@@ -1,0 +1,24 @@
+{
+    "batch_size": 1024,
+    "epochs": 2,
+    "lr": 0.0001,
+    "hidden_layers_size": [
+        400,
+        500,
+        300,
+        100
+    ],
+    "test_size": 0.2,
+    "valid_ratio": 0.2,
+    "workers": 0,
+    "ts_time_step": 5,
+    "encoder_last_activation": null,
+    "pheno_date_min": -45,
+    "pheno_date_max": 410,
+    "n_samples": 10,
+    "supervised": false,
+    "beta_kl": 1.0,
+    "k_fold": 0,
+    "dataset_file_prefix": "",
+    "n_fold": null
+}

@@ -70,7 +70,7 @@ def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
 
 
 
-def get_phenovae_train_parser():
+def get_prosailvae_train_parser():
     """
     Creates a new argument parser.
     """
@@ -105,7 +105,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     best_val_loss = torch.inf
-    for epoch in range(n_epoch):#, desc='phenoVAE training', leave=True):
+    for epoch in trange(n_epoch, desc='phenoVAE training', leave=True):
         train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=10)
         valid_loss_dict = phenoVAE.validate(train_loader, n_samples=10)
         train_loss_dict['epoch']=epoch
@@ -121,7 +121,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_
 
 
 if __name__ == "__main__":
-    parser = get_phenovae_train_parser().parse_args()
+    parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)
     
     config_dir = os.path.join(root_dir,"config/")

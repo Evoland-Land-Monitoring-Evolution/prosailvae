@@ -1,6 +1,7 @@
 #PBS -N trainprosail
-#PBS -l select=1:ncpus=4:mem=92G
-#PBS -l walltime=72:00:00
+#PBS -q qgpgpu
+#PBS -l select=1:ncpus=4:mem=92G:ngpus=1  
+#PBS -l walltime=12:00:00
 
 
 export PATH="/work/scratch/zerahy/miniconda3/bin:$PATH"

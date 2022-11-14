@@ -14,7 +14,7 @@ then
     export name=$1
 fi
 
-source ~/set_proxy_iota2.sh
+source ~/source_proxy.sh
 if [ -z "$https_proxy" ]
 then
     echo "Please set https_proxy environment variable before running this script"

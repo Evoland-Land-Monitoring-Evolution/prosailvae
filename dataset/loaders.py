@@ -61,9 +61,10 @@ def split_train_valid_by_fid(labels, ts_ids,
         fids_valid += valid_fids
     return fids_train, fids_valid
 
-def save_ids_for_k_fold(k=2, test_ratio=0.01, file_prefix="s2_"):
-    data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                         os.pardir),"data/")
+def save_ids_for_k_fold(k=2, test_ratio=0.01, file_prefix="s2_", data_dir=None):
+    if data_dir is None:
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                             os.pardir),"data/")
     labels = torch.load(data_dir+"/s2_labels.pt")
     ts_ids = torch.arange(0,labels.size(0))
     rest_of_ids, test_ids = split_train_valid_by_fid(labels, ts_ids,
@@ -89,9 +90,10 @@ def save_ids_for_k_fold(k=2, test_ratio=0.01, file_prefix="s2_"):
         raise NotImplementedError
 
 def get_s2loader(valid_ratio=None, ts_ids=None, 
-                 batch_size=1024, num_workers=0, file_prefix="s2_"):
-    data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                         os.pardir),"data/")
+                 batch_size=1024, num_workers=0, file_prefix="s2_", data_dir=None):
+    if data_dir is None:
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                             os.pardir),"data/")
     ndvi = torch.load(data_dir + f"/{file_prefix}ndvi_dataset.pt")
     labels = torch.load(data_dir + f"/{file_prefix}labels.pt")
     if ts_ids is None:
@@ -124,25 +126,27 @@ def get_s2loader(valid_ratio=None, ts_ids=None,
                             num_workers=num_workers)
         return train_loader, valid_loader
 
-def load_train_valid_ids(k=None, n=None, file_prefix="s2_"):
-    data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                         os.pardir),"data/")
+def load_train_valid_ids(k=None, n=None, file_prefix="s2_", data_dir=None):
+    if data_dir is None:
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                             os.pardir),"data/")
     if k is None or n is None:
         train_valid_ids = torch.load(data_dir + f"/{file_prefix}train_valid_ids.pt")
     else:
         train_valid_ids = torch.load(data_dir + f"/{file_prefix}train_valid_ids_{k}_{n}.pt")
     return train_valid_ids
 
-def load_test_ids(file_prefix="s2_"):
+def load_test_ids(file_prefix="s2_", data_dir=None):
     data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                          os.pardir),"data/")
     return torch.load(data_dir + f"/{file_prefix}test_ids.pt")
 
 
 def get_simloader(valid_ratio=None, sample_ids=None, 
-                 batch_size=1024, num_workers=0, file_prefix="s2_"):
-    data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                         os.pardir),"data/")
+                 batch_size=1024, num_workers=0, file_prefix="s2_", data_dir=None):
+    if data_dir is None:
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                             os.pardir),"data/")
     s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
     prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
     prosail_params = prosail_sim_vars[:,:-3]
@@ -208,9 +212,14 @@ def get_S2_id_split_parser():
     parser.add_argument("-p", dest="file_prefix",
                         help="prefix on dataset files",
                         type=str, default="s2_")
+    parser.add_argument("-d", dest="data_dir",
+                        help="path to data directory",
+                        type=str, default="")
     return parser
 
 if __name__ == "__main__":
-    data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),os.pardir),"data/")
     parser = get_S2_id_split_parser().parse_args()
+    if len(parser.data_dir)==0:
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                             os.pardir),"data/")
     save_ids_for_k_fold(k=parser.k, test_ratio=parser.test_ratio)

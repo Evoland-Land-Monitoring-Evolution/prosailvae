@@ -38,8 +38,8 @@ def check_fold_res_dir(fold_dir, n_xp, params):
             same_fold = d
     return same_fold
 
-def get_res_dir_path(root_dir, params, n_xp=None, overwrite_xp=False):
-    root_results_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),os.pardir),"results/")
+def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
+    
     if not os.path.exists(root_results_dir):
         os.makedirs(root_results_dir)
     if not os.path.exists(root_results_dir+"n_xp.json"):    
@@ -88,12 +88,20 @@ def get_phenovae_train_parser():
                         help="Number of experience (to use in case of kfold)",
                         type=int, default=1)
     
-    parser.add_argument("-r", dest="overwrite_xp",
+    parser.add_argument("-o", dest="overwrite_xp",
                         help="Allow overwrite of experiment (fold)",
                         type=bool, default=True)
+    
+    parser.add_argument("-d", dest="data_dir",
+                        help="path to data direcotry",
+                        type=str, default="")
+    
+    parser.add_argument("-r", dest="root_results_dir",
+                        help="path to root results direcotry",
+                        type=str, default="")
     return parser
 
-def training_loop(phenoVAE, optimizer, n_epoch):
+def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_dir):
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     best_val_loss = torch.inf
@@ -113,12 +121,16 @@ def training_loop(phenoVAE, optimizer, n_epoch):
 
 
 if __name__ == "__main__":
+    parser = get_phenovae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)
-    data_dir = os.path.join(root_dir,"data/")
+    
     config_dir = os.path.join(root_dir,"config/")
     results_dir = os.path.join(root_dir,"results/")
-    
-    parser = get_phenovae_train_parser().parse_args()
+    if len(parser.data_dir)==0:
+        data_dir = os.path.join(root_dir,"data/")
+    else:
+        data_dir = parser.data_dir
+
     assert parser.n_fold < parser.n_xp 
     params = load_dict(config_dir + parser.config_file)
     if params["supervised"]:
@@ -132,8 +144,13 @@ if __name__ == "__main__":
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
                                               file_prefix=params["dataset_file_prefix"], 
                                               sample_ids=sample_ids,
-                                              batch_size=params["batch_size"])
-    res_dir = get_res_dir_path(root_dir, params, 
+                                              batch_size=params["batch_size"],
+                                              data_dir=data_dir)
+    if len(parser.root_results_dir)==0:
+        root_results_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),os.pardir),"results/")
+    else:
+        root_results_dir = parser.root_results_dir
+    res_dir = get_res_dir_path(root_results_dir, params, 
                                parser.n_xp, parser.overwrite_xp)
     save_dict(params, res_dir+"/config.json")
 
@@ -148,13 +165,16 @@ if __name__ == "__main__":
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])
     all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
                                                          optimizer, 
-                                                         params['epochs'])
+                                                         params['epochs'],
+                                                         train_loader, 
+                                                         valid_loader,
+                                                         res_dir=res_dir) 
     loss_dir = res_dir + "/loss/"
     os.makedirs(loss_dir)
     all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
     all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
 
-    loader = get_simloader(file_prefix="test_")
+    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
     mae, mpiw, picp = get_metrics(prosail_VAE, loader, 

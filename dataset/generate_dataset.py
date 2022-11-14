@@ -5,7 +5,6 @@ Created on Mon Oct 24 10:46:58 2022
 
 @author: yoel
 """
-import pandas as pd
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -105,11 +104,17 @@ def get_data_generation_parser():
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
                         type=str, default="")
+    parser.add_argument("-data_dir", "-d", dest="data_dir",
+                        help="number of samples in simulated dataset",
+                        type=str, default="")
     return parser
 
 if  __name__ == "__main__":
     parser = get_data_generation_parser().parse_args()
-    data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                         os.pardir), "data/")
+    if len(parser.data_dir)==0 : 
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                         os.pardir), "data/")  
+    else: 
+        data_dir = parser.data_dir
     save_dataset(data_dir, parser.file_prefix, parser.n_samples)
     

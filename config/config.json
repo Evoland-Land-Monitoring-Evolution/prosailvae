@@ -8,8 +8,8 @@
         300,
         100
     ],
-    "test_size": 0.2,
-    "valid_ratio": 0.2,
+    "test_size": 0.1,
+    "valid_ratio": 0.1,
     "workers": 0,
     "ts_time_step": 5,
     "encoder_last_activation": null,

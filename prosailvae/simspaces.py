@@ -21,15 +21,15 @@ class LinearVarSpace(SimVarSpace):
         self.device=device
         self.eps=1e-3
         self.latent_dim=latent_dim
-        self.z2sim_mat = z2sim_mat
-        self.z2sim_offset = z2sim_offset
+        self.z2sim_mat = z2sim_mat.to(device)
+        self.z2sim_offset = z2sim_offset.to(device)
         self.sim_pdf_support_span = sim_pdf_support_span
         if z2sim_mat is None:
-            self.z2sim_mat = torch.eye(latent_dim)
+            self.z2sim_mat = torch.eye(latent_dim).to(device)
         if z2sim_offset is None:
-            self.z2sim_offset = torch.zeros((1,latent_dim))
+            self.z2sim_offset = torch.zeros((1,latent_dim)).to(device)
         if sim_pdf_support_span is None:
-            self.sim_pdf_support_span = 2 * torch.ones((1,latent_dim)).view(1,-1, 1)
+            self.sim_pdf_support_span = 2 * torch.ones((1,latent_dim)).view(1,-1, 1).to(device)
         self.inv_z2sim_mat = torch.from_numpy(np.linalg.inv(self.z2sim_mat.detach().cpu())).to(self.device)
         pass
     

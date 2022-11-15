@@ -4,6 +4,8 @@
 
 
 export PATH="/work/scratch/zerahy/miniconda3/bin:$PATH"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/anaconda3/lib
+
 module load conda
 module load gcc
 conda activate /work/scratch/zerahy/dotconda/prosailvae

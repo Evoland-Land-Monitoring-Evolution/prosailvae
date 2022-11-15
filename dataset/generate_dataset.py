@@ -15,7 +15,7 @@ import os
 import argparse
 import prosailvae
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, ProsailVarsDist
-
+from tqdm import trange
 PROSAIL_VARS = [
     "N", "cab", "car", "cbrown", "caw", "cm",
     "lai", "lidfa", "hspot", "psoil", "rsoil"
@@ -72,7 +72,7 @@ def simulate_prosail_dataset(data_dir, nb_simus=100):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, 10))
     with numpyro.handlers.seed(rng_seed=5):
-        for i in range(nb_simus):
+        for i in trange(nb_simus):
             prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist)
             sigma = numpyro.sample("sigma", dist.Uniform(0., 0.01))
             psimulator = ProsailSimulator()
@@ -100,10 +100,10 @@ def get_data_generation_parser():
 
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
-                        type=int, default=10000)
+                        type=int, default=100000)
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
-                        type=str, default="")
+                        type=str, default="sim_")
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
                         type=str, default="")

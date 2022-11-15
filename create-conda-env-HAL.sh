@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export python_version="3.9"
+export python_version="3.8"
 export name="prosailvae"
 
 export GITLAB_TOKEN=hssC4vRMTyMzbU6Gi86k 
@@ -21,7 +21,7 @@ then
     exit 1
 fi
 
-export target=/work/scratch/$USER/virtualenv/$name
+export target=/work/scratch/$USER/dotconda/$name
 
 if ! [ -z "$2" ]
 then
@@ -43,11 +43,11 @@ conda create -p $target
 
 # Enter virtualenv
 conda activate $target
-conda install python==${python_version} pip
+conda install -y python==${python_version} pip
 
 conda install -y pandas scikit-learn tqdm numpy pip
 # Installing Pytorch. Please change option for GPU use.
-conda install pytorch-gpu torchvision cudatoolkit=11.0 -c pytorch -c conda-forge
+conda install -y pytorch-gpu torchvision cudatoolkit=11.0 -c pytorch -c conda-forge
 conda install -y -c conda-forge zenodo_get jax numpyro
 
 which python
@@ -56,12 +56,7 @@ python --version
 conda deactivate
 conda activate $target
 
-# Install thirdparties
-rm -rf thirdparties
-mkdir thirdparties
-
-git clone https://${GITLAB_TOKEN_USER}:${GITLAB_TOKEN}@src.koda.cnrs.fr/yoel.zerah.1/prosailpython.git@${VERSION} thirdparties/prosailpython
-pip install -e ./thirdparties/prosailpython
+pip install git+https://${GITLAB_TOKEN_USER}:${GITLAB_TOKEN}@src.koda.cnrs.fr/yoel.zerah.1/prosailpython.git@${VERSION}
 
 # Install the current project in edit mode
 pip install -e .[testing]

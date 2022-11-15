@@ -44,7 +44,7 @@ def get_prosail_VAE(data_dir, vae_params={"input_size":10,
                                      z2sim_offset=z2sim_offset, 
                                      sim_pdf_support_span=sim_pdf_support_span,  
                                      device=device)
-    psimulator = ProsailSimulator()
+    psimulator = ProsailSimulator(device=device)
     ssimulator = SensorSimulator(data_dir + "/sentinel2.rsr")
     sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
                                             ssimulator=ssimulator)

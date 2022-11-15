@@ -71,10 +71,11 @@ RSR of the sensor.
 
 
 class ProsailSimulator():
-    def __init__(self, factor: str = "SDR", typelidf: int = 2, ):
+    def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu'):
         super().__init__()
         self.factor = factor
         self.typelidf = typelidf
+        self.device=device
 
     def __call__(self, params):
         return self.forward(params)

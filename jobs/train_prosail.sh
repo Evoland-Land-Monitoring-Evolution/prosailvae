@@ -7,7 +7,7 @@
 export PATH="/work/scratch/zerahy/miniconda3/bin:$PATH"
 module load conda
 module load gcc
-conda activate /work/scratch/zerahy/virtualenv/prosailvae
+conda activate /work/scratch/zerahy/dotconda/prosailvae
 export SRCDIR=/home/uz/zerahy/projects/    
 export VAEDIR=${SRCDIR}/prosailvae/prosailvae/
 export DATADIR=/work/scratch/zerahy/prosailvae/data/

@@ -7,7 +7,6 @@ export GITLAB_TOKEN=hssC4vRMTyMzbU6Gi86k
 export GITLAB_TOKEN_USER=readonly
 export VERSION=tensorport
 
-export python_version="3.9"
 export name="prosailvae"
 if ! [ -z "$1" ]
 then

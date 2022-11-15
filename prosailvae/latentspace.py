@@ -44,7 +44,7 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         self.log_max_sigma=torch.log(self.max_sigma).to(self.device)
         self.min_sigma = torch.tensor(min_sigma).to(device)
         self.log_min_sigma=torch.log(self.min_sigma).to(device)
-        self.max_mu = max_mu.to(device)
+        #self.max_mu = max_mu.to(device)
         
         # self.eps=torch.tensor(5e-4).float().to(self.device)
         if max_matrix is None:

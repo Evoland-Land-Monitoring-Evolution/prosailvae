@@ -213,8 +213,8 @@ class SimVAE(nn.Module):
         len_loader = len(dataloader.dataset)
         for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
-            s2_refl = batch[0] 
-            angles = batch[1]
+            s2_refl = batch[0].to(self.device) 
+            angles = batch[1].to(self.device) 
             s2_refl.requires_grad = True
             angles.requires_grad = True
             

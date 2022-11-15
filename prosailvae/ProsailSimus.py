@@ -89,6 +89,7 @@ class ProsailSimulator():
             params,
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
+            device=self.device
         ).float()
     
 def get_ProsailVarsIntervalLen():

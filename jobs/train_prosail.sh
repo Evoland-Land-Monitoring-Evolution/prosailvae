@@ -4,7 +4,7 @@
 #PBS -l walltime=12:00:00
 
 
-export PATH="/work/scratch/zerahy/miniconda3/bin:$PATH"
+export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_PATH
 
 module load conda
 conda activate /work/scratch/zerahy/dotconda/prosailvae

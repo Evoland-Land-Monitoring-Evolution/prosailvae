@@ -7,6 +7,7 @@ Created on Mon Nov 14 14:20:44 2022
 """
 from prosailvae.prosail_vae import get_prosail_VAE
 from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader
+from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
 from datetime import datetime 
 import torch.optim as optim
@@ -116,7 +117,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_
                    pd.DataFrame(valid_loss_dict, index=[0])],ignore_index=True)
         if valid_loss_dict['loss_sum'] < best_val_loss:
             best_val_loss = valid_loss_dict['loss_sum'] 
-            phenoVAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/phenovae_weigths.tar")
+            phenoVAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weigths.tar")
     return all_train_loss_df, all_valid_loss_df
 
 
@@ -138,7 +139,8 @@ if __name__ == "__main__":
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     
-    sample_ids = torch.arange(1,10000) # load_train_valid_ids(k=params["k_fold"],
+    sample_ids = torch.arange(1,100000) 
+    # load_train_valid_ids(k=params["k_fold"],
     #                   n=params["n_fold"], 
     #                   file_prefix=params["dataset_file_prefix"])
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
@@ -162,13 +164,15 @@ if __name__ == "__main__":
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     prosail_VAE = get_prosail_VAE(data_dir, vae_params=vae_params, device=device)
+    
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])
+    # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/1_d2022_11_15_10_57_21_supervised_False_" + "/prosailvae_weigths.tar", optimizer=optimizer)
     all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
-                                                         optimizer, 
-                                                         params['epochs'],
-                                                         train_loader, 
-                                                         valid_loader,
-                                                         res_dir=res_dir) 
+                                                          optimizer, 
+                                                          params['epochs'],
+                                                          train_loader, 
+                                                          valid_loader,
+                                                          res_dir=res_dir) 
     loss_dir = res_dir + "/loss/"
     os.makedirs(loss_dir)
     all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
@@ -180,4 +184,5 @@ if __name__ == "__main__":
     mae, mpiw, picp = get_metrics(prosail_VAE, loader, 
                           n_pdf_sample_points=3001,
                           alpha_conf=alpha_pi)
+    
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi)

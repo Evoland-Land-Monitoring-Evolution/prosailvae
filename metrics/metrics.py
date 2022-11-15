@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import os 
-from prosailvae.ProsailSimus import PROSAILVARS
+from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     metrics_dir = res_dir + "/metrics/"
@@ -25,6 +25,16 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
                            columns=PROSAILVARS)
     df_picp["alpha"] = alpha_pi
     df_picp.to_csv(metrics_dir + "/picp.csv")
+    
+    il = get_ProsailVarsIntervalLen()
+    mpiwr = mpiw/il.view(-1,1)
+    maer = mae/il
+    df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).numpy(), 
+                           columns=PROSAILVARS)
+    df_mpiwr = pd.DataFrame(data=mpiwr.view(-1, len(PROSAILVARS)).numpy(), 
+                           columns=PROSAILVARS)
+    df_maer.to_csv(metrics_dir + "/maer.csv")
+    df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
 
 def get_metrics(phenoVAE, loader,  
                       n_pdf_sample_points=3001,

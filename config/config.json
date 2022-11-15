@@ -19,5 +19,5 @@
     "supervised": false,
     "beta_kl": 1.0,
     "k_fold": 0,
-    "dataset_file_prefix": ""
+    "dataset_file_prefix": "sim_"
 }

@@ -88,6 +88,20 @@ class ProsailSimulator():
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
         ).float()
+def get_ProsailVarsIntervalLen():
+    d = ProsailVarsDist()
+    return torch.tensor([d.N[1]-d.N[0],
+                         d.cab[1]-d.cab[0],
+                         d.car[1]-d.car[0],
+                         d.cbrown[1]-d.cbrown[0],
+                         d.caw[1]-d.caw[0],
+                         d.cm[1]-d.cm[0],
+                         d.lai[1]-d.N[0],
+                         d.lidfa[1]-d.lidfa[0],
+                         d.hspot[1]-d.hspot[0],
+                         d.psoil[1]-d.psoil[0],
+                         d.rsoil[1]-d.rsoil[0],
+                         ])
 
 @dataclass(frozen=True)
 class ProsailVarsBounds:

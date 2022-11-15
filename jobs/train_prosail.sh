@@ -15,6 +15,7 @@ export OUTDIR=/work/scratch/zerahy/prosailvae/results/${PBS_JOBID:0:8}_jobarray/
 export NUM_WORKERS=12
 
 python ${VAEDIR}/prosailvae/train.py -d ${DATADIR} -r $OUTDIR -p "sim_"
+conda deactivate
 
 
 

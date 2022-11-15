@@ -107,8 +107,10 @@ class ProsailNNEncoder(Encoder):
         self.device=device
         
     def encode(self, s2_refl, angles):
+        print(s2_refl.device, angles.device)
         y=self.net(torch.concat((s2_refl, 
                                  torch.cos(torch.deg2rad(angles)),
                                  torch.sin(torch.deg2rad(angles))
                                  ), axis=1))
+        raise NotImplementedError
         return y

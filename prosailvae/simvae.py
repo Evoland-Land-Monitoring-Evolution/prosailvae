@@ -223,7 +223,7 @@ class SimVAE(nn.Module):
                                                                         angles, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             else:
-                tgt = batch[2]
+                tgt = batch[2].to(self.device) 
                 tgt.requires_grad = True
                 loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, tgt, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
@@ -238,13 +238,13 @@ class SimVAE(nn.Module):
         len_loader = len(dataloader.dataset)
         with torch.no_grad():
             for _, batch in enumerate(dataloader):
-                s2_refl = batch[0] 
-                angles = batch[1]
+                s2_refl = batch[0].to(self.device)  
+                angles = batch[1].to(self.device) 
                 if not supervised:
                     loss_sum, _ = self.compute_unsupervised_loss_over_batch(s2_refl, angles, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
                 else:
-                    tgt = batch[2]
+                    tgt = batch[2].to(self.device) 
                     loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, angles, tgt, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
     

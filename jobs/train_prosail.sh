@@ -3,10 +3,8 @@
 #PBS -l select=1:ncpus=4:mem=92G:ngpus=1  
 #PBS -l walltime=12:00:00
 
-
-export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_PATH
-
 module load conda
+export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_PATH
 conda activate /work/scratch/zerahy/dotconda/prosailvae
 export SRCDIR=/home/uz/zerahy/projects/    
 export VAEDIR=${SRCDIR}/prosailvae/prosailvae/

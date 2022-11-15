@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import prosail
+from prosail import spectral_lib
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -30,19 +31,21 @@ RSR of the sensor.
     def __init__(self,
                  rsr_file: str,
                  prospect_range: Tuple[int, int] = (400, 2500),
-                 bands=[1,2,3,4,5,6,7,8 ,9 ,11]):
+                 bands=[1,2,3,4,5,6,7,8 ,9 ,11],
+                 device='cpu'):
           
         super().__init__()
+        self.device=device
         self.prospect_range = prospect_range
-        self.rsr = torch.from_numpy(np.loadtxt(rsr_file, unpack=True))
+        self.rsr = torch.from_numpy(np.loadtxt(rsr_file, unpack=True)).to(device)
         self.nb_bands = self.rsr.shape[0] - 2
         self.rsr_range = (int(self.rsr[0, 0].item() * 1000),
                           int(self.rsr[0, -1].item() * 1000))
         self.nb_lambdas = prospect_range[1] - prospect_range[0] + 1
-        self.rsr_prospect = torch.zeros([self.rsr.shape[0], self.nb_lambdas])
+        self.rsr_prospect = torch.zeros([self.rsr.shape[0], self.nb_lambdas]).to(device)
         self.rsr_prospect[0, :] = torch.linspace(prospect_range[0],
                                                  prospect_range[1],
-                                                 self.nb_lambdas)
+                                                 self.nb_lambdas).to(device)
         self.rsr_prospect[1:, :-(self.prospect_range[1] -
                                  self.rsr_range[1])] = self.rsr[1:, (
                                      self.prospect_range[0] -
@@ -68,11 +71,10 @@ RSR of the sensor.
 
 
 class ProsailSimulator():
-    def __init__(self, factor: str = "SDR", typelidf: int = 2):
+    def __init__(self, factor: str = "SDR", typelidf: int = 2, ):
         super().__init__()
         self.factor = factor
         self.typelidf = typelidf
-        self.bounds = ProsailVarsBounds()
 
     def __call__(self, params):
         return self.forward(params)
@@ -88,6 +90,7 @@ class ProsailSimulator():
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
         ).float()
+    
 def get_ProsailVarsIntervalLen():
     d = ProsailVarsDist()
     return torch.tensor([d.N[1]-d.N[0],

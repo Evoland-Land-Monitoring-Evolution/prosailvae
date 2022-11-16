@@ -4,3 +4,4 @@
 */*.csv
 data/*.pt
 results/*
+prosailvae.egg/*

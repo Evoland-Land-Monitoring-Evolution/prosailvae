@@ -21,6 +21,8 @@ import prosailvae
 from tqdm import trange
 import warnings
 from time import sleep
+import numpy as np
+import matplotlib.pyplot as plt 
 
 def save_dict(data_dict, dict_file_path):
     with open(dict_file_path, 'w') as fp:
@@ -181,6 +183,7 @@ if __name__ == "__main__":
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+    prosail_VAE.eval()
     mae, mpiw, picp, mare = get_metrics(prosail_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
@@ -189,7 +192,7 @@ if __name__ == "__main__":
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     
-    import matplotlib.pyplot as plt 
+    
     fig = plt.figure(dpi=200)
     
     for i in range(len(maer.columns)):
@@ -213,9 +216,38 @@ if __name__ == "__main__":
     plt.ylabel('MAEr')
     fig.savefig(res_dir+"/MAEr.svg")
     
-    fig = plt.figure()
+    fig = plt.figure(dpi=150)
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, mare.numpy())
     plt.ylabel('MARE')
     plt.yscale('log')
     fig.savefig(res_dir+"/mare.svg")
+    
+    for i in range(10):
+        sample_refl = loader.dataset[i:i+1][0]
+        angle = loader.dataset[0:1][1]
+        _,_,_,rec = prosail_VAE.forward(sample_refl, angle, n_samples=1000)
+        mean_rec = rec.detach().mean(2)
+        std_rec = rec.detach().std(2)
+        min_rec = rec.detach().min(2)[0]
+        max_rec = rec.detach().max(2)[0]
+        fig, ax = plt.subplots()
+        
+        bands = ["b2", "b3", "b4", "b5", "b6", "b7", "b8", "b8a", "b11", "b12"]
+        ind = np.arange(len(bands))
+        width = 0.35
+        ax.bar(ind, sample_refl.squeeze().numpy(), width, align='center', alpha=0.5, color='royalblue', capsize=10)
+        ax.bar(ind+width, mean_rec.squeeze().numpy(), width, yerr=std_rec.squeeze().numpy(), 
+               align='center', alpha=0.5, color='black', capsize=10)
+        ax.errorbar(ind+width,mean_rec.squeeze().numpy(), 
+                    torch.concat((min_rec, max_rec),axis=0).numpy(), color='red', fmt=None)
+        ax.set_xticks(ind + width/2)
+        ax.set_xticklabels(bands)
+        ax.yaxis.grid(True)
+        
+        # Save the figure and show
+        plt.tight_layout()
+        plt.savefig(res_dir + f'/reflectance_rec_{i}.png')
+    
+    
+    

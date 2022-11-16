@@ -68,22 +68,27 @@ def sample_prosail_vars(var_dists):
 
     return N, cab, car, cbrown, caw, cm, lai, lidfa, hspot, psoil, rsoil, tts, tto, psi
 
-def simulate_prosail_dataset(data_dir, nb_simus=100):
+def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, 10))
     with numpyro.handlers.seed(rng_seed=5):
         for i in trange(nb_simus):
             prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist)
-            sigma = numpyro.sample("sigma", dist.Uniform(0., 0.01))
+            
             psimulator = ProsailSimulator()
             ssimulator = SensorSimulator(data_dir + "/sentinel2.rsr")
             mean = ssimulator(psimulator(torch.from_numpy(prosail_vars[i,:]).view(1,-1).float())).numpy()
-            prosail_s2_sim[i,:] = numpyro.sample("obs", dist.Normal(mean, sigma))
+            if noise>0:
+                sigma = numpyro.sample("sigma", dist.Uniform(0., noise))
+                prosail_s2_sim[i,:] = numpyro.sample("obs", dist.Normal(mean, sigma))
+            else:
+                prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
-def save_dataset(save_dir, data_file_prefix, nb_simus):
+def save_dataset(save_dir, data_file_prefix, nb_simus, noise=0):
     prosail_vars, prosail_s2_sim = simulate_prosail_dataset(data_dir,
-                                                            nb_simus=nb_simus)
+                                                            nb_simus=nb_simus, 
+                                                            noise=noise)
     
     torch.save(torch.from_numpy(prosail_vars), 
                save_dir + data_file_prefix + "prosail_sim_vars.pt") 
@@ -107,6 +112,9 @@ def get_data_generation_parser():
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
                         type=str, default="")
+    parser.add_argument("-s", dest="noise",
+                        help="gaussian noise level on simulated data",
+                        type=float, default=0)
     return parser
 
 if  __name__ == "__main__":
@@ -116,5 +124,5 @@ if  __name__ == "__main__":
                                          os.pardir), "data/")  
     else: 
         data_dir = parser.data_dir
-    save_dataset(data_dir, parser.file_prefix, parser.n_samples)
+    save_dataset(data_dir, parser.file_prefix, parser.n_samples, parser.noise)
     

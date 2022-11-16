@@ -49,7 +49,7 @@ def numerical_kl_tn_uniform(mu, sigma, support=torch.arange(0,1, 0.001)):
     return kl
 
 def truncated_gaussian_pdf(x, mu, sig, eps=1e-9):
-    return normal_pdf(x, mu, sig)  / (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig)) * (x>=0) * (x<=1)
+    return normal_pdf(x, mu, sig)  / (normal_cdf(torch.ones_like(mu), mu, sig) - normal_cdf(torch.zeros_like(mu), mu, sig)) * (x>=0) * (x<=1)
 
 def truncated_gaussian_cdf(x, mu, sig, eps=1e-9):
     return  (x>1) + (x>=0) * (x<=1) * (normal_cdf(x, mu, sig) - normal_cdf(torch.tensor(0), mu, sig))/ (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig))

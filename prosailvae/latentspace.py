@@ -41,11 +41,10 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         self.device=device
         self.latent_dim = latent_dim
         self.max_sigma = torch.tensor(max_sigma).to(device)
-        self.log_max_sigma=torch.log(self.max_sigma).to(self.device)
+        self.log_max_sigma = torch.log(self.max_sigma).to(self.device)
         self.min_sigma = torch.tensor(min_sigma).to(device)
-        self.log_min_sigma=torch.log(self.min_sigma).to(device)
-        #self.max_mu = max_mu.to(device)
-        
+        self.log_min_sigma = torch.log(self.min_sigma).to(device)
+        # self.max_mu = max_mu.to(device)
         # self.eps=torch.tensor(5e-4).float().to(self.device)
         if max_matrix is None:
             self.max_matrix = torch.eye(latent_dim).to(device)
@@ -84,7 +83,15 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
     def sample_latent_from_params(self, params, n_samples=1, n_sigma=4.5):
         mu = params[:, :, 0].squeeze(2)
         sigma = params[:, :, 1].squeeze(2)
-        u_ubound, u_lbound = self.get_u_bounds(mu, sigma, n_sigma=n_sigma)
+        try:
+            u_ubound, u_lbound = self.get_u_bounds(mu, sigma, n_sigma=n_sigma)
+        except:
+            print("Inverted uniform bounds for Inverse transform method !")
+            print(f"u : {u_ubound[u_ubound <= u_lbound]}")
+            print(f"l : {u_lbound[u_ubound <= u_lbound]}")
+            print(f"mu : {mu[u_ubound <= u_lbound]}")
+            print(f"sigma : {sigma[u_ubound <= u_lbound]}")
+            raise ValueError
         u_dist = torch.distributions.uniform.Uniform(u_lbound, u_ubound)
         mu = params[:, :, 0].repeat(1, 1, n_samples) 
         sigma = params[:, :, 1].repeat(1, 1, n_samples) 

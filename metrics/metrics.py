@@ -27,7 +27,7 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     df_picp.to_csv(metrics_dir + "/picp.csv")
     
     il = get_ProsailVarsIntervalLen()
-    mpiwr = mpiw/il.view(-1,1)
+    mpiwr = (mpiw/il.view(-1,1)).transpose(0,1)
     maer = mae/il
     df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).numpy(), 
                            columns=PROSAILVARS)
@@ -42,6 +42,7 @@ def get_metrics(phenoVAE, loader,
     
     device = phenoVAE.device
     error = torch.tensor([])
+    rel_error = torch.tensor([])
     pic = torch.tensor([])
     piw = torch.tensor([])
     
@@ -59,6 +60,8 @@ def get_metrics(phenoVAE, loader,
             pheno_pi_upper = phenoVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
             error_i = pheno_mode.squeeze() - tgt
             error = torch.concat([error, error_i], axis=0)
+            rel_error_i = (pheno_mode.squeeze() - tgt).abs() / (tgt.abs()+1e-10)
+            rel_error = torch.concat([rel_error, rel_error_i], axis=0)
             piw_i = pheno_pi_upper - pheno_pi_lower
             piw = torch.concat([piw, piw_i], axis=0)
             pic_i = torch.logical_and(tgt.unsqueeze(2) > pheno_pi_lower, 
@@ -66,5 +69,6 @@ def get_metrics(phenoVAE, loader,
             pic = torch.concat([pic, pic_i], axis=0)
     mae = error.abs().mean(axis=0)     
     picp = pic.mean(axis=0)    
-    mpiw = piw.mean(axis=0) 
-    return mae, mpiw, picp
+    mpiw = piw.mean(axis=0)
+    mare = rel_error.mean(axis=0)
+    return mae, mpiw, picp, mare

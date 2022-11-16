@@ -7,7 +7,7 @@ Created on Mon Nov 14 14:20:44 2022
 """
 from prosailvae.prosail_vae import get_prosail_VAE
 from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader
-from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
+# from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
 from datetime import datetime 
 import torch.optim as optim
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     prosail_VAE = get_prosail_VAE(data_dir, vae_params=vae_params, device=device)
     
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])
-    # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/1_d2022_11_15_10_57_21_supervised_False_" + "/prosailvae_weigths.tar", optimizer=optimizer)
+    # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
                                                           optimizer, 
                                                           params['epochs'],
@@ -181,8 +181,41 @@ if __name__ == "__main__":
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
-    mae, mpiw, picp = get_metrics(prosail_VAE, loader, 
-                          n_pdf_sample_points=3001,
-                          alpha_conf=alpha_pi)
+    mae, mpiw, picp, mare = get_metrics(prosail_VAE, loader, 
+                              n_pdf_sample_points=3001,
+                              alpha_conf=alpha_pi)
     
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
+    maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
+    mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
+    
+    import matplotlib.pyplot as plt 
+    fig = plt.figure(dpi=200)
+    
+    for i in range(len(maer.columns)):
+        plt.plot(alpha_pi, picp[i,:], label=maer.columns[i])
+    plt.legend()
+    plt.xlabel('1-a')
+    plt.ylabel('PICP')
+    fig.savefig(res_dir+"/picp.svg")
+    
+    fig = plt.figure(dpi=200)
+    for i in range(len(maer.columns)):
+        plt.plot(alpha_pi, mpiwr.values[:,i], label=maer.columns[i])
+    plt.legend()
+    plt.xlabel('1-a')
+    plt.ylabel('MPIWr')
+    fig.savefig(res_dir+"/MPIWr.svg")
+    
+    fig = plt.figure()
+    ax = fig.add_axes([0,0,1,1])
+    ax.bar(maer.columns, maer.values.reshape(-1),)
+    plt.ylabel('MAEr')
+    fig.savefig(res_dir+"/MAEr.svg")
+    
+    fig = plt.figure()
+    ax = fig.add_axes([0,0,1,1])
+    ax.bar(maer.columns, mare.numpy())
+    plt.ylabel('MARE')
+    plt.yscale('log')
+    fig.savefig(res_dir+"/mare.svg")

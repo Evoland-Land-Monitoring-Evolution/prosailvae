@@ -9,6 +9,7 @@ from prosailvae.prosail_vae import get_prosail_VAE
 from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
+from metrics.prosail_plots import plot_metrics, plot_rec_and_latent
 from datetime import datetime 
 import torch.optim as optim
 import json
@@ -23,7 +24,6 @@ import warnings
 from time import sleep
 import numpy as np
 import matplotlib.pyplot as plt 
-
 def save_dict(data_dict, dict_file_path):
     with open(dict_file_path, 'w') as fp:
         json.dump(data_dict, fp, indent=4)
@@ -193,61 +193,9 @@ if __name__ == "__main__":
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     
     
-    fig = plt.figure(dpi=200)
+    plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare)
     
-    for i in range(len(maer.columns)):
-        plt.plot(alpha_pi, picp[i,:], label=maer.columns[i])
-    plt.legend()
-    plt.xlabel('1-a')
-    plt.ylabel('PICP')
-    fig.savefig(res_dir+"/picp.svg")
-    
-    fig = plt.figure(dpi=200)
-    for i in range(len(maer.columns)):
-        plt.plot(alpha_pi, mpiwr.values[:,i], label=maer.columns[i])
-    plt.legend()
-    plt.xlabel('1-a')
-    plt.ylabel('MPIWr')
-    fig.savefig(res_dir+"/MPIWr.svg")
-    
-    fig = plt.figure()
-    ax = fig.add_axes([0,0,1,1])
-    ax.bar(maer.columns, maer.values.reshape(-1),)
-    plt.ylabel('MAEr')
-    fig.savefig(res_dir+"/MAEr.svg")
-    
-    fig = plt.figure(dpi=150)
-    ax = fig.add_axes([0,0,1,1])
-    ax.bar(maer.columns, mare.numpy())
-    plt.ylabel('MARE')
-    plt.yscale('log')
-    fig.savefig(res_dir+"/mare.svg")
-    
-    for i in range(10):
-        sample_refl = loader.dataset[i:i+1][0]
-        angle = loader.dataset[0:1][1]
-        _,_,_,rec = prosail_VAE.forward(sample_refl, angle, n_samples=1000)
-        mean_rec = rec.detach().mean(2)
-        std_rec = rec.detach().std(2)
-        min_rec = rec.detach().min(2)[0]
-        max_rec = rec.detach().max(2)[0]
-        fig, ax = plt.subplots()
-        
-        bands = ["b2", "b3", "b4", "b5", "b6", "b7", "b8", "b8a", "b11", "b12"]
-        ind = np.arange(len(bands))
-        width = 0.35
-        ax.bar(ind, sample_refl.squeeze().numpy(), width, align='center', alpha=0.5, color='royalblue', capsize=10)
-        ax.bar(ind+width, mean_rec.squeeze().numpy(), width, yerr=std_rec.squeeze().numpy(), 
-               align='center', alpha=0.5, color='black', capsize=10)
-        ax.errorbar(ind+width,mean_rec.squeeze().numpy(), 
-                    torch.concat((min_rec, max_rec),axis=0).numpy(), color='red', fmt=None)
-        ax.set_xticks(ind + width/2)
-        ax.set_xticklabels(bands)
-        ax.yaxis.grid(True)
-        
-        # Save the figure and show
-        plt.tight_layout()
-        plt.savefig(res_dir + f'/reflectance_rec_{i}.png')
+    plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10)
     
     
     

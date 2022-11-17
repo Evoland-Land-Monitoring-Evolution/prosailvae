@@ -36,11 +36,11 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
 
-def get_metrics(phenoVAE, loader,  
-                      n_pdf_sample_points=3001,
-                      alpha_conf=[0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]):
+def get_metrics(prosailVAE, loader,  
+                n_pdf_sample_points=3001,
+                alpha_conf=[0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]):
     
-    device = phenoVAE.device
+    device = prosailVAE.device
     error = torch.tensor([])
     rel_error = torch.tensor([])
     pic = torch.tensor([])
@@ -53,11 +53,11 @@ def get_metrics(phenoVAE, loader,
             data = batch[0].to(device)
             angles = batch[1].to(device)
             tgt = batch[2].to(device)
-            dist_params, z_mode, pheno_mode, _ = phenoVAE.point_estimate_rec(data, angles, mode='sim_mode')
-            lat_pdfs, lat_supports = phenoVAE.lat_space.latent_pdf(dist_params)
-            pheno_pdfs, pheno_supports = phenoVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
-            pheno_pi_lower = phenoVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
-            pheno_pi_upper = phenoVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
+            dist_params, z_mode, pheno_mode, _ = prosailVAE.point_estimate_rec(data, angles, mode='sim_mode')
+            lat_pdfs, lat_supports = prosailVAE.lat_space.latent_pdf(dist_params)
+            pheno_pdfs, pheno_supports = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            pheno_pi_lower = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
+            pheno_pi_upper = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
             error_i = pheno_mode.squeeze() - tgt
             error = torch.concat([error, error_i], axis=0)
             rel_error_i = (pheno_mode.squeeze() - tgt).abs() / (tgt.abs()+1e-10)

@@ -263,4 +263,86 @@ def get_prosailparams_pdf_span():
                                bounds.hspot[1],
                                bounds.psoil[1],
                                bounds.rsoil[1]])
+
+def plot_rsr(rsr, res_dir='.'):
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import (AutoMinorLocator)
+    fig, (ax1, ax2, ax3) = plt.subplots(1,3,sharey=True, facecolor='w', figsize=(10,4), dpi=150)
+    bands = ["B01","B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8a","B09","B10", "B11", "B12"]
+    lamb = np.arange(400,2501)
+    for i in range(len(bands)):
+        rsr_i = rsr.squeeze()[i,:].numpy()
+        non_zero_rsr = rsr_i[rsr_i>0.001]
+        non_zero_rsrl = lamb[rsr_i>0.001]
+        ax1.plot(non_zero_rsrl, non_zero_rsr, label=bands[i])
+        ax2.plot(non_zero_rsrl, non_zero_rsr, label=bands[i])
+        ax3.plot(non_zero_rsrl, non_zero_rsr, label=bands[i])
+
+    ax1.set_xlim(400,1000)
+    ax2.set_xlim(1300,1700)
+    ax3.set_xlim(2000,2400)
+
+    ax1.spines['right'].set_visible(False)
+    ax2.spines['left'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax3.spines['left'].set_visible(False)
+    ax1.yaxis.tick_left()
+    # ax1.tick_params(labelright='off')
+    # ax2.tick_params(labelright='off')
+    ax2.yaxis.set_visible(False)
+    #ax2.set_yticklabels([])
+
+    ax3.yaxis.tick_right()
+
+    ax1.set_ylabel("Relative Spectral Response")
+    ax2.set_xlabel("Wavelength (nm)")
+    box = ax3.get_position()
+    ax3.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax3.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    ax1.xaxis.set_minor_locator(AutoMinorLocator())
+    ax1.yaxis.set_minor_locator(AutoMinorLocator())
+    ax2.xaxis.set_minor_locator(AutoMinorLocator())
+    ax2.yaxis.set_minor_locator(AutoMinorLocator())
+    ax3.xaxis.set_minor_locator(AutoMinorLocator())
+    ax3.yaxis.set_minor_locator(AutoMinorLocator())
+    ax1.tick_params(which='both', axis="both",direction="in")
+    ax2.tick_params(which='both', axis="both",direction="in")
+    ax3.tick_params(which='both', axis="both",direction="in")
+
+    ax1.tick_params(which='both', width=1)
+    ax1.tick_params(which='major', length=5)
+    ax1.tick_params(which='minor', length=3)
+    ax2.tick_params(which='major', length=5)
+    ax2.tick_params(which='minor', length=3)
+    ax3.tick_params(which='major', length=5)
+    ax3.tick_params(which='minor', length=3)
+
+    ax1t = ax1.twiny()
+    ax1t.spines['right'].set_visible(False)
+    ax1t.tick_params(which='both', direction = 'in')
+    ax1t.tick_params(which='major', length=5)
+    ax1t.tick_params(which='minor', length=3)
+    ax1t.xaxis.set_minor_locator(AutoMinorLocator())
+    ax1t.set_xticklabels([])
+
+
+    ax2t = ax2.twiny()
+    ax2t.spines['left'].set_visible(False)
+    ax2t.spines['right'].set_visible(False)
+    ax2t.tick_params(which='both', direction = 'in')
+    ax2t.tick_params(which='major', length=5)
+    ax2t.tick_params(which='minor', length=3)
+    ax2t.xaxis.set_minor_locator(AutoMinorLocator())
+    ax2t.set_xticklabels([])
+    ax3.tick_params(axis="x", which='both', bottom=True, top=True, labelbottom=True, labeltop=False)
+    # ax3t = ax3.twiny()
+    # ax3t.spines['left'].set_visible(False)
+    # ax3t.spines['right'].set_visible(False)
+    # ax3t.tick_params(which='both', direction = 'in')
+    # ax3t.tick_params(which='major', length=5)
+    # ax3t.tick_params(which='minor', length=3)
+    # ax3t.xaxis.set_minor_locator(AutoMinorLocator())
+    # ax3t.set_xticklabels([])
     
+    fig.savefig(res_dir+'/rsr.svg')

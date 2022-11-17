@@ -49,7 +49,8 @@ def numerical_kl_tn_uniform(mu, sigma, support=torch.arange(0,1, 0.001)):
     return kl
 
 def truncated_gaussian_pdf(x, mu, sig, eps=1e-9):
-    return normal_pdf(x, mu, sig)  / (normal_cdf(torch.ones_like(mu), mu, sig) - normal_cdf(torch.zeros_like(mu), mu, sig)) * (x>=0) * (x<=1)
+    return normal_pdf(x, mu, sig)  / (normal_cdf(torch.ones_like(mu), mu, sig) 
+                                      - normal_cdf(torch.zeros_like(mu), mu, sig)) * (x>=0) * (x<=1)
 
 def truncated_gaussian_cdf(x, mu, sig, eps=1e-9):
     return  (x>1) + (x>=0) * (x<=1) * (normal_cdf(x, mu, sig) - normal_cdf(torch.tensor(0), mu, sig))/ (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig))
@@ -77,10 +78,10 @@ def truncated_gaussians_max(x, mu, sigma, eps=1e-9):
 
 def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampling, max_matrix, latent_dim=6, eps=1e-12):
     interval_bound = max(n_sigma_interval * sigma.max().item(), 1)
-    lat_pdf_support = torch.arange(-interval_bound, interval_bound, support_sampling)
+    lat_pdf_support = torch.arange(-interval_bound, interval_bound, support_sampling).to(mu.device)
     len_pdf = len(lat_pdf_support)
     batch_size=mu.size(0)
-    supports = lat_pdf_support.view(1, 1, -1).repeat(batch_size, latent_dim, 1)
+    supports = lat_pdf_support.view(1, 1, -1).repeat(batch_size, latent_dim, 1).to(mu.device)
     pdfs = torch.zeros((batch_size, latent_dim, len_pdf))
     pdfs_at_z = truncated_gaussian_pdf(supports, mu, sigma)
     cdfs_at_z = truncated_gaussian_cdf(supports, mu, sigma)

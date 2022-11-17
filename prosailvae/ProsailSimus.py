@@ -54,6 +54,7 @@ RSR of the sensor.
         self.solar = self.rsr_prospect[1, :].unsqueeze(0)
         self.rsr = self.rsr_prospect[2:, :].unsqueeze(0)
         self.rsr = self.rsr[:,bands,:]
+        
     def __call__(self, prosail_output: torch.Tensor):
         return self.forward(prosail_output)
 

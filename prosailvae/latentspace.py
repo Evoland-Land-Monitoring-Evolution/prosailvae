@@ -83,8 +83,9 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
     def sample_latent_from_params(self, params, n_samples=1, n_sigma=4.5):
         mu = params[:, :, 0].squeeze(2)
         sigma = params[:, :, 1].squeeze(2)
+        u_ubound, u_lbound = self.get_u_bounds(mu, sigma, n_sigma=n_sigma)
         try:
-            u_ubound, u_lbound = self.get_u_bounds(mu, sigma, n_sigma=n_sigma)
+            u_dist = torch.distributions.uniform.Uniform(u_lbound, u_ubound)
         except:
             print("Inverted uniform bounds for Inverse transform method !")
             print(f"u : {u_ubound[u_ubound <= u_lbound]}")
@@ -92,7 +93,6 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
             print(f"mu : {mu[u_ubound <= u_lbound]}")
             print(f"sigma : {sigma[u_ubound <= u_lbound]}")
             raise ValueError
-        u_dist = torch.distributions.uniform.Uniform(u_lbound, u_ubound)
         mu = params[:, :, 0].repeat(1, 1, n_samples) 
         sigma = params[:, :, 1].repeat(1, 1, n_samples) 
         n_dist = torch.distributions.normal.Normal(torch.zeros_like(mu), 

@@ -8,7 +8,7 @@ Created on Thu Nov 17 11:46:20 2022
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
-from prosailvae.ProsailSimus import PROSAILVARS
+from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist
 
 def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
@@ -95,6 +95,10 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         for j in range(len(PROSAILVARS)):
             v2 = ax2[j].violinplot(sim_samples[j], points=100, positions=[ind2[j]+width],
                    showmeans=True, showextrema=True, showmedians=False, vert=False)
+            min_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["min"]
+            max_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["max"]
+            ax2[j].scatter([min_b,max_b],[ind2[j]+width,
+                                          ind2[j]+width],color='k')
             for b in v2['bodies']:
                 # get the center
                 m = np.mean(b.get_paths()[0].vertices[:, 1])
@@ -118,4 +122,4 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         # Save the figure and show
         plt.tight_layout()
         plt.show()
-        plt.savefig(res_dir + f'/reflectance_rec_{i}.png')
+        fig.savefig(res_dir + f'/reflectance_rec_{i}.svg')

@@ -191,11 +191,11 @@ if __name__ == "__main__":
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
-    
-    
     plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare)
-    
     plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10)
+    
+    
+    
     
     
     

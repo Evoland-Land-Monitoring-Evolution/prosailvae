@@ -194,11 +194,13 @@ def scale_pdf(pdf, support, support_scale, support_min, support_max=None):
         support_max = max(support_max, abs(ext_support[0,0,-1]), abs(ext_support[0,0,0]))
     upper_support = torch.arange(ext_support[0,0,-1]+sampling, 
                                   support_max+sampling, 
-                                  sampling).repeat(pdf.size(0), pdf.size(1), 1)
+                                  sampling).to(pdf.device).repeat(pdf.size(0), 
+                                                                  pdf.size(1), 1)
     lower_support = torch.arange(-support_max, ext_support[0,0,0], 
-                                  sampling).repeat(pdf.size(0), pdf.size(1), 1)
-    upper_pdf = torch.zeros((pdf.size(0), pdf.size(1), upper_support.size(2)))
-    lower_pdf = torch.zeros((pdf.size(0), pdf.size(1), lower_support.size(2)))
+                                  sampling).to(pdf.device).repeat(pdf.size(0), 
+                                                                  pdf.size(1), 1)
+    upper_pdf = torch.zeros((pdf.size(0), pdf.size(1), upper_support.size(2))).to(pdf.device)
+    lower_pdf = torch.zeros((pdf.size(0), pdf.size(1), lower_support.size(2))).to(pdf.device)
         
     ext_pdf = torch.cat([lower_pdf, pdf, upper_pdf], axis=2)
     ext_support = torch.cat([lower_support, ext_support, upper_support],axis=2)

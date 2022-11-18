@@ -82,7 +82,7 @@ def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampl
     len_pdf = len(lat_pdf_support)
     batch_size=mu.size(0)
     supports = lat_pdf_support.view(1, 1, -1).repeat(batch_size, latent_dim, 1).to(mu.device)
-    pdfs = torch.zeros((batch_size, latent_dim, len_pdf))
+    pdfs = torch.zeros((batch_size, latent_dim, len_pdf)).to(mu.device)
     pdfs_at_z = truncated_gaussian_pdf(supports, mu, sigma)
     cdfs_at_z = truncated_gaussian_cdf(supports, mu, sigma)
     for i in range(latent_dim):

@@ -43,8 +43,8 @@ class LinearVarSpace(SimVarSpace):
         return z
     
     def sim_pdf(self, pdfs, supports, n_pdf_sample_points=3001):
-        sim_pdfs = torch.zeros((pdfs.size(0), self.z2sim_mat.size(0), n_pdf_sample_points))
-        sim_supports = torch.zeros((pdfs.size(0), self.z2sim_mat.size(0), n_pdf_sample_points))
+        sim_pdfs = torch.zeros((pdfs.size(0), self.z2sim_mat.size(0), n_pdf_sample_points)).to(self.device)
+        sim_supports = torch.zeros((pdfs.size(0), self.z2sim_mat.size(0), n_pdf_sample_points)).to(self.device)
         for i in range(self.latent_dim):
             transfer_mat_line = self.z2sim_mat[i]
             sim_pdf, sim_support = convolve_pdfs(pdfs, supports, 

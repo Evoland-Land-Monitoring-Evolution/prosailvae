@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     
-    sample_ids = torch.arange(1,100000) 
+    sample_ids = torch.arange(1,1000000) 
     # load_train_valid_ids(k=params["k_fold"],
     #                   n=params["n_fold"], 
     #                   file_prefix=params["dataset_file_prefix"])

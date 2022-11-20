@@ -14,7 +14,7 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
     
     for i in range(len(maer.columns)):
-        plt.plot(alpha_pi, picp[i,:].detach(), label=maer.columns[i])
+        plt.plot(alpha_pi, picp[i,:].detach().cpu().numpy(), label=maer.columns[i])
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('PICP')
@@ -60,12 +60,12 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         ax2=[]
         for j in range(len(PROSAILVARS)):
             ax2.append(fig.add_subplot(gs[j, 1]))
-        rec_samples = rec.squeeze().detach().numpy()
+        rec_samples = rec.squeeze().detach().cpu().numpy()
         
         bands = ["b2", "b3", "b4", "b5", "b6", "b7", "b8", "b8a", "b11", "b12"]
         
         rec_samples = [rec_samples[j,:] for j in range(len(bands))]
-        sim_samples = sim.squeeze().detach().numpy()
+        sim_samples = sim.squeeze().detach().cpu().numpy()
         sim_samples = [sim_samples[j,:] for j in range(len(PROSAILVARS))]
         
         ind1 = np.arange(len(bands))
@@ -110,7 +110,8 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
                 v = v2[partname]
                 v.set_edgecolor('red')
                 v.set_linewidth(1)
-            ax2[j].barh([ind2[j]], ref.squeeze()[j].numpy(), width, align='center', 
+            ax2[j].barh([ind2[j]], ref.squeeze()[j].detach().cpu().numpy(), 
+                        width, align='center', 
                    alpha=0.5, color='royalblue', capsize=10)
     
             ax2[j].set_yticks([ind2[j] + width/2])

@@ -68,10 +68,12 @@ class LinearVarSpace(SimVarSpace):
     def sim_quantiles(self, pdfs, supports, alpha=[0.5], n_pdf_sample_points=3001):
         sim_pdfs, sim_supports = self.sim_pdf(pdfs, supports, n_pdf_sample_points=n_pdf_sample_points)
         sim_cdfs = pdfs2cdfs(sim_pdfs)
-        quantiles = torch.zeros((pdfs.size(0), pdfs.size(1), len(alpha)))
+        quantiles = torch.zeros((pdfs.size(0), pdfs.size(1), len(alpha))).to(pdfs.device)
         # for batch_sizes greater than 1 :
         for i in range(pdfs.size(0)):
-            quantiles[i,:,:] = cdfs2quantiles(sim_cdfs[i,:,:], sim_supports[i,:,:], alpha=alpha)
+            quantiles[i,:,:] = cdfs2quantiles(sim_cdfs[i,:,:].cpu(), 
+                                              sim_supports[i,:,:].cpu(), 
+                                              alpha=alpha).to(pdfs.device)
         return quantiles
     
     

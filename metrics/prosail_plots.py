@@ -14,7 +14,7 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
     
     for i in range(len(maer.columns)):
-        plt.plot(alpha_pi, picp[i,:], label=maer.columns[i])
+        plt.plot(alpha_pi, picp[i,:].detach(), label=maer.columns[i])
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('PICP')
@@ -45,8 +45,8 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
     for i in range(n_plots):
         sample_refl = loader.dataset[i:i+1][0].detach()
         sample_refl.requires_grad=False
-        angle = loader.dataset[0:1][1].detach()
-        ref =  loader.dataset[0:1][2].detach()
+        angle = loader.dataset[i:i+1][1].detach()
+        ref =  loader.dataset[i:i+1][2].detach()
         angle.requires_grad=False
         _,_,sim,rec = prosail_VAE.forward(sample_refl, angle, n_samples=1000)
 

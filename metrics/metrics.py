@@ -15,13 +15,13 @@ from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     metrics_dir = res_dir + "/metrics/"
     os.makedirs(metrics_dir)
-    pd.DataFrame(data=mae.view(1,len(PROSAILVARS)).detach().numpy(), columns=PROSAILVARS, 
+    pd.DataFrame(data=mae.view(1,len(PROSAILVARS)).detach().cpu().numpy(), columns=PROSAILVARS, 
                  index=[0]).to_csv(metrics_dir + "/mae.csv")
-    df_mpwi = pd.DataFrame(data=mpiw.view(-1, len(PROSAILVARS)).detach().numpy(), 
+    df_mpwi = pd.DataFrame(data=mpiw.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
     df_mpwi["alpha"] = alpha_pi
     df_mpwi.to_csv(metrics_dir + "/mpiw.csv")
-    df_picp = pd.DataFrame(data=picp.view(-1, len(PROSAILVARS)).detach().numpy(), 
+    df_picp = pd.DataFrame(data=picp.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
     df_picp["alpha"] = alpha_pi
     df_picp.to_csv(metrics_dir + "/picp.csv")
@@ -29,9 +29,9 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     il = get_ProsailVarsIntervalLen()
     mpiwr = (mpiw/il.view(-1,1)).transpose(0,1)
     maer = mae/il
-    df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).detach().numpy(), 
+    df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
-    df_mpiwr = pd.DataFrame(data=mpiwr.view(-1, len(PROSAILVARS)).detach().numpy(), 
+    df_mpiwr = pd.DataFrame(data=mpiwr.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")

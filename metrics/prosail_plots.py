@@ -36,7 +36,7 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     
     fig = plt.figure(dpi=150)
     ax = fig.add_axes([0,0,1,1])
-    ax.bar(maer.columns, mare.numpy())
+    ax.bar(maer.columns, mare.detach().cpu().numpy())
     plt.ylabel('MARE')
     plt.yscale('log')
     fig.savefig(res_dir+"/mare.svg")
@@ -83,7 +83,7 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
             v = v1[partname]
             v.set_edgecolor('red')
             v.set_linewidth(1)
-        ax1.barh(ind1, sample_refl.squeeze().numpy(), width, align='center', 
+        ax1.barh(ind1, sample_refl.squeeze().cpu().numpy(), width, align='center', 
                alpha=0.5, color='royalblue', capsize=10)
     
         ax1.set_yticks(ind1 + width/2)

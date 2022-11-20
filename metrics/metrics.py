@@ -26,7 +26,7 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     df_picp["alpha"] = alpha_pi
     df_picp.to_csv(metrics_dir + "/picp.csv")
     
-    il = get_ProsailVarsIntervalLen()
+    il = get_ProsailVarsIntervalLen().to(mpiw.device)
     mpiwr = (mpiw/il.view(-1,1)).transpose(0,1)
     maer = mae/il
     df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 

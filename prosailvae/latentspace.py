@@ -88,6 +88,8 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
             u_dist = torch.distributions.uniform.Uniform(u_lbound, u_ubound)
         except:
             print("Inverted uniform bounds for Inverse transform method !")
+            print(f"all ordrered : {(u_ubound>u_lbound).all()}")
+            print(f"any unordrered : {(u_ubound<=u_lbound).any()}")
             print(f"u : {u_ubound[u_ubound <= u_lbound]}")
             print(f"l : {u_lbound[u_ubound <= u_lbound]}")
             print(f"mu : {mu[u_ubound <= u_lbound]}")

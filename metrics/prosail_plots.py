@@ -43,10 +43,10 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
     for i in range(n_plots):
-        sample_refl = loader.dataset[i:i+1][0].detach()
+        sample_refl = loader.dataset[i:i+1][0].to(prosail_VAE.device)
         sample_refl.requires_grad=False
-        angle = loader.dataset[i:i+1][1].detach()
-        ref =  loader.dataset[i:i+1][2].detach()
+        angle = loader.dataset[i:i+1][1].to(prosail_VAE.device)
+        ref =  loader.dataset[i:i+1][2].to(prosail_VAE.device)
         angle.requires_grad=False
         _,_,sim,rec = prosail_VAE.forward(sample_refl, angle, n_samples=1000)
 

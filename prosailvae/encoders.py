@@ -109,8 +109,8 @@ class ProsailNNEncoder(Encoder):
             norm_mean = torch.zeros((1,s2refl_size))
         if norm_std is None:
             norm_std = torch.ones((1,s2refl_size))
-        self.norm_mean = norm_mean.to(device)
-        self.norm_std = norm_std.to(device)
+        self.norm_mean = norm_mean.float().to(device)
+        self.norm_std = norm_std.float().to(device)
         
     def encode(self, s2_refl, angles):
         normed_refl = (s2_refl - self.norm_mean) / self.norm_std

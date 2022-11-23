@@ -62,8 +62,8 @@ RSR of the sensor.
             norm_mean = torch.zeros((1, 10))
         if norm_std is None:
             norm_std = torch.ones((1, 10))
-        self.norm_mean = norm_mean.to(device)
-        self.norm_std = norm_std.to(device)
+        self.norm_mean = norm_mean.float().to(device)
+        self.norm_std = norm_std.float().to(device)
         self.apply_norm=apply_norm
         
     def __call__(self, prosail_output: torch.Tensor):

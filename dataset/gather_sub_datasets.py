@@ -35,7 +35,7 @@ def gather_dataset(data_dir):
 def get_sub_dataset_numbers(list_files, filename="prosail_s2_sim_refl"):
     list_dataset_nb = []
     for file in list_files:
-        list_dataset_nb.append(int(file.replace('_'+filename,'')))
+        list_dataset_nb.append(int(file.replace('_'+filename+'.pt','')))
     return list_dataset_nb
 
 def get_data_gathering_parser():

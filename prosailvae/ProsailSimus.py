@@ -158,7 +158,7 @@ class ProsailVarsDist:
                      'law': 'gaussian'},
              'cm': {'min': 0.003, 'max': 0.011, 'mean': 0.005, 'std': 0.005, 'lai_conv': 10,
                     'law': 'gaussian'},
-             'lai': {'min': 0.0, 'max': 5.0, 'mean': 0.5, 'std': 1.0, 'lai_conv': 10,
+             'lai': {'min': 0.0, 'max': 10.0, 'mean': 1.7, 'std': 0.35, 'lai_conv': None,
                      'law': 'lognormal'},
              'lidfa': {'min': 5.0, 'max': 80.0, 'mean': 40.0, 'std': 20.0, 'lai_conv': 10,
                        'law': 'gaussian'},
@@ -168,11 +168,11 @@ class ProsailVarsDist:
                        'law': 'uniform'},
              'rsoil': {'min': 0.3, 'max': 3.5, 'mean': None, 'std': None, 'lai_conv': None,
               'law': 'uniform'},
-             'tts' : {'min': 0, 'max': solar_max_zenith_angle, 'mean': None, 'std': None, 'lai_conv': None,
+             'tts' : {'min': 0.0, 'max': solar_max_zenith_angle, 'mean': None, 'std': None, 'lai_conv': None,
               'law': 'uniform'},
-             'tto' : {'min': 0, 'max': sentinel2_max_tto, 'mean': None, 'std': None, 'lai_conv': None,
+             'tto' : {'min': 0.0, 'max': sentinel2_max_tto, 'mean': None, 'std': None, 'lai_conv': None,
               'law': 'uniform'},
-             'psi' : {'min': 0, 'max': 360, 'mean': None, 'std': None, 'lai_conv': None,
+             'psi' : {'min': 0.0, 'max': 360, 'mean': None, 'std': None, 'lai_conv': None,
               'law': 'uniform'}
              }
     

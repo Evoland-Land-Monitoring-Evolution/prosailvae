@@ -149,7 +149,7 @@ def get_simloader(valid_ratio=None, sample_ids=None,
                                              os.pardir),"data/")
     s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
     len_dataset = s2_refl.size(0)
-    assert (sample_ids < len_dataset).all()
+    
     prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
     prosail_params = prosail_sim_vars[:,:-3]
     angles = prosail_sim_vars[:,-3:]
@@ -159,6 +159,7 @@ def get_simloader(valid_ratio=None, sample_ids=None,
         sub_prosail_params = prosail_params
         sub_angles = angles
     else:
+        assert (sample_ids < len_dataset).all()
         sub_s2_refl = s2_refl[sample_ids,:]
         sub_prosail_params = prosail_params[sample_ids,:]
         sub_angles = angles[sample_ids,:]

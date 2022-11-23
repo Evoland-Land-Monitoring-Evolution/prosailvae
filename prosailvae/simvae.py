@@ -227,6 +227,8 @@ class SimVAE(nn.Module):
                 tgt.requires_grad = True
                 loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, tgt, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
+            if torch.isnan(loss_sum).any():
+                print("NaN Loss encountered during training !")
             loss_sum.backward()
             optimizer.step()
         self.eval()
@@ -247,6 +249,7 @@ class SimVAE(nn.Module):
                     tgt = batch[2].to(self.device) 
                     loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, angles, tgt, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
-    
+            if torch.isnan(loss_sum).any():
+                print("NaN Loss encountered during validation !")
         return valid_loss_dict
 

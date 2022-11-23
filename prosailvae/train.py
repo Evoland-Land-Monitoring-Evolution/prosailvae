@@ -102,6 +102,9 @@ def get_prosailvae_train_parser():
     parser.add_argument("-r", dest="root_results_dir",
                         help="path to root results direcotry",
                         type=str, default="")
+    parser.add_argument("-rsr", dest="rsr_dir",
+                        help="directory of rsr_file",
+                        type=str, default='')
        
     return parser
 
@@ -167,7 +170,8 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
-    prosail_VAE = get_prosail_VAE(data_dir, vae_params=vae_params, device=device,
+    rsr_dir = parser.rsr_dir
+    prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std)
     
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])

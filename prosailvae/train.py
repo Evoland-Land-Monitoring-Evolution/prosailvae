@@ -142,9 +142,9 @@ if __name__ == "__main__":
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     
-    load_train_valid_ids(k=params["k_fold"],
-                      n=params["n_fold"], 
-                      file_prefix=params["dataset_file_prefix"])
+    # load_train_valid_ids(k=params["k_fold"],
+    #                   n=params["n_fold"], 
+    #                   file_prefix=params["dataset_file_prefix"])
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
                                               file_prefix=params["dataset_file_prefix"], 
                                               sample_ids=None,

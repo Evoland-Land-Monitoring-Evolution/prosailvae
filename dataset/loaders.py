@@ -148,10 +148,13 @@ def get_simloader(valid_ratio=None, sample_ids=None,
         data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                              os.pardir),"data/")
     s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
+    len_dataset = s2_refl.size(0)
+    assert (sample_ids < len_dataset).all()
     prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
     prosail_params = prosail_sim_vars[:,:-3]
     angles = prosail_sim_vars[:,-3:]
     if sample_ids is None:
+        sample_ids = torch.arange(0,len_dataset) 
         sub_s2_refl = s2_refl
         sub_prosail_params = prosail_params
         sub_angles = angles
@@ -216,6 +219,11 @@ def get_S2_id_split_parser():
                         help="path to data directory",
                         type=str, default="")
     return parser
+
+def get_norm_coefs(data_dir, file_prefix=''):
+    norm_mean = torch.load(data_dir+f"/{file_prefix}norm_mean.pt")
+    norm_std = torch.load(data_dir+f"/{file_prefix}norm_std.pt")
+    return norm_mean, norm_std
 
 if __name__ == "__main__":
     parser = get_S2_id_split_parser().parse_args()

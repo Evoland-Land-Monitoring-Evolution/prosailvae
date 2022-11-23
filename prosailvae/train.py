@@ -6,7 +6,7 @@ Created on Mon Nov 14 14:20:44 2022
 @author: yoel
 """
 from prosailvae.prosail_vae import get_prosail_VAE
-from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader
+from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader, get_norm_coefs
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
 from metrics.prosail_plots import plot_metrics, plot_rec_and_latent
@@ -102,6 +102,7 @@ def get_prosailvae_train_parser():
     parser.add_argument("-r", dest="root_results_dir",
                         help="path to root results direcotry",
                         type=str, default="")
+       
     return parser
 
 def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_dir):
@@ -141,13 +142,12 @@ if __name__ == "__main__":
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     
-    sample_ids = torch.arange(1,1000000) 
     load_train_valid_ids(k=params["k_fold"],
                       n=params["n_fold"], 
                       file_prefix=params["dataset_file_prefix"])
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
                                               file_prefix=params["dataset_file_prefix"], 
-                                              sample_ids=sample_ids,
+                                              sample_ids=None,
                                               batch_size=params["batch_size"],
                                               data_dir=data_dir)
     if len(parser.root_results_dir)==0:
@@ -165,7 +165,10 @@ if __name__ == "__main__":
                 "beta_kl":params["beta_kl"]}
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    prosail_VAE = get_prosail_VAE(data_dir, vae_params=vae_params, device=device)
+    
+    norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
+    prosail_VAE = get_prosail_VAE(data_dir, vae_params=vae_params, device=device,
+                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std)
     
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)

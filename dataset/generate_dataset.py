@@ -118,7 +118,7 @@ def get_data_generation_parser():
                         type=float, default=0)
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
-                        type=float, default=0)
+                        type=str, default='')
     return parser
 
 if  __name__ == "__main__":

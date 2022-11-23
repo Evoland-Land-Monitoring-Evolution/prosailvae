@@ -142,9 +142,9 @@ if __name__ == "__main__":
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     
     sample_ids = torch.arange(1,1000000) 
-    # load_train_valid_ids(k=params["k_fold"],
-    #                   n=params["n_fold"], 
-    #                   file_prefix=params["dataset_file_prefix"])
+    load_train_valid_ids(k=params["k_fold"],
+                      n=params["n_fold"], 
+                      file_prefix=params["dataset_file_prefix"])
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
                                               file_prefix=params["dataset_file_prefix"], 
                                               sample_ids=sample_ids,
@@ -187,7 +187,6 @@ if __name__ == "__main__":
     mae, mpiw, picp, mare = get_metrics(prosail_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
-    
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])

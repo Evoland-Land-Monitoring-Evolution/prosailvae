@@ -42,6 +42,8 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig.savefig(res_dir+"/mare.svg")
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
+    original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
+    prosail_VAE.decoder.ssimulator.apply_norm = False
     for i in range(n_plots):
         sample_refl = loader.dataset[i:i+1][0].to(prosail_VAE.device)
         sample_refl.requires_grad=False
@@ -124,3 +126,4 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         plt.tight_layout()
         plt.show()
         fig.savefig(res_dir + f'/reflectance_rec_{i}.svg')
+    prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm

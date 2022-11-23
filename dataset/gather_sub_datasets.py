@@ -13,7 +13,7 @@ def get_dataset_files(data_dir, filename=""):
     list_files = []
     for file in os.listdir(data_dir):
         if file.endswith(filename+".pt"):
-            list_files.append(os.path.join(data_dir, file))
+            list_files.append(file)
     return list_files
 
 def gather_dataset(data_dir):
@@ -22,14 +22,21 @@ def gather_dataset(data_dir):
     list_files_vars = get_dataset_files(data_dir, filename="prosail_sim_vars")
     prosail_vars = torch.tensor([[]])
     prosail_refl = torch.tensor([[]])
-    
-    for i in range(len(list_files_refl)):
+    list_dataset_nb = get_sub_dataset_numbers(list_files_refl, 
+                                              filename="prosail_s2_sim_refl")
+    for i in list_dataset_nb:
         vars_i = torch.load(data_dir + f"/{i}_" + list_files_refl[i])
         prosail_vars = torch.concat((prosail_vars, vars_i), axis=0)
         refl_i = torch.load(data_dir + f"/{i}_" + list_files_vars[i])
         prosail_refl = torch.concat((prosail_refl, refl_i), axis=0)
     
     return prosail_refl, prosail_vars
+
+def get_sub_dataset_numbers(list_files, filename="prosail_s2_sim_refl"):
+    list_dataset_nb = []
+    for file in list_files:
+        list_dataset_nb.append(int(file.replace('_'+filename,'')))
+    return list_dataset_nb
 
 def get_data_gathering_parser():
     """
@@ -43,8 +50,14 @@ def get_data_gathering_parser():
 
     return parser
 
+def get_refl_normalization(prosail_refl):
+    return prosail_refl.mean(0), prosail_refl.std(0)
+
 if __name__ == "__main__":
     parser = get_data_gathering_parser().parse_args()
     prosail_refl, prosail_vars = gather_dataset(parser.data_dir)
+    norm_mean, norm_std = get_refl_normalization(prosail_refl)
     torch.save(prosail_vars, parser.data_dir + "/full_" + "prosail_sim_vars.pt") 
     torch.save(prosail_refl, parser.data_dir + "/full_" + "prosail_s2_sim_refl.pt") 
+    torch.save(norm_mean, parser.data_dir + "/full_" + "norm_mean.pt") 
+    torch.save(norm_std, parser.data_dir + "/full_" + "norm_std.pt") 

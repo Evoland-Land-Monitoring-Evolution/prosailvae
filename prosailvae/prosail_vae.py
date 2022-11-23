@@ -20,10 +20,15 @@ from dataset.loaders import get_simloader
 import time
 import torch.optim as optim
 
-def get_prosail_VAE(data_dir, vae_params={"input_size":10,  
-                              "hidden_layers_size":[400, 500, 300, 100], 
-                              "encoder_last_activation":None, "supervised":False,  
-                              "beta_kl":1}, device='cpu'):
+def get_prosail_VAE(data_dir, 
+                    vae_params={"input_size":10,  
+                                "hidden_layers_size":[400, 500, 300, 100], 
+                                "encoder_last_activation":None, 
+                                "supervised":False,  
+                                "beta_kl":1}, 
+                    device='cpu',
+                    refl_norm_mean=None,
+                    refl_norm_std=None):
     latent_dim=11
     output_size = latent_dim * 2
     
@@ -31,7 +36,9 @@ def get_prosail_VAE(data_dir, vae_params={"input_size":10,
                         output_size=output_size, 
                         hidden_layers_size=vae_params["hidden_layers_size"], 
                         last_activation=vae_params["encoder_last_activation"], 
-                        device=device)
+                        device=device,
+                        norm_mean=refl_norm_mean,
+                        norm_std=refl_norm_std)
     lat_space = OrderedTruncatedGaussianLatent(device=device, 
                                                latent_dim=latent_dim,
                                                max_matrix=None)
@@ -45,7 +52,9 @@ def get_prosail_VAE(data_dir, vae_params={"input_size":10,
                                      sim_pdf_support_span=sim_pdf_support_span,  
                                      device=device)
     psimulator = ProsailSimulator(device=device)
-    ssimulator = SensorSimulator(data_dir + "/sentinel2.rsr", device=device)
+    ssimulator = SensorSimulator(data_dir + "/sentinel2.rsr", device=device,
+                                 norm_mean=refl_norm_mean,
+                                 norm_std=refl_norm_std)
     sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
                                             ssimulator=ssimulator)
     

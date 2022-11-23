@@ -32,7 +32,10 @@ RSR of the sensor.
                  rsr_file: str,
                  prospect_range: Tuple[int, int] = (400, 2500),
                  bands=[1,2,3,4,5,6,7,8 ,9 ,11],
-                 device='cpu'):
+                 device='cpu',
+                 norm_mean=None,
+                 norm_std=None,
+                 apply_norm=True):
           
         super().__init__()
         self.device=device
@@ -55,10 +58,18 @@ RSR of the sensor.
         self.rsr = self.rsr_prospect[2:, :].unsqueeze(0)
         self.rsr = self.rsr[:,bands,:]
         
+        if norm_mean is None:
+            norm_mean = torch.zeros((1, 10))
+        if norm_std is None:
+            norm_std = torch.ones((1, 10))
+        self.norm_mean = norm_mean
+        self.norm_std = norm_std
+        self.apply_norm=apply_norm
+        
     def __call__(self, prosail_output: torch.Tensor):
         return self.forward(prosail_output)
-
-    def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
+    
+    def apply_s2_sensor(self, prosail_output: torch.Tensor) -> torch.Tensor:
         # The input should have shape = batch, wavelengths, otherwise,
         # we add the first dimension
         x = prosail_output
@@ -68,6 +79,12 @@ RSR of the sensor.
             x = x.unsqueeze(1)
         simu = (self.rsr * x * self.solar).sum(
             axis=2) / (self.rsr * self.solar).sum(axis=2)  # type: ignore
+        return simu
+    
+    def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
+        simu = self.apply_s2_sensor(prosail_output)
+        if self.apply_norm:
+            simu = (simu - self.norm_mean) / self.norm_std
         return simu  # type: ignore
 
 
@@ -77,7 +94,6 @@ class ProsailSimulator():
         self.factor = factor
         self.typelidf = typelidf
         self.device=device
-
     def __call__(self, params):
         return self.forward(params)
 
@@ -87,12 +103,14 @@ class ProsailSimulator():
         assert params.shape[-1] == 14, f"{params.shape[-1]}"
         if len(params.shape) == 1:
             params = params.unsqueeze(0)
-        return prosail.run_prosail(
+        prosail_refl = prosail.run_prosail(
             params,
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
             device=self.device
         ).float()
+        
+        return prosail_refl
     
 def get_ProsailVarsIntervalLen():
     d = ProsailVarsDist()
@@ -337,13 +355,5 @@ def plot_rsr(rsr, res_dir='.'):
     ax2t.xaxis.set_minor_locator(AutoMinorLocator())
     ax2t.set_xticklabels([])
     ax3.tick_params(axis="x", which='both', bottom=True, top=True, labelbottom=True, labeltop=False)
-    # ax3t = ax3.twiny()
-    # ax3t.spines['left'].set_visible(False)
-    # ax3t.spines['right'].set_visible(False)
-    # ax3t.tick_params(which='both', direction = 'in')
-    # ax3t.tick_params(which='major', length=5)
-    # ax3t.tick_params(which='minor', length=3)
-    # ax3t.xaxis.set_minor_locator(AutoMinorLocator())
-    # ax3t.set_xticklabels([])
-    
+
     fig.savefig(res_dir+'/rsr.svg')

@@ -25,9 +25,9 @@ def gather_dataset(data_dir):
                                               filename="prosail_s2_sim_refl")
     for i in list_dataset_nb:
         vars_i = torch.load(data_dir + f"/{i}_prosail_sim_vars.pt" )
-        prosail_vars = torch.concat((prosail_vars, vars_i), axis=0)
+        prosail_vars = torch.cat((prosail_vars, vars_i), axis=0)
         refl_i = torch.load(data_dir + f"/{i}_prosail_s2_sim_refl.pt")
-        prosail_refl = torch.concat((prosail_refl, refl_i), axis=0)
+        prosail_refl = torch.cat((prosail_refl, refl_i), axis=0)
     
     return prosail_refl, prosail_vars
 

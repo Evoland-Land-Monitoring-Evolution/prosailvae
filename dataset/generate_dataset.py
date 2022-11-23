@@ -68,7 +68,7 @@ def sample_prosail_vars(var_dists):
 
     return N, cab, car, cbrown, caw, cm, lai, lidfa, hspot, psoil, rsoil, tts, tto, psi
 
-def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0):
+def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir=''):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, 10))
     with numpyro.handlers.seed(rng_seed=5):
@@ -76,7 +76,7 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0):
             prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist)
             
             psimulator = ProsailSimulator()
-            ssimulator = SensorSimulator(data_dir + "/sentinel2.rsr")
+            ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
             mean = ssimulator(psimulator(torch.from_numpy(prosail_vars[i,:]).view(1,-1).float())).numpy()
             if noise>0:
                 sigma = numpyro.sample("sigma", dist.Uniform(0., noise))
@@ -85,16 +85,17 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0):
                 prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
-def save_dataset(save_dir, data_file_prefix, nb_simus, noise=0):
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0):
     prosail_vars, prosail_s2_sim = simulate_prosail_dataset(data_dir,
                                                             nb_simus=nb_simus, 
-                                                            noise=noise)
+                                                            noise=noise,
+                                                            rsr_dir=rsr_dir)
     
     torch.save(torch.from_numpy(prosail_vars), 
-               save_dir + data_file_prefix + "prosail_sim_vars.pt") 
+               data_dir + data_file_prefix + "prosail_sim_vars.pt") 
     
     torch.save(torch.from_numpy(prosail_s2_sim), 
-               save_dir + data_file_prefix + "prosail_s2_sim_refl.pt") 
+               data_dir + data_file_prefix + "prosail_s2_sim_refl.pt") 
     
 
 def get_data_generation_parser():
@@ -115,6 +116,9 @@ def get_data_generation_parser():
     parser.add_argument("-s", dest="noise",
                         help="gaussian noise level on simulated data",
                         type=float, default=0)
+    parser.add_argument("-rsr", dest="rsr_dir",
+                        help="directory of rsr_file",
+                        type=float, default=0)
     return parser
 
 if  __name__ == "__main__":
@@ -124,5 +128,8 @@ if  __name__ == "__main__":
                                          os.pardir), "data/")  
     else: 
         data_dir = parser.data_dir
-    save_dataset(data_dir, parser.file_prefix, parser.n_samples, parser.noise)
+    if not os.path.isdir(data_dir):
+        os.makedirs(data_dir)
+    save_dataset(data_dir, parser.file_prefix,parser.rsr_dir,
+                 parser.n_samples, parser.noise)
     

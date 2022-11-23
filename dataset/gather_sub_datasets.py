@@ -19,8 +19,8 @@ def get_dataset_files(data_dir, filename=""):
 def gather_dataset(data_dir):
 
     list_files_refl = get_dataset_files(data_dir, filename="prosail_s2_sim_refl")
-    prosail_vars = torch.tensor([[]])
-    prosail_refl = torch.tensor([[]])
+    prosail_vars = torch.tensor([])
+    prosail_refl = torch.tensor([])
     list_dataset_nb = get_sub_dataset_numbers(list_files_refl, 
                                               filename="prosail_s2_sim_refl")
     for i in list_dataset_nb:

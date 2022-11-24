@@ -113,7 +113,11 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_
     all_valid_loss_df = pd.DataFrame()
     best_val_loss = torch.inf
     for epoch in trange(n_epoch, desc='phenoVAE training', leave=True):
-        train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=10)
+        try:
+            train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=10)
+        except:
+            print(Error during Training !)
+            break
         valid_loss_dict = phenoVAE.validate(train_loader, n_samples=10)
         train_loss_dict['epoch']=epoch
         valid_loss_dict['epoch']=epoch
@@ -202,9 +206,4 @@ if __name__ == "__main__":
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare)
     plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=20)
-    
-    
-
-
-    
     

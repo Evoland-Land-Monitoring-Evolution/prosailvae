@@ -158,7 +158,6 @@ def loss_curve(loss_df, save_file, log_scale=False):
             ax.set_yscale('log')
         ax.plot(epochs,loss, label=loss_names[i])
     ax.legend()
-    ax.set_xticks(epochs)
     ax.set_xlabel('epoch')
     ax.set_ylabel('loss')
     fig.savefig(save_file)

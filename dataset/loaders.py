@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import prosailvae
 import torch
+import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 import argparse    
@@ -222,8 +223,12 @@ def get_S2_id_split_parser():
     return parser
 
 def get_norm_coefs(data_dir, file_prefix=''):
-    norm_mean = torch.from_numpy(torch.load(data_dir+f"/{file_prefix}norm_mean.pt"))
-    norm_std = torch.from_numpy(torch.load(data_dir+f"/{file_prefix}norm_std.pt"))
+    norm_mean = torch.load(data_dir+f"/{file_prefix}norm_mean.pt")
+    norm_std = torch.load(data_dir+f"/{file_prefix}norm_std.pt")
+    if type(norm_mean) is np.ndarray:
+        norm_mean = torch.from_numpy(norm_mean)
+    if type(norm_std) is np.ndarray:
+        norm_std = torch.from_numpy(norm_std)
     return norm_mean, norm_std
 
 if __name__ == "__main__":

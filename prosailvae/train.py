@@ -116,7 +116,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_
         try:
             train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=10)
         except:
-            print(Error during Training !)
+            print("Error during Training !")
             break
         valid_loss_dict = phenoVAE.validate(train_loader, n_samples=10)
         train_loss_dict['epoch']=epoch

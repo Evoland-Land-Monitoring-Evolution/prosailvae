@@ -146,19 +146,19 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         fig.savefig(res_dir + f'/reflectance_rec_{i}.svg')
     prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
     
-    def loss_curve(loss_df, save_file, log_scale=False):
-        loss_names = loss_df.columns.values.tolist()
-        loss_names.remove("epoch")
-        epochs = loss_df["epoch"]
-        fig, ax = plt.subplots(dpi=150)
-        for i in range(len(loss_names)):
-            loss = loss_df[loss_names[i]].values
-            if (loss<=0).any() or log_scale:
-                loss += loss.min() + 1
-                ax.set_yscale('log')
-            ax.plot(epochs,loss, label=loss_names[i])
-        ax.legend()
-        ax.set_xticks(epochs)
-        ax.set_xlabel('epoch')
-        ax.set_ylabel('loss')
-        fig.savefig(save_file)
+def loss_curve(loss_df, save_file, log_scale=False):
+    loss_names = loss_df.columns.values.tolist()
+    loss_names.remove("epoch")
+    epochs = loss_df["epoch"]
+    fig, ax = plt.subplots(dpi=150)
+    for i in range(len(loss_names)):
+        loss = loss_df[loss_names[i]].values
+        if (loss<=0).any() or log_scale:
+            loss += loss.min() + 1
+            ax.set_yscale('log')
+        ax.plot(epochs,loss, label=loss_names[i])
+    ax.legend()
+    ax.set_xticks(epochs)
+    ax.set_xlabel('epoch')
+    ax.set_ylabel('loss')
+    fig.savefig(save_file)

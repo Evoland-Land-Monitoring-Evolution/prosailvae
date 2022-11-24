@@ -45,22 +45,25 @@ def get_metrics(prosailVAE, loader,
     rel_error = torch.tensor([]).to(device)
     pic = torch.tensor([]).to(device)
     piw = torch.tensor([]).to(device)
-    
+    sim_dist = torch.tensor([]).to(device)
     pi_lower = (np.array(alpha_conf)/2).tolist()
     pi_upper = (1-np.array(alpha_conf)/2).tolist()
+    tgt_dist = torch.tensor([]).to(device)
     with torch.no_grad():
         for i, batch in enumerate(tqdm(loader, desc='Computing metrics', leave=True)):
             data = batch[0].to(device)
             angles = batch[1].to(device)
             tgt = batch[2].to(device)
-            dist_params, z_mode, pheno_mode, _ = prosailVAE.point_estimate_rec(data, angles, mode='sim_mode')
+            dist_params, z_mode, prosail_params_mode, _ = prosailVAE.point_estimate_rec(data, angles, mode='sim_mode')
             lat_pdfs, lat_supports = prosailVAE.lat_space.latent_pdf(dist_params)
             pheno_pdfs, pheno_supports = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
             pheno_pi_lower = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
             pheno_pi_upper = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
-            error_i = pheno_mode.squeeze() - tgt
+            error_i = prosail_params_mode.squeeze() - tgt
+            tgt_dist = torch.concat([tgt_dist, tgt], axis=0)
             error = torch.concat([error, error_i], axis=0)
-            rel_error_i = (pheno_mode.squeeze() - tgt).abs() / (tgt.abs()+1e-10)
+            sim_dist = torch.concat([sim_dist, prosail_params_mode], axis=0)
+            rel_error_i = (prosail_params_mode.squeeze() - tgt).abs() / (tgt.abs()+1e-10)
             rel_error = torch.concat([rel_error, rel_error_i], axis=0)
             piw_i = pheno_pi_upper - pheno_pi_lower
             piw = torch.concat([piw, piw_i], axis=0)
@@ -71,4 +74,4 @@ def get_metrics(prosailVAE, loader,
     picp = pic.mean(axis=0)    
     mpiw = piw.mean(axis=0)
     mare = rel_error.mean(axis=0)
-    return mae, mpiw, picp, mare
+    return mae, mpiw, picp, mare, sim_dist, tgt_dist

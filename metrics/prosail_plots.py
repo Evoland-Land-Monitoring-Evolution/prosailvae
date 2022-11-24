@@ -144,6 +144,7 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         plt.tight_layout()
         plt.show()
         fig.savefig(res_dir + f'/reflectance_rec_{i}.svg')
+        plt.close('all')
     prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
     
 def loss_curve(loss_df, save_file, log_scale=False):
@@ -161,3 +162,56 @@ def loss_curve(loss_df, save_file, log_scale=False):
     ax.set_xlabel('epoch')
     ax.set_ylabel('loss')
     fig.savefig(save_file)
+    
+def plot_param_dist(res_dir, sim_dist, tgt_dist):
+    fig = plt.figure(figsize=(18,12), dpi=150,)
+    ax2=[]
+    gs = fig.add_gridspec(len(PROSAILVARS),1)
+    for j in range(len(PROSAILVARS)):
+        ax2.append(fig.add_subplot(gs[j, 0]))
+    
+    for j in range(len(PROSAILVARS)):
+        v2 = ax2[j].violinplot(sim_dist[:,j].squeeze(), points=100, positions=[0],
+                showmeans=True, showextrema=True, showmedians=False, vert=False)
+        min_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["min"]
+        max_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["max"]
+        
+        ax2[j].set_xlim(min_b, max_b)
+
+        
+        for b in v2['bodies']:
+            # get the center
+            m = np.mean(b.get_paths()[0].vertices[:, 1])
+            b.get_paths()[0].vertices[:, 1] = np.clip(b.get_paths()[0].vertices[:, 1], m, np.inf)
+            b.set_color('r')
+            b.set_facecolor('blue')
+            b.set_edgecolor('blue')
+        for partname in ('cbars','cmins','cmaxes','cmeans'):
+            v = v2[partname]
+            v.set_edgecolor('blue')
+            v.set_linewidth(1)
+            
+        v2 = ax2[j].violinplot(tgt_dist[:,j], points=100, positions=[0],
+                showmeans=True, showextrema=True, showmedians=False, vert=False)
+        for b in v2['bodies']:
+            # get the center
+            m = np.mean(b.get_paths()[0].vertices[:, 1])
+            b.get_paths()[0].vertices[:, 1] = np.clip(b.get_paths()[0].vertices[:, 1], - np.inf, m)
+            b.set_color('r')
+            b.set_facecolor('red')
+            b.set_edgecolor('red')
+        for partname in ('cbars','cmins','cmaxes','cmeans'):
+            v = v2[partname]
+            v.set_edgecolor('red')
+            v.set_linewidth(1)
+            
+        ax2[j].set_yticks([0])
+        ax2[j].set_yticklabels([])
+        ax2[j].set_ylabel(PROSAILVARS[j])
+        ax2[j].xaxis.grid(True)
+        
+        
+    # Save the figure and show
+    plt.tight_layout()
+    plt.show()
+    fig.savefig(res_dir + '/prosail_dist.svg')

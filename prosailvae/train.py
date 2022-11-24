@@ -9,7 +9,7 @@ from prosailvae.prosail_vae import get_prosail_VAE
 from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader, get_norm_coefs
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
-from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve
+from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist
 from datetime import datetime 
 import torch.optim as optim
 import json
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     alpha_pi.reverse()
     prosail_VAE.eval()
     
-    mae, mpiw, picp, mare = get_metrics(prosail_VAE, loader, 
+    mae, mpiw, picp, mare, sim_dist, tgt_dist = get_metrics(prosail_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
@@ -210,4 +210,5 @@ if __name__ == "__main__":
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare)
     plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=20)
+    plot_param_dist(res_dir, sim_dist, tgt_dist)
     

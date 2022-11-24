@@ -9,7 +9,7 @@ from prosailvae.prosail_vae import get_prosail_VAE
 from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader, get_norm_coefs
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
-from metrics.prosail_plots import plot_metrics, plot_rec_and_latent
+from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve
 from datetime import datetime 
 import torch.optim as optim
 import json
@@ -97,14 +97,14 @@ def get_prosailvae_train_parser():
     
     parser.add_argument("-d", dest="data_dir",
                         help="path to data direcotry",
-                        type=str, default="")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
     
     parser.add_argument("-r", dest="root_results_dir",
                         help="path to root results direcotry",
                         type=str, default="")
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
-                        type=str, default='')
+                        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
        
     return parser
 
@@ -178,19 +178,22 @@ if __name__ == "__main__":
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
                                                           optimizer, 
-                                                          params['epochs'],
+                                                          3,#params['epochs'],
                                                           train_loader, 
                                                           valid_loader,
                                                           res_dir=res_dir) 
+    
     loss_dir = res_dir + "/loss/"
     os.makedirs(loss_dir)
     all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
     all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
-
+    loss_curve(all_train_loss_df, savefile=loss_dir+"train_loss.svg")
+    loss_curve(all_train_loss_df, savefile=loss_dir+"valid_loss.svg")
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
     prosail_VAE.eval()
+    
     mae, mpiw, picp, mare = get_metrics(prosail_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
@@ -198,10 +201,10 @@ if __name__ == "__main__":
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare)
-    plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10)
+    plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=20)
     
     
-    
-    
+
+
     
     

@@ -222,8 +222,8 @@ def get_S2_id_split_parser():
     return parser
 
 def get_norm_coefs(data_dir, file_prefix=''):
-    norm_mean = torch.load(data_dir+f"/{file_prefix}norm_mean.pt")
-    norm_std = torch.load(data_dir+f"/{file_prefix}norm_std.pt")
+    norm_mean = torch.from_numpy(torch.load(data_dir+f"/{file_prefix}norm_mean.pt"))
+    norm_std = torch.from_numpy(torch.load(data_dir+f"/{file_prefix}norm_std.pt"))
     return norm_mean, norm_std
 
 if __name__ == "__main__":

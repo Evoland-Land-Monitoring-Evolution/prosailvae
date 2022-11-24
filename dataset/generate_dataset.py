@@ -85,17 +85,22 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir=''):
                 prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
+def get_refl_normalization(prosail_refl):
+    return prosail_refl.mean(0), prosail_refl.std(0)
+
 def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0):
     prosail_vars, prosail_s2_sim = simulate_prosail_dataset(data_dir,
                                                             nb_simus=nb_simus, 
                                                             noise=noise,
                                                             rsr_dir=rsr_dir)
-    
+    norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
     torch.save(torch.from_numpy(prosail_vars), 
                data_dir + data_file_prefix + "prosail_sim_vars.pt") 
     
     torch.save(torch.from_numpy(prosail_s2_sim), 
                data_dir + data_file_prefix + "prosail_s2_sim_refl.pt") 
+    torch.save(norm_mean, parser.data_dir + data_file_prefix+ "norm_mean.pt") 
+    torch.save(norm_std, parser.data_dir + data_file_prefix + "norm_std.pt") 
     
 
 def get_data_generation_parser():
@@ -106,19 +111,19 @@ def get_data_generation_parser():
 
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
-                        type=int, default=100000)
+                        type=int, default=1000)
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
                         type=str, default="sim_")
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
-                        type=str, default="")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data")
     parser.add_argument("-s", dest="noise",
                         help="gaussian noise level on simulated data",
                         type=float, default=0)
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
-                        type=str, default='')
+                        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data')
     return parser
 
 if  __name__ == "__main__":
@@ -130,6 +135,6 @@ if  __name__ == "__main__":
         data_dir = parser.data_dir
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
-    save_dataset(data_dir, parser.file_prefix,parser.rsr_dir,
+    save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
                  parser.n_samples, parser.noise)
     

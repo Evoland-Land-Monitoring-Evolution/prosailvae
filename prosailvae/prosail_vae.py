@@ -20,7 +20,7 @@ from dataset.loaders import get_simloader
 import time
 import torch.optim as optim
 
-def get_prosail_VAE(data_dir, 
+def get_prosail_VAE(rsr_dir, 
                     vae_params={"input_size":10,  
                                 "hidden_layers_size":[400, 500, 300, 100], 
                                 "encoder_last_activation":None, 
@@ -52,7 +52,7 @@ def get_prosail_VAE(data_dir,
                                      sim_pdf_support_span=sim_pdf_support_span,  
                                      device=device)
     psimulator = ProsailSimulator(device=device)
-    ssimulator = SensorSimulator(data_dir + "/sentinel2.rsr", device=device,
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", device=device,
                                  norm_mean=refl_norm_mean,
                                  norm_std=refl_norm_std)
     sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,

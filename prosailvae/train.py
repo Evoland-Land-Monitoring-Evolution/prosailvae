@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
                                                           optimizer, 
-                                                          3,#params['epochs'],
+                                                          params['epochs'],
                                                           train_loader, 
                                                           valid_loader,
                                                           res_dir=res_dir) 
@@ -187,8 +187,8 @@ if __name__ == "__main__":
     os.makedirs(loss_dir)
     all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
     all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
-    loss_curve(all_train_loss_df, savefile=loss_dir+"train_loss.svg")
-    loss_curve(all_train_loss_df, savefile=loss_dir+"valid_loss.svg")
+    loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg")
+    loss_curve(all_train_loss_df, save_file=loss_dir+"valid_loss.svg")
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]

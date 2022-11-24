@@ -215,3 +215,19 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
     plt.tight_layout()
     plt.show()
     fig.savefig(res_dir + '/prosail_dist.svg')
+
+def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist):
+    for i in range(len(PROSAILVARS)):
+        fig, ax = plt.subplots(figsize=(7,7), dpi=150)
+        ax.scatter(sim_dist[:,i],tgt_dist[:,i])
+        ax.set_xlabel(f'{PROSAILVARS[i]} predicted')
+        ax.set_ylabel(f'{PROSAILVARS[i]} reference')
+        ax.set_xlim(ProsailVarsDist.Dists[PROSAILVARS[i]]["min"],
+                    ProsailVarsDist.Dists[PROSAILVARS[i]]["max"])
+        ax.set_ylim(ProsailVarsDist.Dists[PROSAILVARS[i]]["min"],
+                    ProsailVarsDist.Dists[PROSAILVARS[i]]["max"])
+        ax.plot([ProsailVarsDist.Dists[PROSAILVARS[i]]["min"], 
+                 ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]],
+                [ProsailVarsDist.Dists[PROSAILVARS[i]]["min"], 
+                 ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]],color='black')
+        fig.savefig(res_dir + f'/pred_vs_ref_{PROSAILVARS[i]}.svg')

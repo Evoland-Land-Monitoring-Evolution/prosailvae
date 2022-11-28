@@ -6,9 +6,10 @@ Created on Thu Nov 17 11:46:20 2022
 @author: yoel
 """
 import matplotlib.pyplot as plt
-import torch
 import numpy as np
-from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist
+import pandas as pd
+from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
+
 
 def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
@@ -67,14 +68,13 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
             ax2.append(fig.add_subplot(gs[j, 1]))
         rec_samples = rec.squeeze().detach().cpu().numpy()
         
-        bands = ["b2", "b3", "b4", "b5", "b6", "b7", "b8", "b8a", "b11", "b12"]
         
-        rec_samples = [rec_samples[j,:] for j in range(len(bands))]
+        
+        rec_samples = [rec_samples[j,:] for j in range(len(BANDS))]
         sim_samples = sim.squeeze().detach().cpu().numpy()
         sim_samples = [sim_samples[j,:] for j in range(len(PROSAILVARS))]
         
-        ind1 = np.arange(len(bands))
-        width = 0.35
+        ind1 = np.arange(len(BANDS))
         ax1.set_xlim(0,1)
         v1 = ax1.violinplot(rec_samples, points=100, positions=ind1,
                showmeans=True, showextrema=True, showmedians=False, vert=False)
@@ -95,11 +95,9 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
                     ind1-0.1, color='black',s=15)
     
         ax1.set_yticks(ind1)
-        ax1.set_yticklabels(bands)
+        ax1.set_yticklabels(BANDS)
         ax1.xaxis.grid(True)
-        
-        # ind2 = np.arange(len(PROSAILVARS))
-        width = 0.35
+
         for j in range(len(PROSAILVARS)):
             # v2 = ax2[j].violinplot(sim_samples[j], points=100, positions=[ind2[j]+width],
             #        showmeans=True, showextrema=True, showmedians=False, vert=False)
@@ -231,3 +229,162 @@ def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist):
                 [ProsailVarsDist.Dists[PROSAILVARS[i]]["min"], 
                  ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]],color='black')
         fig.savefig(res_dir + f'/pred_vs_ref_{PROSAILVARS[i]}.svg')
+
+def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=None):
+
+    filename='/sim_refl_dist.svg'
+    xmax=1
+    xmin=0
+    if normalized:
+        # bands_dist = (bands_dist - ssimulator.norm_mean) / ssimulator.norm_std
+        filename='/sim_normalized_refl_dist.svg'
+        xmax=6
+        xmin=-6
+    fig = plt.figure(figsize=(18,12), dpi=150,)
+    ax2=[]
+    gs = fig.add_gridspec(len(BANDS),1)
+    for j in range(len(BANDS)):
+        ax2.append(fig.add_subplot(gs[j, 0]))
+    
+    for j in range(len(BANDS)):
+        v2 = ax2[j].violinplot(rec_dist[:,j].squeeze(), points=100, positions=[0],
+                showmeans=True, showextrema=True, showmedians=False, vert=False)
+
+        ax2[j].set_xlim(xmin, xmax)
+
+        
+        for b in v2['bodies']:
+            # get the center
+            m = np.mean(b.get_paths()[0].vertices[:, 1])
+            b.get_paths()[0].vertices[:, 1] = np.clip(b.get_paths()[0].vertices[:, 1], m, np.inf)
+            b.set_color('r')
+            b.set_facecolor('blue')
+            b.set_edgecolor('blue')
+        for partname in ('cbars','cmins','cmaxes','cmeans'):
+            v = v2[partname]
+            v.set_edgecolor('blue')
+            v.set_linewidth(1)
+        
+        v2 = ax2[j].violinplot(refl_dist[:,j].squeeze(), points=100, positions=[0],
+                showmeans=True, showextrema=True, showmedians=False, vert=False)
+
+        ax2[j].set_xlim(xmin, xmax)
+
+        
+        for b in v2['bodies']:
+            # get the center
+            m = np.mean(b.get_paths()[0].vertices[:, 1])
+            b.get_paths()[0].vertices[:, 1] = np.clip(b.get_paths()[0].vertices[:, 1], -np.inf, m)
+            b.set_color('r')
+            b.set_facecolor('red')
+            b.set_edgecolor('red')
+        for partname in ('cbars','cmins','cmaxes','cmeans'):
+            v = v2[partname]
+            v.set_edgecolor('red')
+            v.set_linewidth(1)
+            
+            
+        ax2[j].set_yticks([0])
+        ax2[j].set_yticklabels([])
+        ax2[j].set_ylabel(BANDS[j])
+        ax2[j].xaxis.grid(True)
+        
+        
+    # Save the figure and show
+    plt.tight_layout()
+    plt.show()
+    fig.savefig(res_dir + filename)
+    return 
+
+def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='', 
+              filename='pair_plot.svg'):
+    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap):
+        """Plots single pair of features.
+    
+        Parameters
+        ----------
+        ax : Axes
+            matplotlib axis to be plotted
+        feature_ind1 : int
+            index of first feature to be plotted
+        feature_ind2 : int
+            index of second feature to be plotted
+        _X : numpy.ndarray
+            Feature dataset of of shape m x n
+        _y : numpy.ndarray
+            Target list of shape 1 x n
+        _features : list of str
+            List of n feature titles
+        colormap : dict
+            Color map of classes existing in target
+    
+        Returns
+        -------
+        None
+        """
+    
+        # Plot distribution histogram if the features are the same (diagonal of the pair-plot).
+        if feature_ind1 == feature_ind2:
+            tdf = pd.DataFrame(_X[:, [feature_ind1]], columns = [_features[feature_ind1]])
+            tdf['target'] = _y
+            for c in colormap.keys():
+                tdf_filtered = tdf.loc[tdf['target']==c]
+                ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = 30)
+        else:
+            # other wise plot the pair-wise scatter plot
+            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]])
+            tdf['target'] = _y
+            for c in colormap.keys():
+                tdf_filtered = tdf.loc[tdf['target']==c]
+                ax[feature_ind1, feature_ind2].scatter(x = tdf_filtered[_features[feature_ind2]], y = tdf_filtered[_features[feature_ind1]], color=colormap[c])
+    
+        # Print the feature labels only on the left side of the pair-plot figure
+        # and bottom side of the pair-plot figure. 
+        # Here avoiding printing the labels for inner axis plots.
+        if feature_ind1 == len(_features) - 1:
+            ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel='')
+        if feature_ind2 == 0:
+            if feature_ind1 == len(_features) - 1:
+                ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel=_features[feature_ind1])
+            else:
+                ax[feature_ind1, feature_ind2].set(xlabel='', ylabel=_features[feature_ind1])
+    
+    def myplotGrid(X, y, features, colormap={0: "red", 1: "green", 2: "blue"}):
+        """Plots a pair grid of the given features.
+    
+        Parameters
+        ----------
+        X : numpy.ndarray
+            Dataset of shape m x n
+        y : numpy.ndarray
+            Target list of shape 1 x n
+        features : list of str
+            List of n feature titles
+    
+        Returns
+        -------
+        None
+        """
+    
+        feature_count = len(features)
+        # Create a matplot subplot area with the size of [feature count x feature count]
+        fig, axis = plt.subplots(nrows=feature_count, ncols=feature_count)
+        # Setting figure size helps to optimize the figure size according to the feature count.
+        fig.set_size_inches(feature_count * 4, feature_count * 4)
+    
+        # Iterate through features to plot pairwise.
+        for i in range(0, feature_count):
+            for j in range(0, feature_count):
+                plot_single_pair(axis, i, j, X, y, features, colormap)
+
+        plt.show()
+        return fig, axis
+    X = tensor_1.numpy()
+    y = np.zeros(tensor_1.size(0))
+    if tensor_2 is not None:
+        X = np.concatenate((X,tensor_2.numpy()))
+        y = np.concatenate((y,np.ones(tensor_2.size(0))))
+    fig, axis = myplotGrid(X, y, features, colormap={0:'blue', 1:'red'})
+    fig.savefig(res_dir + filename)
+    return
+

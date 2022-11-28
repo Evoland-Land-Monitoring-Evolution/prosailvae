@@ -114,7 +114,7 @@ def get_data_generation_parser():
                         type=int, default=1000)
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
-                        type=str, default="sim_")
+                        type=str, default="small_test_")
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data")

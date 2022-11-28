@@ -14,6 +14,7 @@ from prosail import spectral_lib
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
+BANDS = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
 
 class SensorSimulator():
     """Simulates the reflectances of a sensor from a full spectrum and the

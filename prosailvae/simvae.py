@@ -153,7 +153,28 @@ class SimVAE(nn.Module):
         # assert n_samples>1
         batch_size = data.size(0)
         data = data.view(batch_size, -1).float()
-        params, _, _, rec = self.forward(data, n_samples=n_samples, angles=angles)       
+        params, z, sim, rec = self.forward(data, n_samples=n_samples, angles=angles)     
+        if torch.isnan(rec).any():
+            n_samples = z.size(2)
+            batch_size = z.size(0)
+            sim_input = torch.concat((z, 
+                angles.unsqueeze(2).repeat(1,1,n_samples)), 
+                 axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
+            print("NaN in reconstruction encountered !")
+            
+            nan_batch_idx = torch.where(torch.isnan(rec))[0]
+            nan_sample_idx = torch.where(torch.isnan(rec))[1]
+            print(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            print("The First NaN reconstruction has:")
+            print("z = ")
+            print(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
+            print("sim = ")
+            print(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
+            print("mu = ")
+            print(f"{params[nan_batch_idx[0],:,0]}")
+            print("sigma = ")
+            print(f"{params[nan_batch_idx[0],:,1]}")
+            
         rec_loss = self.decoder.loss(data, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
@@ -229,6 +250,7 @@ class SimVAE(nn.Module):
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             if torch.isnan(loss_sum).any():
                 print("NaN Loss encountered during training !")
+                
             loss_sum.backward()
             optimizer.step()
         self.eval()

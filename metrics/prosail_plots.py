@@ -169,7 +169,7 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
         ax2.append(fig.add_subplot(gs[j, 0]))
     
     for j in range(len(PROSAILVARS)):
-        v2 = ax2[j].violinplot(sim_dist[:,j].squeeze(), points=100, positions=[0],
+        v2 = ax2[j].violinplot(sim_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
         min_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["min"]
         max_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["max"]
@@ -189,7 +189,7 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
             v.set_edgecolor('blue')
             v.set_linewidth(1)
             
-        v2 = ax2[j].violinplot(tgt_dist[:,j], points=100, positions=[0],
+        v2 = ax2[j].violinplot(tgt_dist[:,j].detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
         for b in v2['bodies']:
             # get the center
@@ -217,7 +217,7 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
 def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist):
     for i in range(len(PROSAILVARS)):
         fig, ax = plt.subplots(figsize=(7,7), dpi=150)
-        ax.scatter(sim_dist[:,i],tgt_dist[:,i])
+        ax.scatter(sim_dist[:,i].detach().cpu(),tgt_dist[:,i].detach().cpu())
         ax.set_xlabel(f'{PROSAILVARS[i]} predicted')
         ax.set_ylabel(f'{PROSAILVARS[i]} reference')
         ax.set_xlim(ProsailVarsDist.Dists[PROSAILVARS[i]]["min"],
@@ -247,7 +247,7 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
         ax2.append(fig.add_subplot(gs[j, 0]))
     
     for j in range(len(BANDS)):
-        v2 = ax2[j].violinplot(rec_dist[:,j].squeeze(), points=100, positions=[0],
+        v2 = ax2[j].violinplot(rec_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
 
         ax2[j].set_xlim(xmin, xmax)
@@ -265,7 +265,7 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
             v.set_edgecolor('blue')
             v.set_linewidth(1)
         
-        v2 = ax2[j].violinplot(refl_dist[:,j].squeeze(), points=100, positions=[0],
+        v2 = ax2[j].violinplot(refl_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
 
         ax2[j].set_xlim(xmin, xmax)
@@ -379,10 +379,10 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
 
         plt.show()
         return fig, axis
-    X = tensor_1.numpy()
+    X = tensor_1.detach().cpu().numpy()
     y = np.zeros(tensor_1.size(0))
     if tensor_2 is not None:
-        X = np.concatenate((X,tensor_2.numpy()))
+        X = np.concatenate((X,tensor_2.detach().cpu().numpy()))
         y = np.concatenate((y,np.ones(tensor_2.size(0))))
     fig, axis = myplotGrid(X, y, features, colormap={0:'blue', 1:'red'})
     fig.savefig(res_dir + filename)

@@ -118,12 +118,12 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_
         try:
             train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=10)
         except:
-            print("Error during Training at epoch {epoch} !")
+            print(f"Error during Training at epoch {epoch} !")
             break
         try:
             valid_loss_dict = phenoVAE.validate(train_loader, n_samples=10)
         except:
-            print("Error during Validation at epoch {epoch} !")
+            print(f"Error during Validation at epoch {epoch} !")
         train_loss_dict['epoch']=epoch
         valid_loss_dict['epoch']=epoch
         all_train_loss_df = pd.concat([all_train_loss_df, 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg")
     
     # Computing metrics
-    loader = get_simloader(file_prefix="small_test_", data_dir=data_dir)
+    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
 
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]

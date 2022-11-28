@@ -219,24 +219,28 @@ if __name__ == "__main__":
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     
     # Plotting results
-    plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare)
-    plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=20)
-    plot_param_dist(res_dir, sim_dist, tgt_dist)
-    plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist)
+    metrics_dir = res_dir + "/metrics_plot/"
+    plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
+    rec_dir = res_dir + "/reconstruction/"
+    os.makedirs(rec_dir)
+    plot_rec_and_latent(prosail_VAE, loader, rec_dir, n_plots=20)
+    
+    plot_param_dist(metrics_dir, sim_dist, tgt_dist)
+    plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
     ssimulator = prosail_VAE.decoder.ssimulator
     refl_dist = loader.dataset[:][0]
     plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=prosail_VAE.decoder.ssimulator)
     
     normed_rec_dist =  (rec_dist - ssimulator.norm_mean) / ssimulator.norm_std 
     normed_refl_dist =  (refl_dist - ssimulator.norm_mean) / ssimulator.norm_std 
-    plot_refl_dist(normed_rec_dist, normed_refl_dist, res_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
+    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
     
     pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
-              res_dir=res_dir, filename='normed_rec_pair_plot.svg')
+              res_dir=metrics_dir, filename='normed_rec_pair_plot.svg')
     pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
-              res_dir=res_dir, filename='normed_s2bands_pair_plot.svg')
+              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.svg')
     
     pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=res_dir, filename='sim_prosail_pair_plot.svg')
+              res_dir=metrics_dir, filename='sim_prosail_pair_plot.svg')
     pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=res_dir, filename='ref_prosail_pair_plot.svg')
+              res_dir=metrics_dir, filename='ref_prosail_pair_plot.svg')

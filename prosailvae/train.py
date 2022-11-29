@@ -23,13 +23,11 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import warnings
 from time import sleep
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
-from prosailvae.utils import load_dict, save_dict
+from prosailvae.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM
 torch.autograd.set_detect_anomaly(True)
 import logging
 import logging.config
 import time
-
-
 
 
 def check_fold_res_dir(fold_dir, n_xp, params):
@@ -113,24 +111,35 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     best_val_loss = torch.inf
+    total_ram = get_total_RAM()
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             try:
                 train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=n_samples)
-            except:
+            except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
+                logger.error('Original error :')
+                logger.error(str(e))
                 print(f"Error during Training at epoch {epoch} !")
+                print('Original error :')
+                print(str(e))
                 break
             try:
                 valid_loss_dict = phenoVAE.validate(train_loader, n_samples=n_samples)
-            except:
+            except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
+                logger.error('Original error :')
+                logger.error(str(e))
                 print(f"Error during Validation at epoch {epoch} !")
+                print('Original error :')
+                print(str(e))
             t1=time.time()
+            ram_usage = get_RAM_usage()
+            
             train_loss_info = '- '.join([f"{key}: {'{:.3f}'.format(train_loss_dict[key])} " for key in train_loss_dict.keys()])
             valid_loss_info = '- '.join([f"{key}: {'{:.3f}'.format(valid_loss_dict[key])} " for key in valid_loss_dict.keys()])
-            logger.info(f"{epoch} -- {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}")
+            logger.info(f"{epoch} -- RAM: {ram_usage} / {total_ram} -- {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}")
             train_loss_dict['epoch']=epoch
             valid_loss_dict['epoch']=epoch
             all_train_loss_df = pd.concat([all_train_loss_df, 
@@ -187,7 +196,7 @@ if __name__ == "__main__":
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
-                                              file_prefix=params["dataset_file_prefix"], 
+                                              file_prefix="small_test_",#params["dataset_file_prefix"], 
                                               sample_ids=None,
                                               batch_size=params["batch_size"],
                                               data_dir=data_dir)
@@ -221,7 +230,7 @@ if __name__ == "__main__":
                                                          train_loader, 
                                                          valid_loader,
                                                          res_dir=res_dir,
-                                                         n_samples=params["n_samples"],
+                                                         n_samples=10,#params["n_samples"],
                                                          logger_name=logger_name) 
     logger.info("Training Completed !")
     logger.info("Saving Loss")

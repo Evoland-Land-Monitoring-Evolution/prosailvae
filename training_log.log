@@ -1,0 +1,47 @@
+INFO:PROSAIL-VAE logger:Starting training of PROSAIL-VAE.
+INFO:PROSAIL-VAE logger:========================================================================
+INFO:PROSAIL-VAE logger:Parameters are : 
+INFO:PROSAIL-VAE logger:batch_size : 64
+INFO:PROSAIL-VAE logger:epochs : 40
+INFO:PROSAIL-VAE logger:lr : 0.0005
+INFO:PROSAIL-VAE logger:hidden_layers_size : [400, 500, 500, 300, 100]
+INFO:PROSAIL-VAE logger:test_size : 0.01
+INFO:PROSAIL-VAE logger:valid_ratio : 0.01
+INFO:PROSAIL-VAE logger:workers : 0
+INFO:PROSAIL-VAE logger:encoder_last_activation : None
+INFO:PROSAIL-VAE logger:n_samples : 20
+INFO:PROSAIL-VAE logger:supervised : False
+INFO:PROSAIL-VAE logger:beta_kl : 1
+INFO:PROSAIL-VAE logger:k_fold : 0
+INFO:PROSAIL-VAE logger:dataset_file_prefix : full_
+INFO:PROSAIL-VAE logger:n_fold : None
+INFO:PROSAIL-VAE logger:========================================================================
+INFO:PROSAIL-VAE logger:Loading training and validation loader in /home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data//full_...
+INFO:PROSAIL-VAE logger:Training and validation loaders, loaded.
+INFO:PROSAIL-VAE logger:Starting training of PROSAIL-VAE.
+INFO:PROSAIL-VAE logger:========================================================================
+INFO:PROSAIL-VAE logger:Parameters are : 
+INFO:PROSAIL-VAE logger:batch_size : 64
+INFO:PROSAIL-VAE logger:epochs : 40
+INFO:PROSAIL-VAE logger:lr : 0.0005
+INFO:PROSAIL-VAE logger:hidden_layers_size : [400, 500, 500, 300, 100]
+INFO:PROSAIL-VAE logger:test_size : 0.01
+INFO:PROSAIL-VAE logger:valid_ratio : 0.01
+INFO:PROSAIL-VAE logger:workers : 0
+INFO:PROSAIL-VAE logger:encoder_last_activation : None
+INFO:PROSAIL-VAE logger:n_samples : 20
+INFO:PROSAIL-VAE logger:supervised : False
+INFO:PROSAIL-VAE logger:beta_kl : 1
+INFO:PROSAIL-VAE logger:k_fold : 0
+INFO:PROSAIL-VAE logger:dataset_file_prefix : full_
+INFO:PROSAIL-VAE logger:n_fold : None
+INFO:PROSAIL-VAE logger:========================================================================
+INFO:PROSAIL-VAE logger:Loading training and validation loader in /home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data//full_...
+INFO:PROSAIL-VAE logger:Training and validation loaders, loaded.
+INFO:PROSAIL-VAE logger:PROSAIL-VAE and optimizer initialized.
+INFO:PROSAIL-VAE logger:Starting Training loop for 40 epochs.
+INFO:PROSAIL-VAE logger:Training Completed !
+INFO:PROSAIL-VAE logger:Saving Loss
+INFO:PROSAIL-VAE logger:Loading test loader...
+INFO:PROSAIL-VAE logger:Test loader, loaded.
+INFO:PROSAIL-VAE logger:Computing inference metrics with test dataset...

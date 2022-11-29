@@ -66,6 +66,8 @@ RSR of the sensor.
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
         self.apply_norm=apply_norm
+        self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
+        self.s2norm_factor_n = self.rsr * self.solar
         
     def __call__(self, prosail_output: torch.Tensor):
         return self.forward(prosail_output)
@@ -78,8 +80,8 @@ RSR of the sensor.
             x = x.unsqueeze(0)
         elif len(x.shape) == 2:
             x = x.unsqueeze(1)
-        simu = (self.rsr * x * self.solar).sum(
-            axis=2) / (self.rsr * self.solar).sum(axis=2)  # type: ignore
+        simu = (self.s2norm_factor_n * x).sum(
+            axis=2) / self.s2norm_factor_d  
         return simu
     
     def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:

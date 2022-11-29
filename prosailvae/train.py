@@ -223,8 +223,8 @@ if __name__ == "__main__":
     refl_dist = loader.dataset[:][0]
     plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=prosail_VAE.decoder.ssimulator)
     
-    normed_rec_dist =  (rec_dist - ssimulator.norm_mean) / ssimulator.norm_std 
-    normed_refl_dist =  (refl_dist - ssimulator.norm_mean) / ssimulator.norm_std 
+    normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+    normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
     plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
     
     pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 

@@ -157,6 +157,9 @@ class SimVAE(nn.Module):
         batch_size = data.size(0)
         data = data.view(batch_size, -1).float()
         params, z, sim, rec = self.forward(data, n_samples=n_samples, angles=angles)     
+        if torch.isnan(params).any():
+            print("NaN in inferred distribution parameters !")
+            
         if torch.isnan(rec).any():
             n_samples = z.size(2)
             batch_size = z.size(0)

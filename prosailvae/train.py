@@ -23,6 +23,7 @@ import warnings
 from time import sleep
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 from prosailvae.utils import load_dict, save_dict
+torch.autograd.set_detect_anomaly(True)
 
 
 def check_fold_res_dir(fold_dir, n_xp, params):

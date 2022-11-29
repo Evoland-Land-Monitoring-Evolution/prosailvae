@@ -89,8 +89,11 @@ class SimVAE(nn.Module):
         rec = self.decoder.decode(sim, dec_args)
         return rec
         
-    def forward(self, x, angles=None, n_samples=1):
+    def forward(self, x, angles=None, n_samples=20):
         # encoding
+        if angles is None:
+            angles = x[:,-3:]
+            x = x[:,:-3]
         y = self.encode(x, angles)
         dist_params = self.lat_space.get_params_from_encoder(y)
         
@@ -275,3 +278,23 @@ class SimVAE(nn.Module):
                 print("NaN Loss encountered during validation !")
         return valid_loss_dict
 
+
+def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
+    eps = torch.tensor(eps).to(device)
+    return (torch.square(x - mu) / torch.max(sigma, eps)).mean(1).sum(1) +  \
+            torch.log(torch.max(sigma.squeeze(1), eps)).sum(1)
+from prosailvae.dist_utils import kl_tn_uniform     
+     
+def lr_finder_elbo(model_outputs, label, beta=1):
+    dist_params, z, sim, rec = model_outputs
+    rec_err_var = torch.var(rec-label.unsqueeze(2), 2).unsqueeze(2)
+    rec_loss = gaussian_nll(label.unsqueeze(2), rec, rec_err_var).mean() 
+    loss_sum=rec_loss
+    sigma = dist_params[:, :, 1].squeeze()
+    mu = dist_params[:, :, 0].squeeze()
+    kl = kl_tn_uniform(mu, sigma) 
+    
+    kl_loss = beta * kl.sum(1).mean()
+    loss_sum+=kl_loss
+
+    return loss_sum

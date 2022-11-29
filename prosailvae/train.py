@@ -6,13 +6,12 @@ Created on Mon Nov 14 14:20:44 2022
 @author: yoel
 """
 from prosailvae.prosail_vae import get_prosail_VAE
-from dataset.loaders import load_train_valid_ids, get_s2loader, get_simloader, get_norm_coefs
+from dataset.loaders import  get_simloader, get_norm_coefs
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
 from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot
 from datetime import datetime 
 import torch.optim as optim
-import json
 import torch
 import pandas as pd
 import argparse
@@ -22,18 +21,9 @@ import prosailvae
 from tqdm import trange
 import warnings
 from time import sleep
-import numpy as np
-import matplotlib.pyplot as plt 
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
+from prosailvae.utils import load_dict, save_dict
 
-def save_dict(data_dict, dict_file_path):
-    with open(dict_file_path, 'w') as fp:
-        json.dump(data_dict, fp, indent=4)
-
-def load_dict(dict_file_path):
-    with open(dict_file_path, "r") as read_file:
-        data_dict = json.load(read_file)
-    return data_dict
 
 def check_fold_res_dir(fold_dir, n_xp, params):
     same_fold = ""
@@ -110,18 +100,18 @@ def get_prosailvae_train_parser():
        
     return parser
 
-def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_dir):
+def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, res_dir, n_samples=20):
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     best_val_loss = torch.inf
     for epoch in trange(n_epoch, desc='phenoVAE training', leave=True):
         try:
-            train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=10)
+            train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=n_samples)
         except:
             print(f"Error during Training at epoch {epoch} !")
             break
         try:
-            valid_loss_dict = phenoVAE.validate(train_loader, n_samples=10)
+            valid_loss_dict = phenoVAE.validate(train_loader, n_samples=n_samples)
         except:
             print(f"Error during Validation at epoch {epoch} !")
         train_loss_dict['epoch']=epoch
@@ -186,14 +176,15 @@ if __name__ == "__main__":
     
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
-    
+
     # Training
     all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
                                                             optimizer, 
                                                             params['epochs'],
                                                             train_loader, 
                                                             valid_loader,
-                                                            res_dir=res_dir) 
+                                                            res_dir=res_dir,
+                                                            n_samples=params["n_samples"]) 
     # Saving Loss
     loss_dir = res_dir + "/loss/"
     os.makedirs(loss_dir)
@@ -220,6 +211,7 @@ if __name__ == "__main__":
     
     # Plotting results
     metrics_dir = res_dir + "/metrics_plot/"
+    os.makedirs(metrics_dir)
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
     rec_dir = res_dir + "/reconstruction/"
     os.makedirs(rec_dir)

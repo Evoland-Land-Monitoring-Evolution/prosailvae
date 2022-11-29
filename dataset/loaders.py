@@ -142,9 +142,40 @@ def load_test_ids(file_prefix="s2_", data_dir=None):
                                          os.pardir),"data/")
     return torch.load(data_dir + f"/{file_prefix}test_ids.pt")
 
+def lr_finder_loader(sample_ids=None, 
+                     batch_size=1024, num_workers=0, file_prefix="s2_", 
+                     data_dir=None):
+    if data_dir is None:
+        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                             os.pardir),"data/")
+    s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
+    len_dataset = s2_refl.size(0)
+    
+    prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
+    angles = prosail_sim_vars[:,-3:]
+    if sample_ids is None:
+        sample_ids = torch.arange(0,len_dataset) 
+        sub_s2_refl = s2_refl
+        sub_angles = angles
+    else:
+        assert (sample_ids < len_dataset).all()
+        sub_s2_refl = s2_refl[sample_ids,:]
+        sub_angles = angles[sample_ids,:]
+
+    dataset = TensorDataset(torch.concat((sub_s2_refl.float(),
+                            sub_angles.float()), axis=1), 
+                            sub_s2_refl.float(),
+                            )
+
+    loader = DataLoader(dataset,
+                        batch_size=batch_size,
+                        num_workers=num_workers)
+    return loader
+    
 
 def get_simloader(valid_ratio=None, sample_ids=None, 
-                 batch_size=1024, num_workers=0, file_prefix="s2_", data_dir=None):
+                 batch_size=1024, num_workers=0, file_prefix="s2_", 
+                 data_dir=None, cat_angles=False):
     if data_dir is None:
         data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                              os.pardir),"data/")
@@ -166,6 +197,7 @@ def get_simloader(valid_ratio=None, sample_ids=None,
         sub_angles = angles[sample_ids,:]
         
     if valid_ratio is None:
+       
         dataset = TensorDataset(sub_s2_refl.float(),
                                 sub_angles.float(), 
                                 sub_prosail_params.float(),
@@ -186,17 +218,18 @@ def get_simloader(valid_ratio=None, sample_ids=None,
         sub_s2_refl_valid = s2_refl[ids_valid,:]
         sub_prosail_params_valid = prosail_params[ids_valid,:]
         sub_angles_valid = angles[ids_valid,:]
-        
+
         train_dataset = TensorDataset(sub_s2_refl_train.float(),
                                       sub_angles_train.float(),
                                       sub_prosail_params_train.float(),)
-        train_loader = DataLoader(train_dataset,
-                            batch_size=batch_size,
-                            num_workers=num_workers)
         valid_dataset = TensorDataset(sub_s2_refl_valid.float(),
                                       sub_angles_valid.float(),
                                       sub_prosail_params_valid.float(),
                                        )
+        train_loader = DataLoader(train_dataset,
+                            batch_size=batch_size,
+                            num_workers=num_workers)
+        
         valid_loader = DataLoader(valid_dataset,
                             batch_size=batch_size,
                             num_workers=num_workers)

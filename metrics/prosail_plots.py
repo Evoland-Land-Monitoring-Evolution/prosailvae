@@ -11,7 +11,7 @@ import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 
 
-def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
+def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
     
     for i in range(len(maer.columns)):
@@ -19,7 +19,7 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('PICP')
-    fig.savefig(res_dir+"/picp.svg")
+    fig.savefig(save_dir+"/picp.svg")
     
     fig = plt.figure(dpi=200)
     for i in range(len(maer.columns)):
@@ -27,20 +27,20 @@ def plot_metrics(res_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('MPIWr')
-    fig.savefig(res_dir+"/MPIWr.svg")
+    fig.savefig(save_dir+"/MPIWr.svg")
     
     fig = plt.figure()
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, maer.values.reshape(-1),)
     plt.ylabel('MAEr')
-    fig.savefig(res_dir+"/MAEr.svg")
+    fig.savefig(save_dir+"/MAEr.svg")
     
     fig = plt.figure(dpi=150)
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, mare.detach().cpu().numpy())
     plt.ylabel('MARE')
     plt.yscale('log')
-    fig.savefig(res_dir+"/mare.svg")
+    fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
     original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm

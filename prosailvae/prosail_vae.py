@@ -28,7 +28,8 @@ def get_prosail_VAE(rsr_dir,
                                 "beta_kl":1}, 
                     device='cpu',
                     refl_norm_mean=None,
-                    refl_norm_std=None):
+                    refl_norm_std=None,
+                    logger_name=''):
     latent_dim=11
     output_size = latent_dim * 2
     
@@ -62,7 +63,8 @@ def get_prosail_VAE(rsr_dir,
                       lat_space=lat_space, sim_space=pheno_var_space, 
                       supervised=vae_params["supervised"],  
                       device=device, 
-                      beta_kl=vae_params["beta_kl"])
+                      beta_kl=vae_params["beta_kl"],
+                      logger_name=logger_name)
     return prosailVAE
 
 def load_prosailVAE(vae_params, vae_file_path, optimizer=None, device='cpu'):

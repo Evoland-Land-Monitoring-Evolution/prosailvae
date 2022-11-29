@@ -208,8 +208,8 @@ def get_simloader(valid_ratio=None, sample_ids=None,
         return loader
     else:
         n_valid = int(len(sample_ids) * valid_ratio)
-        ids_valid = sample_ids[n_valid:]
-        ids_train = sample_ids[:n_valid]
+        ids_train = sample_ids[n_valid:]
+        ids_valid = sample_ids[:n_valid]
         
         sub_s2_refl_train = s2_refl[ids_train,:]
         sub_prosail_params_train = prosail_params[ids_train,:]

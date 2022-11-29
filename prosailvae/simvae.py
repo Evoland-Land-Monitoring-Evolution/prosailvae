@@ -8,6 +8,7 @@ Created on Thu Sep  1 08:25:49 2022
 import torch.nn as nn
 import torch
 import time
+import logging
 
 class SimVAE(nn.Module):
     """
@@ -53,7 +54,7 @@ class SimVAE(nn.Module):
     """
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
-                 beta_kl=0):
+                 beta_kl=0, logger_name='PROSAIL-VAE logger'):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -67,6 +68,7 @@ class SimVAE(nn.Module):
         self.device=device
         self.beta_kl = beta_kl
         self.eval()
+        self.logger = logging.getLogger(logger_name)
         
     def encode(self, x, angles):
         y = self.encoder.encode(x, angles)
@@ -158,7 +160,7 @@ class SimVAE(nn.Module):
         data = data.view(batch_size, -1).float()
         params, z, sim, rec = self.forward(data, n_samples=n_samples, angles=angles)     
         if torch.isnan(params).any():
-            print("NaN in inferred distribution parameters !")
+            self.logger.error("NaN in inferred distribution parameters !")
             
         if torch.isnan(rec).any():
             n_samples = z.size(2)
@@ -166,19 +168,20 @@ class SimVAE(nn.Module):
             sim_input = torch.concat((z, 
                 angles.unsqueeze(2).repeat(1,1,n_samples)), 
                  axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
-            print("NaN in reconstruction encountered !")
+            self.logger.error("NaN in reconstruction parameters !")
             nan_batch_idx = torch.where(torch.isnan(rec))[0]
             nan_sample_idx = torch.where(torch.isnan(rec))[1]
-            print(f"{len(nan_batch_idx)} reconstructions have NaNs.")
-            print("The First NaN reconstruction has:")
-            print("z = ")
-            print(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
-            print("sim = ")
-            print(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
-            print("mu = ")
-            print(f"{params[nan_batch_idx[0],:,0]}")
-            print("sigma = ")
-            print(f"{params[nan_batch_idx[0],:,1]}")
+            self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            self.logger.debug("The First NaN reconstruction has:")
+            self.logger.debug("z = ")
+            self.logger.debug(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
+            self.logger.debug("sim = ")
+            self.logger.debug(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
+            self.logger.debug("mu = ")
+            self.logger.debug(f"{params[nan_batch_idx[0],:,0]}")
+            self.logger.debug("sigma = ")
+            self.logger.debug(f"{params[nan_batch_idx[0],:,1]}")
             
         rec_loss = self.decoder.loss(data, rec)
 
@@ -254,7 +257,7 @@ class SimVAE(nn.Module):
                 loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, tgt, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             if torch.isnan(loss_sum).any():
-                print("NaN Loss encountered during training !")
+                self.logger.error("NaN Loss encountered during training !")
                 
             loss_sum.backward()
             optimizer.step()
@@ -277,7 +280,7 @@ class SimVAE(nn.Module):
                     loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, angles, tgt, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
             if torch.isnan(loss_sum).any():
-                print("NaN Loss encountered during validation !")
+                self.logger.error("NaN Loss encountered during validation !")
         return valid_loss_dict
 
 

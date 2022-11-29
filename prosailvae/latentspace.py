@@ -75,12 +75,12 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         z = self.sample_latent_from_params(params, n_samples=n_samples)
         return z
     
-    def get_u_bounds(self, mu, sigma, n_sigma=4.5):
+    def get_u_bounds(self, mu, sigma, n_sigma=4):
         u_ubound = truncated_gaussian_cdf(mu + n_sigma*sigma, mu, sigma)
         u_lbound = truncated_gaussian_cdf(mu - n_sigma*sigma, mu, sigma)
         return u_ubound, u_lbound
     
-    def sample_latent_from_params(self, params, n_samples=1, n_sigma=4.5):
+    def sample_latent_from_params(self, params, n_samples=1, n_sigma=4):
         mu = params[:, :, 0].squeeze(2)
         sigma = params[:, :, 1].squeeze(2)
         u_ubound, u_lbound = self.get_u_bounds(mu, sigma, n_sigma=n_sigma)

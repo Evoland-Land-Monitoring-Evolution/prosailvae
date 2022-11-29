@@ -164,7 +164,6 @@ class SimVAE(nn.Module):
                 angles.unsqueeze(2).repeat(1,1,n_samples)), 
                  axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
             print("NaN in reconstruction encountered !")
-            
             nan_batch_idx = torch.where(torch.isnan(rec))[0]
             nan_sample_idx = torch.where(torch.isnan(rec))[1]
             print(f"{len(nan_batch_idx)} reconstructions have NaNs.")

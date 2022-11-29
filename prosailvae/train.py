@@ -174,7 +174,7 @@ if __name__ == "__main__":
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std)
     
-    optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"])
+    optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"], weight_decay=1e-2)
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
 
     # Training

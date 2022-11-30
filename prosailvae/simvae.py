@@ -161,27 +161,27 @@ class SimVAE(nn.Module):
         params, z, sim, rec = self.forward(data, n_samples=n_samples, angles=angles)     
         if torch.isnan(params).any():
             self.logger.error("NaN in inferred distribution parameters !")
-            
-        if torch.isnan(rec).any():
+        nan_rec = torch.isnan(rec[:,0,:]).detach()
+        if nan_rec.any():
             n_samples = z.size(2)
             batch_size = z.size(0)
             sim_input = torch.concat((z, 
                 angles.unsqueeze(2).repeat(1,1,n_samples)), 
                  axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
             self.logger.error("NaN in reconstruction parameters !")
-            nan_batch_idx = torch.where(torch.isnan(rec))[0]
-            nan_sample_idx = torch.where(torch.isnan(rec))[1]
-            self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
-            self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
-            self.logger.debug("The First NaN reconstruction has:")
-            self.logger.debug("z = ")
-            self.logger.debug(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
-            self.logger.debug("sim = ")
-            self.logger.debug(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
-            self.logger.debug("mu = ")
-            self.logger.debug(f"{params[nan_batch_idx[0],:,0]}")
-            self.logger.debug("sigma = ")
-            self.logger.debug(f"{params[nan_batch_idx[0],:,1]}")
+            # nan_batch_idx = torch.where(nan_rec)[0]
+            # nan_sample_idx = torch.where(nan_rec)[1]
+            # self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            # self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            # self.logger.debug("The First NaN reconstruction has:")
+            # self.logger.debug("z = ")
+            # self.logger.debug(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
+            # self.logger.debug("sim = ")
+            # self.logger.debug(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
+            # self.logger.debug("mu = ")
+            # self.logger.debug(f"{params[nan_batch_idx[0],:,0]}")
+            # self.logger.debug("sigma = ")
+            # self.logger.debug(f"{params[nan_batch_idx[0],:,1]}")
             
         rec_loss = self.decoder.loss(data, rec)
 

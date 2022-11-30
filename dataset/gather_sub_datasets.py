@@ -8,7 +8,9 @@ Created on Mon Nov 21 10:45:29 2022
 import torch
 import os
 import argparse
-from dataset.generate_dataset import get_refl_normalization
+
+def get_refl_normalization(prosail_refl):
+    return prosail_refl.mean(0), prosail_refl.std(0)
 
 def get_dataset_files(data_dir, filename=""):
     list_files = []

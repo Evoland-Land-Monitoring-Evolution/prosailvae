@@ -118,6 +118,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
             t0=time.time()
             try:
                 train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=n_samples)
+                
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')

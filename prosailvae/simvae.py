@@ -169,19 +169,19 @@ class SimVAE(nn.Module):
                 angles.unsqueeze(2).repeat(1,1,n_samples)), 
                  axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
             self.logger.error("NaN in reconstruction parameters !")
-            # nan_batch_idx = torch.where(nan_rec)[0]
-            # nan_sample_idx = torch.where(nan_rec)[1]
-            # self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
-            # self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
-            # self.logger.debug("The First NaN reconstruction has:")
-            # self.logger.debug("z = ")
-            # self.logger.debug(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
-            # self.logger.debug("sim = ")
-            # self.logger.debug(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
-            # self.logger.debug("mu = ")
-            # self.logger.debug(f"{params[nan_batch_idx[0],:,0]}")
-            # self.logger.debug("sigma = ")
-            # self.logger.debug(f"{params[nan_batch_idx[0],:,1]}")
+            nan_batch_idx = torch.where(nan_rec)[0]
+            nan_sample_idx = torch.where(nan_rec)[1]
+            self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            self.logger.debug(f"{len(nan_batch_idx)} reconstructions have NaNs.")
+            self.logger.debug("The First NaN reconstruction has:")
+            self.logger.debug("z = ")
+            self.logger.debug(f"{z[nan_batch_idx[0], nan_sample_idx[0],:]}")
+            self.logger.debug("sim = ")
+            self.logger.debug(f"{sim_input[nan_batch_idx[0] * batch_size + nan_sample_idx[0],:]}")
+            self.logger.debug("mu = ")
+            self.logger.debug(f"{params[nan_batch_idx[0],:,0]}")
+            self.logger.debug("sigma = ")
+            self.logger.debug(f"{params[nan_batch_idx[0],:,1]}")
             
         rec_loss = self.decoder.loss(data, rec)
 

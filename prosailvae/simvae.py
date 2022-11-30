@@ -7,8 +7,8 @@ Created on Thu Sep  1 08:25:49 2022
 """
 import torch.nn as nn
 import torch
-import time
 import logging
+from prosailvae.utils import NaN_model_params
 
 class SimVAE(nn.Module):
     """
@@ -257,10 +257,12 @@ class SimVAE(nn.Module):
                 loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, tgt, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             if torch.isnan(loss_sum).any():
-                self.logger.error("NaN Loss encountered during training !")
+                self.logger.error(f"NaN Loss encountered during training at batch {i}!")
                 
             loss_sum.backward()
             optimizer.step()
+            if NaN_model_params(self):
+                self.logger.debug(f"NaN model parameters after batch {i}!")
         self.eval()
         return train_loss_dict
 

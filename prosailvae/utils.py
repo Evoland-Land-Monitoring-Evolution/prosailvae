@@ -8,6 +8,7 @@ Created on Tue Nov 29 11:18:38 2022
 import json
 import psutil
 import os
+import torch 
 
 def get_total_RAM():
     return "{:.1f} GB".format(psutil.virtual_memory()[0]/1000000000)
@@ -27,3 +28,9 @@ def load_dict(dict_file_path):
     with open(dict_file_path, "r") as read_file:
         data_dict = json.load(read_file)
     return data_dict
+def NaN_model_params(model):
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            if torch.isnan(param).any() :
+                return True
+    return False

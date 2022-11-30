@@ -28,6 +28,7 @@ torch.autograd.set_detect_anomaly(True)
 import logging
 import logging.config
 import time
+import traceback
 
 
 def check_fold_res_dir(fold_dir, n_xp, params):
@@ -124,6 +125,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
                 print(f"Error during Training at epoch {epoch} !")
                 print('Original error :')
                 print(str(e))
+                traceback.print_exc()
                 break
             try:
                 valid_loss_dict = phenoVAE.validate(train_loader, n_samples=n_samples)
@@ -134,6 +136,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
                 print(f"Error during Validation at epoch {epoch} !")
                 print('Original error :')
                 print(str(e))
+                traceback.print_exc()
             t1=time.time()
             ram_usage = get_RAM_usage()
             

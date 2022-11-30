@@ -15,7 +15,8 @@ export GITLAB_TOKEN=hssC4vRMTyMzbU6Gi86k
 export GITLAB_TOKEN_USER=readonly
 export VERSION=tensorport
 
-conda install -y pandas scikit-learn tqdm numpy pip
+conda install -y pandas scikit-learn tqdm numpy pip 
+pip install psutil
 # Installing Pytorch. Please change option for GPU use.
 conda install -y pytorch torchvision cpuonly -c pytorch
 conda install -y -c conda-forge zenodo_get jax numpyro

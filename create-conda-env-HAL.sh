@@ -44,7 +44,8 @@ conda create -p $target
 conda activate $target
 conda install -y python==${python_version} pip
 
-conda install -y pandas scikit-learn tqdm numpy pip
+conda install -y pandas scikit-learn tqdm numpy pip 
+pip install psutil
 # Installing Pytorch. Please change option for GPU use.
 conda install -y pytorch-gpu torchvision cudatoolkit=11.0 -c pytorch -c conda-forge
 conda install -y -c conda-forge zenodo_get jax numpyro

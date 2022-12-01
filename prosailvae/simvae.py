@@ -178,6 +178,8 @@ class SimVAE(nn.Module):
             self.logger.debug(f"{z[nan_batch_idx[0], :, nan_sample_idx[0]].squeeze()}")
             self.logger.debug("sim = ")
             self.logger.debug(f"{sim[nan_batch_idx[0], :, nan_sample_idx[0]].squeeze()}")
+            self.logger.debug("angles = ")
+            self.logger.debug(f"{angles[nan_batch_idx[0], :].squeeze()}")
             self.logger.debug("mu = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,0].squeeze()}")
             self.logger.debug("sigma = ")

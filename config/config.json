@@ -1,9 +1,10 @@
 {
-    "batch_size": 64,
-    "epochs": 40,
+    "batch_size": 256,
+    "epochs": 10,
     "lr": 0.0005,
     "hidden_layers_size": [
         400,
+        500,
         500,
         500,
         300,
@@ -13,7 +14,7 @@
     "valid_ratio": 0.01,
     "workers": 0,
     "encoder_last_activation": null,
-    "n_samples": 20,
+    "n_samples": 10,
     "supervised": false,
     "beta_kl": 1,
     "k_fold": 0,

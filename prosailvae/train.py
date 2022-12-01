@@ -184,7 +184,7 @@ if __name__ == "__main__":
                                parser.n_xp, parser.overwrite_xp)
     save_dict(params, res_dir+"/config.json")
     logging.basicConfig(filename=res_dir+'/training_log.log', 
-                              level=logging.INFO)
+                              level=logging.DEBUG)
     logger_name = 'PROSAIL-VAE logger'
     # create logger
     logger = logging.getLogger(logger_name)

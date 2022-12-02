@@ -1,0 +1,13 @@
+pandas
+scikit-learn
+tqdm
+numpy
+pip
+psutil
+torch
+torchvision
+zenodo_get
+jax
+numpyro
+geopandas
+rasterio

@@ -11,3 +11,11 @@ jax
 numpyro
 geopandas
 rasterio
+ipykernel
+memory_profiler
+pytorch_lightning
+rich
+tqdm
+omegaconf
+ipython
+matplotlib

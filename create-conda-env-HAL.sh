@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export python_version="3.8"
+export python_version="3.9"
 export name="prosailvae"
 
 if ! [ -z "$1" ]
@@ -33,7 +33,6 @@ fi
 # Create blank virtualenv
 module load conda
 module load gcc
-conda activate
 conda create -p $target
 
 # Enter virtualenv
@@ -51,10 +50,7 @@ python --version
 conda deactivate
 conda activate $target
 
-#pip install git+https://${GITLAB_TOKEN_USER}:${GITLAB_TOKEN}@src.koda.cnrs.fr/yoel.zerah.1/prosailpython.git@${VERSION}
-
-#git clone -b tensorport https://vinasco_juan:GSJaA9th4ZUkNnBymQrz@src.koda.cnrs.fr/yoel.zerah.1/prosailpython thirdparties/prosailpython
-pip install -e /home/uz/vinascj/forked/prosailpython
+pip install -e /home/uz/vinascj/scratch/fork/prosailpython
 
 pip install -e /home/uz/vinascj/src/MMDC/mmdc-singledate/
 

@@ -49,6 +49,6 @@ class ProsailSimulatorDecoder(Decoder):
     
     def loss(self, tgt, rec):        
         rec_err_var = torch.var(rec-tgt.unsqueeze(2), 2).unsqueeze(2)
-        rec_loss = gaussian_nll(tgt.unsqueeze(2), rec, rec_err_var, device=self.device).mean() 
+        rec_loss = gaussian_nll(tgt.unsqueeze(2), rec.mean(2), rec_err_var, device=self.device).mean() 
         return rec_loss
 

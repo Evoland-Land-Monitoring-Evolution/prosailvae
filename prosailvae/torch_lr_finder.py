@@ -728,9 +728,13 @@ if __name__ == "__main__":
                                     sample_ids=None,
                                     batch_size=64,
                                     data_dir=data_dir)
-    optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-2)
+    # optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-2)
+    # lr_finder = LRFinder(model, optimizer, criterion, device="cpu")
+    # lr_finder.range_test(lrtrainloader, val_loader=lrtrainloader, end_lr=1, num_iter=100, step_mode="linear")
+    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
     lr_finder = LRFinder(model, optimizer, criterion, device="cpu")
-    lr_finder.range_test(lrtrainloader, val_loader=lrtrainloader, end_lr=1, num_iter=100, step_mode="linear")
+    lr_finder.range_test(lrtrainloader, end_lr=100, num_iter=100)
     lr_optimal = lr_finder.suggest_lr()
-    lr_finder.plot(log_lr=False) # to inspect the loss-learning rate graph
+    print(lr_optimal)
+    lr_finder.plot(log_lr=True) # to inspect the loss-learning rate graph
     lr_finder.reset() 

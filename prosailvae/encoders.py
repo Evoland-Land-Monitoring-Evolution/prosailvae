@@ -86,6 +86,7 @@ class ProsailNNEncoder(Encoder):
                  hidden_layers_size=[400, 500, 300, 100], 
                  last_activation=None, device='cpu', norm_mean=None, norm_std=None): 
         super().__init__()
+
         layers = []
         layers.append(nn.Linear(in_features=s2refl_size + 2 * 3, 
                                 out_features=hidden_layers_size[0]))
@@ -113,6 +114,7 @@ class ProsailNNEncoder(Encoder):
         self.norm_std = norm_std.float().to(device)
         
     def encode(self, s2_refl, angles):
+        
         normed_refl = (s2_refl - self.norm_mean) / self.norm_std
         y=self.net(torch.concat((normed_refl, 
                                  torch.cos(torch.deg2rad(angles)),

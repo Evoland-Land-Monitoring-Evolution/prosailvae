@@ -3,5 +3,11 @@
 */*.pt
 */*.csv
 data/*.pt
+data/*.pth
+data/*.csv
+data/*/*.pth
+data/real_data/torchfiles/*/*.csv
+data/real_data/torchfiles/*/*.pth
+data/*
 results/*
 prosailvae.egg/*

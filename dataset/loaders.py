@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -13,6 +14,18 @@ import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 import argparse    
+import sys
+sys.path = ['/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/mmdc-singledate',
+            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/sensorsio',
+            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/torchutils/src'] + sys.path
+from src.datamodules.mmdc_datamodule import (IterableMMDCDataset,
+                                                         worker_init_fn,
+                                                         destructure_batch)
+from src.datamodules.components.datamodule_utils import (MMDCDataStats,
+                                                        OneSetMMDCDataclass,
+                                                        average_stats,
+                                                        compute_stats,
+                                                        create_tensors_path)                                                         
 
 
 def split_train_valid_by_fid(labels, ts_ids,
@@ -263,6 +276,71 @@ def get_norm_coefs(data_dir, file_prefix=''):
     if type(norm_std) is np.ndarray:
         norm_std = torch.from_numpy(norm_std)
     return norm_mean, norm_std
+
+def get_mmdc_loaders(tensors_dir="",
+        batch_size=1,
+        batch_par_epoch=100,
+        max_open_files=4,
+        num_workers=1,
+        pin_memory=False):
+
+    train_data_files = [
+        list(i) for i in create_tensors_path(
+        path_to_exported_files=f"{tensors_dir}/T*",
+        datasplit="train")
+        ]
+    # print(f"{train_data_files}")
+    val_data_files = [
+        list(i) for i in create_tensors_path(
+        path_to_exported_files=f"{tensors_dir}/T*",
+        datasplit="val")
+        ]
+    test_data_files = [
+        list(i) for i in create_tensors_path(
+        path_to_exported_files=f"{tensors_dir}/T*",
+        datasplit="test")
+        ]
+    # define iterable dataset
+    data_train = IterableMMDCDataset(
+            zip_files=train_data_files,
+            batch_size=batch_size,
+            batch_par_epoch=batch_par_epoch,
+            max_open_files=max_open_files)
+    # print(f"{data_train}")
+    data_val = IterableMMDCDataset(
+            zip_files=val_data_files,
+            batch_size=batch_size,
+            batch_par_epoch=batch_par_epoch,
+            max_open_files=max_open_files)
+
+    data_test = IterableMMDCDataset(
+    zip_files=test_data_files,
+    batch_size=batch_size,
+    batch_par_epoch=batch_par_epoch,
+    max_open_files=max_open_files)
+    # Make a DataLoader
+
+    train_dataloader =  DataLoader(dataset=data_train,
+                            batch_size=None,
+                            num_workers=num_workers,
+                            pin_memory=pin_memory,
+                            worker_init_fn=worker_init_fn)
+
+    val_dataloader = DataLoader(dataset=data_val,
+                            batch_size=None,
+                            num_workers=num_workers,
+                            pin_memory=pin_memory,
+                            worker_init_fn=worker_init_fn)
+
+    test_dataloader = DataLoader(dataset=data_test,
+                    batch_size=None,
+                    num_workers=num_workers,
+                    pin_memory=pin_memory,
+                    worker_init_fn=worker_init_fn)
+    return train_dataloader, val_dataloader, test_dataloader
+
+
+
 
 if __name__ == "__main__":
     parser = get_S2_id_split_parser().parse_args()

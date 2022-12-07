@@ -297,7 +297,7 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
     return 
 
 def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='', 
-              filename='pair_plot.svg'):
+              filename='pair_plot.png'):
     def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap):
         """Plots single pair of features.
     

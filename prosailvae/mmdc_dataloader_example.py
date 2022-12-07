@@ -13,10 +13,13 @@ import sys
 import os
 
 # this is a temporal solution
-sys.path = ['/home/uz/vinascj/scratch/fork/prosailvae',
-            '/home/uz/vinascj/src/MMDC/mmdc-singledate',
-            '/home/uz/vinascj/src/MMDC/mmdc-datacollection/thirdparties/sensorsio',
-            '/home/uz/vinascj/src/torchutils/src'] + sys.path
+# sys.path = ['/home/uz/vinascj/scratch/fork/prosailvae',
+#             '/home/uz/vinascj/src/MMDC/mmdc-singledate',
+#             '/home/uz/vinascj/src/MMDC/mmdc-datacollection/thirdparties/sensorsio',
+#             '/home/uz/vinascj/src/torchutils/src'] + sys.path
+sys.path = ['/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/mmdc-singledate',
+            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/sensorsio',
+            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/torchutils/src'] + sys.path
 
 from typing import Any
 import torch
@@ -35,10 +38,10 @@ from src.datamodules.components.datamodule_utils import (MMDCDataStats,
 
 def main():
         # parameters
-        tensors_dir='/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/'
+        tensors_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/"#'/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/'
         batch_size=None
         batch_par_epoch=100
-        max_open_files=1
+        max_open_files=4
         num_workers=1
         pin_memory=False
         nb_epochs = 5 #00
@@ -104,7 +107,8 @@ def main():
 
         # Make the training loop
         for e in range(nb_epochs):
-                for idx, batch in zip(range(batch_par_epoch), train_dataloader):
+                
+                for idx, batch in zip(range(batch_par_epoch), test_dataloader):
                         (s2_x, s2_a, s1_x, s1_a_asc, s1_a_desc, wc_x,
                         srtm_x) = destructure_batch(batch)
                         print(f"s2_x = {s2_x.shape}"),

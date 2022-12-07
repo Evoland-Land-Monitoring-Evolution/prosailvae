@@ -10,6 +10,25 @@ import torch
 import logging
 from prosailvae.utils import NaN_model_params
 
+def convert_angles(angles):
+    #TODO: convert 6 S2 "angles" into sun zenith, S2 zenith and Sun/S2 relative Azimuth (degrees)
+    return angles[:,:3]
+
+def flatten_patch(s2_refl, angles):
+    batch_size = s2_refl.size(0)
+    patch_size_x = s2_refl.size(2)
+    patch_size_y = s2_refl.size(3)
+    s2_refl = s2_refl.transpose(1,2).transpose(2,3).reshape(batch_size * patch_size_x * patch_size_y, 10)
+    angles = convert_angles(angles.transpose(1,2).transpose(2,3).reshape(batch_size * patch_size_x * patch_size_y, 6))
+    return s2_refl, angles
+
+def patchify_2D_tensor(tensor_2D, data_size=10, patch_size=32):
+    mixed_batch_size = tensor_2D.size(0) 
+    batch_size = mixed_batch_size // patch_size**2 
+    patchified_tensor = tensor_2D.reshape(batch_size, patch_size, patch_size, data_size).transpose(2,3).transpose(1,2)
+    return patchified_tensor
+    
+
 class SimVAE(nn.Module):
     """
     A class used to represent an encoder with simulator-decoder.
@@ -54,7 +73,8 @@ class SimVAE(nn.Module):
     """
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
-                 beta_kl=0, logger_name='PROSAIL-VAE logger'):
+                 beta_kl=0, logger_name='PROSAIL-VAE logger',
+                 patch_mode=False):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -69,6 +89,7 @@ class SimVAE(nn.Module):
         self.beta_kl = beta_kl
         self.eval()
         self.logger = logging.getLogger(logger_name)
+        self.patch_mode = patch_mode
         
     def encode(self, x, angles):
         y = self.encoder.encode(x, angles)
@@ -107,7 +128,6 @@ class SimVAE(nn.Module):
         
         # decoding
         rec = self.decode(sim, angles)
-        
         return dist_params, z, sim, rec
     
     def point_estimate_rec(self, x, angles, mode='random'):
@@ -157,8 +177,11 @@ class SimVAE(nn.Module):
                                              len_loader=1, n_samples=1, eps=1e-9):
         # assert n_samples>1
         batch_size = data.size(0)
-        data = data.view(batch_size, -1).float()
-        params, z, sim, rec = self.forward(data, n_samples=n_samples, angles=angles)     
+        s2_refl = data.view(batch_size, -1).float()
+        if self.patch_mode:
+            angles = convert_angles(angles)
+            s2_refl, angles = flatten_patch(s2_refl, angles)
+        params, z, sim, rec = self.forward(s2_refl, n_samples=n_samples, angles=angles)     
         if torch.isnan(params).any():
             self.logger.error("NaN in inferred distribution parameters !")
         nan_rec = torch.isnan(rec[:,0,:]).detach()
@@ -185,7 +208,7 @@ class SimVAE(nn.Module):
             self.logger.debug("sigma = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,1].squeeze()}")
             
-        rec_loss = self.decoder.loss(data, rec)
+        rec_loss = self.decoder.loss(s2_refl, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum=rec_loss

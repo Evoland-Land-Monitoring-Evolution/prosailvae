@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export python_version="3.9"
-export name="prosailvae"
+export name="juanvae"
 
 if ! [ -z "$1" ]
 then
@@ -50,15 +50,16 @@ python --version
 conda deactivate
 conda activate $target
 
-pip install -e /home/uz/vinascj/scratch/fork/prosailpython
-
-pip install -e /home/uz/vinascj/src/MMDC/mmdc-singledate/
+pip install -e /home/uz/$USER/scratch/src/thirdparties/prosailpython
+pip install -e /home/uz/$USER/src/thirdparties/mmdc-singledate/
+pip install -e /home/uz/$USER/src/thirdparties/sensorsio/
+pip install -e /home/uz/$USER/src/thirdparties/torchutils/
 
 # Install requirements
 pip install -r requirements.txt
 
 # Install the current project in edit mode
-pip install -e .[testing]
+pip install -e .
 
 # End
 conda deactivate

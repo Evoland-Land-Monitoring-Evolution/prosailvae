@@ -106,7 +106,7 @@ def get_prosailvae_train_parser():
        
     return parser
 
-def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader, 
+def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
                   res_dir, n_samples=20, logger_name=''):
     logger = logging.getLogger(logger_name)
     all_train_loss_df = pd.DataFrame()
@@ -117,7 +117,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             try:
-                train_loss_dict = phenoVAE.fit(train_loader, optimizer, n_samples=n_samples)
+                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
                 
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
@@ -129,7 +129,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
                 traceback.print_exc()
                 break
             try:
-                valid_loss_dict = phenoVAE.validate(train_loader, n_samples=n_samples)
+                valid_loss_dict = PROSAIL_VAE.validate(train_loader, n_samples=n_samples)
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')
@@ -153,7 +153,7 @@ def training_loop(phenoVAE, optimizer, n_epoch, train_loader, valid_loader,
             
             if valid_loss_dict['loss_sum'] < best_val_loss:
                 best_val_loss = valid_loss_dict['loss_sum'] 
-                phenoVAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weigths.tar")
+                PROSAIL_VAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weigths.tar")
     return all_train_loss_df, all_valid_loss_df
 
 
@@ -291,14 +291,14 @@ if __name__ == "__main__":
     plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
     logger.info("Plotting reconstructed reflectance components pair plots")
     pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
-              res_dir=metrics_dir, filename='normed_rec_pair_plot.svg')
+              res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
     logger.info("Plotting reference reflectance components pair plots")
     pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
-              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.svg')
+              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
     logger.info("Plotting inferred PROSAIL parameters pair plots")
     pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=metrics_dir, filename='sim_prosail_pair_plot.svg')
+              res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
     logger.info("Plotting reference PROSAIL parameters pair plots")
     pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=metrics_dir, filename='ref_prosail_pair_plot.svg')
+              res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
     logger.info("Program completed.")

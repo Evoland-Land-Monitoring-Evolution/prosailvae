@@ -11,3 +11,4 @@ data/real_data/torchfiles/*/*.pth
 data/*
 results/*
 prosailvae.egg/*
+prosailvae.egg-info/*

@@ -15,9 +15,13 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 import argparse    
 import sys
-sys.path = ['/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/mmdc-singledate',
-            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/sensorsio',
-            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/torchutils/src'] + sys.path
+
+# thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
+thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
+
+sys.path = [thirdparties_path + '/mmdc-singledate',
+            thirdparties_path + '/sensorsio',
+            thirdparties_path + '/torchutils/src'] + sys.path
 from src.datamodules.mmdc_datamodule import (IterableMMDCDataset,
                                                          worker_init_fn,
                                                          destructure_batch)

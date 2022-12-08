@@ -25,13 +25,14 @@ def get_prosail_VAE(rsr_dir,
                                 "hidden_layers_size":[400, 500, 300, 100], 
                                 "encoder_last_activation":None, 
                                 "supervised":False,  
-                                "beta_kl":1}, 
+                                "beta_kl":1,
+                                "beta_index":1}, 
                     device='cpu',
                     refl_norm_mean=None,
                     refl_norm_std=None,
                     logger_name='',
                     patch_mode=False):
-    latent_dim=11
+    latent_dim = 11
     output_size = latent_dim * 2
     
     encoder = ProsailNNEncoder(s2refl_size=vae_params["input_size"], 
@@ -65,6 +66,7 @@ def get_prosail_VAE(rsr_dir,
                       supervised=vae_params["supervised"],  
                       device=device, 
                       beta_kl=vae_params["beta_kl"],
+                      beta_index=vae_params["beta_index"],
                       logger_name=logger_name, patch_mode=patch_mode)
     return prosailVAE
 

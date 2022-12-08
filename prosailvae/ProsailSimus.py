@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import prosail
 from prosail import spectral_lib
+from prosailvae.utils import gaussian_nll_loss
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -84,11 +85,44 @@ RSR of the sensor.
             axis=2) / self.s2norm_factor_d  
         return simu
     
+    def normalize(self, s2_r):
+        return (s2_r - self.norm_mean) / self.norm_std
+    
+    def unnormalize(self, s2_r):
+        if len(s2_r.size())==2:
+            return s2_r * self.norm_std + self.norm_mean
+        elif len(s2_r.size())==3:
+            return s2_r * self.norm_std.unsqueeze(0).unsqueeze(2) + self.norm_mean.unsqueeze(0).unsqueeze(2)
+        else:
+            raise NotImplementedError
+
     def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)
         if self.apply_norm:
-            simu = (simu - self.norm_mean) / self.norm_std
+            simu = self.normalize(simu)
         return simu  # type: ignore
+    
+    def index_loss(self, s2_r, s2_rec, index_terms = ["NDVI"]):
+        u_s2_r = self.unnormalize(s2_r)
+        u_s2_rec = self.unnormalize(s2_rec)
+        n_samples = s2_rec.size(2)
+        loss = torch.tensor(0.0).to(s2_r.device)
+        if "NDVI" in index_terms:
+            ndvi = NDVI(u_s2_r).view(-1,1)
+            ndvi_rec = NDVI(u_s2_rec).view(-1,1,n_samples)
+            loss += gaussian_nll_loss(ndvi, ndvi_rec)
+        return loss
+
+def NDVI(s2_r, eps=torch.tensor(1e-7)):
+    if len(s2_r.size())==2:
+        B4 = s2_r[:,2]
+        B8 = s2_r[:,6]
+    elif len(s2_r.size())==3:
+        B4 = s2_r[:,2,:]
+        B8 = s2_r[:,6,:]
+    else:
+        raise NotImplementedError
+    return (B8 - B4) / (B8 + B4 + eps)
 
 
 class ProsailSimulator():

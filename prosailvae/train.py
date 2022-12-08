@@ -220,7 +220,8 @@ if __name__ == "__main__":
                 "hidden_layers_size":params["hidden_layers_size"], 
                 "encoder_last_activation":params["encoder_last_activation"],
                 "supervised":params["supervised"],  
-                "beta_kl":params["beta_kl"]}
+                "beta_kl":params["beta_kl"],
+                "beta_index":params["beta_index"],}
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     

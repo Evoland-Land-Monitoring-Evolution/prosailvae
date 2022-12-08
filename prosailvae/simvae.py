@@ -58,7 +58,7 @@ class SimVAE(nn.Module):
     """
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
-                 beta_kl=0, logger_name='PROSAIL-VAE logger',
+                 beta_kl=0, beta_index=0, logger_name='PROSAIL-VAE logger',
                  patch_mode=False):
         
         super(SimVAE, self).__init__()
@@ -75,6 +75,7 @@ class SimVAE(nn.Module):
         self.eval()
         self.logger = logging.getLogger(logger_name)
         self.patch_mode = patch_mode
+        self.beta_index = beta_index
         
     def encode(self, x, angles):
         y = self.encoder.encode(x, angles)
@@ -200,9 +201,14 @@ class SimVAE(nn.Module):
         
         if self.beta_kl > 0:
             kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
-            loss_sum+=kl_loss
+            loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()
-            
+
+        if self.beta_index>0:
+            index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec)
+            loss_sum += index_loss
+            loss_dict['index_loss'] = index_loss.item()
+
         loss_dict['loss_sum'] = loss_sum.item()
 
         for key in loss_dict:
@@ -246,12 +252,14 @@ class SimVAE(nn.Module):
         loss = checkpoint['loss']
         return epoch, loss
     
-    def fit(self, dataloader, optimizer, supervised=False, n_samples=1):
+    def fit(self, dataloader, optimizer, supervised=False, n_samples=1, batch_per_epoch=None):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
         # for i, batch in zip(range(batch_per_epoch), test_dataloader):
-        for i, batch in enumerate(dataloader):
+        if batch_per_epoch is None:
+            batch_per_epoch = len(dataloader)
+        for i, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
             optimizer.zero_grad()
             
             if not supervised:
@@ -269,12 +277,14 @@ class SimVAE(nn.Module):
         self.eval()
         return train_loss_dict
 
-    def validate(self, dataloader, supervised=False, n_samples=1):
+    def validate(self, dataloader, supervised=False, n_samples=1, batch_per_epoch=None):
         self.eval()
         valid_loss_dict = {}
         len_loader = len(dataloader.dataset)
         with torch.no_grad():
-            for _, batch in enumerate(dataloader):
+            if batch_per_epoch is None:
+                batch_per_epoch = len(dataloader)
+            for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
                 if not supervised:
                     loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)

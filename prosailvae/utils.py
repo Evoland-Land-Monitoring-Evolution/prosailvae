@@ -34,3 +34,12 @@ def NaN_model_params(model):
             if torch.isnan(param).any() :
                 return True
     return False
+
+def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
+    eps = torch.tensor(eps).to(device)
+    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
+            torch.log(torch.max(sigma, eps)).sum(1)
+
+def gaussian_nll_loss(tgt, recs):
+    rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
+    return gaussian_nll(tgt, recs.mean(2), rec_err_var, device=tgt.device).mean() 

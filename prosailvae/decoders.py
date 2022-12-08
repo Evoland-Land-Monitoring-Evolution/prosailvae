@@ -11,8 +11,8 @@ import torch
 
 def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
     eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu.unsqueeze(2)) / torch.max(sigma, eps)).sum(1) +  \
-            torch.log(torch.max(sigma.squeeze(1), eps)).sum(1)
+    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
+            torch.log(torch.max(sigma, eps)).sum(1)
 
 class Decoder(nn.Module):
 
@@ -48,7 +48,7 @@ class ProsailSimulatorDecoder(Decoder):
     #     return rec_loss
     
     def loss(self, tgt, rec):        
-        rec_err_var = torch.var(rec-tgt.unsqueeze(2), 2).unsqueeze(2)
-        rec_loss = gaussian_nll(tgt.unsqueeze(2), rec.mean(2), rec_err_var, device=self.device).mean() 
+        rec_err_var = torch.var(rec-tgt.unsqueeze(2), 2)
+        rec_loss = gaussian_nll(tgt, rec.mean(2), rec_err_var, device=self.device).mean() 
         return rec_loss
 

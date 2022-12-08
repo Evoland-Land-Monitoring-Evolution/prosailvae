@@ -22,10 +22,10 @@ thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
 sys.path = [thirdparties_path + '/mmdc-singledate',
             thirdparties_path + '/sensorsio',
             thirdparties_path + '/torchutils/src'] + sys.path
-from src.datamodules.mmdc_datamodule import (IterableMMDCDataset,
+from src.mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
                                                          worker_init_fn,
                                                          destructure_batch)
-from src.datamodules.components.datamodule_utils import (MMDCDataStats,
+from src.mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataStats,
                                                         OneSetMMDCDataclass,
                                                         average_stats,
                                                         compute_stats,

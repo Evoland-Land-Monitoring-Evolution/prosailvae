@@ -18,6 +18,7 @@
     "supervised": false,
     "beta_kl": 1,
     "k_fold": 0,
-    "dataset_file_prefix": "full_",
-    "n_fold": null
+    "dataset_file_prefix": "mmdc_",
+    "n_fold": null,
+    "simulated_dataset":false
 }

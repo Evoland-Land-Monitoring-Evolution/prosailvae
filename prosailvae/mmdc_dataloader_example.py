@@ -12,29 +12,27 @@ related with MMDC project
 import sys
 import os
 
-# this is a temporal solution
-# sys.path = ['/home/uz/vinascj/scratch/fork/prosailvae',
-#             '/home/uz/vinascj/src/MMDC/mmdc-singledate',
-#             '/home/uz/vinascj/src/MMDC/mmdc-datacollection/thirdparties/sensorsio',
-#             '/home/uz/vinascj/src/torchutils/src'] + sys.path
-sys.path = ['/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/mmdc-singledate',
-            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/sensorsio',
-            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/torchutils/src'] + sys.path
-
 from typing import Any
 import torch
 
 from torch.utils.data import DataLoader
 
-from src.datamodules.mmdc_datamodule import (IterableMMDCDataset,
+thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
+# thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
+
+sys.path = [thirdparties_path + '/mmdc-singledate',
+            thirdparties_path + '/sensorsio',
+            thirdparties_path + '/torchutils/src'] + sys.path
+
+from src.mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
                                                          worker_init_fn,
                                                          destructure_batch)
-
-from src.datamodules.components.datamodule_utils import (MMDCDataStats,
-                                                        OneSetMMDCDataclass,
+from src.mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataStats,
+                                                        #OneSetMMDCDataclass,
                                                         average_stats,
                                                         compute_stats,
-                                                        create_tensors_path)
+                                                        create_tensors_path)                                                         
+
 
 def main():
         # parameters
@@ -71,19 +69,16 @@ def main():
         data_train = IterableMMDCDataset(
                 zip_files=train_data_files,
                 batch_size=1,
-                batch_par_epoch=batch_par_epoch,
                 max_open_files=max_open_files)
         print(f"{data_train}")
         data_val = IterableMMDCDataset(
                 zip_files=val_data_files,
                 batch_size=1,
-                batch_par_epoch=batch_par_epoch,
                 max_open_files=max_open_files)
 
         data_test = IterableMMDCDataset(
         zip_files=test_data_files,
         batch_size=1,
-        batch_par_epoch=batch_par_epoch,
         max_open_files=max_open_files)
         # Make a DataLoader
 
@@ -107,8 +102,8 @@ def main():
 
         # Make the training loop
         for e in range(nb_epochs):
-                
-                for idx, batch in zip(range(batch_par_epoch), test_dataloader):
+                for idx, batch in enumerate(test_dataloader):
+                # for idx, batch in zip(range(batch_par_epoch), test_dataloader):
                         (s2_x, s2_a, s1_x, s1_a_asc, s1_a_desc, wc_x,
                         srtm_x) = destructure_batch(batch)
                         print(f"s2_x = {s2_x.shape}"),

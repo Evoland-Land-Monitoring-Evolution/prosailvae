@@ -6,7 +6,7 @@ Created on Mon Nov 14 14:20:44 2022
 @author: yoel
 """
 from prosailvae.prosail_vae import get_prosail_VAE
-from dataset.loaders import  get_simloader, get_norm_coefs
+from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
 from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot
@@ -100,10 +100,14 @@ def get_prosailvae_train_parser():
     parser.add_argument("-r", dest="root_results_dir",
                         help="path to root results direcotry",
                         type=str, default="")
+
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
-       
+    
+    parser.add_argument("-t", dest="tensor_dir",
+                        help="directory of mmdc tensor files",
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
     return parser
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
@@ -173,6 +177,7 @@ if __name__ == "__main__":
     params = load_dict(config_dir + parser.config_file)
     if params["supervised"]:
         params["dataset_file_prefix"]='sim_'
+        params["simulated_dataset"]=True
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     if len(parser.root_results_dir)==0:
@@ -193,17 +198,20 @@ if __name__ == "__main__":
     logger.info('Parameters are : ')
     for _, key in enumerate(params):
         logger.info(f'{key} : {params[key]}')
-    # load_train_valid_ids(k=params["k_fold"],
-    #                   n=params["n_fold"], 
-    #                   file_prefix=params["dataset_file_prefix"])
     logger.info('========================================================================')
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
-    
-    train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
-                                              file_prefix=params["dataset_file_prefix"], 
-                                              sample_ids=None,
-                                              batch_size=params["batch_size"],
-                                              data_dir=data_dir)
+    if params["simulated_dataset"]:
+        train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
+                            file_prefix=params["dataset_file_prefix"], 
+                            sample_ids=None,
+                            batch_size=params["batch_size"],
+                            data_dir=data_dir)
+    else:
+        train_loader, valid_loader, _ = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
+                                                         batch_size=1,
+                                                         max_open_files=4,
+                                                         num_workers=1,
+                                                         pin_memory=False)
     
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
@@ -220,7 +228,7 @@ if __name__ == "__main__":
     rsr_dir = parser.rsr_dir
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
-                                  logger_name=logger_name)
+                                  logger_name=logger_name,patch_mode= not params["simulated_dataset"])
     
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"], weight_decay=1e-2)
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)

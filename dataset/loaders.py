@@ -16,8 +16,8 @@ from sklearn.model_selection import train_test_split
 import argparse    
 import sys
 
-# thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
-thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
+thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
+# thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
 
 sys.path = [thirdparties_path + '/mmdc-singledate',
             thirdparties_path + '/sensorsio',
@@ -281,6 +281,44 @@ def get_norm_coefs(data_dir, file_prefix=''):
         norm_std = torch.from_numpy(norm_std)
     return norm_mean, norm_std
 
+
+def convert_angles(angles):
+    #TODO: convert 6 S2 "angles" into sun zenith, S2 zenith and Sun/S2 relative Azimuth (degrees)
+    c_sun_zen = angles[:,0].unsqueeze(1)
+    c_sun_azi = angles[:,1].unsqueeze(1)
+    s_sun_azi = angles[:,2].unsqueeze(1)
+    c_obs_zen = angles[:,3].unsqueeze(1)
+    c_obs_azi = angles[:,4].unsqueeze(1)
+    s_obs_azi = angles[:,5].unsqueeze(1)
+
+    c_rel_azi = c_obs_azi * c_sun_azi + s_obs_azi * s_sun_azi
+    s_rel_azi = s_obs_azi * c_sun_azi - c_obs_azi * s_sun_azi
+
+    sun_zen = torch.rad2deg(torch.arccos(c_sun_zen))
+    obs_zen = torch.rad2deg(torch.arccos(c_obs_zen))
+    rel_azi = torch.rad2deg(torch.atan2(s_rel_azi, c_rel_azi))
+
+    return torch.concat((sun_zen, obs_zen, rel_azi), axis=1)
+
+def flatten_patch(s2_refl, angles):
+    batch_size = s2_refl.size(0)
+    patch_size_x = s2_refl.size(2)
+    patch_size_y = s2_refl.size(3)
+    s2_refl = s2_refl.transpose(1,2).transpose(2,3).reshape(batch_size * patch_size_x * patch_size_y, 10)
+    angles = convert_angles(angles.transpose(1,2).transpose(2,3).reshape(batch_size * patch_size_x * patch_size_y, 6))
+    return s2_refl, angles
+
+def patchify_2D_tensor(tensor_2D, data_size=10, patch_size=32):
+    mixed_batch_size = tensor_2D.size(0) 
+    batch_size = mixed_batch_size // patch_size**2 
+    patchified_tensor = tensor_2D.reshape(batch_size, patch_size, patch_size, data_size).transpose(2,3).transpose(1,2)
+    return patchified_tensor
+
+def get_flattened_patch(batch, device='cpu'):
+    (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+    s2_r, s2_a = flatten_patch(s2_r.to(device), s2_a.to(device))
+    return s2_r, s2_a
+
 def get_mmdc_loaders(tensors_dir="",
         batch_size=1,
         batch_par_epoch=100,
@@ -308,19 +346,16 @@ def get_mmdc_loaders(tensors_dir="",
     data_train = IterableMMDCDataset(
             zip_files=train_data_files,
             batch_size=batch_size,
-            batch_par_epoch=batch_par_epoch,
             max_open_files=max_open_files)
     # print(f"{data_train}")
     data_val = IterableMMDCDataset(
             zip_files=val_data_files,
             batch_size=batch_size,
-            batch_par_epoch=batch_par_epoch,
             max_open_files=max_open_files)
 
     data_test = IterableMMDCDataset(
     zip_files=test_data_files,
     batch_size=batch_size,
-    batch_par_epoch=batch_par_epoch,
     max_open_files=max_open_files)
     # Make a DataLoader
 

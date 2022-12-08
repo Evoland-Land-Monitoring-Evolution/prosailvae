@@ -9,24 +9,9 @@ import torch.nn as nn
 import torch
 import logging
 from prosailvae.utils import NaN_model_params
+from dataset.loaders import get_flattened_patch
 
-def convert_angles(angles):
-    #TODO: convert 6 S2 "angles" into sun zenith, S2 zenith and Sun/S2 relative Azimuth (degrees)
-    return angles[:,:3]
 
-def flatten_patch(s2_refl, angles):
-    batch_size = s2_refl.size(0)
-    patch_size_x = s2_refl.size(2)
-    patch_size_y = s2_refl.size(3)
-    s2_refl = s2_refl.transpose(1,2).transpose(2,3).reshape(batch_size * patch_size_x * patch_size_y, 10)
-    angles = convert_angles(angles.transpose(1,2).transpose(2,3).reshape(batch_size * patch_size_x * patch_size_y, 6))
-    return s2_refl, angles
-
-def patchify_2D_tensor(tensor_2D, data_size=10, patch_size=32):
-    mixed_batch_size = tensor_2D.size(0) 
-    batch_size = mixed_batch_size // patch_size**2 
-    patchified_tensor = tensor_2D.reshape(batch_size, patch_size, patch_size, data_size).transpose(2,3).transpose(1,2)
-    return patchified_tensor
     
 
 class SimVAE(nn.Module):
@@ -173,15 +158,15 @@ class SimVAE(nn.Module):
             
         return dist_params, z, sim, rec
     
-    def compute_unsupervised_loss_over_batch(self, data, angles, normalized_loss_dict, 
+    def compute_unsupervised_loss_over_batch(self, batch, normalized_loss_dict, 
                                              len_loader=1, n_samples=1, eps=1e-9):
         # assert n_samples>1
-        batch_size = data.size(0)
-        s2_refl = data.view(batch_size, -1).float()
-        if self.patch_mode:
-            angles = convert_angles(angles)
-            s2_refl, angles = flatten_patch(s2_refl, angles)
-        params, z, sim, rec = self.forward(s2_refl, n_samples=n_samples, angles=angles)     
+        if self.patch_mode:      
+            s2_r, s2_a = get_flattened_patch(batch, device=self.device)
+        else:
+            s2_r = batch[0].to(self.device) 
+            s2_a = batch[1].to(self.device)  
+        params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)     
         if torch.isnan(params).any():
             self.logger.error("NaN in inferred distribution parameters !")
         nan_rec = torch.isnan(rec[:,0,:]).detach()
@@ -202,13 +187,13 @@ class SimVAE(nn.Module):
             self.logger.debug("sim = ")
             self.logger.debug(f"{sim[nan_batch_idx[0], :, nan_sample_idx[0]].squeeze()}")
             self.logger.debug("angles = ")
-            self.logger.debug(f"{angles[nan_batch_idx[0], :].squeeze()}")
+            self.logger.debug(f"{s2_a[nan_batch_idx[0], :].squeeze()}")
             self.logger.debug("mu = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,0].squeeze()}")
             self.logger.debug("sigma = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,1].squeeze()}")
             
-        rec_loss = self.decoder.loss(s2_refl, rec)
+        rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum=rec_loss
@@ -265,22 +250,15 @@ class SimVAE(nn.Module):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
+        # for i, batch in zip(range(batch_per_epoch), test_dataloader):
         for i, batch in enumerate(dataloader):
             optimizer.zero_grad()
-            s2_refl = batch[0].to(self.device) 
-            angles = batch[1].to(self.device) 
-            s2_refl.requires_grad = True
-            angles.requires_grad = True
             
             if not supervised:
-                loss_sum, _ = self.compute_unsupervised_loss_over_batch(s2_refl, 
-                                                                        angles, 
+                loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             else:
-                tgt = batch[2].to(self.device) 
-                tgt.requires_grad = True
-                loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, tgt, 
-                    train_loss_dict, n_samples=n_samples, len_loader=len_loader)
+                raise NotImplementedError
             if torch.isnan(loss_sum).any():
                 self.logger.error(f"NaN Loss encountered during training at batch {i}!")
                 
@@ -297,15 +275,11 @@ class SimVAE(nn.Module):
         len_loader = len(dataloader.dataset)
         with torch.no_grad():
             for _, batch in enumerate(dataloader):
-                s2_refl = batch[0].to(self.device)  
-                angles = batch[1].to(self.device) 
                 if not supervised:
-                    loss_sum, _ = self.compute_unsupervised_loss_over_batch(s2_refl, angles, 
+                    loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
                 else:
-                    tgt = batch[2].to(self.device) 
-                    loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, angles, tgt, 
-                        valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
+                    raise NotImplementedError
             if torch.isnan(loss_sum).any():
                 self.logger.error("NaN Loss encountered during validation !")
         return valid_loss_dict
@@ -313,14 +287,14 @@ class SimVAE(nn.Module):
 
 def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
     eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu) / torch.max(sigma, eps)).mean(1).sum(1) +  \
-            torch.log(torch.max(sigma.squeeze(1), eps)).sum(1)
+    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
+            torch.log(torch.max(sigma, eps)).sum(1)
 from prosailvae.dist_utils import kl_tn_uniform     
      
 def lr_finder_elbo(model_outputs, label, beta=1):
-    dist_params, z, sim, rec = model_outputs
-    rec_err_var = torch.var(rec-label.unsqueeze(2), 2).unsqueeze(2)
-    rec_loss = gaussian_nll(label.unsqueeze(2), rec, rec_err_var).mean() 
+    dist_params, _, _, rec = model_outputs
+    rec_err_var = torch.var(rec-label.unsqueeze(2), 2)
+    rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
     loss_sum=rec_loss
     sigma = dist_params[:, :, 1].squeeze()
     mu = dist_params[:, :, 0].squeeze()

@@ -200,9 +200,9 @@ if __name__ == "__main__":
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     
     train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
-                                              file_prefix=params["dataset_file_prefix"], 
+                                              file_prefix="small_test_",#params["dataset_file_prefix"], 
                                               sample_ids=None,
-                                              batch_size=params["batch_size"],
+                                              batch_size=13,#params["batch_size"],
                                               data_dir=data_dir)
     
     logger.info(f'Training ({len(train_loader.dataset)} samples) '

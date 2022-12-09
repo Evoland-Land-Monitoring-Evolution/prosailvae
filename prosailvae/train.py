@@ -268,7 +268,8 @@ if __name__ == "__main__":
     prosail_VAE.eval()
     logger.info("Computing inference metrics with test dataset...")
     (mae, mpiw, picp, mare, 
-    sim_dist, tgt_dist, rec_dist) = get_metrics(prosail_VAE, loader, 
+    sim_dist, tgt_dist, rec_dist,
+    angles_dist) = get_metrics(prosail_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
     logger.info("Metrics computed.")

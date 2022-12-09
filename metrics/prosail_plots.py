@@ -388,3 +388,20 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
     fig.savefig(res_dir + filename)
     return
 
+def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
+    error_dist = (tgt_dist - rec_dist).abs().mean(1)
+    fig, axs = plt.subplots(3,1,dpi=150)
+    axs[0].scatter(angles_dist[:,0].squeeze().numpy(), error_dist.squeeze().numpy())
+    axs[0].set_ylabel('Reconstruction Mean Absolute Error')
+    axs[0].set_xlabel("Sun zenith")
+
+    axs[1].scatter(angles_dist[:,1].squeeze().numpy(), error_dist.squeeze().numpy())
+    axs[1].set_ylabel('Reconstruction Mean Absolute Error')
+    axs[1].set_xlabel("S2 zenith")
+
+    axs[2].scatter(angles_dist[:,2].squeeze().numpy(), error_dist.squeeze().numpy())
+    axs[2].set_ylabel('Reconstruction Mean Absolute Error')
+    axs[2].set_xlabel("Sun/S2 Relative azimuth")
+
+    fig.savefig(res_dir+"error_vs_angles.png")
+    return

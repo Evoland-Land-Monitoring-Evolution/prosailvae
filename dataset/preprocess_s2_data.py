@@ -37,17 +37,20 @@ def get_S2_data_preprocess_parser():
         type=int, default=100)    
     return parser
 
-sys.path = ['/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/mmdc-singledate',
-            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/sensorsio',
-            '/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/torchutils/src'] + sys.path
-from src.datamodules.mmdc_datamodule import (IterableMMDCDataset,
+thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
+# thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
+
+sys.path = [thirdparties_path + '/mmdc-singledate',
+            thirdparties_path + '/sensorsio',
+            thirdparties_path + '/torchutils/src'] + sys.path
+from src.mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
                                                          worker_init_fn,
                                                          destructure_batch)
-from src.datamodules.components.datamodule_utils import (MMDCDataStats,
-                                                        OneSetMMDCDataclass,
+from src.mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataStats,
+                                                        #OneSetMMDCDataclass,
                                                         average_stats,
                                                         compute_stats,
-                                                        create_tensors_path)   
+                                                        create_tensors_path)     
 
 
 def get_mmdc_dataset_mean_std(loader, max_batch=100):
@@ -56,7 +59,7 @@ def get_mmdc_dataset_mean_std(loader, max_batch=100):
     n = 0
     for idx, batch in zip(range(max_batch), loader):
         (s2_x, _, _, _, _, _, _) = destructure_batch(batch)
-        s2_refl = s2_x.transpose(0,1).reshape(10,-1)
+        s2_refl = s2_x.transpose(0,1).reshape(10,-1) / 10000
         S1 = S1 + s2_refl.sum(1)
         S2 = S2 + s2_refl.pow(2).sum(1)
         n = n + s2_refl.size(1)

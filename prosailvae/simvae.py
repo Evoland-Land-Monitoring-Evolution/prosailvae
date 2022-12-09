@@ -164,6 +164,7 @@ class SimVAE(nn.Module):
         # assert n_samples>1
         if self.patch_mode:      
             s2_r, s2_a = get_flattened_patch(batch, device=self.device)
+            s2_r = s2_r / 10000
         else:
             s2_r = batch[0].to(self.device) 
             s2_a = batch[1].to(self.device)  

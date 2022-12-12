@@ -37,7 +37,6 @@ class ProsailSimulatorDecoder(Decoder):
         rec = self.ssimulator(self.prosailsimulator(sim_input)).reshape(batch_size, 
                                                                         n_samples, 
                                                                         -1).transpose(1,2)
-        
         return rec
     
     # def loss(self, tgt, rec):        
@@ -46,6 +45,8 @@ class ProsailSimulatorDecoder(Decoder):
     #     return rec_loss
     
     def loss(self, tgt, rec):        
+        if self.ssimulator.apply_norm:
+            tgt = self.ssimulator.normalize(tgt)
         rec_loss = gaussian_nll_loss(tgt, rec) 
         return rec_loss
 

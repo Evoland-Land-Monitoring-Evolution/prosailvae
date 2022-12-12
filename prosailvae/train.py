@@ -29,6 +29,7 @@ import logging
 import logging.config
 import time
 import traceback
+import socket
 
 
 def check_fold_res_dir(fold_dir, n_xp, params):
@@ -162,8 +163,19 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
 
 
 if __name__ == "__main__":
-    
-    parser = get_prosailvae_train_parser().parse_args()
+    if socket.gethostname()=='CELL200973':
+        args=["-n", "0",
+              "-c", "config_dev.json",
+              "-x", "1",
+              "-o", "True",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
+              "-r", "",
+              "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
+              "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/"]
+        
+        parser = get_prosailvae_train_parser().parse_args(args)    
+    else:
+        parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)
     
     config_dir = os.path.join(root_dir,"config/")
@@ -229,7 +241,8 @@ if __name__ == "__main__":
     rsr_dir = parser.rsr_dir
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
-                                  logger_name=logger_name,patch_mode= not params["simulated_dataset"])
+                                  logger_name=logger_name, patch_mode=not params["simulated_dataset"],
+                                  apply_norm_rec=True)
     
     optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"], weight_decay=1e-2)
     # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)

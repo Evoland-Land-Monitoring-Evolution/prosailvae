@@ -12,6 +12,7 @@ import torch
 import prosail
 from prosail import spectral_lib
 from prosailvae.utils import gaussian_nll_loss
+from spectral_indices import NDVI, mNDVI750, ND_lma, NDII, LAI_savi, CRI2
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -102,28 +103,37 @@ RSR of the sensor.
             simu = self.normalize(simu)
         return simu  # type: ignore
     
-    def index_loss(self, s2_r, s2_rec, index_terms = ["NDVI"]):
+    def index_loss(self, s2_r, s2_rec, index_terms = ["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"]):
         u_s2_r = self.unnormalize(s2_r)
-        u_s2_rec = self.unnormalize(s2_rec)
+        if self.apply_norm:
+            u_s2_rec = self.unnormalize(s2_rec)
         n_samples = s2_rec.size(2)
         loss = torch.tensor(0.0).to(s2_r.device)
         if "NDVI" in index_terms:
             ndvi = NDVI(u_s2_r).view(-1,1)
             ndvi_rec = NDVI(u_s2_rec).view(-1,1,n_samples)
             loss += gaussian_nll_loss(ndvi, ndvi_rec)
+        if "mNDVI750" in index_terms:
+            mndvi750 = mNDVI750(u_s2_r).view(-1,1)
+            mndvi750_rec = mNDVI750(u_s2_rec).view(-1,1,n_samples)
+            loss += gaussian_nll_loss(mndvi750, mndvi750_rec)
+        if "CRI2" in index_terms:
+            cri2 = CRI2(u_s2_r).view(-1,1)
+            cri2_rec = CRI2(u_s2_rec).view(-1,1,n_samples)
+            loss += gaussian_nll_loss(cri2, cri2_rec)
+        if "NDII" in index_terms:
+            ndii = NDII(u_s2_r).view(-1,1)
+            ndii_rec = NDII(u_s2_rec).view(-1,1,n_samples)
+            loss += gaussian_nll_loss(ndii, ndii_rec)
+        if "ND_lma" in index_terms:
+            nd_lma = ND_lma(u_s2_r).view(-1,1)
+            nd_lma_rec = ND_lma(u_s2_rec).view(-1,1,n_samples)
+            loss += gaussian_nll_loss(nd_lma, nd_lma_rec)  
+        if "LAI_savi" in index_terms:
+            lai_savi = LAI_savi(u_s2_r).view(-1,1)
+            lai_savi_rec = LAI_savi(u_s2_rec).view(-1,1,n_samples)
+            loss += gaussian_nll_loss(lai_savi, lai_savi_rec)      
         return loss
-
-def NDVI(s2_r, eps=torch.tensor(1e-7)):
-    if len(s2_r.size())==2:
-        B4 = s2_r[:,2]
-        B8 = s2_r[:,6]
-    elif len(s2_r.size())==3:
-        B4 = s2_r[:,2,:]
-        B8 = s2_r[:,6,:]
-    else:
-        raise NotImplementedError
-    return (B8 - B4) / (B8 + B4 + eps)
-
 
 class ProsailSimulator():
     def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu'):

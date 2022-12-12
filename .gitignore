@@ -12,3 +12,4 @@ data/*
 results/*
 prosailvae.egg/*
 prosailvae.egg-info/*
+config/config_dev.json

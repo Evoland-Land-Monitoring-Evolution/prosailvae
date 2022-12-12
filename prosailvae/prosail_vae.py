@@ -31,7 +31,8 @@ def get_prosail_VAE(rsr_dir,
                     refl_norm_mean=None,
                     refl_norm_std=None,
                     logger_name='',
-                    patch_mode=False):
+                    patch_mode=False,
+                    apply_norm_rec=True):
     latent_dim = 11
     output_size = latent_dim * 2
     
@@ -57,7 +58,8 @@ def get_prosail_VAE(rsr_dir,
     psimulator = ProsailSimulator(device=device)
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", device=device,
                                  norm_mean=refl_norm_mean,
-                                 norm_std=refl_norm_std)
+                                 norm_std=refl_norm_std,
+                                 apply_norm=apply_norm_rec)
     sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
                                             ssimulator=ssimulator)
     

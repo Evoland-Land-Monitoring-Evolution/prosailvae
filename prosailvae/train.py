@@ -9,7 +9,7 @@ from prosailvae.prosail_vae import get_prosail_VAE
 from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
-from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot
+from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles 
 from datetime import datetime 
 import torch.optim as optim
 import torch
@@ -311,4 +311,6 @@ if __name__ == "__main__":
     logger.info("Plotting reference PROSAIL parameters pair plots")
     pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
               res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
+    logger.info("Plotting reconstruction error against angles")
+    plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
     logger.info("Program completed.")

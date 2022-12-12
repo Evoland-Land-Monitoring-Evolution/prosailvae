@@ -17,7 +17,7 @@ import argparse
 import sys
 
 thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
-thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
+# thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
 
 sys.path = [thirdparties_path + '/mmdc-singledate',
             thirdparties_path + '/sensorsio',

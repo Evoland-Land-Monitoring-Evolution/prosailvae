@@ -43,9 +43,11 @@ thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
 sys.path = [thirdparties_path + '/mmdc-singledate',
             thirdparties_path + '/sensorsio',
             thirdparties_path + '/torchutils/src'] + sys.path
+
 from src.mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
-                                                         worker_init_fn,
-                                                         destructure_batch)
+                                                            worker_init_fn,
+                                                            destructure_batch)
+
 from src.mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataStats,
                                                         #OneSetMMDCDataclass,
                                                         average_stats,
@@ -73,7 +75,7 @@ def analyse_angles(loader, max_batch=100):
     for idx, batch in zip(range(max_batch), loader):
         (_, s2_a, _, _, _, _, _) = destructure_batch(batch)
         angles = s2_a.transpose(0,1).reshape(6,-1).transpose(0,1)
-        a = torch.concat((a,angles), axis=0)
+        a = torch.concat((a, angles), axis=0)
     fig, ax = plt.subplots(2,3,dpi=100)
     ax[0,0].hist(a[:,0].numpy(),bins=50)
     ax[1,0].hist(a[:,1].numpy(),bins=50)
@@ -92,7 +94,7 @@ def main(tensors_dir='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_
     
     train_loader, _, _ = get_mmdc_loaders(tensors_dir=tensors_dir,
                                           batch_par_epoch=batch_par_epoch)
-    # analyse_angles(train_loader, max_batch=100)                                      
+    analyse_angles(train_loader, max_batch=100)                                      
     mean, std = get_mmdc_dataset_mean_std(train_loader)
     torch.save(mean, rsr_dir + "mmdc_"+ "norm_mean.pt") 
     torch.save(std, rsr_dir + "mmdc_" + "norm_std.pt") 

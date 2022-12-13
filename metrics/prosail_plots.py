@@ -217,7 +217,7 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
 def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist):
     for i in range(len(PROSAILVARS)):
         fig, ax = plt.subplots(figsize=(7,7), dpi=150)
-        ax.scatter(sim_dist[:,i].detach().cpu(),tgt_dist[:,i].detach().cpu())
+        ax.scatter(sim_dist[:,i].detach().cpu(),tgt_dist[:,i].detach().cpu(), marker='.',s=2)
         ax.set_xlabel(f'{PROSAILVARS[i]} predicted')
         ax.set_ylabel(f'{PROSAILVARS[i]} reference')
         ax.set_xlim(ProsailVarsDist.Dists[PROSAILVARS[i]]["min"],
@@ -332,11 +332,11 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
                 ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = 30)
         else:
             # other wise plot the pair-wise scatter plot
-            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]])
+            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]], marker='.',s=2)
             tdf['target'] = _y
             for c in colormap.keys():
                 tdf_filtered = tdf.loc[tdf['target']==c]
-                ax[feature_ind1, feature_ind2].scatter(x = tdf_filtered[_features[feature_ind2]], y = tdf_filtered[_features[feature_ind1]], color=colormap[c])
+                ax[feature_ind1, feature_ind2].scatter(x = tdf_filtered[_features[feature_ind2]], y = tdf_filtered[_features[feature_ind1]], color=colormap[c], marker='.',s=2)
     
         # Print the feature labels only on the left side of the pair-plot figure
         # and bottom side of the pair-plot figure. 
@@ -391,16 +391,16 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
 def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     error_dist = (tgt_dist - rec_dist).abs().mean(1)
     fig, axs = plt.subplots(3,1,dpi=150)
-    axs[0].scatter(angles_dist[:,0].squeeze().numpy(), error_dist.squeeze().numpy())
-    axs[0].set_ylabel('Reconstruction Mean Absolute Error')
+    axs[0].scatter(angles_dist[:,0].squeeze().numpy(), error_dist.squeeze().numpy(), marker='.',s=2)
+    axs[0].set_ylabel('Reconstruction \n MAE')
     axs[0].set_xlabel("Sun zenith")
 
-    axs[1].scatter(angles_dist[:,1].squeeze().numpy(), error_dist.squeeze().numpy())
-    axs[1].set_ylabel('Reconstruction Mean Absolute Error')
+    axs[1].scatter(angles_dist[:,1].squeeze().numpy(), error_dist.squeeze().numpy(), marker='.',s=2)
+    axs[1].set_ylabel('Reconstruction \n MAE')
     axs[1].set_xlabel("S2 zenith")
 
-    axs[2].scatter(angles_dist[:,2].squeeze().numpy(), error_dist.squeeze().numpy())
-    axs[2].set_ylabel('Reconstruction Mean Absolute Error')
+    axs[2].scatter(angles_dist[:,2].squeeze().numpy(), error_dist.squeeze().numpy(), marker='.',s=2)
+    axs[2].set_ylabel('Reconstruction \n MAE')
     axs[2].set_xlabel("Sun/S2 Relative azimuth")
 
     fig.savefig(res_dir+"error_vs_angles.png")

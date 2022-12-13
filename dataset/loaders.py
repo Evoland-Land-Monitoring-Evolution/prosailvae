@@ -13,23 +13,16 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-import argparse    
-import sys
+import argparse      
 
-thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
-thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
-
-sys.path = [thirdparties_path + '/mmdc-singledate',
-            thirdparties_path + '/sensorsio',
-            thirdparties_path + '/torchutils/src'] + sys.path
-from src.mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
+from mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
                                                          worker_init_fn,
-                                                         destructure_batch)
-from src.mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataStats,
-                                                        #OneSetMMDCDataclass,
-                                                        average_stats,
-                                                        compute_stats,
-                                                        create_tensors_path)                                                         
+                                                         destructure_batch)    
+from mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataStats,
+                                                                    #OneSetMMDCDataclass,
+                                                                    average_stats,
+                                                                    compute_stats,
+                                                                    create_tensors_path)                                          
 
 
 def split_train_valid_by_fid(labels, ts_ids,

@@ -282,10 +282,11 @@ if __name__ == "__main__":
     logger.info("Computing inference metrics with test dataset...")
     (mae, mpiw, picp, mare, 
     sim_dist, tgt_dist, rec_dist,
-    angles_dist) = get_metrics(prosail_VAE, loader, 
+    angles_dist, s2_r_dist) = get_metrics(prosail_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
     logger.info("Metrics computed.")
+
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
@@ -293,6 +294,8 @@ if __name__ == "__main__":
     # Plotting results
     metrics_dir = res_dir + "/metrics_plot/"
     os.makedirs(metrics_dir)
+    logger.info("Plotting reconstruction error against angles")
+    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
     logger.info("Plotting metrics.")
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
     rec_dir = res_dir + "/reconstruction/"
@@ -324,6 +327,5 @@ if __name__ == "__main__":
     logger.info("Plotting reference PROSAIL parameters pair plots")
     pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
               res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
-    logger.info("Plotting reconstruction error against angles")
-    plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
+
     logger.info("Program completed.")

@@ -30,6 +30,7 @@ import logging.config
 import time
 import traceback
 import socket
+CUDA_LAUNCH_BLOCKING=1
 
 
 def check_fold_res_dir(fold_dir, n_xp, params):
@@ -294,8 +295,7 @@ if __name__ == "__main__":
     # Plotting results
     metrics_dir = res_dir + "/metrics_plot/"
     os.makedirs(metrics_dir)
-    logger.info("Plotting reconstruction error against angles")
-    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
+    
     logger.info("Plotting metrics.")
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
     rec_dir = res_dir + "/reconstruction/"
@@ -327,5 +327,6 @@ if __name__ == "__main__":
     logger.info("Plotting reference PROSAIL parameters pair plots")
     pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
               res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
-
+    logger.info("Plotting reconstruction error against angles")
+    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
     logger.info("Program completed.")

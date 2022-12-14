@@ -18,7 +18,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
         plt.plot(alpha_pi, picp[i,:].detach().cpu().numpy(), label=maer.columns[i])
     plt.legend()
     plt.xlabel('1-a')
-    plt.ylabel('PICP')
+    plt.ylabel('Prediction Interval Coverage Probability')
     fig.savefig(save_dir+"/picp.svg")
     
     fig = plt.figure(dpi=200)
@@ -26,20 +26,23 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
         plt.plot(alpha_pi, mpiwr.values[:,i], label=maer.columns[i])
     plt.legend()
     plt.xlabel('1-a')
-    plt.ylabel('MPIWr')
+    plt.ylabel('Mean Prediction Interval Width (Standardized)')
+    plt.grid(which='both', axis='y')
     fig.savefig(save_dir+"/MPIWr.svg")
     
     fig = plt.figure()
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, maer.values.reshape(-1),)
-    plt.ylabel('MAEr')
+    plt.ylabel('Mean Absolute Error (Standardized)')
+    plt.grid(which='both', axis='y')
     fig.savefig(save_dir+"/MAEr.svg")
     
     fig = plt.figure(dpi=150)
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, mare.detach().cpu().numpy())
-    plt.ylabel('MARE')
+    plt.ylabel('Mean Absolute Relative Error')
     plt.yscale('log')
+    plt.grid(which='both', axis='y')
     fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):

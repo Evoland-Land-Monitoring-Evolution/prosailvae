@@ -19,3 +19,4 @@ tqdm
 omegaconf
 ipython
 matplotlib
+codecarbon

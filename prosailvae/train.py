@@ -251,10 +251,9 @@ def setupTraining():
         parser = get_prosailvae_train_parser().parse_args(args)    
     else:
         parser = get_prosailvae_train_parser().parse_args()
-    root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)
+    root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
     
     config_dir = os.path.join(root_dir,"config/")
-    results_dir = os.path.join(root_dir,"results/")
     if len(parser.data_dir)==0:
         data_dir = os.path.join(root_dir,"data/")
     else:
@@ -340,11 +339,28 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     logger.info("Training Completed !")
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df
 
+def configureEmissionTracker(parser):
+    logger = logging.getLogger(LOGGER_NAME)
+    try:
+        from codecarbon import OfflineEmissionsTracker
+        tracker = OfflineEmissionsTracker(country_iso_code="FRA", output_dir=parser.root_results_dir)
+        tracker.start()
+        useEmissionTracker = True
+    except:
+        logger.error("Couldn't start codecarbon ! Emissions not tracked for this execution.")
+        useEmissionTracker = False
+        tracker = None
+    return tracker, useEmissionTracker
 def main():
+    
+    
     params, parser, res_dir, data_dir = setupTraining()
+    tracker, useEmissionTracker = configureEmissionTracker(parser)
     PROSAIL_VAE, all_train_loss_df, all_valid_loss_df = trainProsailVae(params, parser, res_dir, data_dir)
     save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir)
-    return
+    if useEmissionTracker:
+        tracker.stop()
+    pass
 
 if __name__ == "__main__":
     main()

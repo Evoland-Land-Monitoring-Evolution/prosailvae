@@ -31,7 +31,7 @@ import time
 import traceback
 import socket
 CUDA_LAUNCH_BLOCKING=1
-
+LOGGER_NAME = 'PROSAIL-VAE logger'
 
 def check_fold_res_dir(fold_dir, n_xp, params):
     same_fold = ""
@@ -113,8 +113,8 @@ def get_prosailvae_train_parser():
     return parser
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20, logger_name=''):
-    logger = logging.getLogger(logger_name)
+                  res_dir, n_samples=20):
+    logger = logging.getLogger(LOGGER_NAME)
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     best_val_loss = torch.inf
@@ -135,7 +135,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
                 traceback.print_exc()
                 break
             try:
-                valid_loss_dict = PROSAIL_VAE.validate(train_loader, n_samples=n_samples)
+                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples)
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')
@@ -162,8 +162,82 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
                 PROSAIL_VAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weigths.tar")
     return all_train_loss_df, all_valid_loss_df
 
+def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir):
+    device = PROSAIL_VAE.device
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.info("Saving Loss")
+    # Saving Loss
+    loss_dir = res_dir + "/loss/"
+    os.makedirs(loss_dir)
+    all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
+    all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
+    loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", 
+               log_scale=True)
+    loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg",  
+               log_scale=True)
+    
+    # Computing metrics
+    logger.info("Loading test loader...")
+    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
+    logger.info("Test loader, loaded.")
+    
+    alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
+                0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+    alpha_pi.reverse()
+    PROSAIL_VAE.eval()
+    logger.info("Computing inference metrics with test dataset...")
+    (mae, mpiw, picp, mare, 
+    sim_dist, tgt_dist, rec_dist,
+    angles_dist, s2_r_dist) = get_metrics(PROSAIL_VAE, loader, 
+                              n_pdf_sample_points=3001,
+                              alpha_conf=alpha_pi)
+    logger.info("Metrics computed.")
 
-if __name__ == "__main__":
+    save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
+    maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
+    mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
+    
+    # Plotting results
+    metrics_dir = res_dir + "/metrics_plot/"
+    os.makedirs(metrics_dir)
+    
+    logger.info("Plotting metrics.")
+    plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
+    rec_dir = res_dir + "/reconstruction/"
+    os.makedirs(rec_dir)
+    logger.info("Plotting reconstructions")
+    plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
+    logger.info("Plotting PROSAIL parameter distributions")
+    plot_param_dist(metrics_dir, sim_dist, tgt_dist)
+    logger.info("Plotting PROSAIL parameters, reference vs prediction")
+    plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
+    ssimulator = PROSAIL_VAE.decoder.ssimulator
+    refl_dist = loader.dataset[:][0]
+    plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
+                   ssimulator=PROSAIL_VAE.decoder.ssimulator)
+    
+    normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+    normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+    logger.info("Plotting reflectance distribution")
+    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
+    logger.info("Plotting reconstructed reflectance components pair plots")
+    pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
+              res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
+    logger.info("Plotting reference reflectance components pair plots")
+    pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
+              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
+    logger.info("Plotting inferred PROSAIL parameters pair plots")
+    pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
+              res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
+    logger.info("Plotting reference PROSAIL parameters pair plots")
+    pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
+              res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
+    logger.info("Plotting reconstruction error against angles")
+    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
+    logger.info("Program completed.")
+    return
+
+def setupTraining():
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
               "-c", "config_dev.json",
@@ -212,6 +286,11 @@ if __name__ == "__main__":
     for _, key in enumerate(params):
         logger.info(f'{key} : {params[key]}')
     logger.info('========================================================================')
+
+    return params, parser, res_dir, data_dir
+
+def trainProsailVae(params, parser, res_dir, data_dir):
+    logger = logging.getLogger(LOGGER_NAME)
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     if params["simulated_dataset"]:
         train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
@@ -240,93 +319,34 @@ if __name__ == "__main__":
     
     norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
     rsr_dir = parser.rsr_dir
-    prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
+    PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
-                                  logger_name=logger_name, patch_mode=not params["simulated_dataset"],
+                                  logger_name=LOGGER_NAME, patch_mode=not params["simulated_dataset"],
                                   apply_norm_rec=True)
     
-    optimizer = optim.Adam(prosail_VAE.parameters(), lr=params["lr"], weight_decay=1e-2)
-    # prosail_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
+    optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=params["lr"], weight_decay=1e-2)
+    # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     logger.info('PROSAIL-VAE and optimizer initialized.')
     
     # Training
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
-    all_train_loss_df, all_valid_loss_df = training_loop(prosail_VAE, 
+    all_train_loss_df, all_valid_loss_df = training_loop(PROSAIL_VAE, 
                                                          optimizer, 
                                                          params['epochs'],
                                                          train_loader, 
                                                          valid_loader,
                                                          res_dir=res_dir,
-                                                         n_samples=params["n_samples"],
-                                                         logger_name=logger_name) 
+                                                         n_samples=params["n_samples"]) 
     logger.info("Training Completed !")
-    logger.info("Saving Loss")
-    # Saving Loss
-    loss_dir = res_dir + "/loss/"
-    os.makedirs(loss_dir)
-    all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
-    all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
-    loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", 
-               log_scale=True)
-    loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg",  
-               log_scale=True)
-    
-    # Computing metrics
-    logger.info("Loading test loader...")
-    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
-    logger.info("Test loader, loaded.")
-    
-    alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
-                0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
-    alpha_pi.reverse()
-    prosail_VAE.eval()
-    logger.info("Computing inference metrics with test dataset...")
-    (mae, mpiw, picp, mare, 
-    sim_dist, tgt_dist, rec_dist,
-    angles_dist, s2_r_dist) = get_metrics(prosail_VAE, loader, 
-                              n_pdf_sample_points=3001,
-                              alpha_conf=alpha_pi)
-    logger.info("Metrics computed.")
+    return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df
 
-    save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
-    maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
-    mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
+def main():
+    params, parser, res_dir, data_dir = setupTraining()
+    PROSAIL_VAE, all_train_loss_df, all_valid_loss_df = trainProsailVae(params, parser, res_dir, data_dir)
+    save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir)
+    return
+
+if __name__ == "__main__":
+    main()
     
-    # Plotting results
-    metrics_dir = res_dir + "/metrics_plot/"
-    os.makedirs(metrics_dir)
     
-    logger.info("Plotting metrics.")
-    plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
-    rec_dir = res_dir + "/reconstruction/"
-    os.makedirs(rec_dir)
-    logger.info("Plotting reconstructions")
-    plot_rec_and_latent(prosail_VAE, loader, rec_dir, n_plots=20)
-    logger.info("Plotting PROSAIL parameter distributions")
-    plot_param_dist(metrics_dir, sim_dist, tgt_dist)
-    logger.info("Plotting PROSAIL parameters, reference vs prediction")
-    plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
-    ssimulator = prosail_VAE.decoder.ssimulator
-    refl_dist = loader.dataset[:][0]
-    plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
-                   ssimulator=prosail_VAE.decoder.ssimulator)
-    
-    normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-    normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-    logger.info("Plotting reflectance distribution")
-    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
-    logger.info("Plotting reconstructed reflectance components pair plots")
-    pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
-              res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
-    logger.info("Plotting reference reflectance components pair plots")
-    pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
-              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
-    logger.info("Plotting inferred PROSAIL parameters pair plots")
-    pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
-    logger.info("Plotting reference PROSAIL parameters pair plots")
-    pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
-    logger.info("Plotting reconstruction error against angles")
-    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
-    logger.info("Program completed.")

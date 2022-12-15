@@ -219,7 +219,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, dat
     normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
     normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
     logger.info("Plotting reflectance distribution")
-    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=prosail_VAE.decoder.ssimulator)
+    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator)
     logger.info("Plotting reconstructed reflectance components pair plots")
     pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
               res_dir=metrics_dir, filename='normed_rec_pair_plot.png')

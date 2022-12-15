@@ -670,7 +670,7 @@ def get_prosailvae_train_parser():
     
     parser.add_argument("-c", dest="config_file",
                         help="name of config json file on config directory.",
-                        type=str, default="config.json")
+                        type=str, default="config_dev.json")
     
     parser.add_argument("-x", dest="n_xp",
                         help="Number of experience (to use in case of kfold)",
@@ -717,7 +717,8 @@ if __name__ == "__main__":
                 "hidden_layers_size":params["hidden_layers_size"], 
                 "encoder_last_activation":params["encoder_last_activation"],
                 "supervised":params["supervised"],  
-                "beta_kl":params["beta_kl"]}
+                "beta_kl":params["beta_kl"],
+                "beta_index":0}
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std)

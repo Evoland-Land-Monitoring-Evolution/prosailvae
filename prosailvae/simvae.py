@@ -160,7 +160,7 @@ class SimVAE(nn.Module):
         return dist_params, z, sim, rec
     
     def compute_unsupervised_loss_over_batch(self, batch, normalized_loss_dict, 
-                                             len_loader=1, n_samples=1, eps=1e-9):
+                                             len_loader=1, n_samples=1):
         # assert n_samples>1
         if self.patch_mode:      
             s2_r, s2_a = get_flattened_patch(batch, device=self.device)
@@ -219,13 +219,16 @@ class SimVAE(nn.Module):
         
         return loss_sum, normalized_loss_dict
     
-    def compute_supervised_loss_over_batch(self, data, angles, tgt, normalized_loss_dict, 
-                                           len_loader=1, n_samples=1):
-        
-        batch_size = data.size(0)
-        data = data.view(batch_size, -1).float()
-        params = self.encode2lat_params(data, angles)
-        loss_sum = self.lat_space.loss(tgt, params)
+    def compute_supervised_loss_over_batch(self, batch, normalized_loss_dict, 
+                                           len_loader=1):
+        s2_r = batch[0].to(self.device) 
+        s2_a = batch[1].to(self.device)  
+        ref_sim = batch[2].to(self.device)  
+        ref_lat = self.sim_space.sim2z(ref_sim)
+        y = self.encode(s2_r, s2_a)
+        dist_params = self.lat_space.get_params_from_encoder(y)
+
+        loss_sum = self.lat_space.loss(ref_lat, dist_params)
         all_losses = {'lat_loss': loss_sum.item()}
        
         all_losses['loss_sum'] = loss_sum.item()

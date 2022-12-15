@@ -27,22 +27,21 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('Mean Prediction Interval Width (Standardized)')
-    plt.grid(which='both', axis='y')
     fig.savefig(save_dir+"/MPIWr.svg")
     
     fig = plt.figure()
+    plt.grid(which='both', axis='y')
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, maer.values.reshape(-1),)
     plt.ylabel('Mean Absolute Error (Standardized)')
-    plt.grid(which='both', axis='y')
     fig.savefig(save_dir+"/MAEr.svg")
     
     fig = plt.figure(dpi=150)
+    plt.grid(which='both', axis='y')
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, mare.detach().cpu().numpy())
     plt.ylabel('Mean Absolute Relative Error')
     plt.yscale('log')
-    plt.grid(which='both', axis='y')
     fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
@@ -335,7 +334,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
                 ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = 30)
         else:
             # other wise plot the pair-wise scatter plot
-            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]], marker='.',s=2)
+            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]])
             tdf['target'] = _y
             for c in colormap.keys():
                 tdf_filtered = tdf.loc[tdf['target']==c]

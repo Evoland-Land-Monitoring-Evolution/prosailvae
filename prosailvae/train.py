@@ -262,7 +262,6 @@ def setupTraining():
     assert parser.n_fold < parser.n_xp 
     params = load_dict(config_dir + parser.config_file)
     if params["supervised"]:
-        params["dataset_file_prefix"]='sim_'
         params["simulated_dataset"]=True
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None

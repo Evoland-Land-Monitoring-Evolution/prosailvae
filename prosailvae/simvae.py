@@ -318,3 +318,17 @@ def lr_finder_elbo(model_outputs, label, beta=1):
     loss_sum+=kl_loss
 
     return loss_sum
+
+def lr_finder_sup_nll(model_outputs, label, beta=1):
+    dist_params, _, _, rec = model_outputs
+    rec_err_var = torch.var(rec-label.unsqueeze(2), 2)
+    rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
+    loss_sum=rec_loss
+    sigma = dist_params[:, :, 1].squeeze()
+    mu = dist_params[:, :, 0].squeeze()
+    kl = kl_tn_uniform(mu, sigma) 
+    
+    kl_loss = beta * kl.sum(1).mean()
+    loss_sum+=kl_loss
+
+    return loss_sum

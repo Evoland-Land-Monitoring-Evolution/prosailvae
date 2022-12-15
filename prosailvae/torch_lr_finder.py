@@ -728,7 +728,8 @@ if __name__ == "__main__":
                                     file_prefix="small_test_", 
                                     sample_ids=None,
                                     batch_size=64,
-                                    data_dir=data_dir)
+                                    data_dir=data_dir,
+                                    supervised=params['supervised'])
     # optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-2)
     # lr_finder = LRFinder(model, optimizer, criterion, device="cpu")
     # lr_finder.range_test(lrtrainloader, val_loader=lrtrainloader, end_lr=1, num_iter=100, step_mode="linear")

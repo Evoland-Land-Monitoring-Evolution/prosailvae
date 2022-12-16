@@ -32,7 +32,8 @@ def get_prosail_VAE(rsr_dir,
                     refl_norm_std=None,
                     logger_name='',
                     patch_mode=False,
-                    apply_norm_rec=True):
+                    apply_norm_rec=True,
+                    inference_mode=False):
     latent_dim = 11
     output_size = latent_dim * 2
     
@@ -69,7 +70,7 @@ def get_prosail_VAE(rsr_dir,
                       device=device, 
                       beta_kl=vae_params["beta_kl"],
                       beta_index=vae_params["beta_index"],
-                      logger_name=logger_name, patch_mode=patch_mode)
+                      logger_name=logger_name, patch_mode=patch_mode, inference_mode=inference_mode)
     return prosailVAE
 
 def load_prosailVAE(vae_params, vae_file_path, optimizer=None, device='cpu'):

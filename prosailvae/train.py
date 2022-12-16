@@ -6,6 +6,7 @@ Created on Mon Nov 14 14:20:44 2022
 @author: yoel
 """
 from prosailvae.prosail_vae import get_prosail_VAE
+from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
@@ -113,7 +114,7 @@ def get_prosailvae_train_parser():
     return parser
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20):
+                  res_dir, n_samples=20, lr_recompute=None, data_dir=""):
     logger = logging.getLogger(LOGGER_NAME)
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
@@ -122,6 +123,10 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
+            if epoch > 0 and lr_recompute is not None:
+                if epoch % lr_recompute == 0:
+                    new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+                    optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
                 
@@ -321,8 +326,10 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                   logger_name=LOGGER_NAME, patch_mode=not params["simulated_dataset"],
                                   apply_norm_rec=True)
-    
-    optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=params["lr"], weight_decay=1e-2)
+    lr = params['lr']
+    if lr is None:
+        lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+    optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     logger.info('PROSAIL-VAE and optimizer initialized.')
     
@@ -334,7 +341,9 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                                          train_loader, 
                                                          valid_loader,
                                                          res_dir=res_dir,
-                                                         n_samples=params["n_samples"]) 
+                                                         n_samples=params["n_samples"],
+                                                         lr_recompute=None,
+                                                         data_dir=data_dir) 
     logger.info("Training Completed !")
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df
 
@@ -358,6 +367,7 @@ def main():
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df = trainProsailVae(params, parser, res_dir, data_dir)
         save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir)
     except Exception as e:
+        traceback.print_exc()
         print(e)
     if useEmissionTracker:
         tracker.stop()

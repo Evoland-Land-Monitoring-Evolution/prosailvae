@@ -59,7 +59,7 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
                  beta_kl=0, beta_index=0, logger_name='PROSAIL-VAE logger',
-                 patch_mode=False):
+                 patch_mode=False, inference_mode=False):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -76,6 +76,7 @@ class SimVAE(nn.Module):
         self.logger = logging.getLogger(logger_name)
         self.patch_mode = patch_mode
         self.beta_index = beta_index
+        self.inference_mode = inference_mode
         
     def encode(self, x, angles):
         y = self.encoder.encode(x, angles)
@@ -105,7 +106,8 @@ class SimVAE(nn.Module):
             x = x[:,:-3]
         y = self.encode(x, angles)
         dist_params = self.lat_space.get_params_from_encoder(y)
-        
+        if self.inference_mode:
+            return dist_params, None, None, None
         # latent sampling
         z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
         
@@ -256,7 +258,7 @@ class SimVAE(nn.Module):
         loss = checkpoint['loss']
         return epoch, loss
     
-    def fit(self, dataloader, optimizer, supervised=False, n_samples=1, batch_per_epoch=None):
+    def fit(self, dataloader, optimizer, n_samples=1, batch_per_epoch=None):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
@@ -266,11 +268,13 @@ class SimVAE(nn.Module):
         for i, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
             optimizer.zero_grad()
             
-            if not supervised:
+            if not self.supervised:
                 loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             else:
-                raise NotImplementedError
+                loss_sum, _ = self.compute_supervised_loss_over_batch(batch, train_loss_dict, 
+                                                        len_loader=len_loader)
+                
             if torch.isnan(loss_sum).any():
                 self.logger.error(f"NaN Loss encountered during training at batch {i}!")
                 
@@ -281,7 +285,7 @@ class SimVAE(nn.Module):
         self.eval()
         return train_loss_dict
 
-    def validate(self, dataloader, supervised=False, n_samples=1, batch_per_epoch=None):
+    def validate(self, dataloader, n_samples=1, batch_per_epoch=None):
         self.eval()
         valid_loss_dict = {}
         len_loader = len(dataloader.dataset)
@@ -289,11 +293,12 @@ class SimVAE(nn.Module):
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
             for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
-                if not supervised:
+                if not self.supervised:
                     loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
                 else:
-                    raise NotImplementedError
+                    loss_sum, _ = self.compute_supervised_loss_over_batch(batch, valid_loss_dict, 
+                                                        len_loader=len_loader)
             if torch.isnan(loss_sum).any():
                 self.logger.error("NaN Loss encountered during validation !")
         return valid_loss_dict
@@ -304,31 +309,34 @@ def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
     return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
             torch.log(torch.max(sigma, eps)).sum(1)
 from prosailvae.dist_utils import kl_tn_uniform     
-     
-def lr_finder_elbo(model_outputs, label, beta=1):
-    dist_params, _, _, rec = model_outputs
-    rec_err_var = torch.var(rec-label.unsqueeze(2), 2)
-    rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
-    loss_sum=rec_loss
+
+class lr_finder_elbo(nn.Module):
+    def __init__(self, index_loss, beta_kl=1, beta_index=0) -> None:
+        super(lr_finder_elbo,self).__init__()
+        self.beta_kl = beta_kl
+        self.beta_index = beta_index
+        self.index_loss=index_loss
+        pass
+
+    def lr_finder_elbo_inner(self, model_outputs, label):
+        dist_params, _, _, rec = model_outputs
+        rec_err_var = torch.var(rec-label.unsqueeze(2), 2)
+        rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
+        loss_sum=rec_loss
+        sigma = dist_params[:, :, 1].squeeze()
+        mu = dist_params[:, :, 0].squeeze()
+        if self.beta_kl > 0:
+            kl_loss = self.beta_kl * kl_tn_uniform(mu, sigma).sum(1).mean()
+            loss_sum += kl_loss
+        if self.beta_index>0:
+            index_loss = self.beta_index * self.index_loss(s2_r, rec)
+            loss_sum += index_loss
+        loss_sum+=kl_loss
+        return loss_sum
+
+def lr_finder_sup_nll(model_outputs, label):
+    dist_params, _, _, _ = model_outputs
     sigma = dist_params[:, :, 1].squeeze()
     mu = dist_params[:, :, 0].squeeze()
-    kl = kl_tn_uniform(mu, sigma) 
-    
-    kl_loss = beta * kl.sum(1).mean()
-    loss_sum+=kl_loss
-
-    return loss_sum
-
-def lr_finder_sup_nll(model_outputs, label, beta=1):
-    dist_params, _, _, rec = model_outputs
-    rec_err_var = torch.var(rec-label.unsqueeze(2), 2)
-    rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
-    loss_sum=rec_loss
-    sigma = dist_params[:, :, 1].squeeze()
-    mu = dist_params[:, :, 0].squeeze()
-    kl = kl_tn_uniform(mu, sigma) 
-    
-    kl_loss = beta * kl.sum(1).mean()
-    loss_sum+=kl_loss
-
-    return loss_sum
+    loss = gaussian_nll(label, mu, sigma).mean() 
+    return loss

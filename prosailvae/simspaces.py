@@ -38,6 +38,8 @@ class LinearVarSpace(SimVarSpace):
         return sim
     
     def sim2z(self, sim):
+        if len(sim.size())==2:
+            sim=sim.unsqueeze(2)
         z = torch.matmul(self.inv_z2sim_mat, sim 
                          - self.z2sim_offset) 
         return z

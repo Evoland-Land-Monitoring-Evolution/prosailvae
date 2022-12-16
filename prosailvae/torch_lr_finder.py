@@ -16,6 +16,10 @@ from torch.utils.data import DataLoader
 
 from packaging import version
 
+from prosailvae.simvae import lr_finder_elbo, lr_finder_sup_nll
+from dataset.loaders import lr_finder_loader
+import torch.optim as optim
+
 PYTORCH_VERSION = version.parse(torch.__version__)
 
 import argparse
@@ -691,15 +695,41 @@ def get_prosailvae_train_parser():
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
        
-    return parser                
+    return parser       
+
+def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False):
+    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
+    lrtrainloader = lr_finder_loader(
+                                    file_prefix="small_test_", 
+                                    sample_ids=None,
+                                    batch_size=64,
+                                    data_dir=data_dir,
+                                    supervised=model.supervised)
+    inference_mode = model.inference_mode
+    if model.supervised:
+        criterion = lr_finder_sup_nll
+        model.inference_mode = True
+    else:
+        criterion = lr_finder_elbo(index_loss=model.decoder.ssimulator.index_loss,
+                                    beta_kl=model.beta_kl, beta_index=model.beta_index)
+    lr_finder = LRFinder(model, optimizer, criterion, device=model.device)
+    lr_finder.range_test(lrtrainloader, end_lr=100, num_iter=100)
+    lr_optimal = lr_finder.suggest_lr()
+    if plot_lr:
+        print(lr_optimal)
+        lr_finder.plot(log_lr=True)
+    model.inference_mode = inference_mode
+    lr_finder.reset()
+    return lr_optimal     
+
 if __name__ == "__main__":
 
-    from prosailvae.simvae import lr_finder_elbo
-    from dataset.loaders import lr_finder_loader, get_norm_coefs
+    
+    from dataset.loaders import get_norm_coefs
     import prosailvae
     from prosailvae.utils import load_dict
     from prosailvae.prosail_vae import get_prosail_VAE
-    import torch.optim as optim
+    
     parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)
     
@@ -720,23 +750,9 @@ if __name__ == "__main__":
                 "beta_kl":params["beta_kl"],
                 "beta_index":0}
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    inference_mode = params["supervised"]
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
-                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std)
+                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std, inference_mode=inference_mode)
     model = prosail_VAE
-    criterion = lr_finder_elbo
-    lrtrainloader = lr_finder_loader(
-                                    file_prefix="small_test_", 
-                                    sample_ids=None,
-                                    batch_size=64,
-                                    data_dir=data_dir,
-                                    supervised=params['supervised'])
-    # optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-2)
-    # lr_finder = LRFinder(model, optimizer, criterion, device="cpu")
-    # lr_finder.range_test(lrtrainloader, val_loader=lrtrainloader, end_lr=1, num_iter=100, step_mode="linear")
-    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
-    lr_finder = LRFinder(model, optimizer, criterion, device="cpu")
-    lr_finder.range_test(lrtrainloader, end_lr=100, num_iter=100)
-    lr_optimal = lr_finder.suggest_lr()
-    print(lr_optimal)
-    lr_finder.plot(log_lr=True) # to inspect the loss-learning rate graph
-    lr_finder.reset() 
+    
+    lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True)

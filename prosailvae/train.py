@@ -350,13 +350,15 @@ def configureEmissionTracker(parser):
         useEmissionTracker = False
         tracker = None
     return tracker, useEmissionTracker
+
 def main():
-    
-    
     params, parser, res_dir, data_dir = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
-    PROSAIL_VAE, all_train_loss_df, all_valid_loss_df = trainProsailVae(params, parser, res_dir, data_dir)
-    save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir)
+    try:
+        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df = trainProsailVae(params, parser, res_dir, data_dir)
+        save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir)
+    except Exception as e:
+        print(e)
     if useEmissionTracker:
         tracker.stop()
     pass

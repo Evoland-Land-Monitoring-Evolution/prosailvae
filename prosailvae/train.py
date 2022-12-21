@@ -154,7 +154,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             
             train_loss_info = '- '.join([f"{key}: {'{:.3f}'.format(train_loss_dict[key])} " for key in train_loss_dict.keys()])
             valid_loss_info = '- '.join([f"{key}: {'{:.3f}'.format(valid_loss_dict[key])} " for key in valid_loss_dict.keys()])
-            logger.info(f"{epoch} -- RAM: {ram_usage} / {total_ram} -- {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}")
+            logger.info(f"{epoch} -- RAM: {ram_usage} / {total_ram} -- lr: {'{:.2E}'.format(optimizer.param_groups[0]['lr'])} -- {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}")
             train_loss_dict['epoch']=epoch
             valid_loss_dict['epoch']=epoch
             all_train_loss_df = pd.concat([all_train_loss_df, 
@@ -335,6 +335,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     
     # Training
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
+
     all_train_loss_df, all_valid_loss_df = training_loop(PROSAIL_VAE, 
                                                          optimizer, 
                                                          params['epochs'],
@@ -342,7 +343,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                                          valid_loader,
                                                          res_dir=res_dir,
                                                          n_samples=params["n_samples"],
-                                                         lr_recompute=None,
+                                                         lr_recompute=params['lr_recompute'],
                                                          data_dir=data_dir) 
     logger.info("Training Completed !")
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df

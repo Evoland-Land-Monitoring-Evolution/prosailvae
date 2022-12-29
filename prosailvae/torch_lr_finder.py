@@ -711,7 +711,9 @@ def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_"):
         model.inference_mode = True
     else:
         criterion = lr_finder_elbo(index_loss=model.decoder.ssimulator.index_loss,
-                                    beta_kl=model.beta_kl, beta_index=model.beta_index)
+                                    beta_kl=model.beta_kl, beta_index=model.beta_index, 
+                                    loss_type=model.decoder.loss_type)
+                                    
     lr_finder = LRFinder(model, optimizer, criterion, device=model.device)
     lr_finder.range_test(lrtrainloader, end_lr=100, num_iter=100)
     lr_optimal = lr_finder.suggest_lr()

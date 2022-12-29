@@ -325,7 +325,8 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                   logger_name=LOGGER_NAME, patch_mode=not params["simulated_dataset"],
-                                  apply_norm_rec=True)
+                                  apply_norm_rec=True,
+                                  loss_type=params["loss_type"])
     lr = params['lr']
     if lr is None:
         lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)

@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:23:46 2022
 """
 import torch.nn as nn
 import torch
-from prosailvae.utils import gaussian_nll_loss
+from prosailvae.utils import gaussian_nll_loss, full_gaussian_nll_loss
 
 
 
@@ -22,11 +22,12 @@ class Decoder(nn.Module):
 
 class ProsailSimulatorDecoder(Decoder):
     
-    def __init__(self, prosailsimulator, ssimulator, device='cpu'):
+    def __init__(self, prosailsimulator, ssimulator, device='cpu', loss_type='diag_nll'):
         super().__init__()
         self.device = device
         self.prosailsimulator = prosailsimulator
         self.ssimulator = ssimulator
+        self.loss_type = loss_type
         
     def decode(self, z, angles):
         n_samples = z.size(2)
@@ -47,6 +48,11 @@ class ProsailSimulatorDecoder(Decoder):
     def loss(self, tgt, rec):        
         if self.ssimulator.apply_norm:
             tgt = self.ssimulator.normalize(tgt)
-        rec_loss = gaussian_nll_loss(tgt, rec) 
+        if self.loss_type == "diag_nll":
+            rec_loss = gaussian_nll_loss(tgt, rec) 
+        elif self.loss_type == "full_nll":
+            rec_loss = full_gaussian_nll_loss(tgt, rec) 
+        else:
+            raise NotImplementedError("Please choose between 'diag_nll' (diagonal covariance matrix) and 'full_nll' (full covariance matrix) for nll loss option.")
         return rec_loss
 

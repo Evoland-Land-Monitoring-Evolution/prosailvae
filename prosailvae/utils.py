@@ -35,12 +35,11 @@ def NaN_model_params(model):
                 return True
     return False
 
-def full_gaussian_nll(x, mu, sigma_mat, eps=5e-4, device='cpu', regularization=1e-5):
+def full_gaussian_nll(x, mu, sigma_mat, eps=1e-6, device='cpu', regularization=1e-3):
     eps = torch.tensor(eps).to(device)
     L, L_info = torch.linalg.cholesky_ex(sigma_mat + regularization * torch.eye(sigma_mat.size(1)).unsqueeze(0).to(sigma_mat.device), 
                                  check_errors=False)
     if L_info.ne(0).any():
-        
         raise ValueError('Baddly conditionned covariance matrix for cholesky lower triangular computation. ')
     inverse_sigma_mat = torch.cholesky_inverse(L)
     return ((x - mu).unsqueeze(1) @ inverse_sigma_mat @ (x - mu).unsqueeze(2)).squeeze() +  \
@@ -56,10 +55,9 @@ def gaussian_nll_loss(tgt, recs):
     return gaussian_nll(tgt, recs.mean(2), rec_err_var, device=tgt.device).mean() 
 
 def full_gaussian_nll_loss(tgt, recs):
-    err = recs-tgt.unsqueeze(2)
-    rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
+    err = recs - tgt.unsqueeze(2)
     sigma_mat = err @ err.transpose(1,2) / err.size(2)
-    return full_gaussian_nll(tgt, recs.mean(2), rec_err_var, device=tgt.device).mean() 
+    return full_gaussian_nll(tgt, recs.mean(2), sigma_mat, device=tgt.device).mean() 
 
 def cuda_cholesky(A):
     n = A.size(0)

@@ -309,18 +309,24 @@ class SimVAE(nn.Module):
 #     return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
 #             torch.log(torch.max(sigma, eps)).sum(1)
 from prosailvae.dist_utils import kl_tn_uniform     
-from prosailvae.utils import gaussian_nll, gaussian_nll_loss     
+from prosailvae.utils import gaussian_nll, gaussian_nll_loss, full_gaussian_nll_loss     
 class lr_finder_elbo(nn.Module):
-    def __init__(self, index_loss, beta_kl=1, beta_index=0) -> None:
+    def __init__(self, index_loss, beta_kl=1, beta_index=0, loss_type='diag_nll') -> None:
         super(lr_finder_elbo,self).__init__()
         self.beta_kl = beta_kl
         self.beta_index = beta_index
         self.index_loss = index_loss
+        self.loss_type = loss_type
         pass
 
     def lr_finder_elbo_inner(self, model_outputs, label):
         dist_params, _, _, rec = model_outputs
-        rec_loss = gaussian_nll_loss(label, rec).mean()
+        if self.loss_type == "diag_nll":
+            rec_loss = gaussian_nll_loss(label, rec).mean()
+        elif self.loss_type == "full_nll":
+            rec_loss = full_gaussian_nll_loss(label, rec).mean()
+        else:
+            raise NotImplementedError
         # rec_err_var = torch.var(rec - label.unsqueeze(2), 2)
         # rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
         loss_sum = rec_loss

@@ -33,7 +33,8 @@ def get_prosail_VAE(rsr_dir,
                     logger_name='',
                     patch_mode=False,
                     apply_norm_rec=True,
-                    inference_mode=False):
+                    inference_mode=False,
+                    loss_type="diag_nll"):
     latent_dim = 11
     output_size = latent_dim * 2
     
@@ -62,7 +63,8 @@ def get_prosail_VAE(rsr_dir,
                                  norm_std=refl_norm_std,
                                  apply_norm=apply_norm_rec)
     sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
-                                            ssimulator=ssimulator)
+                                            ssimulator=ssimulator,
+                                            loss_type=loss_type)
     
     prosailVAE = SimVAE(encoder=encoder, decoder=sigmo_decoder, 
                       lat_space=lat_space, sim_space=pheno_var_space, 

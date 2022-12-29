@@ -316,7 +316,8 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                 "encoder_last_activation":params["encoder_last_activation"],
                 "supervised":params["supervised"],  
                 "beta_kl":params["beta_kl"],
-                "beta_index":params["beta_index"],}
+                "beta_index":params["beta_index"],
+                }
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -325,7 +326,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                   logger_name=LOGGER_NAME, patch_mode=not params["simulated_dataset"],
-                                  apply_norm_rec=True,
+                                  apply_norm_rec=params["apply_norm_rec"],
                                   loss_type=params["loss_type"])
     lr = params['lr']
     if lr is None:

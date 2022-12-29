@@ -408,5 +408,5 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     axs[2].set_ylabel('Reconstruction \n MAE')
     axs[2].set_xlabel("Sun/S2 Relative azimuth")
 
-    fig.savefig(res_dir+"error_vs_angles.png")
+    fig.savefig(res_dir+"/error_vs_angles.png")
     return

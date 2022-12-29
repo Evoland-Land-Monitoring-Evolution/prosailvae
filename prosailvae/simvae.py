@@ -304,35 +304,39 @@ class SimVAE(nn.Module):
         return valid_loss_dict
 
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
-    eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
-            torch.log(torch.max(sigma, eps)).sum(1)
+# def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
+#     eps = torch.tensor(eps).to(device)
+#     return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
+#             torch.log(torch.max(sigma, eps)).sum(1)
 from prosailvae.dist_utils import kl_tn_uniform     
-
+from prosailvae.utils import gaussian_nll, gaussian_nll_loss     
 class lr_finder_elbo(nn.Module):
     def __init__(self, index_loss, beta_kl=1, beta_index=0) -> None:
         super(lr_finder_elbo,self).__init__()
         self.beta_kl = beta_kl
         self.beta_index = beta_index
-        self.index_loss=index_loss
+        self.index_loss = index_loss
         pass
 
     def lr_finder_elbo_inner(self, model_outputs, label):
         dist_params, _, _, rec = model_outputs
-        rec_err_var = torch.var(rec-label.unsqueeze(2), 2)
-        rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
-        loss_sum=rec_loss
+        rec_loss = gaussian_nll_loss(label, rec).mean()
+        # rec_err_var = torch.var(rec - label.unsqueeze(2), 2)
+        # rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
+        loss_sum = rec_loss
         sigma = dist_params[:, :, 1].squeeze()
         mu = dist_params[:, :, 0].squeeze()
         if self.beta_kl > 0:
             kl_loss = self.beta_kl * kl_tn_uniform(mu, sigma).sum(1).mean()
             loss_sum += kl_loss
         if self.beta_index>0:
-            index_loss = self.beta_index * self.index_loss(s2_r, rec)
+            index_loss = self.beta_index * self.index_loss(label, rec)
             loss_sum += index_loss
         loss_sum+=kl_loss
         return loss_sum
+
+    def forward(self, model_outputs, label):
+        return self.lr_finder_elbo_inner(model_outputs, label)
 
 def lr_finder_sup_nll(model_outputs, label):
     dist_params, _, _, _ = model_outputs

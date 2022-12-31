@@ -197,6 +197,7 @@ class LRFinder(object):
         diverge_th=5,
         accumulation_steps=1,
         non_blocking_transfer=True,
+        disable_tqdm=True,
     ):
         """Performs the learning rate range test.
         Arguments:
@@ -312,7 +313,7 @@ class LRFinder(object):
                     "or child of `ValDataLoaderIter`.".format(type(val_loader))
                 )
 
-        for iteration in tqdm(range(num_iter)):
+        for iteration in tqdm(range(num_iter),disable=disable_tqdm):
             # Train on batch and retrieve loss
             loss = self._train_batch(
                 train_iter,
@@ -697,7 +698,7 @@ def get_prosailvae_train_parser():
        
     return parser       
 
-def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_"):
+def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True):
     optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
     lrtrainloader = lr_finder_loader(
                                     file_prefix=file_prefix, 
@@ -715,8 +716,8 @@ def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_"):
                                     loss_type=model.decoder.loss_type)
 
     lr_finder = LRFinder(model, optimizer, criterion, device=model.device)
-    lr_finder.range_test(lrtrainloader, end_lr=100, num_iter=100)
-    lr_optimal = max(lr_finder.suggest_lr(), 1.0)
+    lr_finder.range_test(lrtrainloader, end_lr=10, num_iter=100, disable_tqdm=disable_tqdm)
+    lr_optimal = min(lr_finder.suggest_lr(), 1.0)
     if plot_lr:
         print(lr_optimal)
         lr_finder.plot(log_lr=True)
@@ -757,4 +758,4 @@ if __name__ == "__main__":
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std, inference_mode=inference_mode)
     model = prosail_VAE
     
-    lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True)
+    lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True, disable_tqdm=False)

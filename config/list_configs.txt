@@ -1,0 +1,7 @@
+config_supervised.json
+config_unsupervised_b1_idx_0_diag.json
+config_unsupervised_b1_idx_0_diag_normed.json
+config_unsupervised_b1_idx_0_full.json
+config_unsupervised_b1_idx_0_full_normed.json
+config_unsupervised_b1_idx_1_diag.json
+config_unsupervised_b1_idx_1_diag_normed.json

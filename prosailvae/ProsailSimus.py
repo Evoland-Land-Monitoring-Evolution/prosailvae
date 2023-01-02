@@ -107,6 +107,8 @@ RSR of the sensor.
         u_s2_r = self.unnormalize(s2_r)
         if self.apply_norm:
             u_s2_rec = self.unnormalize(s2_rec)
+        else:
+            u_s2_rec = s2_rec
         n_samples = s2_rec.size(2)
         loss = torch.tensor(0.0).to(s2_r.device)
         if "NDVI" in index_terms:

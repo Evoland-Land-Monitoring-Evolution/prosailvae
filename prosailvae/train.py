@@ -125,8 +125,12 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             t0=time.time()
             if epoch > 0 and lr_recompute is not None:
                 if epoch % lr_recompute == 0:
-                    new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
-                    optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+                    try:
+                        new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+                        optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+                    except:
+                        logger.error(f"Couldn't recompute lr at epoch {epoch} !")
+                        print(f"Couldn't recompute lr at epoch {epoch} !")
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
                 
@@ -330,7 +334,13 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                   loss_type=params["loss_type"])
     lr = params['lr']
     if lr is None:
-        lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+        try:
+            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+        except:
+            lr = 1e-3
+            logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
+            print(f"Couldn't recompute lr at initialization ! Using lr={lr}")
+
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     logger.info('PROSAIL-VAE and optimizer initialized.')

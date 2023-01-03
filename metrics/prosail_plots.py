@@ -155,7 +155,8 @@ def loss_curve(loss_df, save_file, log_scale=False):
     for i in range(len(loss_names)):
         loss = loss_df[loss_names[i]].values
         if log_scale: # (loss<=0).any() or 
-            loss += loss.min() + 1
+            if (loss<=0).any():
+                loss += loss.min() + 1
             ax.set_yscale('log')
         ax.plot(epochs,loss, label=loss_names[i])
     ax.legend()

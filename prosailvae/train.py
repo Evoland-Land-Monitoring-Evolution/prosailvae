@@ -118,6 +118,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     logger = logging.getLogger(LOGGER_NAME)
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
+    info_df = pd.DataFrame()
     best_val_loss = torch.inf
     total_ram = get_total_RAM()
     with logging_redirect_tqdm():
@@ -131,6 +132,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
                     except:
                         logger.error(f"Couldn't recompute lr at epoch {epoch} !")
                         print(f"Couldn't recompute lr at epoch {epoch} !")
+            info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
                 
@@ -169,9 +171,9 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             if valid_loss_dict['loss_sum'] < best_val_loss:
                 best_val_loss = valid_loss_dict['loss_sum'] 
                 PROSAIL_VAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weigths.tar")
-    return all_train_loss_df, all_valid_loss_df
+    return all_train_loss_df, all_valid_loss_df, info_df
 
-def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir):
+def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res_dir, data_dir):
     device = PROSAIL_VAE.device
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -183,6 +185,8 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, dat
     loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", 
                log_scale=True)
     loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg",  
+               log_scale=True)
+    loss_curve(info_df, save_file=loss_dir+"lr.svg",  
                log_scale=True)
     
     # Computing metrics
@@ -283,7 +287,7 @@ def setupTraining():
                                parser.n_xp, parser.overwrite_xp)
     save_dict(params, res_dir+"/config.json")
     logging.basicConfig(filename=res_dir+'/training_log.log', 
-                              level=logging.DEBUG)
+                              level=logging.ERROR)
     logger_name = 'PROSAIL-VAE logger'
     # create logger
     logger = logging.getLogger(logger_name)
@@ -348,7 +352,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     # Training
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
-    all_train_loss_df, all_valid_loss_df = training_loop(PROSAIL_VAE, 
+    all_train_loss_df, all_valid_loss_df, info_df = training_loop(PROSAIL_VAE, 
                                                          optimizer, 
                                                          params['epochs'],
                                                          train_loader, 
@@ -358,7 +362,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                                          lr_recompute=params['lr_recompute'],
                                                          data_dir=data_dir) 
     logger.info("Training Completed !")
-    return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df
+    return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df
 
 def configureEmissionTracker(parser):
     logger = logging.getLogger(LOGGER_NAME)
@@ -377,8 +381,8 @@ def main():
     params, parser, res_dir, data_dir = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
-        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df = trainProsailVae(params, parser, res_dir, data_dir)
-        save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, res_dir, data_dir)
+        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir)
+        save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res_dir, data_dir)
     except Exception as e:
         traceback.print_exc()
         print(e)

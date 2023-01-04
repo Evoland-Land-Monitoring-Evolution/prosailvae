@@ -114,13 +114,15 @@ def get_prosailvae_train_parser():
     return parser
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20, lr_recompute=None, data_dir=""):
+                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0):
     logger = logging.getLogger(LOGGER_NAME)
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     info_df = pd.DataFrame()
     best_val_loss = torch.inf
     total_ram = get_total_RAM()
+    if exp_lr_decay>0:
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
@@ -129,13 +131,16 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
                     try:
                         new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
                         optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+                        if exp_lr_decay>0:
+                            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
                     except:
                         logger.error(f"Couldn't recompute lr at epoch {epoch} !")
                         print(f"Couldn't recompute lr at epoch {epoch} !")
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
-                
+                if exp_lr_decay>0:
+                    lr_scheduler.step()
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')
@@ -349,7 +354,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     logger.info('PROSAIL-VAE and optimizer initialized.')
     
-    # Training
+    # Trainingget_PROSAIL_VAE_lr
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
     all_train_loss_df, all_valid_loss_df, info_df = training_loop(PROSAIL_VAE, 
@@ -360,7 +365,8 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                                          res_dir=res_dir,
                                                          n_samples=params["n_samples"],
                                                          lr_recompute=params['lr_recompute'],
-                                                         data_dir=data_dir) 
+                                                         data_dir=data_dir, 
+                                                         exp_lr_decay=params["exp_lr_decay"]) 
     logger.info("Training Completed !")
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df
 

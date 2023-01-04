@@ -30,5 +30,6 @@
     "simulated_dataset": true,
     "lr_recompute": 40,
     "loss_type": "diag_nll",
-    "apply_norm_rec": false
+    "apply_norm_rec": false,
+    "exp_lr_decay": 0.96
 }

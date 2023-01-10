@@ -121,8 +121,12 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     info_df = pd.DataFrame()
     best_val_loss = torch.inf
     total_ram = get_total_RAM()
-    if exp_lr_decay>0:
-        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+    if exp_lr_decay > 0:
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.1, 
+                                                                    patience=exp_lr_decay, threshold=0.0001, 
+                                                                    threshold_mode='rel', cooldown=0, min_lr=1e-8, 
+                                                                    eps=1e-08, verbose=False)
+                    # torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()

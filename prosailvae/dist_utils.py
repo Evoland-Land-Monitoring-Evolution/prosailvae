@@ -109,6 +109,7 @@ def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device
         prod_cdfs = torch.prod(selected_cdfs, 1).view(-1,1)
         prod_pdfs_invcdfs = selected_pdfs / (selected_cdfs + eps)
         max_pdf_lat[:,i] = (prod_cdfs * prod_pdfs_invcdfs.sum(axis=1).view(-1,1)).squeeze()
+    #TODO: correct error in backward pass here.
     log_max_pdf_i = torch.log(max_pdf_lat + eps)
     nll = -log_max_pdf_i
     return nll.sum(axis=1) 

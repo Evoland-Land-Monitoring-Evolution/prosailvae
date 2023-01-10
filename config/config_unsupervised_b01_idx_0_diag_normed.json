@@ -21,14 +21,14 @@
     "encoder_last_activation": null,
     "n_samples": 20,
     "supervised": false,
-    "beta_kl": 1,
+    "beta_kl": 0.1,
     "beta_index": 0,
     "k_fold": 0,
     "dataset_file_prefix": "full_",
     "n_fold": null,
     "simulated_dataset": true,
     "lr_recompute": 100,
-    "loss_type": "full_nll",
+    "loss_type": "diag_nll",
     "apply_norm_rec": true,
     "exp_lr_decay": 10
 }

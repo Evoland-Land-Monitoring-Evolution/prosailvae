@@ -56,7 +56,8 @@ def gaussian_nll_loss(tgt, recs):
 
 def full_gaussian_nll_loss(tgt, recs):
     err = recs - tgt.unsqueeze(2)
-    sigma_mat = err @ err.transpose(1,2) / err.size(2)
+    errm = err - err.mean(2).unsqueeze(2)
+    sigma_mat = errm @ errm.transpose(1,2) / errm.size(2)
     return full_gaussian_nll(tgt, recs.mean(2), sigma_mat, device=tgt.device).mean() 
 
 def cuda_cholesky(A):

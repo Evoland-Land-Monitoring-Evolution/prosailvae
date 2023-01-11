@@ -228,9 +228,13 @@ class SimVAE(nn.Module):
         ref_sim = batch[2].to(self.device)  
         ref_lat = self.sim_space.sim2z(ref_sim)
         y = self.encode(s2_r, s2_a)
+        if y.isnan().any():
+            raise ValueError("NaN encountered during encoding, there are probably NaN values in network parameters.")
         dist_params = self.lat_space.get_params_from_encoder(y)
 
         loss_sum = self.lat_space.loss(ref_lat, dist_params)
+        if loss_sum.isnan().any() or loss_sum.isinf().any():
+            raise ValueError
         all_losses = {'lat_loss': loss_sum.item()}
        
         all_losses['loss_sum'] = loss_sum.item()

@@ -122,11 +122,11 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     best_val_loss = torch.inf
     total_ram = get_total_RAM()
     if exp_lr_decay > 0:
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
-                                                                    patience=exp_lr_decay, threshold=0.0001, 
-                                                                    threshold_mode='rel', cooldown=0, min_lr=1e-8, 
-                                                                    eps=1e-08, verbose=False)
-                    # torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+        # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
+        #                                                             patience=exp_lr_decay, threshold=0.0001, 
+        #                                                             threshold_mode='rel', cooldown=0, min_lr=1e-8, 
+        #                                                             eps=1e-08, verbose=False)
+        lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
@@ -136,11 +136,11 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
                         new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
                         optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                         if exp_lr_decay>0:
-                            lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
-                                                                    patience=exp_lr_decay, threshold=0.0001, 
-                                                                    threshold_mode='rel', cooldown=0, min_lr=1e-8, 
-                                                                    eps=1e-08, verbose=False)
-                            # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+                            # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
+                            #                                         patience=exp_lr_decay, threshold=0.0001, 
+                            #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
+                            #                                         eps=1e-08, verbose=False)
+                            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
                     except:
                         logger.error(f"Couldn't recompute lr at epoch {epoch} !")
                         print(f"Couldn't recompute lr at epoch {epoch} !")
@@ -159,7 +159,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             try:
                 valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples)
                 if exp_lr_decay>0:
-                    lr_scheduler.step(valid_loss_dict['loss_sum'])
+                    # lr_scheduler.step(valid_loss_dict['loss_sum'])
+                    lr_scheduler.step()
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')

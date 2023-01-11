@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:54:24 2022
 """
 import torch.nn as nn
 import torch
-from .dist_utils import kl_tn_uniform, truncated_gaussian_cdf, ordered_truncated_gaussian_nll, get_latent_ordered_truncated_pdfs
+from .dist_utils import kl_tn_uniform, truncated_gaussian_cdf, ordered_truncated_gaussian_nll, get_latent_ordered_truncated_pdfs, truncated_gaussian_nll
 eps=5e-4
 MAX_MATRIX = torch.eye(10)
 
@@ -121,8 +121,9 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
     def loss(self, z, params):
         mu = params[:, :, 0].squeeze()
         sigma = params[:, :, 1].squeeze()
-        nll = ordered_truncated_gaussian_nll(z, mu, sigma, self.max_matrix, 
-                                             device=self.device).mean()
+        # nll = ordered_truncated_gaussian_nll(z, mu, sigma, self.max_matrix, 
+        #                                      device=self.device).mean()
+        nll = truncated_gaussian_nll(z, mu.unsqueeze(2), sigma.unsqueeze(2)).mean()
         return nll
     
     def kl(self, params):

@@ -56,7 +56,11 @@ def truncated_gaussian_cdf(x, mu, sig, eps=1e-9):
     return  (x>1) + (x>=0) * (x<=1) * (normal_cdf(x, mu, sig) - normal_cdf(torch.tensor(0), mu, sig))/ (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig))
 
 def truncated_gaussian_nll(x, mu, sig, eps=1e-9):
-    return -torch.log(truncated_gaussian_pdf(x, mu, sig) + torch.tensor(eps)).sum(axis=1)
+    likelihood = truncated_gaussian_pdf(x, mu, sig)
+    nll = -torch.log(likelihood + torch.tensor(eps)).sum(axis=1)
+    if nll.isinf().any() or nll.isnan().any():
+        raise ValueError()
+    return nll
 
 def get_truncated_gaussian_pdf(mu, sigma, support_sampling=0.001):
     support = torch.arange(support_sampling, 1, support_sampling)
@@ -94,7 +98,6 @@ def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampl
         pdfs[:, i, :] = (prod_cdfs.view(batch_size, -1) * prod_pdfs_invcdfs.sum(axis=1))
     return pdfs, supports
 
-
 def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device='cpu'):
     
     n_lat = max_matrix.size(1)
@@ -104,6 +107,7 @@ def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device
         cdfs_at_zi = truncated_gaussian_cdf(z[:,i].view(-1,1), mu, sigma).to(device)
         max_mat_col = max_matrix[:,i]
         max_mat_mask = max_mat_col.repeat(z.size(0),1)
+        # masked select is probably triggering some errors, see : https://discuss.pytorch.org/t/logbackward-returned-nan-values-in-its-0th-output/92820/7
         selected_cdfs = torch.masked_select(cdfs_at_zi, max_mat_mask.bool()).view(z.size(0),-1)
         selected_pdfs = torch.masked_select(pdfs_at_zi, max_mat_mask.bool()).view(z.size(0),-1)
         prod_cdfs = torch.prod(selected_cdfs, 1).view(-1,1)

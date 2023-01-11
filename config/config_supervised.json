@@ -1,5 +1,5 @@
 {
-    "batch_size": 256,
+    "batch_size": 1024,
     "epochs": 400,
     "lr": null,
     "hidden_layers_size": [

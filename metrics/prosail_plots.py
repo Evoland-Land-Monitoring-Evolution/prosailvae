@@ -8,6 +8,7 @@ Created on Thu Nov 17 11:46:20 2022
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 
 
@@ -44,10 +45,53 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.yscale('log')
     fig.savefig(save_dir+"/mare.svg")
 
+def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
+    
+    
+    recs_dist = torch.tensor([]).to(prosail_VAE.device)
+    s2_r_dist = torch.tensor([]).to(prosail_VAE.device)
+    with torch.no_grad():
+        for i, batch in enumerate(loader):
+            s2_r = batch[0].to(prosail_VAE.device)
+            s2_r_dist = torch.concat([s2_r_dist, s2_r], axis=0)
+            angles = batch[1].to(prosail_VAE.device)
+            _, _, _, recs = prosail_VAE.forward(s2_r, angles, n_samples=100)
+            recs_dist = torch.concat([recs_dist, recs], axis=0)
+    n_bands = s2r_dist.size(1)
+    N = s2r_dist.size(0)
+    fig, axs = plt.subplots(2, n_bands//2 + n_bands%2, dpi=100)
+    for i in range(n_bands):
+        axi = i%2
+        axj = i//2
+
+        xs = recs_dist[:,i,:].detach().cpu().numpy()
+        ys = s2_r_dist[:,i].detach().cpu().numpy()
+        min_b = min(xs.min(),ys.min())
+        max_b = max(xs.max(),ys.max())
+        xedges = np.linspace(min_b, max_b, nbin)
+        yedges = np.linspace(min_b, max_b, nbin)
+        heatmap = 0
+        for j in range(N):
+            xj = xs[j,:]
+            yj = ys[j]
+            hist, xedges, yedges = np.histogram2d(
+                xj, np.ones_like(xj) * yj, bins=[xedges, yedges])
+            heatmap += hist
+
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        heatmap = np.flipud(np.rot90(heatmap))
+        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
+        axs[axi, axj].set_ylabel(BANDS[i])
+        axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
+    plt.show()
+    fig.savefig(res_dir + '/2d_rec_dist.svg')
+    plt.close('all')
+    pass
+
 def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
     n_lats = sim_pdfs.size(1)
     N = sim_pdfs.size(0)
-
+    fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=100)
     for i in range(n_lats):
         xs = sim_supports[:,i,:].detach().cpu().numpy()
         ys = tgt_dist[:,i].detach().cpu().numpy()
@@ -71,10 +115,15 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
         ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         ax.set_ylabel(PROSAILVARS[i])
         ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])
-        plt.plot([min_b, max_b], [min_b, max_b], c='w')
-        plt.show()
+        ax.plot([min_b, max_b], [min_b, max_b], c='w')
+        axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
+        axs_all[i%2, i//2].set_ylabel(PROSAILVARS[i])
+        axs_all[i%2, i//2].set_xlabel("Predicted" + PROSAILVARS[i])
+        axs_all[i%2, i//2].plot([min_b, max_b], [min_b, max_b], c='w')
+        
         fig.savefig(res_dir + f'/2d_pred_dist_{PROSAILVARS[i]}.svg')
         plt.close('all')
+    fig_all.savefig(res_dir + f'/2d_pred_dist_PROSAIL_VARS.svg')
     pass
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):

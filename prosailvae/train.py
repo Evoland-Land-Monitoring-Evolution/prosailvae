@@ -10,7 +10,7 @@ from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
-from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D 
+from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D
 from datetime import datetime 
 import torch.optim as optim
 import torch
@@ -247,6 +247,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     os.makedirs(rec_dir)
     logger.info("Plotting reconstructions")
     plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
+    plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     logger.info("Plotting PROSAIL parameter distributions")
     plot_param_dist(metrics_dir, sim_dist, tgt_dist)
     logger.info("Plotting PROSAIL parameters, reference vs prediction")

@@ -61,7 +61,7 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
                 recs_dist = torch.concat([recs_dist, recs], axis=0)
     n_bands = s2_r_dist.size(1)
     N = s2_r_dist.size(0)
-    fig, axs = plt.subplots(2, n_bands//2 + n_bands % 2, dpi=100, tight_layout=True, figsize=(1 + 2*(n_bands//2 + n_bands%2), 1+2*2))
+    fig, axs = plt.subplots(2, n_bands//2 + n_bands % 2, dpi=120, tight_layout=True, figsize=(1 + 2*(n_bands//2 + n_bands%2), 1+2*2))
     for i in range(n_bands):
         axi = i%2
         axj = i//2
@@ -79,11 +79,12 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
             hist, xedges, yedges = np.histogram2d(
                 xj, np.ones_like(xj) * yj, bins=[xedges, yedges])
             heatmap += hist
-        heatmap = np.flipud(heatmap)
+        heatmap = np.flipud(np.rot90(heatmap))
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        # heatmap = np.flipud(np.rot90(heatmap))
+        
         axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         axs[axi, axj].set_ylabel(BANDS[i])
+        axs[axi, axj].set_xlabel("rec. " + BANDS[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
     plt.show()
     fig.savefig(res_dir + '/2d_rec_dist.svg')
@@ -95,7 +96,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
 
     n_lats = sim_pdfs.size(1)
     N = sim_pdfs.size(0)
-    fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=100, tight_layout=True, figsize=(1 + 2*(n_lats//2 + n_lats%2), 1+2*2))
+    fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=120, tight_layout=True, figsize=(1 + 2*(n_lats//2 + n_lats%2), 1+2*2))
     for i in range(n_lats):
         xs = sim_supports[:,i,:].detach().cpu().numpy()
         ys = tgt_dist[:,i].detach().cpu().numpy()
@@ -114,8 +115,8 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
             heatmap += hist
 
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        heatmap = np.flipud(heatmap)
-        fig, ax = plt.subplots(dpi=100)
+        heatmap = np.flipud(np.rot90(heatmap))
+        fig, ax = plt.subplots(dpi=120)
         ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         ax.set_ylabel(PROSAILVARS[i])
         ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])

@@ -313,7 +313,7 @@ class SimVAE(nn.Module):
 #     return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
 #             torch.log(torch.max(sigma, eps)).sum(1)
 from prosailvae.dist_utils import kl_tn_uniform     
-from prosailvae.utils import gaussian_nll, gaussian_nll_loss, full_gaussian_nll_loss     
+from prosailvae.utils import gaussian_nll, gaussian_nll_loss, full_gaussian_nll_loss truncated_gaussian_nll
 class lr_finder_elbo(nn.Module):
     def __init__(self, index_loss, beta_kl=1, beta_index=0, loss_type='diag_nll') -> None:
         super(lr_finder_elbo,self).__init__()
@@ -352,5 +352,5 @@ def lr_finder_sup_nll(model_outputs, label):
     dist_params, _, _, _ = model_outputs
     sigma = dist_params[:, :, 1].squeeze()
     mu = dist_params[:, :, 0].squeeze()
-    loss = gaussian_nll(label, mu, sigma).mean() 
+    loss = truncated_gaussian_nll(label, mu, sigma).mean() 
     return loss

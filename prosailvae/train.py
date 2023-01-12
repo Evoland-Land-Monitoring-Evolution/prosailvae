@@ -242,6 +242,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     os.makedirs(metrics_dir)
     
     logger.info("Plotting metrics.")
+    plot_rec_hist2D(PROSAIL_VAE, loader, metrics_dir, nbin=50)
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
     rec_dir = res_dir + "/reconstruction/"
     os.makedirs(rec_dir)
@@ -276,7 +277,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
               res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
     logger.info("Plotting reconstruction error against angles")
     plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
-    plot_rec_hist2D(PROSAIL_VAE, loader, metrics_dir, nbin=50)
+    
     logger.info("Program completed.")
     return
 

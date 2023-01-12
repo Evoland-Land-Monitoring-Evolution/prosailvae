@@ -122,7 +122,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
         ax.plot([min_b, max_b], [min_b, max_b], c='w')
         axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         axs_all[i%2, i//2].set_ylabel(PROSAILVARS[i])
-        axs_all[i%2, i//2].set_xlabel("Predicted" + PROSAILVARS[i])
+        axs_all[i%2, i//2].set_xlabel("Pred. " + PROSAILVARS[i])
         axs_all[i%2, i//2].plot([min_b, max_b], [min_b, max_b], c='w')
         fig.savefig(res_dir + f'/2d_pred_dist_{PROSAILVARS[i]}.svg')
         plt.close('all')

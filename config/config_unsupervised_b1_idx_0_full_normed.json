@@ -1,6 +1,6 @@
 {
     "batch_size": 256,
-    "epochs": 100,
+    "epochs": 80,
     "lr": null,
     "hidden_layers_size": [
         16,
@@ -8,7 +8,7 @@
         64,
         128,
         256,
-        512
+        512,
         256,
         128,
         64     
@@ -25,7 +25,7 @@
     "dataset_file_prefix": "full_",
     "n_fold": null,
     "simulated_dataset": true,
-    "lr_recompute": 50,
+    "lr_recompute": 40,
     "loss_type": "full_nll",
     "apply_norm_rec": true,
     "exp_lr_decay": 0.96

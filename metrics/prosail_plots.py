@@ -79,7 +79,7 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
             hist, xedges, yedges = np.histogram2d(
                 xj, np.ones_like(xj) * yj, bins=[xedges, yedges])
             heatmap += hist
-
+        heatmap = np.flipud(heatmap)
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         # heatmap = np.flipud(np.rot90(heatmap))
         axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
@@ -114,7 +114,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
             heatmap += hist
 
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        # heatmap = np.flipud(np.rot90(heatmap))
+        heatmap = np.flipud(heatmap)
         fig, ax = plt.subplots(dpi=100)
         ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         ax.set_ylabel(PROSAILVARS[i])

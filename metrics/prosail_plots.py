@@ -52,7 +52,6 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
     s2_r_dist = torch.tensor([]).to(prosail_VAE.device)
     with torch.no_grad():
         for i, batch in enumerate(loader):
-            
             s2_r = batch[0].to(prosail_VAE.device)
             s2_r_dist = torch.concat([s2_r_dist, s2_r], axis=0)
             angles = batch[1].to(prosail_VAE.device)
@@ -62,7 +61,7 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
                 recs_dist = torch.concat([recs_dist, recs], axis=0)
     n_bands = s2_r_dist.size(1)
     N = s2_r_dist.size(0)
-    fig, axs = plt.subplots(2, n_bands//2 + n_bands%2, dpi=100)
+    fig, axs = plt.subplots(2, n_bands//2 + n_bands % 2, dpi=100, tight_layout=True, figsize=(1 + 2*(n_bands//2 + n_bands%2), 1+2*2))
     for i in range(n_bands):
         axi = i%2
         axj = i//2
@@ -82,7 +81,7 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
             heatmap += hist
 
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        heatmap = np.flipud(np.rot90(heatmap))
+        # heatmap = np.flipud(np.rot90(heatmap))
         axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         axs[axi, axj].set_ylabel(BANDS[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
@@ -96,7 +95,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
 
     n_lats = sim_pdfs.size(1)
     N = sim_pdfs.size(0)
-    fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=100)
+    fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=100, tight_layout=True, figsize=(1 + 2*(n_lats//2 + n_lats%2), 1+2*2))
     for i in range(n_lats):
         xs = sim_supports[:,i,:].detach().cpu().numpy()
         ys = tgt_dist[:,i].detach().cpu().numpy()
@@ -115,7 +114,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
             heatmap += hist
 
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        heatmap = np.flipud(np.rot90(heatmap))
+        # heatmap = np.flipud(np.rot90(heatmap))
         fig, ax = plt.subplots(dpi=100)
         ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
         ax.set_ylabel(PROSAILVARS[i])
@@ -125,10 +124,12 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
         axs_all[i%2, i//2].set_ylabel(PROSAILVARS[i])
         axs_all[i%2, i//2].set_xlabel("Predicted" + PROSAILVARS[i])
         axs_all[i%2, i//2].plot([min_b, max_b], [min_b, max_b], c='w')
-        
         fig.savefig(res_dir + f'/2d_pred_dist_{PROSAILVARS[i]}.svg')
         plt.close('all')
+    if n_lats%2==1:
+        fig_all.delaxes(axs_all[-1, -1])
     fig_all.savefig(res_dir + f'/2d_pred_dist_PROSAIL_VARS.svg')
+    
     pass
 
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):

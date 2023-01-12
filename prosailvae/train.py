@@ -113,7 +113,7 @@ def get_prosailvae_train_parser():
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger):
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir):
     if epoch > 0 and lr_recompute is not None:
                 if epoch % lr_recompute == 0:
                     try:
@@ -154,7 +154,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75)
-            lr_scheduler = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger)
+            lr_scheduler = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
@@ -276,7 +276,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
               res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
     logger.info("Plotting reconstruction error against angles")
     plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
-    plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
+    plot_rec_hist2D(PROSAIL_VAE, loader, metrics_dir, nbin=50)
     logger.info("Program completed.")
     return
 

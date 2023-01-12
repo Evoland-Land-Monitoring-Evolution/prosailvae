@@ -46,19 +46,22 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
-    
-    
+    original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
+    prosail_VAE.decoder.ssimulator.apply_norm = False
     recs_dist = torch.tensor([]).to(prosail_VAE.device)
     s2_r_dist = torch.tensor([]).to(prosail_VAE.device)
     with torch.no_grad():
         for i, batch in enumerate(loader):
+            
             s2_r = batch[0].to(prosail_VAE.device)
             s2_r_dist = torch.concat([s2_r_dist, s2_r], axis=0)
             angles = batch[1].to(prosail_VAE.device)
-            _, _, _, recs = prosail_VAE.forward(s2_r, angles, n_samples=100)
-            recs_dist = torch.concat([recs_dist, recs], axis=0)
-    n_bands = s2r_dist.size(1)
-    N = s2r_dist.size(0)
+            len_batch=s2_r.size(0)
+            for j in range(len_batch):
+                _, _, _, recs = prosail_VAE.forward(s2_r[j,:].unsqueeze(0), angles[j,:].unsqueeze(0), n_samples=100)
+                recs_dist = torch.concat([recs_dist, recs], axis=0)
+    n_bands = s2_r_dist.size(1)
+    N = s2_r_dist.size(0)
     fig, axs = plt.subplots(2, n_bands//2 + n_bands%2, dpi=100)
     for i in range(n_bands):
         axi = i%2
@@ -86,9 +89,11 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
     plt.show()
     fig.savefig(res_dir + '/2d_rec_dist.svg')
     plt.close('all')
+    prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
     pass
 
 def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
+
     n_lats = sim_pdfs.size(1)
     N = sim_pdfs.size(0)
     fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=100)

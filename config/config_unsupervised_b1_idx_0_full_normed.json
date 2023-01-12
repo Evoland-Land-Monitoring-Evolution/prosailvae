@@ -26,7 +26,7 @@
     "n_fold": null,
     "simulated_dataset": true,
     "lr_recompute": 40,
-    "loss_type": "full_nll",
+    "loss_type": "hybrid_nll",
     "apply_norm_rec": true,
     "exp_lr_decay": 0.96
 }

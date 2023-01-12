@@ -48,7 +48,7 @@ class ProsailSimulatorDecoder(Decoder):
     def loss(self, tgt, rec):        
         if self.ssimulator.apply_norm:
             tgt = self.ssimulator.normalize(tgt)
-        if self.loss_type == "diag_nll":
+        if self.loss_type == "diag_nll" or self.loss_type == "hybrid_nll":
             rec_loss = gaussian_nll_loss(tgt, rec) 
         elif self.loss_type == "full_nll":
             rec_loss = full_gaussian_nll_loss(tgt, rec) 

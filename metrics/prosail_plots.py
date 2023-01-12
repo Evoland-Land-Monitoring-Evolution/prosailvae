@@ -44,6 +44,39 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.yscale('log')
     fig.savefig(save_dir+"/mare.svg")
 
+def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
+    n_lats = sim_pdfs.size(1)
+    N = sim_pdfs.size(0)
+
+    for i in range(n_lats):
+        xs = sim_supports[:,i,:].detach().cpu().numpy()
+        ys = tgt_dist[:,i].detach().cpu().numpy()
+        weights = sim_pdfs[:,i,:].detach().cpu().numpy()
+        min_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["min"]
+        max_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]
+        xedges = np.linspace(min_b, max_b, nbin)
+        yedges = np.linspace(min_b, max_b, nbin)
+        heatmap = 0
+        for j in range(N):
+            xj = xs[j,:]
+            yj = ys[j]
+            wj = weights[j,:]
+            hist, xedges, yedges = np.histogram2d(
+                xj, np.ones_like(xj) * yj, bins=[xedges, yedges], weights=wj)
+            heatmap += hist
+
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        heatmap = np.flipud(np.rot90(heatmap))
+        fig, ax = plt.subplots(dpi=100)
+        ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
+        ax.set_ylabel(PROSAILVARS[i])
+        ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])
+        plt.plot([min_b, max_b], [min_b, max_b], c='w')
+        plt.show()
+        fig.savefig(res_dir + f'/2d_pred_dist_{PROSAILVARS[i]}.svg')
+        plt.close('all')
+    pass
+
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
     original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
     prosail_VAE.decoder.ssimulator.apply_norm = False

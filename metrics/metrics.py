@@ -52,6 +52,8 @@ def get_metrics(prosailVAE, loader,
     rec_dist = torch.tensor([]).to(device)
     s2_r_dist = torch.tensor([]).to(device)
     angles_dist = torch.tensor([]).to(device)
+    sim_pdfs = torch.tensor([]).to(device)
+    sim_supports = torch.tensor([]).to(device)
     ssimulator = prosailVAE.decoder.ssimulator
     with torch.no_grad():
         for i, batch in enumerate(tqdm(loader, desc='Computing metrics', leave=True)):
@@ -61,7 +63,9 @@ def get_metrics(prosailVAE, loader,
             tgt = batch[2].to(device)
             dist_params, z_mode, prosail_params_mode, rec = prosailVAE.point_estimate_rec(s2_r, angles, mode='sim_mode')
             lat_pdfs, lat_supports = prosailVAE.lat_space.latent_pdf(dist_params)
-            # pheno_pdfs, pheno_supports = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            sim_pdfs_i, sim_supports_i = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            sim_pdfs = torch.concat([sim_pdfs, sim_pdfs_i], axis=0)
+            sim_supports = torch.concat([sim_supports, sim_supports_i], axis=0)
             pheno_pi_lower = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
             pheno_pi_upper = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
             error_i = prosail_params_mode.squeeze() - tgt
@@ -81,4 +85,4 @@ def get_metrics(prosailVAE, loader,
     picp = pic.mean(axis=0)    
     mpiw = piw.mean(axis=0)
     mare = rel_error.mean(axis=0)
-    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist
+    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist, sim_pdfs, sim_supports

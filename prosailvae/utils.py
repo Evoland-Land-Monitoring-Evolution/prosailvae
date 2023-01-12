@@ -51,11 +51,12 @@ def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
             torch.log(torch.max(sigma, eps)).sum(1)
 
 def gaussian_nll_loss(tgt, recs):
-    rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
+    # rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
+    rec_err_var = torch.var(recs, 2)
     return gaussian_nll(tgt, recs.mean(2), rec_err_var, device=tgt.device).mean() 
 
 def full_gaussian_nll_loss(tgt, recs):
-    err = recs - tgt.unsqueeze(2)
+    err = recs # - tgt.unsqueeze(2)
     errm = err - err.mean(2).unsqueeze(2)
     sigma_mat = errm @ errm.transpose(1,2) / errm.size(2)
     return full_gaussian_nll(tgt, recs.mean(2), sigma_mat, device=tgt.device).mean() 

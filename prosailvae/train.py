@@ -10,7 +10,7 @@ from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.metrics import get_metrics, save_metrics
-from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles 
+from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D 
 from datetime import datetime 
 import torch.optim as optim
 import torch
@@ -113,6 +113,29 @@ def get_prosailvae_train_parser():
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
     return parser
 
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger):
+    if epoch > 0 and lr_recompute is not None:
+                if epoch % lr_recompute == 0:
+                    try:
+                        new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+                        optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+                        if exp_lr_decay>0:
+                            # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
+                            #                                         patience=exp_lr_decay, threshold=0.0001, 
+                            #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
+                            #                                         eps=1e-08, verbose=False)
+                            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+                    except:
+                        logger.error(f"Couldn't recompute lr at epoch {epoch} !")
+                        print(f"Couldn't recompute lr at epoch {epoch} !")
+    return lr_scheduler
+def switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75):
+    loss_type = PROSAIL_VAE.decoder.loss_type
+    if loss_type == "hybrid_nll":
+        if epoch > threshold * n_epoch:
+            PROSAIL_VAE.decoder.loss_type = "full_nll"
+    pass
+
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
                   res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0):
     logger = logging.getLogger(LOGGER_NAME)
@@ -130,20 +153,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
-            if epoch > 0 and lr_recompute is not None:
-                if epoch % lr_recompute == 0:
-                    try:
-                        new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
-                        optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
-                        if exp_lr_decay>0:
-                            # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
-                            #                                         patience=exp_lr_decay, threshold=0.0001, 
-                            #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
-                            #                                         eps=1e-08, verbose=False)
-                            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
-                    except:
-                        logger.error(f"Couldn't recompute lr at epoch {epoch} !")
-                        print(f"Couldn't recompute lr at epoch {epoch} !")
+            switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75)
+            lr_scheduler = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
@@ -216,7 +227,8 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     logger.info("Computing inference metrics with test dataset...")
     (mae, mpiw, picp, mare, 
     sim_dist, tgt_dist, rec_dist,
-    angles_dist, s2_r_dist) = get_metrics(PROSAIL_VAE, loader, 
+    angles_dist, s2_r_dist,
+    sim_pdfs, sim_supports) = get_metrics(PROSAIL_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
     logger.info("Metrics computed.")
@@ -238,6 +250,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     logger.info("Plotting PROSAIL parameter distributions")
     plot_param_dist(metrics_dir, sim_dist, tgt_dist)
     logger.info("Plotting PROSAIL parameters, reference vs prediction")
+    plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50)
     plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
     ssimulator = PROSAIL_VAE.decoder.ssimulator
     refl_dist = loader.dataset[:][0]

@@ -121,7 +121,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
         ax.set_ylabel(PROSAILVARS[i])
         ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])
         ax.plot([min_b, max_b], [min_b, max_b], c='w')
-        axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
+        axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma', origin='lower')
         axs_all[i%2, i//2].set_ylabel(PROSAILVARS[i])
         axs_all[i%2, i//2].set_xlabel("Pred. " + PROSAILVARS[i])
         axs_all[i%2, i//2].plot([min_b, max_b], [min_b, max_b], c='w')

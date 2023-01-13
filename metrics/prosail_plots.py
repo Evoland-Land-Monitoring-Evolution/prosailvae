@@ -77,12 +77,12 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
             xj = xs[j,:]
             yj = ys[j]
             hist, xedges, yedges = np.histogram2d(
-                xj, np.ones_like(xj) * yj, bins=[xedges, yedges])
+                np.ones_like(xj) * yj, xj, bins=[xedges, yedges])
             heatmap += hist
-        heatmap = np.flipud(np.rot90(heatmap))
+        # heatmap = heatmap #np.flipud(np.rot90(heatmap))
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         
-        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
+        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma', origin='lower')
         axs[axi, axj].set_ylabel(BANDS[i])
         axs[axi, axj].set_xlabel("rec. " + BANDS[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
@@ -111,13 +111,13 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
             yj = ys[j]
             wj = weights[j,:]
             hist, xedges, yedges = np.histogram2d(
-                xj, np.ones_like(xj) * yj, bins=[xedges, yedges], weights=wj)
+                np.ones_like(xj) * yj, xj, bins=[xedges, yedges], weights=wj)
             heatmap += hist
 
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        heatmap = np.flipud(np.rot90(heatmap))
+        # heatmap = np.flipud(np.rot90(heatmap))
         fig, ax = plt.subplots(dpi=120)
-        ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma')
+        ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma', origin='lower')
         ax.set_ylabel(PROSAILVARS[i])
         ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])
         ax.plot([min_b, max_b], [min_b, max_b], c='w')

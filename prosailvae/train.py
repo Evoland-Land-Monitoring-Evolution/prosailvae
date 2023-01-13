@@ -225,6 +225,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     alpha_pi.reverse()
     PROSAIL_VAE.eval()
     logger.info("Computing inference metrics with test dataset...")
+    plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     (mae, mpiw, picp, mare, 
     sim_dist, tgt_dist, rec_dist,
     angles_dist, s2_r_dist,
@@ -242,7 +243,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     os.makedirs(metrics_dir)
     
     logger.info("Plotting metrics.")
-    plot_rec_hist2D(PROSAIL_VAE, loader, metrics_dir, nbin=50)
+    
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
     rec_dir = res_dir + "/reconstruction/"
     os.makedirs(rec_dir)

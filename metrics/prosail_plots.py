@@ -82,7 +82,7 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
         # heatmap = heatmap #np.flipud(np.rot90(heatmap))
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         
-        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma', origin='lower')
+        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
         axs[axi, axj].set_ylabel(BANDS[i])
         axs[axi, axj].set_xlabel("rec. " + BANDS[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
@@ -117,11 +117,11 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         # heatmap = np.flipud(np.rot90(heatmap))
         fig, ax = plt.subplots(dpi=120)
-        ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma', origin='lower')
+        ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
         ax.set_ylabel(PROSAILVARS[i])
         ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])
         ax.plot([min_b, max_b], [min_b, max_b], c='w')
-        axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='plasma', origin='lower')
+        axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
         axs_all[i%2, i//2].set_ylabel(PROSAILVARS[i])
         axs_all[i%2, i//2].set_xlabel("Pred. " + PROSAILVARS[i])
         axs_all[i%2, i//2].plot([min_b, max_b], [min_b, max_b], c='w')

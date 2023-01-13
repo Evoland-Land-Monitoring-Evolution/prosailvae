@@ -379,6 +379,9 @@ def trainProsailVae(params, parser, res_dir, data_dir):
 
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
+    # all_train_loss_df = pd.DataFrame([])
+    # all_valid_loss_df = pd.DataFrame([])
+    # info_df = pd.DataFrame([])
     logger.info('PROSAIL-VAE and optimizer initialized.')
     
     # Trainingget_PROSAIL_VAE_lr
@@ -395,6 +398,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
                                                          data_dir=data_dir, 
                                                          exp_lr_decay=params["exp_lr_decay"]) 
     logger.info("Training Completed !")
+
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df
 
 def configureEmissionTracker(parser):

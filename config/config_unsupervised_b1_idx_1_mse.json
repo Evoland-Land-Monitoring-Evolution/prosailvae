@@ -22,7 +22,7 @@
     "beta_kl": 1,
     "beta_index": 1,
     "k_fold": 0,
-    "dataset_file_prefix": "small_test_",
+    "dataset_file_prefix": "full_",
     "n_fold": null,
     "simulated_dataset": true,
     "lr_recompute": 50,

@@ -28,5 +28,6 @@
     "lr_recompute": 10,
     "loss_type": "diag_nll",
     "apply_norm_rec": false,
-    "exp_lr_decay": 0.96
+    "exp_lr_decay": 0.96,
+    "supervised_kl": false
 }

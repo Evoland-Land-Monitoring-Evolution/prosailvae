@@ -28,5 +28,6 @@
     "lr_recompute": 10,
     "loss_type": "mse",
     "apply_norm_rec": true,
-    "exp_lr_decay": 0.97
+    "exp_lr_decay": 0.97,
+    "supervised_kl": false
 }

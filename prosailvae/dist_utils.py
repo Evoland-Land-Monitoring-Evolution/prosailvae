@@ -42,7 +42,7 @@ def kl_tn_uniform(mu, sigma, a=torch.tensor(0.0), b=torch.tensor(1.0)):
     kl = - torch.log(sigma.float() * Z.float()) - torch.log(torch.tensor(2*pi))/2 - 1/2 - (alpha * phi_alpha - beta* phi_beta)/(2*Z) + torch.log(b-a) # + mu * (phi_alpha - phi_beta)/(2 * sigma * Z)
     return kl
 
-def kl_tntn(mu1,sigma1,mu2,sigma2,a=torch.tensor(0.0), b=torch.tensor(1.0)):
+def kl_tntn(mu1, sigma1, mu2, sigma2, a=torch.tensor(0.0), b=torch.tensor(1.0)):
     alpha1 = (a - mu1) / sigma1
     beta1 = (b - mu1) / sigma1
     phi_alpha1 = torch.exp(-alpha1**2/2) / torch.sqrt(torch.tensor(2*pi))
@@ -55,14 +55,16 @@ def kl_tntn(mu1,sigma1,mu2,sigma2,a=torch.tensor(0.0), b=torch.tensor(1.0)):
     Phi_alpha2 = 0.5 * (1 + torch.erf(alpha2/(2**0.5))) 
     Phi_beta2 = 0.5 * (1 + torch.erf(beta2/(2**0.5))) 
     eta2 = Phi_beta2 - Phi_alpha2
+    sigma22 = sigma2.pow(2)
+    sigma12 = sigma1.pow(2)
     K1 = alpha1 * phi_alpha1 - beta1 * phi_beta1
     N1 = phi_alpha1 - phi_beta1
     kl = - 1/2
     kl += torch.log(sigma2 * eta2) - torch.log(sigma1 * eta1) 
-    kl += - K1 / (2 * eta1) * (1 - (sigma1 / sigma2).pow(2))
-    kl += (mu1 - mu2).pow(2) / 2 / sigma2.pow(2)
-    kl += sigma1.pow(2) / 2 / sigma2.pow(2)
-    kl += (mu1 - mu2) * sigma1 / eta1 / sigma2.pow(2) * N1
+    kl += - K1 / (2 * eta1) * (1 - sigma12 / sigma22)
+    kl += (mu1 - mu2).pow(2) / 2 / sigma22
+    kl += sigma12 / 2 / sigma22
+    kl += (mu1 - mu2) * sigma1 / eta1 / sigma22 * N1
     return kl
 
 

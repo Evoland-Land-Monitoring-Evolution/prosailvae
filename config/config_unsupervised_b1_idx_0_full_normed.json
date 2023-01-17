@@ -28,5 +28,6 @@
     "lr_recompute": 40,
     "loss_type": "hybrid_nll",
     "apply_norm_rec": true,
-    "exp_lr_decay": 0.96
+    "exp_lr_decay": 0.96,
+    "supervised_kl": false
 }

@@ -87,6 +87,14 @@ def get_prosailvae_train_parser():
     parser.add_argument("-c", dest="config_file",
                         help="name of config json file on config directory.",
                         type=str, default="config.json")
+
+    parser.add_argument("-cs", dest="supervised_config_file",
+                        help="path to config for supervised model kl json file on config directory.",
+                        type=str, default="config.json")
+
+    parser.add_argument("-ws", dest="supervised_weight_file",
+                        help="path to model weights used to supervise the KL loss",
+                        type=str, default="model.tar")
     
     parser.add_argument("-x", dest="n_xp",
                         help="Number of experience (to use in case of kfold)",
@@ -291,6 +299,8 @@ def setupTraining():
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
               "-c", "config_dev.json",
+              "-cs", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_config.json",
+              "-ws", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_prosailvae_weigths.tar",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
@@ -313,6 +323,11 @@ def setupTraining():
     params = load_dict(config_dir + parser.config_file)
     if params["supervised"]:
         params["simulated_dataset"]=True
+    if params["supervised_kl"]:
+        params2 = load_dict(parser.supervised_config_file)
+        params2['sup_model_weights_path'] = parser.supervised_weight_file
+    else:
+        params2 = None
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     if len(parser.root_results_dir)==0:
@@ -335,9 +350,9 @@ def setupTraining():
         logger.info(f'{key} : {params[key]}')
     logger.info('========================================================================')
 
-    return params, parser, res_dir, data_dir
+    return params, parser, res_dir, data_dir, params2
 
-def trainProsailVae(params, parser, res_dir, data_dir):
+def trainProsailVae(params, parser, res_dir, data_dir, params2=None):
     logger = logging.getLogger(LOGGER_NAME)
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     if params["simulated_dataset"]:
@@ -368,11 +383,32 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     
     norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
     rsr_dir = parser.rsr_dir
+    if params2 is not None and params["beta_kl"] > 0:
+        vae_params2={"input_size":10,  
+                "hidden_layers_size":params2["hidden_layers_size"], 
+                "encoder_last_activation":params2["encoder_last_activation"],
+                "supervised":params2["supervised"],  
+                "beta_kl":params2["beta_kl"],
+                "beta_index":params2["beta_index"],
+                }
+        SUP_PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params2, device=device,
+                                            refl_norm_mean=norm_mean, refl_norm_std=norm_std,
+                                            logger_name=LOGGER_NAME, patch_mode=not params2["simulated_dataset"],
+                                            apply_norm_rec=params2["apply_norm_rec"],
+                                            loss_type=params2["loss_type"])
+        SUP_PROSAIL_VAE.load_ae(params2['sup_model_weights_path'])
+        for param in SUP_PROSAIL_VAE.parameters():
+            param.requires_grad = False # this model should not be trained.
+
+    else:
+        SUP_PROSAIL_VAE = None
+
     PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                   logger_name=LOGGER_NAME, patch_mode=not params["simulated_dataset"],
                                   apply_norm_rec=params["apply_norm_rec"],
-                                  loss_type=params["loss_type"])
+                                  loss_type=params["loss_type"],
+                                  supervised_model=SUP_PROSAIL_VAE)
     lr = params['lr']
     if lr is None:
         try:
@@ -420,10 +456,10 @@ def configureEmissionTracker(parser):
     return tracker, useEmissionTracker
 
 def main():
-    params, parser, res_dir, data_dir = setupTraining()
+    params, parser, res_dir, data_dir, params2 = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
-        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir)
+        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params2)
         save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res_dir, data_dir)
     except Exception as e:
         traceback.print_exc()

@@ -35,7 +35,8 @@ def get_prosail_VAE(rsr_dir,
                     patch_mode=False,
                     apply_norm_rec=True,
                     inference_mode=False,
-                    loss_type="diag_nll"):
+                    loss_type="diag_nll",
+                    supervised_model=None):
     latent_dim = 11
     output_size = latent_dim * 2
     
@@ -46,9 +47,14 @@ def get_prosail_VAE(rsr_dir,
                         device=device,
                         norm_mean=refl_norm_mean,
                         norm_std=refl_norm_std)
+    if supervised_model is not None:
+        kl_type = "tntn"
+    else:
+        kl_type = "tnu"
     lat_space = OrderedTruncatedGaussianLatent(device=device, 
                                                latent_dim=latent_dim,
-                                               max_matrix=None)
+                                               max_matrix=None,
+                                               kl_type=kl_type)
     
     z2sim_mat = get_z2prosailparams_mat()
     z2sim_offset = get_z2prosailparams_offset()
@@ -73,7 +79,8 @@ def get_prosail_VAE(rsr_dir,
                       device=device, 
                       beta_kl=vae_params["beta_kl"],
                       beta_index=vae_params["beta_index"],
-                      logger_name=logger_name, patch_mode=patch_mode, inference_mode=inference_mode)
+                      logger_name=logger_name, patch_mode=patch_mode, inference_mode=inference_mode,
+                      supervised_model=supervised_model)
     return prosailVAE
 
 def load_prosailVAE(vae_params, vae_file_path, optimizer=None, device='cpu'):

@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:54:24 2022
 """
 import torch.nn as nn
 import torch
-from .dist_utils import kl_tn_uniform, truncated_gaussian_cdf, ordered_truncated_gaussian_nll, get_latent_ordered_truncated_pdfs, truncated_gaussian_nll
+from .dist_utils import kl_tn_uniform, truncated_gaussian_cdf, ordered_truncated_gaussian_nll, get_latent_ordered_truncated_pdfs, truncated_gaussian_nll, kl_tntn
 eps=5e-4
 MAX_MATRIX = torch.eye(10)
 
@@ -36,7 +36,7 @@ class LatentSpace(nn.Module):
 
 class OrderedTruncatedGaussianLatent(LatentSpace):
     def __init__(self, latent_dim=10, min_sigma=5e-4, max_sigma=1.4,
-                 max_mu=1, device='cpu', max_matrix=MAX_MATRIX):
+                 max_mu=1, device='cpu', max_matrix=MAX_MATRIX, kl_type="tnu"):
         super().__init__()
         self.device=device
         self.latent_dim = latent_dim
@@ -46,6 +46,7 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         self.log_min_sigma = torch.log(self.min_sigma).to(device)
         # self.max_mu = max_mu.to(device)
         # self.eps=torch.tensor(5e-4).float().to(self.device)
+        self.kl_type=kl_type
         if max_matrix is None:
             self.max_matrix = torch.eye(latent_dim).to(device)
         else:
@@ -126,10 +127,18 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         nll = truncated_gaussian_nll(z, mu.unsqueeze(2), sigma.unsqueeze(2)).mean()
         return nll
     
-    def kl(self, params):
+    def kl(self, params, params2=None):
         sigma = params[:, :, 1].squeeze()
         mu = params[:, :, 0].squeeze()
-        return kl_tn_uniform(mu, sigma) 
+        if self.kl_type=='tnu':
+
+            return kl_tn_uniform(mu, sigma) 
+        elif self.kl_type=='tntn':
+            sigma2 = params2[:, :, 1].squeeze()
+            mu2 = params2[:, :, 0].squeeze()
+            return kl_tntn(mu, sigma, mu2, sigma2) 
+        else:
+            raise NotImplementedError
 
 
 def rectify(z, max_matrix):

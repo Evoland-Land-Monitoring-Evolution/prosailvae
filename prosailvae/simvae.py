@@ -59,7 +59,7 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
                  beta_kl=0, beta_index=0, logger_name='PROSAIL-VAE logger',
-                 patch_mode=False, inference_mode=False):
+                 patch_mode=False, inference_mode=False, supervised_model=None):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -77,6 +77,7 @@ class SimVAE(nn.Module):
         self.patch_mode = patch_mode
         self.beta_index = beta_index
         self.inference_mode = inference_mode
+        self.supervised_model = supervised_model
         
     def encode(self, x, angles):
         y = self.encoder.encode(x, angles)
@@ -203,11 +204,17 @@ class SimVAE(nn.Module):
         loss_sum=rec_loss
         
         if self.beta_kl > 0:
-            kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
+            if self.supervised_model is None:
+                kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
+
+            else:
+                params2 = self.supervised_model.encode2lat_params(s2_r, s2_a)
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params2).sum(1).mean()
+
             loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()
 
-        if self.beta_index>0:
+        if self.beta_index > 0:
             rec_loss_fn = select_rec_loss_fn(self.decoder.loss_type)
             index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec, lossfn=rec_loss_fn)
             loss_sum += index_loss

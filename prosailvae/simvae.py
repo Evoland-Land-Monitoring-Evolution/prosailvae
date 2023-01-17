@@ -8,7 +8,7 @@ Created on Thu Sep  1 08:25:49 2022
 import torch.nn as nn
 import torch
 import logging
-from prosailvae.utils import NaN_model_params
+from prosailvae.utils import NaN_model_params, select_rec_loss_fn
 from dataset.loaders import get_flattened_patch
 
 
@@ -99,7 +99,7 @@ class SimVAE(nn.Module):
         rec = self.decoder.decode(sim, dec_args)
         return rec
         
-    def forward(self, x, angles=None, n_samples=20):
+    def forward(self, x, angles=None, n_samples=1):
         # encoding
         if angles is None:
             angles = x[:,-3:]
@@ -208,7 +208,8 @@ class SimVAE(nn.Module):
             loss_dict['kl_loss'] = kl_loss.item()
 
         if self.beta_index>0:
-            index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec)
+            rec_loss_fn = select_rec_loss_fn(self.decoder.loss_type)
+            index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec, lossfn=rec_loss_fn)
             loss_sum += index_loss
             loss_dict['index_loss'] = index_loss.item()
 
@@ -313,34 +314,34 @@ class SimVAE(nn.Module):
 #     return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
 #             torch.log(torch.max(sigma, eps)).sum(1)
 from prosailvae.dist_utils import kl_tn_uniform, truncated_gaussian_nll
-from prosailvae.utils import gaussian_nll, gaussian_nll_loss, full_gaussian_nll_loss
+from prosailvae.utils import gaussian_nll, gaussian_nll_loss, full_gaussian_nll_loss, mse_loss
+
 class lr_finder_elbo(nn.Module):
-    def __init__(self, index_loss, beta_kl=1, beta_index=0, loss_type='diag_nll') -> None:
+    def __init__(self, index_loss, beta_kl=1, beta_index=0, loss_type='diag_nll', ssimulator=None) -> None:
         super(lr_finder_elbo,self).__init__()
         self.beta_kl = beta_kl
         self.beta_index = beta_index
         self.index_loss = index_loss
         self.loss_type = loss_type
+        self.ssimulator = ssimulator 
         pass
 
     def lr_finder_elbo_inner(self, model_outputs, label):
         dist_params, _, _, rec = model_outputs
-        if self.loss_type == "diag_nll" or self.loss_type == "hybrid_nll":
-            rec_loss = gaussian_nll_loss(label, rec).mean()
-        elif self.loss_type == "full_nll":
-            rec_loss = full_gaussian_nll_loss(label, rec).mean()
-        else:
-            raise NotImplementedError
-        # rec_err_var = torch.var(rec - label.unsqueeze(2), 2)
-        # rec_loss = gaussian_nll(label, rec.mean(2), rec_err_var).mean() 
-        loss_sum = rec_loss
+
+        if self.ssimulator.apply_norm:
+            label = self.ssimulator.normalize(label)
+        rec_loss_fn = select_rec_loss_fn(self.loss_type)
+        rec_loss = rec_loss_fn(label, rec)
+        loss_sum = rec_loss.mean()
         sigma = dist_params[:, :, 1].squeeze()
         mu = dist_params[:, :, 0].squeeze()
         if self.beta_kl > 0:
             kl_loss = self.beta_kl * kl_tn_uniform(mu, sigma).sum(1).mean()
             loss_sum += kl_loss
         if self.beta_index>0:
-            index_loss = self.beta_index * self.index_loss(label, rec)
+            
+            index_loss = self.beta_index * self.index_loss(label, rec, lossfn=rec_loss_fn)
             loss_sum += index_loss
         loss_sum+=kl_loss
         return loss_sum

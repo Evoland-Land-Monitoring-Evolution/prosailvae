@@ -9,6 +9,18 @@ import json
 import psutil
 import os
 import torch 
+import torch.nn as nn
+
+def select_rec_loss_fn(loss_type):
+    if loss_type == "diag_nll" or loss_type == "hybrid_nll":
+            rec_loss_fn = gaussian_nll_loss
+    elif loss_type == "full_nll":
+        rec_loss_fn = full_gaussian_nll_loss
+    elif loss_type =='mse':
+        rec_loss_fn = mse_loss
+    else:
+        raise NotImplementedError("Please choose between 'diag_nll' (diagonal covariance matrix) and 'full_nll' (full covariance matrix) for nll loss option.")
+    return rec_loss_fn
 
 def get_total_RAM():
     return "{:.1f} GB".format(psutil.virtual_memory()[0]/1000000000)
@@ -52,6 +64,8 @@ def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
 
 def gaussian_nll_loss(tgt, recs):
     # rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
+    if len(recs.size())<3:
+        raise ValueError("NLL needs more than 1 samples of distribution.")
     rec_err_var = torch.var(recs, 2)
     return gaussian_nll(tgt, recs.mean(2), rec_err_var, device=tgt.device).mean() 
 
@@ -60,6 +74,13 @@ def full_gaussian_nll_loss(tgt, recs):
     errm = err - err.mean(2).unsqueeze(2)
     sigma_mat = errm @ errm.transpose(1,2) / errm.size(2)
     return full_gaussian_nll(tgt, recs.mean(2), sigma_mat, device=tgt.device).mean() 
+
+def mse_loss(tgt, recs):
+    if len(recs.size()) > 2:
+        recs = recs[:,:,0]
+    rec = recs.reshape(tgt.size(0), tgt.size(1))
+    rec_lossfn = nn.MSELoss()
+    return rec_lossfn(rec, tgt)
 
 def cuda_cholesky(A):
     n = A.size(0)

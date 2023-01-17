@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:23:46 2022
 """
 import torch.nn as nn
 import torch
-from prosailvae.utils import gaussian_nll_loss, full_gaussian_nll_loss
+from prosailvae.utils import select_rec_loss_fn, gaussian_nll_loss, full_gaussian_nll_loss, mse_loss
 
 
 
@@ -48,11 +48,7 @@ class ProsailSimulatorDecoder(Decoder):
     def loss(self, tgt, rec):        
         if self.ssimulator.apply_norm:
             tgt = self.ssimulator.normalize(tgt)
-        if self.loss_type == "diag_nll" or self.loss_type == "hybrid_nll":
-            rec_loss = gaussian_nll_loss(tgt, rec) 
-        elif self.loss_type == "full_nll":
-            rec_loss = full_gaussian_nll_loss(tgt, rec) 
-        else:
-            raise NotImplementedError("Please choose between 'diag_nll' (diagonal covariance matrix) and 'full_nll' (full covariance matrix) for nll loss option.")
+        rec_loss_fn = select_rec_loss_fn(self.loss_type)
+        rec_loss = rec_loss_fn(tgt, rec)
         return rec_loss
 

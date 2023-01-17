@@ -138,7 +138,12 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75):
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
                   res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0):
+
+
     logger = logging.getLogger(LOGGER_NAME)
+    if PROSAIL_VAE.decoder.loss_type=='mse':
+        n_samples=1
+        logger.info('MSE Loss enabled, setting number of monte-carlo samples to 1')
     all_train_loss_df = pd.DataFrame()
     all_valid_loss_df = pd.DataFrame()
     info_df = pd.DataFrame()
@@ -371,7 +376,7 @@ def trainProsailVae(params, parser, res_dir, data_dir):
     lr = params['lr']
     if lr is None:
         try:
-            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"])
         except:
             lr = 1e-3
             logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")

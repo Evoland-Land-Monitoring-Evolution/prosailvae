@@ -19,6 +19,7 @@ import os
 from dataset.loaders import get_simloader
 import time
 import torch.optim as optim
+from prosailvae.utils import gaussian_nll_loss
 
 def get_prosail_VAE(rsr_dir, 
                     vae_params={"input_size":10,  

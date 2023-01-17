@@ -198,6 +198,7 @@ class LRFinder(object):
         accumulation_steps=1,
         non_blocking_transfer=True,
         disable_tqdm=True,
+        n_samples=20
     ):
         """Performs the learning rate range test.
         Arguments:
@@ -318,11 +319,12 @@ class LRFinder(object):
             loss = self._train_batch(
                 train_iter,
                 accumulation_steps,
-                non_blocking_transfer=non_blocking_transfer,
+                non_blocking_transfer=non_blocking_transfer, 
+                n_samples=n_samples
             )
             if val_loader:
                 loss = self._validate(
-                    val_iter, non_blocking_transfer=non_blocking_transfer
+                    val_iter, non_blocking_transfer=non_blocking_transfer,n_samples=n_samples
                 )
 
             # Update the learning rate
@@ -363,7 +365,7 @@ class LRFinder(object):
             if "initial_lr" in param_group:
                 raise RuntimeError("Optimizer already has a scheduler attached to it")
 
-    def _train_batch(self, train_iter, accumulation_steps, non_blocking_transfer=True):
+    def _train_batch(self, train_iter, accumulation_steps, non_blocking_transfer=True, n_samples=20):
         self.model.train()
         total_loss = None  # for late initialization
 
@@ -375,7 +377,7 @@ class LRFinder(object):
             )
 
             # Forward pass
-            outputs = self.model(inputs)
+            outputs = self.model(inputs, n_samples=n_samples)
             loss = self.criterion(outputs, labels)
 
             # Loss should be averaged in each step
@@ -420,7 +422,7 @@ class LRFinder(object):
         labels = move(labels, self.device, non_blocking=non_blocking)
         return inputs, labels
 
-    def _validate(self, val_iter, non_blocking_transfer=True):
+    def _validate(self, val_iter, non_blocking_transfer=True, n_samples=20):
         # Set model to evaluation mode and disable gradient computation
         running_loss = 0
         self.model.eval()
@@ -432,7 +434,7 @@ class LRFinder(object):
                 )
 
                 # Forward pass and loss computation
-                outputs = self.model(inputs)
+                outputs = self.model(inputs, n_samples=n_samples)
                 loss = self.criterion(outputs, labels)
                 running_loss += loss.item() * len(labels)
 
@@ -698,7 +700,7 @@ def get_prosailvae_train_parser():
        
     return parser       
 
-def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True):
+def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True,n_samples=20):
     optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
     lrtrainloader = lr_finder_loader(
                                     file_prefix=file_prefix, 
@@ -713,10 +715,14 @@ def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disa
     else:
         criterion = lr_finder_elbo(index_loss=model.decoder.ssimulator.index_loss,
                                     beta_kl=model.beta_kl, beta_index=model.beta_index, 
-                                    loss_type=model.decoder.loss_type)
+                                    loss_type=model.decoder.loss_type, 
+                                    ssimulator=model.decoder.ssimulator)
 
     lr_finder = LRFinder(model, optimizer, criterion, device=model.device)
-    lr_finder.range_test(lrtrainloader, end_lr=10, num_iter=100, disable_tqdm=disable_tqdm)
+
+    if model.decoder.loss_type == "mse":
+        n_samples=1
+    lr_finder.range_test(lrtrainloader, end_lr=10, num_iter=100, disable_tqdm=disable_tqdm,n_samples=n_samples)
     lr_optimal = min(lr_finder.suggest_lr(), 1.0)
     if plot_lr:
         print(lr_optimal)
@@ -755,7 +761,8 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     inference_mode = params["supervised"]
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
-                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std, inference_mode=inference_mode)
+                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std, 
+                                  inference_mode=inference_mode)
     model = prosail_VAE
     
     lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True, disable_tqdm=False)

@@ -38,7 +38,8 @@ RSR of the sensor.
                  device='cpu',
                  norm_mean=None,
                  norm_std=None,
-                 apply_norm=True):
+                 apply_norm=True,
+                 lossfn=gaussian_nll_loss):
           
         super().__init__()
         self.device=device
@@ -70,6 +71,7 @@ RSR of the sensor.
         self.apply_norm=apply_norm
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
+        
         
     def __call__(self, prosail_output: torch.Tensor):
         return self.forward(prosail_output)
@@ -103,38 +105,45 @@ RSR of the sensor.
             simu = self.normalize(simu)
         return simu  # type: ignore
     
-    def index_loss(self, s2_r, s2_rec, index_terms = ["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"]):
+    def index_loss(self, s2_r, s2_rec, lossfn=gaussian_nll_loss,
+                    index_terms=["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"]):
+                    
+        if len(s2_rec.size())>2:
+            n_samples = s2_rec.size(2)
+        else:
+            n_samples = 1
+            
         u_s2_r = self.unnormalize(s2_r)
         if self.apply_norm:
             u_s2_rec = self.unnormalize(s2_rec)
         else:
             u_s2_rec = s2_rec
-        n_samples = s2_rec.size(2)
+
         loss = torch.tensor(0.0).to(s2_r.device)
         if "NDVI" in index_terms:
             ndvi = NDVI(u_s2_r).view(-1,1)
             ndvi_rec = NDVI(u_s2_rec).view(-1,1,n_samples)
-            loss += gaussian_nll_loss(ndvi, ndvi_rec)
+            loss += lossfn(ndvi, ndvi_rec)
         if "mNDVI750" in index_terms:
             mndvi750 = mNDVI750(u_s2_r).view(-1,1)
             mndvi750_rec = mNDVI750(u_s2_rec).view(-1,1,n_samples)
-            loss += gaussian_nll_loss(mndvi750, mndvi750_rec)
+            loss += lossfn(mndvi750, mndvi750_rec)
         if "CRI2" in index_terms:
             cri2 = CRI2(u_s2_r).view(-1,1)
             cri2_rec = CRI2(u_s2_rec).view(-1,1,n_samples)
-            loss += gaussian_nll_loss(cri2, cri2_rec)
+            loss += lossfn(cri2, cri2_rec)
         if "NDII" in index_terms:
             ndii = NDII(u_s2_r).view(-1,1)
             ndii_rec = NDII(u_s2_rec).view(-1,1,n_samples)
-            loss += gaussian_nll_loss(ndii, ndii_rec)
+            loss += lossfn(ndii, ndii_rec)
         if "ND_lma" in index_terms:
             nd_lma = ND_lma(u_s2_r).view(-1,1)
             nd_lma_rec = ND_lma(u_s2_rec).view(-1,1,n_samples)
-            loss += gaussian_nll_loss(nd_lma, nd_lma_rec)  
+            loss += lossfn(nd_lma, nd_lma_rec)  
         if "LAI_savi" in index_terms:
             lai_savi = LAI_savi(u_s2_r).view(-1,1)
             lai_savi_rec = LAI_savi(u_s2_rec).view(-1,1,n_samples)
-            loss += gaussian_nll_loss(lai_savi, lai_savi_rec)      
+            loss += lossfn(lai_savi, lai_savi_rec)      
         return loss
 
 class ProsailSimulator():

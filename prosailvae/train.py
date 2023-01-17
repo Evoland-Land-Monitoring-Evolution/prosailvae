@@ -123,24 +123,25 @@ def get_prosailvae_train_parser():
 
 def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer):
     if epoch > 0 and lr_recompute is not None:
-                if epoch % lr_recompute == 0:
-                    try:
-                        new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
-                        optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
-                        if exp_lr_decay>0:
-                            # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
-                            #                                         patience=exp_lr_decay, threshold=0.0001, 
-                            #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
-                            #                                         eps=1e-08, verbose=False)
-                            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
-                    except:
-                        logger.error(f"Couldn't recompute lr at epoch {epoch} !")
-                        print(f"Couldn't recompute lr at epoch {epoch} !")
+        if epoch % lr_recompute == 0:
+            try:
+                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
+                optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+                if exp_lr_decay>0:
+                    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
+                    #                                         patience=exp_lr_decay, threshold=0.0001, 
+                    #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
+                    #                                         eps=1e-08, verbose=False)
+                    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+            except:
+                logger.error(f"Couldn't recompute lr at epoch {epoch} !")
+                print(f"Couldn't recompute lr at epoch {epoch} !")
     return lr_scheduler, optimizer
-def switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75):
+
+def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     loss_type = PROSAIL_VAE.decoder.loss_type
     if loss_type == "hybrid_nll":
-        if epoch > threshold * n_epoch:
+        if epoch > swith_ratio * n_epoch:
             PROSAIL_VAE.decoder.loss_type = "full_nll"
     pass
 
@@ -166,7 +167,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
-            switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75)
+            switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
             lr_scheduler, optimizer = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
@@ -197,8 +198,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             t1=time.time()
             ram_usage = get_RAM_usage()
             
-            train_loss_info = '- '.join([f"{key}: {'{:.3f}'.format(train_loss_dict[key])} " for key in train_loss_dict.keys()])
-            valid_loss_info = '- '.join([f"{key}: {'{:.3f}'.format(valid_loss_dict[key])} " for key in valid_loss_dict.keys()])
+            train_loss_info = '- '.join([f"{key}: {'{:.2E}'.format(train_loss_dict[key])} " for key in train_loss_dict.keys()])
+            valid_loss_info = '- '.join([f"{key}: {'{:.2E}'.format(valid_loss_dict[key])} " for key in valid_loss_dict.keys()])
             logger.info(f"{epoch} -- RAM: {ram_usage} / {total_ram} -- lr: {'{:.2E}'.format(optimizer.param_groups[0]['lr'])} -- {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}")
             train_loss_dict['epoch']=epoch
             valid_loss_dict['epoch']=epoch
@@ -221,6 +222,7 @@ def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res
     os.makedirs(loss_dir)
     all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
     all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
+
     loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", 
                log_scale=True)
     loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg",  

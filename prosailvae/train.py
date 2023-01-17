@@ -121,7 +121,7 @@ def get_prosailvae_train_parser():
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir):
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer):
     if epoch > 0 and lr_recompute is not None:
                 if epoch % lr_recompute == 0:
                     try:
@@ -136,7 +136,7 @@ def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, l
                     except:
                         logger.error(f"Couldn't recompute lr at epoch {epoch} !")
                         print(f"Couldn't recompute lr at epoch {epoch} !")
-    return lr_scheduler
+    return lr_scheduler, optimizer
 def switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75):
     loss_type = PROSAIL_VAE.decoder.loss_type
     if loss_type == "hybrid_nll":
@@ -167,7 +167,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, threshold = 0.75)
-            lr_scheduler = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir)
+            lr_scheduler, optimizer = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)

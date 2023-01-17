@@ -347,10 +347,8 @@ class lr_finder_elbo(nn.Module):
             kl_loss = self.beta_kl * kl_tn_uniform(mu, sigma).sum(1).mean()
             loss_sum += kl_loss
         if self.beta_index>0:
-            
             index_loss = self.beta_index * self.index_loss(label, rec, lossfn=rec_loss_fn)
             loss_sum += index_loss
-        loss_sum+=kl_loss
         return loss_sum
 
     def forward(self, model_outputs, label):

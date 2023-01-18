@@ -68,12 +68,19 @@ RSR of the sensor.
             norm_std = torch.ones((1, 10))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self.apply_norm=apply_norm
+        self.apply_norm = apply_norm
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
         
     def change_device(self, device):
-        self.device=device
+        self.device = device
+        self.rsr = self.rsr.to(device)
+        self.norm_mean = norm_mean.to(device)
+        self.norm_std = norm_std.to(device)
+        self.s2norm_factor_d = self.s2norm_factor_d.to(device)
+        self.s2norm_factor_n = self.s2norm_factor_n.to(device)
+        self.solar = self.solar.to(device)
+
         pass
 
     def __call__(self, prosail_output: torch.Tensor):

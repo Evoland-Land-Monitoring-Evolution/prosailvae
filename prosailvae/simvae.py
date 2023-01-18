@@ -261,9 +261,9 @@ class SimVAE(nn.Module):
             'loss': loss,
             }, path)  
     
-    def load_ae(self, path, optimizer=None):
-        map_location = 'cuda:0' if self.device != torch.device('cpu') else 'cpu'
-        checkpoint = torch.load(path, map_location=map_location)
+    def load_ae(self, path, optimizer=None, weights_only=True):
+        # map_location = 'cuda:0' if self.device != torch.device('cpu') else 'cpu'
+        checkpoint = torch.load(path, map_location=self.device, weights_only=weights_only)
         self.load_state_dict(checkpoint['model_state_dict'])
         if optimizer is not None:
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])

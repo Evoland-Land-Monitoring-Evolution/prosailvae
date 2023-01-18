@@ -14,7 +14,7 @@ export OUTDIR=/work/scratch/zerahy/prosailvae/results/37039097_jobarray/
 export TENSOR_DIR=/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/
 
 
-python ${VAEDIR}/metrics/train.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR
+python ${VAEDIR}/metrics/results.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR
 conda deactivate
 
 

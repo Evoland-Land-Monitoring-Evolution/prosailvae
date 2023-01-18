@@ -215,14 +215,7 @@ def setupTraining():
     res_dir = get_res_dir_path(root_results_dir, params, 
                                parser.n_xp, parser.overwrite_xp)
     save_dict(params, res_dir+"/config.json")
-    if params["supervised_kl"]:
-        
-        shutil.copyfile(parser.supervised_config_file, res_dir+"/sup_kl_model_config.json")
-        shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
-        params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
-        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.json"
-    else:
-        params_sup_kl_model = None
+
     logging.basicConfig(filename=res_dir+'/training_log.log', 
                               level=logging.INFO, force=True)
     logger_name = 'PROSAIL-VAE logger'
@@ -234,7 +227,16 @@ def setupTraining():
     for _, key in enumerate(params):
         logger.info(f'{key} : {params[key]}')
     logger.info('========================================================================')
-
+    if params["supervised_kl"]:
+        logger.info("Supervised KL loss enabled.")
+        logger.info(f"copying {parser.supervised_config_file} into {res_dir+'/sup_kl_model_config.json'}")
+        logger.info(f"copying {parser.supervised_weight_file} into {res_dir+'/sup_kl_model_weights.tar'}")
+        shutil.copyfile(parser.supervised_config_file, res_dir+"/sup_kl_model_config.json")
+        shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
+        params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
+        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.json"
+    else:
+        params_sup_kl_model = None
     return params, parser, res_dir, data_dir, params_sup_kl_model
 
 def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None):

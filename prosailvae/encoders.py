@@ -114,6 +114,9 @@ class ProsailNNEncoder(Encoder):
     
     def change_device(self, device):
         self.device=device
+        self.norm_mean.to(device)
+        self.norm_std.to(device)
+        self.net.to(device)
         self.to(device)
 
     def encode(self, s2_refl, angles):

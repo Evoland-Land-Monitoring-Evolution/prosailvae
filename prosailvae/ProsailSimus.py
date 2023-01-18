@@ -75,8 +75,8 @@ RSR of the sensor.
     def change_device(self, device):
         self.device = device
         self.rsr = self.rsr.to(device)
-        self.norm_mean = norm_mean.to(device)
-        self.norm_std = norm_std.to(device)
+        self.norm_mean = self.norm_mean.to(device)
+        self.norm_std = self.norm_std.to(device)
         self.s2norm_factor_d = self.s2norm_factor_d.to(device)
         self.s2norm_factor_n = self.s2norm_factor_n.to(device)
         self.solar = self.solar.to(device)

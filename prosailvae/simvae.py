@@ -218,7 +218,7 @@ class SimVAE(nn.Module):
             else:
                 self.logger.info(f's2_r device : {s2_r.device}')
                 self.logger.info(f'self.supervised_model.encoder : {self.supervised_model.encoder.device}')
-                self.logger.info(f'self.supervised_model.encoder.net : {self.supervised_model.encoder.net.device}')
+                # self.logger.info(f'self.supervised_model.encoder.net : {self.supervised_model.encoder.net.device}')
                 self.logger.info(f'self.supervised_model.encoder.norm_mean : {self.supervised_model.encoder.norm_mean.device}')
                 self.logger.info(f'self.supervised_model.encoder.norm_std : {self.supervised_model.encoder.norm_std.device}')
                 params2 = self.supervised_model.encode2lat_params(s2_r, s2_a)

@@ -16,7 +16,7 @@ from prosailvae.simspaces import LinearVarSpace
 from prosailvae.ProsailSimus import SensorSimulator, ProsailSimulator, get_z2prosailparams_offset, get_z2prosailparams_mat, get_prosailparams_pdf_span
 from prosailvae.decoders import ProsailSimulatorDecoder
 import os
-from dataset.loaders import get_simloader
+from dataset.loaders import  get_norm_coefs
 import time
 import torch.optim as optim
 from prosailvae.utils import gaussian_nll_loss
@@ -83,12 +83,66 @@ def get_prosail_VAE(rsr_dir,
                       supervised_model=supervised_model)
     return prosailVAE
 
-def load_prosailVAE(vae_params, vae_file_path, optimizer=None, device='cpu'):
-    pheno_vae = get_prosail_VAE(vae_params, device=device).to(device)
-    nb_epoch, loss = pheno_vae.load_ae(vae_file_path, optimizer)
-    pheno_vae.eval()
-    return pheno_vae, nb_epoch, loss
+def load_prosailVAE(rsr_dir, vae_params, vae_file_path, optimizer=None, device='cpu',
+                    refl_norm_mean=None, refl_norm_std=None,
+                                            logger_name=None, patch_mode=None,
+                                            apply_norm_rec=None,
+                                            loss_type=None, sup_prosail_vae=None):
 
+    prosail_vae = get_prosail_VAE(rsr_dir, vae_params, device='cpu', 
+                                    refl_norm_mean=refl_norm_mean, refl_norm_std=refl_norm_std,
+                                    logger_name=logger_name, patch_mode=patch_mode,
+                                    apply_norm_rec=apply_norm_rec, loss_type=loss_type, supervised_model=sup_prosail_vae)
+
+    nb_epoch, loss = prosail_vae.load_ae(vae_file_path, optimizer)
+    prosail_vae.change_device(device)
+    return prosail_vae, nb_epoch, loss
+
+def load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name, vae_file_path=None, params_sup_kl_model=None):
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    sup_prosail_vae=None
+    if params_sup_kl_model is not None:
+        vae_params={"input_size":10,  
+                "hidden_layers_size":params_sup_kl_model["hidden_layers_size"], 
+                "encoder_last_activation":params_sup_kl_model["encoder_last_activation"],
+                "supervised":params_sup_kl_model["supervised"],  
+                "beta_kl":params_sup_kl_model["beta_kl"],
+                "beta_index":params_sup_kl_model["beta_index"],
+                }
+        norm_mean, norm_std = get_norm_coefs(data_dir, params_sup_kl_model["dataset_file_prefix"])
+        rsr_dir = parser.rsr_dir
+        sup_prosail_vae, _, _ = load_prosailVAE(rsr_dir, vae_params=vae_params,vae_file_path=params_sup_kl_model['sup_model_weights_path'],
+                                            optimizer=None, device=device,
+                                            refl_norm_mean=norm_mean, refl_norm_std=norm_std,
+                                            logger_name=logger_name, patch_mode=not params_sup_kl_model["simulated_dataset"],
+                                            apply_norm_rec=params_sup_kl_model["apply_norm_rec"],
+                                            loss_type=params_sup_kl_model["loss_type"])
+    
+    vae_params={"input_size":10,  
+                "hidden_layers_size":params["hidden_layers_size"], 
+                "encoder_last_activation":params["encoder_last_activation"],
+                "supervised":params["supervised"],  
+                "beta_kl":params["beta_kl"],
+                "beta_index":params["beta_index"],
+                }
+    norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
+    rsr_dir = parser.rsr_dir
+    if vae_file_path is not None:
+        prosail_vae, _, _ = load_prosailVAE(rsr_dir, vae_params=vae_params,vae_file_path=vae_file_path,
+                                            optimizer=None, device=device,
+                                            refl_norm_mean=norm_mean, refl_norm_std=norm_std,
+                                            logger_name=logger_name, patch_mode=not params["simulated_dataset"],
+                                            apply_norm_rec=params["apply_norm_rec"],
+                                            loss_type=params["loss_type"], sup_prosail_vae=sup_prosail_vae)
+    else:
+        prosail_vae = get_prosail_VAE(rsr_dir, vae_params, device=device, 
+                                    refl_norm_mean=norm_mean, refl_norm_std=norm_std,
+                                    logger_name=logger_name, patch_mode=not params["simulated_dataset"],
+                                    apply_norm_rec=params["apply_norm_rec"], loss_type=params["loss_type"], 
+                                    supervised_model=sup_prosail_vae)
+    
+    return prosail_vae
 # if __name__ == "__main__":
 #     data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),os.pardir),"data/")
 #     prosailVAE = get_prosail_VAE(data_dir)

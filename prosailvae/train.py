@@ -5,24 +5,24 @@ Created on Mon Nov 14 14:20:44 2022
 
 @author: yoel
 """
-from prosailvae.prosail_vae import get_prosail_VAE
+from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
-from metrics.metrics import get_metrics, save_metrics
-from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D
-from datetime import datetime 
+from metrics.results import save_results, get_res_dir_path
+
 import torch.optim as optim
 import torch
 import pandas as pd
 import argparse
 import os 
-import shutil
+
 import prosailvae
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
-import warnings
-from time import sleep
+import shutil
+
+
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 from prosailvae.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM
 torch.autograd.set_detect_anomaly(True)
@@ -33,45 +33,6 @@ import traceback
 import socket
 CUDA_LAUNCH_BLOCKING=1
 LOGGER_NAME = 'PROSAIL-VAE logger'
-
-def check_fold_res_dir(fold_dir, n_xp, params):
-    same_fold = ""
-    all_dirs = os.listdir(fold_dir)
-    for d in all_dirs:
-        if d.startswith(f"{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}") :
-            same_fold = d
-    return same_fold
-
-def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
-    
-    if not os.path.exists(root_results_dir):
-        os.makedirs(root_results_dir)
-    if not os.path.exists(root_results_dir+"n_xp.json"):    
-        save_dict({"xp":0}, root_results_dir+"n_xp.json")
-    if n_xp is None:
-        n_xp = load_dict(root_results_dir+"n_xp.json")['xp']+1
-    save_dict({"xp":n_xp}, root_results_dir+"n_xp.json")
-    date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    if params['k_fold']>1:
-        k_fold_dir = f"{root_results_dir}/{n_xp}_kfold_{params['k_fold']}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-        if not params['supervised']:
-            k_fold_dir + f"kl_{params['beta_kl']}"
-        if not os.path.exists(k_fold_dir):
-            os.makedirs(k_fold_dir)    
-        res_dir = f"{k_fold_dir}/{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-        same_fold_dir = check_fold_res_dir(k_fold_dir, n_xp, params)
-        if len(same_fold_dir)>0:
-            if overwrite_xp:
-                warnings.warn("WARNING: Overwriting existing fold experiment in 5s")
-                sleep(5)
-                shutil.rmtree(k_fold_dir + "/"+ same_fold_dir)
-            else:
-                raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
-    else:
-        res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-    os.makedirs(res_dir)    
-    return res_dir
-
 
 
 def get_prosailvae_train_parser():
@@ -210,99 +171,17 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             
             if valid_loss_dict['loss_sum'] < best_val_loss:
                 best_val_loss = valid_loss_dict['loss_sum'] 
-                PROSAIL_VAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weigths.tar")
+                PROSAIL_VAE.save_ae(epoch, optimizer, best_val_loss, res_dir + "/prosailvae_weights.tar")
     return all_train_loss_df, all_valid_loss_df, info_df
 
-def save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res_dir, data_dir):
-    device = PROSAIL_VAE.device
-    logger = logging.getLogger(LOGGER_NAME)
-    logger.info("Saving Loss")
-    # Saving Loss
-    loss_dir = res_dir + "/loss/"
-    os.makedirs(loss_dir)
-    all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
-    all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
 
-    loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", 
-               log_scale=True)
-    loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg",  
-               log_scale=True)
-    loss_curve(info_df, save_file=loss_dir+"lr.svg",  
-               log_scale=True)
-    
-    # Computing metrics
-    logger.info("Loading test loader...")
-    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
-    logger.info("Test loader, loaded.")
-    
-    alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
-                0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
-    alpha_pi.reverse()
-    PROSAIL_VAE.eval()
-    logger.info("Computing inference metrics with test dataset...")
-    plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
-    (mae, mpiw, picp, mare, 
-    sim_dist, tgt_dist, rec_dist,
-    angles_dist, s2_r_dist,
-    sim_pdfs, sim_supports) = get_metrics(PROSAIL_VAE, loader, 
-                              n_pdf_sample_points=3001,
-                              alpha_conf=alpha_pi)
-    logger.info("Metrics computed.")
-
-    save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
-    maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
-    mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
-    
-    # Plotting results
-    metrics_dir = res_dir + "/metrics_plot/"
-    os.makedirs(metrics_dir)
-    
-    logger.info("Plotting metrics.")
-    
-    plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
-    rec_dir = res_dir + "/reconstruction/"
-    os.makedirs(rec_dir)
-    logger.info("Plotting reconstructions")
-    plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
-    
-    logger.info("Plotting PROSAIL parameter distributions")
-    plot_param_dist(metrics_dir, sim_dist, tgt_dist)
-    logger.info("Plotting PROSAIL parameters, reference vs prediction")
-    plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50)
-    plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
-    ssimulator = PROSAIL_VAE.decoder.ssimulator
-    refl_dist = loader.dataset[:][0]
-    plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
-                   ssimulator=PROSAIL_VAE.decoder.ssimulator)
-    
-    normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-    normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-    logger.info("Plotting reflectance distribution")
-    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator)
-    logger.info("Plotting reconstructed reflectance components pair plots")
-    pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
-              res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
-    logger.info("Plotting reference reflectance components pair plots")
-    pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
-              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
-    logger.info("Plotting inferred PROSAIL parameters pair plots")
-    pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
-    logger.info("Plotting reference PROSAIL parameters pair plots")
-    pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-              res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
-    logger.info("Plotting reconstruction error against angles")
-    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
-    
-    logger.info("Program completed.")
-    return
 
 def setupTraining():
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
               "-c", "config_dev.json",
-              "-cs", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_config.json",
-              "-ws", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_prosailvae_weigths.tar",
+              "-cs", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_kl_model_config.json",
+              "-ws", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_kl_model_weights.tar",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
@@ -325,11 +204,7 @@ def setupTraining():
     params = load_dict(config_dir + parser.config_file)
     if params["supervised"]:
         params["simulated_dataset"]=True
-    if params["supervised_kl"]:
-        params2 = load_dict(parser.supervised_config_file)
-        params2['sup_model_weights_path'] = parser.supervised_weight_file
-    else:
-        params2 = None
+
 
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     if len(parser.root_results_dir)==0:
@@ -340,6 +215,14 @@ def setupTraining():
     res_dir = get_res_dir_path(root_results_dir, params, 
                                parser.n_xp, parser.overwrite_xp)
     save_dict(params, res_dir+"/config.json")
+    if params["supervised_kl"]:
+        
+        shutil.copyfile(parser.supervised_config_file, res_dir+"/sup_kl_model_config.json")
+        shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
+        params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
+        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.json"
+    else:
+        params_sup_kl_model = None
     logging.basicConfig(filename=res_dir+'/training_log.log', 
                               level=logging.INFO, force=True)
     logger_name = 'PROSAIL-VAE logger'
@@ -352,9 +235,9 @@ def setupTraining():
         logger.info(f'{key} : {params[key]}')
     logger.info('========================================================================')
 
-    return params, parser, res_dir, data_dir, params2
+    return params, parser, res_dir, data_dir, params_sup_kl_model
 
-def trainProsailVae(params, parser, res_dir, data_dir, params2=None):
+def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None):
     logger = logging.getLogger(LOGGER_NAME)
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     if params["simulated_dataset"]:
@@ -373,46 +256,10 @@ def trainProsailVae(params, parser, res_dir, data_dir, params2=None):
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     
-    vae_params={"input_size":10,  
-                "hidden_layers_size":params["hidden_layers_size"], 
-                "encoder_last_activation":params["encoder_last_activation"],
-                "supervised":params["supervised"],  
-                "beta_kl":params["beta_kl"],
-                "beta_index":params["beta_index"],
-                }
     
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
-    norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
-    rsr_dir = parser.rsr_dir
-    if params2 is not None and params["beta_kl"] > 0:
-        vae_params2={"input_size":10,  
-                "hidden_layers_size":params2["hidden_layers_size"], 
-                "encoder_last_activation":params2["encoder_last_activation"],
-                "supervised":params2["supervised"],  
-                "beta_kl":params2["beta_kl"],
-                "beta_index":params2["beta_index"],
-                }
-        logger.info(f'Attempting to load a model for KL supervision on device {device}, with torch.cuda.device_count()={torch.cuda.device_count()}')
-        SUP_PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params2, device='cpu',
-                                            refl_norm_mean=norm_mean, refl_norm_std=norm_std,
-                                            logger_name=LOGGER_NAME, patch_mode=not params2["simulated_dataset"],
-                                            apply_norm_rec=params2["apply_norm_rec"],
-                                            loss_type=params2["loss_type"])
-        SUP_PROSAIL_VAE.load_ae(params2['sup_model_weights_path'])
-        SUP_PROSAIL_VAE.change_device(device)
-        for param in SUP_PROSAIL_VAE.parameters():
-            param.requires_grad = False # this model should not be trained.
 
-    else:
-        SUP_PROSAIL_VAE = None
-
-    PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
-                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std,
-                                  logger_name=LOGGER_NAME, patch_mode=not params["simulated_dataset"],
-                                  apply_norm_rec=params["apply_norm_rec"],
-                                  loss_type=params["loss_type"],
-                                  supervised_model=SUP_PROSAIL_VAE)
+    PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name=LOGGER_NAME,
+                                                        vae_file_path=None, params_sup_kl_model=None)
     lr = params['lr']
     if lr is None:
         try:
@@ -460,11 +307,11 @@ def configureEmissionTracker(parser):
     return tracker, useEmissionTracker
 
 def main():
-    params, parser, res_dir, data_dir, params2 = setupTraining()
+    params, parser, res_dir, data_dir, params_sup_kl_model = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
-        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params2)
-        save_results(PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df, res_dir, data_dir)
+        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
+        save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME)
     except Exception as e:
         traceback.print_exc()
         print(e)

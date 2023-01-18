@@ -12,7 +12,7 @@ import torch
 import prosail
 from prosail import spectral_lib
 from prosailvae.utils import gaussian_nll_loss
-from spectral_indices import NDVI, mNDVI750, ND_lma, NDII, LAI_savi, CRI2
+from prosailvae.spectral_indices import NDVI, mNDVI750, ND_lma, NDII, LAI_savi, CRI2
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -161,7 +161,7 @@ class ProsailSimulator():
     def change_device(self, device):
         self.device=device
         pass
-    
+
     def forward(self, params):
         # params.shape == [x] => single sample
         # params.shape == [x,y] => batch

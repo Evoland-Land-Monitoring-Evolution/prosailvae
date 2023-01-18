@@ -1,0 +1,253 @@
+import os
+import logging
+if __name__ == "__main__":
+    from metrics import get_metrics, save_metrics
+    from prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D
+else:
+    from metrics.metrics import get_metrics, save_metrics
+    from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D
+
+from dataset.loaders import  get_simloader
+import pandas as pd
+from prosailvae.ProsailSimus import PROSAILVARS, BANDS
+import prosailvae
+import traceback
+import argparse
+import socket
+from prosailvae.utils import load_dict, save_dict
+from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
+LOGGER_NAME = "PROSAIL-VAE results logger"
+import torch
+from datetime import datetime 
+import shutil
+from time import sleep
+import warnings
+
+def get_prosailvae_results_parser():
+    """
+    Creates a new argument parser.
+    """
+    parser = argparse.ArgumentParser(description='Parser for data generation')
+
+    parser.add_argument("-c", dest="config_file",
+                        help="name of config json file on config directory.",
+                        type=str, default="config.json")
+
+    parser.add_argument("-d", dest="data_dir",
+                        help="path to data direcotry",
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
+    
+    parser.add_argument("-r", dest="root_results_dir",
+                        help="path to root results direcotry",
+                        type=str, default="")
+
+    parser.add_argument("-rsr", dest="rsr_dir",
+                        help="directory of rsr_file",
+                        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
+    
+    parser.add_argument("-t", dest="tensor_dir",
+                        help="directory of mmdc tensor files",
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
+    return parser
+
+
+
+def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger'):
+    device = PROSAIL_VAE.device
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.info("Saving Loss")
+    # Saving Loss
+    loss_dir = res_dir + "/loss/"
+    os.makedirs(loss_dir)
+    
+    if all_train_loss_df is not None:
+        all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
+        loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", log_scale=True)
+    if all_valid_loss_df is not None:
+        all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
+        loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg", log_scale=True)
+    if info_df is not None:
+        loss_curve(info_df, save_file=loss_dir+"lr.svg", log_scale=True)
+    
+    # Computing metrics
+    logger.info("Loading test loader...")
+    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
+    logger.info("Test loader, loaded.")
+    
+    alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
+                0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+    alpha_pi.reverse()
+    PROSAIL_VAE.eval()
+    logger.info("Computing inference metrics with test dataset...")
+    plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
+    (mae, mpiw, picp, mare, 
+    sim_dist, tgt_dist, rec_dist,
+    angles_dist, s2_r_dist,
+    sim_pdfs, sim_supports) = get_metrics(PROSAIL_VAE, loader, 
+                              n_pdf_sample_points=3001,
+                              alpha_conf=alpha_pi)
+    logger.info("Metrics computed.")
+
+    save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
+    maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
+    mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
+    
+    # Plotting results
+    metrics_dir = res_dir + "/metrics_plot/"
+    os.makedirs(metrics_dir)
+    
+    logger.info("Plotting metrics.")
+    
+    plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
+    rec_dir = res_dir + "/reconstruction/"
+    os.makedirs(rec_dir)
+    logger.info("Plotting reconstructions")
+    plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
+    
+    logger.info("Plotting PROSAIL parameter distributions")
+    plot_param_dist(metrics_dir, sim_dist, tgt_dist)
+    logger.info("Plotting PROSAIL parameters, reference vs prediction")
+    plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50)
+    plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
+    ssimulator = PROSAIL_VAE.decoder.ssimulator
+    refl_dist = loader.dataset[:][0]
+    plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
+                   ssimulator=PROSAIL_VAE.decoder.ssimulator)
+    
+    normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+    normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+    logger.info("Plotting reflectance distribution")
+    plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator)
+    logger.info("Plotting reconstructed reflectance components pair plots")
+    pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
+              res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
+    logger.info("Plotting reference reflectance components pair plots")
+    pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
+              res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
+    logger.info("Plotting inferred PROSAIL parameters pair plots")
+    pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
+              res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
+    logger.info("Plotting reference PROSAIL parameters pair plots")
+    pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
+              res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
+    logger.info("Plotting reconstruction error against angles")
+    plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
+    
+    logger.info("Program completed.")
+    return
+
+def check_fold_res_dir(fold_dir, n_xp, params):
+    same_fold = ""
+    all_dirs = os.listdir(fold_dir)
+    for d in all_dirs:
+        if d.startswith(f"{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}") :
+            same_fold = d
+    return same_fold
+
+def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
+    
+    if not os.path.exists(root_results_dir):
+        os.makedirs(root_results_dir)
+    if not os.path.exists(root_results_dir+"n_xp.json"):    
+        save_dict({"xp":0}, root_results_dir+"n_xp.json")
+    if n_xp is None:
+        n_xp = load_dict(root_results_dir+"n_xp.json")['xp']+1
+    save_dict({"xp":n_xp}, root_results_dir+"n_xp.json")
+    date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    if params['k_fold']>1:
+        k_fold_dir = f"{root_results_dir}/{n_xp}_kfold_{params['k_fold']}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+        if not params['supervised']:
+            k_fold_dir + f"kl_{params['beta_kl']}"
+        if not os.path.exists(k_fold_dir):
+            os.makedirs(k_fold_dir)    
+        res_dir = f"{k_fold_dir}/{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+        same_fold_dir = check_fold_res_dir(k_fold_dir, n_xp, params)
+        if len(same_fold_dir)>0:
+            if overwrite_xp:
+                warnings.warn("WARNING: Overwriting existing fold experiment in 5s")
+                sleep(5)
+                shutil.rmtree(k_fold_dir + "/"+ same_fold_dir)
+            else:
+                raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
+    else:
+        res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+    os.makedirs(res_dir)    
+    return res_dir
+
+def setupResults():
+    if socket.gethostname()=='CELL200973':
+        args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
+              "-r", "",
+              "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
+              "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/"]
+        
+        parser = get_prosailvae_results_parser().parse_args(args)    
+    else:
+        parser = get_prosailvae_results_parser().parse_args()
+    root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
+
+    if len(parser.data_dir)==0:
+        data_dir = os.path.join(root_dir,"data/")
+    else:
+        data_dir = parser.data_dir
+
+    if len(parser.root_results_dir)==0:
+        res_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                                     os.pardir),"results/")
+    else:
+        res_dir = parser.root_results_dir    
+    params = load_dict(res_dir + "/config.json")
+    if params["supervised"]:
+        params["simulated_dataset"]=True
+    params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
+
+    params_sup_kl_model = None
+    if params["supervised_kl"]:
+        params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
+        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.tar"
+    
+    logging.basicConfig(filename=res_dir+'/results_log.log', 
+                              level=logging.INFO, force=True)
+    logger_name = LOGGER_NAME
+    # create logger
+    logger = logging.getLogger(logger_name)
+    logger.info('Starting computation of results of PROSAIL-VAE.')
+    logger.info('========================================================================')
+    logger.info('Parameters are : ')
+    for _, key in enumerate(params):
+        logger.info(f'{key} : {params[key]}')
+    logger.info('========================================================================')
+
+    return params, parser, res_dir, data_dir, params_sup_kl_model
+    
+def configureEmissionTracker(parser):
+    logger = logging.getLogger(LOGGER_NAME)
+    try:
+        from codecarbon import OfflineEmissionsTracker
+        tracker = OfflineEmissionsTracker(country_iso_code="FRA", output_dir=parser.root_results_dir)
+        tracker.start()
+        useEmissionTracker = True
+    except:
+        logger.error("Couldn't start codecarbon ! Emissions not tracked for this execution.")
+        useEmissionTracker = False
+        tracker = None
+    return tracker, useEmissionTracker
+
+def main():
+    params, parser, res_dir, data_dir, params_sup_kl_model = setupResults()
+    tracker, useEmissionTracker = configureEmissionTracker(parser)
+    try:
+        vae_file_path = res_dir + '/prosailvae_weights.tar'
+        PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, 
+                                logger_name=LOGGER_NAME, vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model)
+        save_results(PROSAIL_VAE, res_dir, data_dir, LOGGER_NAME=LOGGER_NAME)
+    except Exception as e:
+        traceback.print_exc()
+        print(e)
+    if useEmissionTracker:
+        tracker.stop()
+    pass
+    pass
+
+if __name__ == "__main__":
+    main()

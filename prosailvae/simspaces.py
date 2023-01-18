@@ -32,9 +32,13 @@ class LinearVarSpace(SimVarSpace):
             self.sim_pdf_support_span = 2 * torch.ones((1,latent_dim)).view(1,-1, 1).to(device)
         self.inv_z2sim_mat = torch.from_numpy(np.linalg.inv(self.z2sim_mat.detach().cpu())).to(self.device)
         pass
-    
+
     def change_device(self, device):
         self.device=device
+        self.z2sim_mat = self.z2sim_mat.to(device)
+        self.z2sim_offset = self.z2sim_offset.to(device)
+        self.sim_pdf_support_span = self.sim_pdf_support_span .to(device)
+        self.inv_z2sim_mat = self.inv_z2sim_mat.to(device)
         pass
 
     def z2sim(self, z):

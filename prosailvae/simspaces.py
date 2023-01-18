@@ -33,6 +33,10 @@ class LinearVarSpace(SimVarSpace):
         self.inv_z2sim_mat = torch.from_numpy(np.linalg.inv(self.z2sim_mat.detach().cpu())).to(self.device)
         pass
     
+    def change_device(self, device):
+        self.device=device
+        pass
+
     def z2sim(self, z):
         sim = torch.matmul(self.z2sim_mat, z) + self.z2sim_offset
         return sim

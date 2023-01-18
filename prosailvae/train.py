@@ -394,12 +394,13 @@ def trainProsailVae(params, parser, res_dir, data_dir, params2=None):
                 "beta_index":params2["beta_index"],
                 }
         logger.info(f'Attempting to load a model for KL supervision on device {device}, with torch.cuda.device_count()={torch.cuda.device_count()}')
-        SUP_PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params2, device=device,
+        SUP_PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params2, device='cpu',
                                             refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                             logger_name=LOGGER_NAME, patch_mode=not params2["simulated_dataset"],
                                             apply_norm_rec=params2["apply_norm_rec"],
                                             loss_type=params2["loss_type"])
         SUP_PROSAIL_VAE.load_ae(params2['sup_model_weights_path'])
+        SUP_PROSAIL_VAE.change_device(device)
         for param in SUP_PROSAIL_VAE.parameters():
             param.requires_grad = False # this model should not be trained.
 

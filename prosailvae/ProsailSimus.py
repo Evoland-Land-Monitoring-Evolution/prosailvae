@@ -72,7 +72,10 @@ RSR of the sensor.
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
         
-        
+    def change_device(self, device):
+        self.device=device
+        pass
+
     def __call__(self, prosail_output: torch.Tensor):
         return self.forward(prosail_output)
     
@@ -155,6 +158,10 @@ class ProsailSimulator():
     def __call__(self, params):
         return self.forward(params)
 
+    def change_device(self, device):
+        self.device=device
+        pass
+    
     def forward(self, params):
         # params.shape == [x] => single sample
         # params.shape == [x,y] => batch

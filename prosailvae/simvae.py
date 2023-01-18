@@ -78,7 +78,15 @@ class SimVAE(nn.Module):
         self.beta_index = beta_index
         self.inference_mode = inference_mode
         self.supervised_model = supervised_model
-        
+
+    def change_device(self, device):
+        self.device=device
+        self.encoder.change_device(device)
+        self.lat_space.change_device(device)
+        self.sim_space.change_device(device)
+        self.decoder.change_device(device)
+        pass
+
     def encode(self, x, angles):
         y = self.encoder.encode(x, angles)
         return y

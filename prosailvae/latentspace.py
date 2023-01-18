@@ -54,6 +54,10 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
             self.max_matrix = max_matrix.to(self.device)
         pass
     
+    def change_device(self, device):
+        self.device=device
+        pass
+    
     def get_params_from_encoder(self, y):
         y = y.view(-1, 2, self.latent_dim)
         mu = torch.sigmoid(y[:, 0, :].view(-1, self.latent_dim, 1))

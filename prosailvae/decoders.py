@@ -28,7 +28,13 @@ class ProsailSimulatorDecoder(Decoder):
         self.prosailsimulator = prosailsimulator
         self.ssimulator = ssimulator
         self.loss_type = loss_type
-        
+    
+    def change_device(self, device):
+        self.device=device
+        self.ssimulator.change_device(device)
+        self.prosailsimulator.change_device(device)
+        pass
+
     def decode(self, z, angles):
         n_samples = z.size(2)
         batch_size = z.size(0)

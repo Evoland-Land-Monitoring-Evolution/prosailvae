@@ -393,6 +393,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params2=None):
                 "beta_kl":params2["beta_kl"],
                 "beta_index":params2["beta_index"],
                 }
+        logger.info(f'Attempting to load a model for KL supervision on device {device}, with torch.cuda.device_count()={torch.cuda.device_count()}')
         SUP_PROSAIL_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params2, device=device,
                                             refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                             logger_name=LOGGER_NAME, patch_mode=not params2["simulated_dataset"],

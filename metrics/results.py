@@ -95,13 +95,15 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     
     # Plotting results
     metrics_dir = res_dir + "/metrics_plot/"
-    os.makedirs(metrics_dir)
+    if not os.path.isdir(metrics_dir):
+        os.makedirs(metrics_dir)
     
     logger.info("Plotting metrics.")
     
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
     rec_dir = res_dir + "/reconstruction/"
-    os.makedirs(rec_dir)
+    if not os.path.isdir(rec_dir):
+        os.makedirs(rec_dir)
     logger.info("Plotting reconstructions")
     plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
     

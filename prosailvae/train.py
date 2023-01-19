@@ -261,7 +261,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     
 
     PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name=LOGGER_NAME,
-                                                        vae_file_path=None, params_sup_kl_model=None)
+                                                        vae_file_path=None, params_sup_kl_model=params_sup_kl_model)
     lr = params['lr']
     if lr is None:
         try:

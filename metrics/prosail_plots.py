@@ -108,6 +108,7 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
         ys = tgt_dist[:,i].detach().cpu().numpy()
         ys_05 = np.quantile(ys,0.05)
         ys_95 = np.quantile(ys,0.95)
+        print(xs_05, ys_05, xs_95, ys_95)
         weights = sim_pdfs[:,i,:].detach().cpu().numpy()
         # min_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["min"]
         # max_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]

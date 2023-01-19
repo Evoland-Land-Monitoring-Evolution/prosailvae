@@ -58,7 +58,8 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     logger.info("Saving Loss")
     # Saving Loss
     loss_dir = res_dir + "/loss/"
-    os.makedirs(loss_dir)
+    if not os.path.isdir(loss_dir):
+        os.makedirs(loss_dir)
     
     if all_train_loss_df is not None:
         all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
@@ -171,7 +172,8 @@ def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
                 raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
     else:
         res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-    os.makedirs(res_dir)    
+    if not os.path.isdir(res_dir):
+        os.makedirs(res_dir)    
     return res_dir
 
 def setupResults():

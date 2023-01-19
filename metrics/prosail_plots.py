@@ -67,9 +67,13 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
         axj = i//2
 
         xs = recs_dist[:,i,:].detach().cpu().numpy()
+        xs_05 = np.quantile(xs,0.05)
+        xs_95 = np.quantile(xs,0.95)
         ys = s2_r_dist[:,i].detach().cpu().numpy()
-        min_b = min(xs.min(),ys.min())
-        max_b = max(xs.max(),ys.max())
+        ys_05 = np.quantile(ys,0.05)
+        ys_95 = np.quantile(ys,0.95)
+        min_b = min(xs_05,ys_05)
+        max_b = max(xs_95,ys_95)
         xedges = np.linspace(min_b, max_b, nbin)
         yedges = np.linspace(min_b, max_b, nbin)
         heatmap = 0
@@ -99,10 +103,16 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
     fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=120, tight_layout=True, figsize=(1 + 2*(n_lats//2 + n_lats%2), 1+2*2))
     for i in range(n_lats):
         xs = sim_supports[:,i,:].detach().cpu().numpy()
+        xs_05 = np.quantile(xs,0.05)
+        xs_95 = np.quantile(xs,0.95)
         ys = tgt_dist[:,i].detach().cpu().numpy()
+        ys_05 = np.quantile(ys,0.05)
+        ys_95 = np.quantile(ys,0.95)
         weights = sim_pdfs[:,i,:].detach().cpu().numpy()
-        min_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["min"]
-        max_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]
+        # min_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["min"]
+        # max_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]
+        min_b = min(xs_05,ys_05)
+        max_b = max(xs_95,ys_95)
         xedges = np.linspace(min_b, max_b, nbin)
         yedges = np.linspace(min_b, max_b, nbin)
         heatmap = 0

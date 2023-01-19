@@ -14,7 +14,8 @@ from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     metrics_dir = res_dir + "/metrics/"
-    os.makedirs(metrics_dir)
+    if not os.path.isdir(metrics_dir):
+        os.makedirs(metrics_dir)
     pd.DataFrame(data=mae.view(1,len(PROSAILVARS)).detach().cpu().numpy(), columns=PROSAILVARS, 
                  index=[0]).to_csv(metrics_dir + "/mae.csv")
     df_mpwi = pd.DataFrame(data=mpiw.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 

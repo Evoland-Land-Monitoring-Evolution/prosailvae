@@ -234,7 +234,7 @@ def setupTraining():
         shutil.copyfile(parser.supervised_config_file, res_dir+"/sup_kl_model_config.json")
         shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
         params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
-        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.json"
+        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.tar"
     else:
         params_sup_kl_model = None
     return params, parser, res_dir, data_dir, params_sup_kl_model

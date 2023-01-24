@@ -44,11 +44,11 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percent
 def get_percentiles_from_box_plots(bp):
     percentiles = torch.zeros((5,len(bp['boxes'])))
     for i in range(len(bp['boxes'])):
-        percentiles[0,i] = torch.from_numpy(bp['caps'][2*i].get_ydata()[0])
-        percentiles[1,i] = torch.from_numpy(bp['boxes'][i].get_ydata()[0])
-        percentiles[2,i] = torch.from_numpy(bp['medians'][i].get_ydata()[0])
-        percentiles[3,i] = torch.from_numpy(bp['boxes'][i].get_ydata()[2])
-        percentiles[4,i] = torch.from_numpy(bp['caps'][2*i + 1].get_ydata()[0])
+        percentiles[0,i] = torch.from_numpy(bp['caps'][2*i].get_ydata()[0].astype(float))
+        percentiles[1,i] = torch.from_numpy(bp['boxes'][i].get_ydata()[0].astype(float))
+        percentiles[2,i] = torch.from_numpy(bp['medians'][i].get_ydata()[0].astype(float))
+        percentiles[3,i] = torch.from_numpy(bp['boxes'][i].get_ydata()[2].astype(float))
+        percentiles[4,i] = torch.from_numpy(bp['caps'][2*i + 1].get_ydata()[0].astype(float))
                         #    (bp['fliers'][i].get_xdata(),
                         #     bp['fliers'][i].get_ydata()))
     return percentiles

@@ -5,6 +5,10 @@ import pandas as pd
 import prosailvae
 import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
+if __name__ == "__main__":
+    from prosail_plots import plot_metric_boxplot
+else:
+    from metrics.prosail_plots import plot_metric_boxplot
 
 def get_prosailvae_results_gather_parser():
     """
@@ -37,10 +41,14 @@ def main():
         os.makedirs(gathered_res_dir)
     val_losses = []
     ae_percentiles = torch.zeros((len(res_dirs, len(PROSAILVARS) ,5)))
+    are_percentiles = torch.zeros((len(res_dirs, len(PROSAILVARS) ,5)))
     for i, dir_name in enumerate(res_dirs):
         val_loss = pd.read_csv(root_res_dir+ "/" + dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
         val_losses.append(val_loss)
         ae_percentiles[i,:,:] = torch.load(dir_name + '/metrics/ae_percentiles.pt')
+        plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_ae")
+        are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt')
+        plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_are")
         pass
     pass
 

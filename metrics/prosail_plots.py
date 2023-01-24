@@ -539,8 +539,8 @@ def customized_box_plot(percentiles_tensor, axes, redraw = True, *args, **kwargs
 
     min_y, max_y = float('inf'), -float('inf')
 
-    for box_no, pdata in range(n_box):
-        pdata = percentiles_tensor[:,i]
+    for box_no in range(n_box):
+        pdata = percentiles_tensor[:,box_no]
         if len(pdata) == 6:
             (q1_start, q2_start, q3_start, q4_start, q4_end, fliers_xy) = pdata
         elif len(pdata) == 5:

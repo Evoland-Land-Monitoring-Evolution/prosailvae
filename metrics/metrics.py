@@ -110,7 +110,7 @@ def get_metrics(prosailVAE, loader,
     mae = error.abs().mean(axis=0)     
     ae_percentiles = get_box_plot_percentiles(error.abs().detach().cpu())
     picp = pic.mean(axis=0)    
-    mpiw = .mean(axis=0)
+    mpiw = piw.mean(axis=0)
     piw_percentiles = None # get_box_plot_percentiles(piw.detach().cpu())
     mare = rel_error.mean(axis=0)
     are_percentiles = get_box_plot_percentiles(rel_error.detach().cpu())

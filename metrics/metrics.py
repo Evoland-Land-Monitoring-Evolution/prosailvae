@@ -59,7 +59,7 @@ def get_box_plot_percentiles(tensor):
     for i in range(tensor.size(1)):
         bp = ax.boxplot([tensor[:,i].numpy(),])
         percentiles = get_percentiles_from_box_plots(bp)
-        all_tensor_percentiles[:,i] = percentiles
+        all_tensor_percentiles[:,i] = percentiles.squeeze()
     return all_tensor_percentiles
 
 def get_metrics(prosailVAE, loader,  

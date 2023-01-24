@@ -37,8 +37,8 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percent
                            columns=PROSAILVARS)
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
-    torch.save(ae_percentiles, '/ae_percentiles.pt')
-    torch.save(are_percentiles, '/are_percentiles.pt')
+    torch.save(ae_percentiles, metrics_dir + '/ae_percentiles.pt')
+    torch.save(are_percentiles, metrics_dir + '/are_percentiles.pt')
     # torch.save(piw_percentiles, '/piw_percentiles.pt')
 
 def get_percentiles_from_box_plots(bp):

@@ -3,6 +3,8 @@ import argparse
 import socket
 import pandas as pd
 import prosailvae
+import torch
+from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 
 def get_prosailvae_results_gather_parser():
     """
@@ -30,10 +32,15 @@ def get_results_dirs_names():
 
 def main():
     root_res_dir, res_dirs = get_results_dirs_names()
+    gathered_res_dir = root_res_dir + "/aggregated_results/"
+    if not os.path.isdir(gathered_res_dir):
+        os.makedirs(gathered_res_dir)
     val_losses = []
+    ae_percentiles = torch.zeros((len(res_dirs, len(PROSAILVARS) ,5)))
     for i, dir_name in enumerate(res_dirs):
-        val_loss = pd.read_csv(root_res_dir+ "/" +dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
+        val_loss = pd.read_csv(root_res_dir+ "/" + dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
         val_losses.append(val_loss)
+        ae_percentiles[i,:,:] = torch.load(dir_name + '/metrics/ae_percentiles.pt')
         pass
     pass
 

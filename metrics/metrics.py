@@ -11,8 +11,9 @@ import pandas as pd
 from tqdm import tqdm
 import os 
 from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
+import matplotlib.pyplot as plt
 
-def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
+def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
     metrics_dir = res_dir + "/metrics/"
     if not os.path.isdir(metrics_dir):
         os.makedirs(metrics_dir)
@@ -36,6 +37,30 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
                            columns=PROSAILVARS)
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
+    torch.save(ae_percentiles, '/ae_percentiles.pt')
+    torch.save(are_percentiles, '/are_percentiles.pt')
+    # torch.save(piw_percentiles, '/piw_percentiles.pt')
+
+def get_percentiles_from_box_plots(bp):
+    percentiles = torch.zeros((5,len(bp['boxes'])))
+    for i in range(len(bp['boxes'])):
+        percentiles[0,i] = bp['caps'][2*i].get_ydata()[0]
+        percentiles[1,i] = bp['boxes'][i].get_ydata()[0]
+        percentiles[2,i] = bp['medians'][i].get_ydata()[0]
+        percentiles[3,i] = bp['boxes'][i].get_ydata()[2]
+        percentiles[4,i] = bp['caps'][2*i + 1].get_ydata()[0]
+                        #    (bp['fliers'][i].get_xdata(),
+                        #     bp['fliers'][i].get_ydata()))
+    return percentiles
+
+def get_box_plot_percentiles(tensor):
+    fig, ax = plt.subplots()
+    all_tensor_percentiles = torch.zeros((5, tensor.size(1)))
+    for i in range(tensor.size(1)):
+        bp = ax.boxplot([tensor[:,i].numpy(),])
+        percentiles = get_percentiles_from_box_plots(bp)
+        all_tensor_percentiles[:,i] = percentiles
+    return all_tensor_percentiles
 
 def get_metrics(prosailVAE, loader,  
                 n_pdf_sample_points=3001,
@@ -83,7 +108,10 @@ def get_metrics(prosailVAE, loader,
             pic = torch.concat([pic, pic_i], axis=0)
             angles_dist = torch.concat([angles_dist, angles], axis=0)
     mae = error.abs().mean(axis=0)     
+    ae_percentiles = get_box_plot_percentiles(error.abs().detach().cpu())
     picp = pic.mean(axis=0)    
-    mpiw = piw.mean(axis=0)
+    mpiw = .mean(axis=0)
+    piw_percentiles = None # get_box_plot_percentiles(piw.detach().cpu())
     mare = rel_error.mean(axis=0)
-    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist, sim_pdfs, sim_supports
+    are_percentiles = get_box_plot_percentiles(rel_error.detach().cpu())
+    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist, sim_pdfs, sim_supports, ae_percentiles, are_percentiles, piw_percentiles

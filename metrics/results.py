@@ -2,10 +2,10 @@ import os
 import logging
 if __name__ == "__main__":
     from metrics import get_metrics, save_metrics
-    from prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D
+    from prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, plot_metric_boxplot
 else:
     from metrics.metrics import get_metrics, save_metrics
-    from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D
+    from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, plot_metric_boxplot
 
 from dataset.loaders import  get_simloader
 import pandas as pd
@@ -84,12 +84,14 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     (mae, mpiw, picp, mare, 
     sim_dist, tgt_dist, rec_dist,
     angles_dist, s2_r_dist,
-    sim_pdfs, sim_supports) = get_metrics(PROSAIL_VAE, loader, 
+    sim_pdfs, sim_supports, ae_percentiles, 
+    are_percentiles, piw_percentiles) = get_metrics(PROSAIL_VAE, loader, 
                               n_pdf_sample_points=3001,
                               alpha_conf=alpha_pi)
     logger.info("Metrics computed.")
 
-    save_metrics(res_dir, mae, mpiw, picp, alpha_pi)
+    save_metrics(res_dir, mae, mpiw, picp, alpha_pi, 
+                ae_percentiles, are_percentiles, piw_percentiles)
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     
@@ -101,6 +103,9 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     logger.info("Plotting metrics.")
     
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
+    plot_metric_boxplot(ae_percentiles, res_dir, metric_name='ae')
+    plot_metric_boxplot(are_percentiles, res_dir, metric_name='are')
+    # plot_metric_boxplot(piw_percentiles, res_dir, metric_name='piw')
     rec_dir = res_dir + "/reconstruction/"
     if not os.path.isdir(rec_dir):
         os.makedirs(rec_dir)

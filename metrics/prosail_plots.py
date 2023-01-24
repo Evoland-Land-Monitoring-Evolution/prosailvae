@@ -592,6 +592,6 @@ def customized_box_plot(percentiles_tensor, axes, redraw = True, *args, **kwargs
 
     # If redraw is set to true, the canvas is updated.
     if redraw:
-        ax.figure.canvas.draw()
+        axes.figure.canvas.draw()
 
     return box_plot

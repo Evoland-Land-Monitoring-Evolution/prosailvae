@@ -38,7 +38,7 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percent
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
     torch.save(ae_percentiles, metrics_dir + '/ae_percentiles.pt')
-    aer_percentiles = ae_percentiles / interval_length.view(-1,1)
+    aer_percentiles = ae_percentiles / interval_length.view(1,-1)
     torch.save(aer_percentiles, metrics_dir + '/aer_percentiles.pt')
     torch.save(are_percentiles, metrics_dir + '/are_percentiles.pt')
     # torch.save(piw_percentiles, '/piw_percentiles.pt')

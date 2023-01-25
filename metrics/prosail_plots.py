@@ -42,7 +42,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, maer.values.reshape(-1),)
     plt.ylabel('Mean Absolute Error (Standardized)')
-    ax.xaxis.grid(True)
+    ax.yaxis.grid(True)
     fig.savefig(save_dir+"/MAEr.svg")
     
     fig = plt.figure(dpi=150)
@@ -51,7 +51,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     ax.bar(maer.columns, mare.detach().cpu().numpy())
     plt.ylabel('Mean Absolute Relative Error')
     plt.yscale('log')
-    ax.xaxis.grid(True)
+    ax.yaxis.grid(True)
     fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
@@ -529,11 +529,11 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             fig, axs =  plt.subplots(1, n_suplots, dpi=150, sharey=sharey)
             fig.tight_layout()
             for i in range(n_suplots):
-                bplot = customized_box_plot(metric_percentiles[:,i], axs[i], redraw=True, patch_artist=True, widths=(0.3))
+                bplot = customized_box_plot(metric_percentiles[:,i], axs[i], redraw=True, patch_artist=True)
                 for box in bplot['boxes']:
                     box.set(color='green')
                 for median in bp['medians']:
-                    median.set(color='k', linewidth=2,)
+                    median.set(color='k')
                 axs[i].set_xticks([])
                 axs[i].set_xticklabels([])
                 if features_names is not None:
@@ -544,14 +544,13 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
         else:
             fig, axs =  plt.subplots(1, 1, dpi=150, sharey=sharey)
             
-            bplot = customized_box_plot(metric_percentiles, axs, redraw=True, patch_artist=True, widths=(0.3)*n_suplots,)
+            bplot = customized_box_plot(metric_percentiles, axs, redraw=True, patch_artist=True,)
             for box in bplot['boxes']:
                 box.set(color='green')
             for median in bplot['medians']:
-                    median.set(color='k', linewidth=2,)
+                    median.set(color='k')
             if features_names is not None:
                 axs.set_xticklabels(features_names)
-            axs.set_xticks([])
             if logscale:
                 axs.set_yscale('symlog', linthresh=1e-5)
             fig.tight_layout()
@@ -579,7 +578,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
                 row = i%2 
                 col = i//2
             bplot = customized_box_plot(metric_percentiles[:,:,i].transpose(0,1), axs[row, col], redraw = True, 
-                                patch_artist=True, widths=(0.1)*n_models)
+                                patch_artist=True)
             cmap = plt.cm.get_cmap('rainbow')
             colors = [cmap(val/n_models) for val in range(n_models)]
             for patch, color in zip(bplot['boxes'], colors):

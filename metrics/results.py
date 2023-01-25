@@ -103,7 +103,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     logger.info("Plotting metrics.")
     
     plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
-    plot_metric_boxplot(ae_percentiles, res_dir, metric_name='ae')
+    plot_metric_boxplot(ae_percentiles, res_dir, metric_name='ae', logscale=True)
     plot_metric_boxplot(are_percentiles, res_dir, metric_name='are')
     # plot_metric_boxplot(piw_percentiles, res_dir, metric_name='piw')
     rec_dir = res_dir + "/reconstruction/"

@@ -515,17 +515,19 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     return
 
 def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, 
-                        features_names=PROSAILVARS, format='slides'):
+                        features_names=PROSAILVARS, format='slides', logscale=True, sharey=True):
     if len(metric_percentiles.size())==2:
         n_suplots = metric_percentiles.size(1)
-        fig, axs =  plt.subplots(1, n_suplots, dpi=150)
+        fig, axs =  plt.subplots(1, n_suplots, dpi=150, sharey=sharey)
         fig.tight_layout()
         for i in range(n_suplots):
             customized_box_plot(metric_percentiles[:,i], axs[i], redraw = True)
-            axs[i].set_yticks([])
-            axs[i].set_yticklabels([])
+            axs[i].set_xticks([])
+            axs[i].set_xticklabels([])
             if features_names is not None:
-                axs[i].title.set_text([features_names[i]])                
+                axs[i].title.set_text(features_names[i])  
+            if logscale:
+                axs[i].set_yscale('symlog', linthresh=1e-5)
     elif len(metric_percentiles.size())==3:
         n_models = metric_percentiles.size(0)
         if model_names is none or len(model_names)!=n_models:
@@ -544,13 +546,21 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
         if n_suplots%2==1:
             fig.delaxes(axs[-1, -1])
         for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[:,:,i], axs[i//2, i%2], redraw = True)
-            axs[i//2, i%2].set_yticklabels([i+1 for i in range(n_models)], model_names)
+            if format=='article':
+                row = i%2 
+                col = i//2
+            else:
+                row = i//2
+                col = i%2
+            customized_box_plot(metric_percentiles[:,:,i], axs[row, col], redraw = True)
+            axs[row, col].set_yticklabels([i+1 for i in range(n_models)], model_names)
             if features_names is not None:
-                ax.title.set_text([features_names[i]])      
+                axs[row, col].title.set_text([features_names[i]])  
+            if logscale:
+                axs[row, col].set_yscale('symlog', linthresh=1e-5)    
     else:
         raise NotImplementedError()
-    fig.savefig(res_dir+f"/{metric_name}_boxplot.svg")
+    fig.savefig(res_dir + f"/{metric_name}_boxplot.svg")
     pass
 
 def customized_box_plot(percentiles_tensor, axes, redraw = True, *args, **kwargs):

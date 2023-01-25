@@ -200,7 +200,7 @@ def setupTraining():
     xp_array = parser.xp_array
     job_array_dir = None
     if xp_array:
-        job_array_dir = os.path.join(root_dir, os.pardir)
+        job_array_dir = os.path.join(parser.root_results_dir, os.pardir)
         
     config_dir = os.path.join(root_dir,"config/")
     if len(parser.data_dir)==0:
@@ -245,7 +245,7 @@ def setupTraining():
         params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.tar"
     else:
         params_sup_kl_model = None
-    return params, parser, res_dir, data_dir, params_sup_kl_model
+    return params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir
 
 def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None):
     logger = logging.getLogger(LOGGER_NAME)
@@ -315,13 +315,21 @@ def configureEmissionTracker(parser):
         useEmissionTracker = False
         tracker = None
     return tracker, useEmissionTracker
-
+def save_array_xp_path(job_array_dir, res_dir):
+    if job_array_dir is not None:
+            if not os.path.isfile(job_array_dir + "/results_directory_names.txt"):
+                with open(job_array_dir + "/results_directory_names.txt", 'w') as outfile:
+                    outfile.write(f"{res_dir}\n")
+            else:
+                with open(job_array_dir + "/results_directory_names.txt", 'a') as outfile:
+                    outfile.write(f"{res_dir}\n")
 def main():
-    params, parser, res_dir, data_dir, params_sup_kl_model = setupTraining()
+    params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
         save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME)
+        save_array_xp_path(job_array_dir, res_dir)
     except Exception as e:
         traceback.print_exc()
         print(e)

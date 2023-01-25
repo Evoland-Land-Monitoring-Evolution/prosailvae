@@ -517,11 +517,11 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
 def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, 
                         features_names=PROSAILVARS, format='slides'):
     if len(metric_percentiles.size())==2:
-        n_suplots = metric_percentiles.size(0)
+        n_suplots = metric_percentiles.size(1)
         fig, axs =  plt.subplots(1, n_suplots, dpi=150)
         fig.tight_layout()
         for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[i,:].unsqueeze(1), axs[i], redraw = True)
+            customized_box_plot(metric_percentiles[:,i], axs[i], redraw = True)
             ax.set_yticks([])
             ax.set_yticklabels([])
             if features_names is not None:
@@ -530,7 +530,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
         n_models = metric_percentiles.size(0)
         if model_names is none or len(model_names)!=n_models:
             model_names = [str(i+1) for i in range(n_models)]
-        n_suplots = metric_percentiles.size(1)
+        n_suplots = metric_percentiles.size(2)
         if format=='article':
             n_rows = n_suplots // 2 + n_suplots % 2
             n_cols = 2
@@ -544,7 +544,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
         if n_suplots%2==1:
             fig.delaxes(axs[-1, -1])
         for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[:,i,:], axs[i//2, i%2], redraw = True)
+            customized_box_plot(metric_percentiles[:,:,i], axs[i//2, i%2], redraw = True)
             axs[i//2, i%2].set_yticklabels([i+1 for i in range(n_models)], model_names)
             if features_names is not None:
                 ax.title.set_text([features_names[i]])      

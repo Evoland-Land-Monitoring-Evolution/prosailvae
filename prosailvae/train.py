@@ -197,7 +197,11 @@ def setupTraining():
     else:
         parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
-    
+    xp_array = parser.xp_array
+    job_array_dir = None
+    if xp_array:
+        job_array_dir = os.path.join(root_dir, os.pardir)
+        
     config_dir = os.path.join(root_dir,"config/")
     if len(parser.data_dir)==0:
         data_dir = os.path.join(root_dir,"data/")

@@ -522,10 +522,10 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
         fig.tight_layout()
         for i in range(n_suplots):
             customized_box_plot(metric_percentiles[:,i], axs[i], redraw = True)
-            ax.set_yticks([])
-            ax.set_yticklabels([])
+            axs[i].set_yticks([])
+            axs[i].set_yticklabels([])
             if features_names is not None:
-                ax.title.set_text([features_names[i]])                
+                axs[i].title.set_text([features_names[i]])                
     elif len(metric_percentiles.size())==3:
         n_models = metric_percentiles.size(0)
         if model_names is none or len(model_names)!=n_models:

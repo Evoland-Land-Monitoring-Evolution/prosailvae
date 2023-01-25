@@ -3,3 +3,5 @@ regression_configs/config_supervised_1.json
 regression_configs/config_supervised_2.json
 regression_configs/config_supervised_3.json
 regression_configs/config_supervised_4.json
+regression_configs/config_supervised_5.json
+regression_configs/config_supervised_6.json

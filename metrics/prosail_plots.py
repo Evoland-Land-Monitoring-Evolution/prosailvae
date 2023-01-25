@@ -540,6 +540,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
                     axs[i].title.set_text(features_names[i])  
                 if logscale:
                     axs[i].set_yscale('symlog', linthresh=1e-5)
+                axs[i].yaxis.grid(True)
             fig.tight_layout()
         else:
             fig, axs =  plt.subplots(1, 1, dpi=150, sharey=sharey)
@@ -553,6 +554,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
                 axs.set_xticklabels(features_names)
             if logscale:
                 axs.set_yscale('symlog', linthresh=1e-5)
+            axs.yaxis.grid(True)
             fig.tight_layout()
     elif len(metric_percentiles.size())==3:
         n_models = metric_percentiles.size(0)
@@ -589,7 +591,8 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             if features_names is not None:
                 axs[row, col].set_title(features_names[i])  
             if logscale:
-                axs[row, col].set_yscale('symlog', linthresh=1e-5)    
+                axs[row, col].set_yscale('symlog', linthresh=1e-5)  
+            axs[row, col].yaxis.grid(True) 
         fig.tight_layout()
     else:
         raise NotImplementedError()

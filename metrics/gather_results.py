@@ -43,7 +43,7 @@ def main():
     if not os.path.isdir(gathered_res_dir):
         os.makedirs(gathered_res_dir)
     val_losses = []
-    ae_percentiles = torch.zeros((len(res_dirs), len(PROSAILVARS) ,5))
+    aer_percentiles = torch.zeros((len(res_dirs), len(PROSAILVARS) ,5))
     are_percentiles = torch.zeros((len(res_dirs), len(PROSAILVARS) ,5))
     if os.path.isfile(root_res_dir + "/model_names.txt"):
         with open(root_res_dir + "/results_directory_names.txt") as f:
@@ -53,11 +53,11 @@ def main():
     for i, dir_name in enumerate(res_dirs):
         val_loss = pd.read_csv(dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
         val_losses.append(val_loss)
-        ae_percentiles[i,:,:] = torch.load(dir_name + '/metrics/ae_percentiles.pt')
+        aer_percentiles[i,:,:] = torch.load(dir_name + '/metrics/aer_percentiles.pt')
         are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt')     
         pass
-    plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_ae", model_names=model_names)
-    plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_are", model_names=model_names)
+    plot_metric_boxplot(aer_percentiles, gathered_res_dir, "agregated_aer", model_names=model_names)
+    plot_metric_boxplot(are_percentiles, gathered_res_dir, "agregated_are", model_names=model_names)
     pd.DataFrame(data=np.array(val_losses).reshape(1,-1), columns=model_names).to_csv(gathered_res_dir+'/all_losses.csv')
     pass
 

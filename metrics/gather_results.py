@@ -43,8 +43,8 @@ def main():
     if not os.path.isdir(gathered_res_dir):
         os.makedirs(gathered_res_dir)
     val_losses = []
-    aer_percentiles = torch.zeros((len(res_dirs), len(PROSAILVARS) ,5))
-    are_percentiles = torch.zeros((len(res_dirs), len(PROSAILVARS) ,5))
+    aer_percentiles = torch.zeros((len(res_dirs),5 , len(PROSAILVARS)))
+    are_percentiles = torch.zeros((len(res_dirs),5 , len(PROSAILVARS)))
     if os.path.isfile(root_res_dir + "/model_names.txt"):
         with open(root_res_dir + "/results_directory_names.txt") as f:
             model_names =  [line.rstrip() for line in f]

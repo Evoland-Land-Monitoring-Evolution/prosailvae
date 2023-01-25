@@ -527,6 +527,8 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
 
 def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, 
                         features_names=PROSAILVARS, pltformat='slides', logscale=False, sharey=True):
+    """Metric percentile sizes : if 3 : models 0, percentiles 1, features 2
+                                 if 2 : percentiles 0, features 1"""
     if len(metric_percentiles.size())==2:
         n_suplots = metric_percentiles.size(1)
         if not sharey:

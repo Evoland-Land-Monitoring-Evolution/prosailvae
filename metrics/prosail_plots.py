@@ -512,20 +512,41 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     fig.savefig(res_dir+"/error_vs_angles.png")
     return
 
-def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae'):
+def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, features_names=PROSAILVARS, format='slides'):
     if len(metric_percentiles.size())==2:
-        fig, ax =  plt.subplots(dpi=150)
-        customized_box_plot(metric_percentiles, ax, redraw = True)
-    elif len(metric_percentiles.size())==3:
         n_suplots = metric_percentiles.size(0)
-        n_rows = n_suplots // 2 + n_suplots % 2
-        fig, axs =  plt.subplots(n_rows, 2, dpi=150)
+        fig, ax =  plt.subplots(1,n_suplots,dpi=150)
+        fig.tight_layout()
+        for i in range(n_suplots):
+            customized_box_plot(metric_percentiles[i,:], ax, redraw = True)
+            ax.set_yticks([])
+            ax.set_yticklabels([])
+            if features_names is not None:
+                ax.title.set_text([features_names[i]])                
+    elif len(metric_percentiles.size())==3:
+        n_models = metric_percentiles.size(0)
+        if model_names is none or len(model_names)!=n_models:
+            model_names = [str(i+1) for i in range(n_models)]
+        n_suplots = metric_percentiles.size(1)
+        if format=='article':
+            n_rows = n_suplots // 2 + n_suplots % 2
+            n_cols = 2
+            figsize = (8.27, 11.69) #A4 paper size in inches
+        else:
+            n_rows = 2
+            n_cols = n_suplots // 2 + n_suplots % 2
+            figsize = (16, 9)
+        fig, axs =  plt.subplots(n_rows, n_cols, dpi=150, figsize=figsize)
+        fig.tight_layout()
         if n_suplots%2==1:
             fig.delaxes(axs[-1, -1])
         for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[i,:,:], ax[i//2, i%2], redraw = True)
+            customized_box_plot(metric_percentiles[:,i,:], axs[i//2, i%2], redraw = True)
+            axs[i//2, i%2].set_yticklabels([i+1 for i in range(n_models)], model_names)
+            if features_names is not None:
+                ax.title.set_text([features_names[i]])      
     else:
-        raise NotImplementedError
+        raise NotImplementedError()
     fig.savefig(res_dir+f"/{metric_name}_boxplot.svg")
     pass
 

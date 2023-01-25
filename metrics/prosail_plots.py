@@ -550,7 +550,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             for median in bplot['medians']:
                     median.set(color='k', linewidth=2,)
             if features_names is not None:
-                axs.set_xticklabels([i+1 for i in range(n_suplots)], features_names)
+                axs.set_xticklabels(features_names)
             axs.set_xticks([])
             if logscale:
                 axs.set_yscale('symlog', linthresh=1e-5)

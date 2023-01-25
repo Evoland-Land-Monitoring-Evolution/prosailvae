@@ -51,7 +51,7 @@ def main():
     else:
         model_names = [str(i+1) for i in range(len(res_dirs))]
     for i, dir_name in enumerate(res_dirs):
-        val_loss = pd.read_csv(root_res_dir+ "/" + dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
+        val_loss = pd.read_csv(dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
         val_losses.append(val_loss)
         ae_percentiles[i,:,:] = torch.load(dir_name + '/metrics/ae_percentiles.pt')
         are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt')     

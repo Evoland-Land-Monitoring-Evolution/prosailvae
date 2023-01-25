@@ -124,8 +124,8 @@ def plot_grad_flow(model, savefile=None):
         if(p.requires_grad) and ("bias" not in n):
             layers.append(n)
             if p.grad is not None:
-                ave_grads.append(p.grad.abs().mean())
-                max_grads.append(p.grad.abs().max())
+                ave_grads.append(p.grad.abs().mean().detach().cpu().numpy())
+                max_grads.append(p.grad.abs().max().detach().cpu().numpy())
             else:
                 print("None gradient")
                 print(n)

@@ -17,7 +17,7 @@ export NUM_WORKERS=12
 export CONFIG_LIST=${VAEDIR}/config/list_configs.txt
 export CONFIG=$(sed -n ${PBS_ARRAY_INDEX}"p" $CONFIG_LIST)
 
-CUDA_LAUNCH_BLOCKING=1 python ${VAEDIR}/prosailvae/train.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR -c $CONFIG
+CUDA_LAUNCH_BLOCKING=1 python ${VAEDIR}/prosailvae/train.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR -c $CONFIG -a True
 conda deactivate
 
 

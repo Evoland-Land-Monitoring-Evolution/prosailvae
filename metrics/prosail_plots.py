@@ -5,7 +5,14 @@ Created on Thu Nov 17 11:46:20 2022
 
 @author: yoel
 """
+
 import matplotlib.pyplot as plt
+
+plt.rcParams.update({
+  "text.usetex": True,
+  "font.family": "Helvetica"
+})
+
 import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
@@ -516,7 +523,7 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     return
 
 def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, 
-                        features_names=PROSAILVARS, format='slides', logscale=True, sharey=True):
+                        features_names=PROSAILVARS, pltformat='slides', logscale=False, sharey=True):
     if len(metric_percentiles.size())==2:
         n_suplots = metric_percentiles.size(1)
         if not sharey:
@@ -524,7 +531,8 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             fig.tight_layout()
             for i in range(n_suplots):
                 bplot = customized_box_plot(metric_percentiles[:,i], axs[i], redraw=True, patch_artist=True, widths=(0.3))
-                bplot['boxes'].set_facecolor("green")
+                for box in bplot['boxes']:
+                    box.set(color='green')
                 for median in bp['medians']:
                     median.set(color='k', linewidth=2,)
                 axs[i].set_xticks([])
@@ -533,11 +541,13 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
                     axs[i].title.set_text(features_names[i])  
                 if logscale:
                     axs[i].set_yscale('symlog', linthresh=1e-5)
+            fig.tight_layout()
         else:
             fig, axs =  plt.subplots(1, 1, dpi=150, sharey=sharey)
-            fig.tight_layout()
-            bplot = customized_box_plot(metric_percentiles, axs, redraw=True, patch_artist=True, widths=(0.3)*n_suplots)
-            bplot['boxes'].set_facecolor("green")
+            
+            bplot = customized_box_plot(metric_percentiles, axs, redraw=True, patch_artist=True, widths=(0.3)*n_suplots,)
+            for box in bplot['boxes']:
+                box.set(color='green')
             for median in bplot['medians']:
                     median.set(color='k', linewidth=2,)
             if features_names is not None:
@@ -545,12 +555,13 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             axs.set_xticks([])
             if logscale:
                 axs.set_yscale('symlog', linthresh=1e-5)
+            fig.tight_layout()
     elif len(metric_percentiles.size())==3:
         n_models = metric_percentiles.size(0)
-        if model_names is none or len(model_names)!=n_models:
+        if model_names is None or len(model_names)!=n_models:
             model_names = [str(i+1) for i in range(n_models)]
         n_suplots = metric_percentiles.size(2)
-        if format=='article':
+        if pltformat=='article':
             n_rows = n_suplots // 2 + n_suplots % 2
             n_cols = 2
             figsize = (8.27, 11.69) #A4 paper size in inches
@@ -558,30 +569,30 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             n_rows = 2
             n_cols = n_suplots // 2 + n_suplots % 2
             figsize = (16, 9)
-        fig, axs =  plt.subplots(n_rows, n_cols, dpi=150, figsize=figsize)
-        fig.tight_layout()
+        fig, axs =  plt.subplots(n_rows, n_cols, dpi=150, figsize=figsize, sharey=sharey)
         if n_suplots%2==1:
             fig.delaxes(axs[-1, -1])
         for i in range(n_suplots):
-            if format=='article':
-                row = i%2 
-                col = i//2
-            else:
+            if pltformat=='article':
                 row = i//2
                 col = i%2
-            bplot = customized_box_plot(metric_percentiles[:,:,i], axs[row, col], redraw = True, 
-                                patch_artist=True, widths=(0.3)*n_models)
+            else:
+                row = i%2 
+                col = i//2
+            bplot = customized_box_plot(metric_percentiles[:,:,i].transpose(0,1), axs[row, col], redraw = True, 
+                                patch_artist=True, widths=(0.1)*n_models)
             cmap = plt.cm.get_cmap('rainbow')
             colors = [cmap(val/n_models) for val in range(n_models)]
             for patch, color in zip(bplot['boxes'], colors):
                 patch.set_facecolor(color)
             for median in bplot['medians']:
                     median.set(color='k', linewidth=2,)
-            axs[row, col].set_yticklabels([i+1 for i in range(n_models)], model_names)
+            axs[row, col].set_xticklabels(model_names)
             if features_names is not None:
-                axs[row, col].title.set_text([features_names[i]])  
+                axs[row, col].set_title(features_names[i])  
             if logscale:
                 axs[row, col].set_yscale('symlog', linthresh=1e-5)    
+        fig.tight_layout()
     else:
         raise NotImplementedError()
     fig.savefig(res_dir + f"/{metric_name}_boxplot.svg")

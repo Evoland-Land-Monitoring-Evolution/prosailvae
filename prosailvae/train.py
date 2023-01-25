@@ -317,12 +317,12 @@ def configureEmissionTracker(parser):
     return tracker, useEmissionTracker
 def save_array_xp_path(job_array_dir, res_dir):
     if job_array_dir is not None:
-            if not os.path.isfile(job_array_dir + "/results_directory_names.txt"):
-                with open(job_array_dir + "/results_directory_names.txt", 'w') as outfile:
-                    outfile.write(f"{res_dir}\n")
-            else:
-                with open(job_array_dir + "/results_directory_names.txt", 'a') as outfile:
-                    outfile.write(f"{res_dir}\n")
+        if not os.path.isfile(job_array_dir + "/results_directory_names.txt"):
+            with open(job_array_dir + "/results_directory_names.txt", 'w') as outfile:
+                outfile.write(f"{res_dir}\n")
+        else:
+            with open(job_array_dir + "/results_directory_names.txt", 'a') as outfile:
+                outfile.write(f"{res_dir}\n")
 def main():
     params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)

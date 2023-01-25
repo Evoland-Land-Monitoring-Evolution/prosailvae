@@ -80,6 +80,7 @@ def get_prosailvae_train_parser():
     parser.add_argument("-t", dest="tensor_dir",
                         help="directory of mmdc tensor files",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
+                        
     parser.add_argument("-a", dest="xp_array",
                         help="array training (false for single xp) ",
                         type=bool, default=False)

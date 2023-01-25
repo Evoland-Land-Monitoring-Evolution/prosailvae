@@ -8,12 +8,11 @@ Created on Thu Nov 17 11:46:20 2022
 
 import matplotlib.pyplot as plt
 
-plt.rcParams.update({
-  "text.usetex": True,
-  "font.family": "Helvetica"
-})
+# plt.rcParams.update({
+#   "text.usetex": True,
+#   "font.family": "Helvetica"
+# })
 
-import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 import torch

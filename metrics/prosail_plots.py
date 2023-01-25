@@ -521,7 +521,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
         fig, axs =  plt.subplots(1, n_suplots, dpi=150)
         fig.tight_layout()
         for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[i,:].unsqueeze(0), axs[i], redraw = True)
+            customized_box_plot(metric_percentiles[i,:].unsqueeze(1), axs[i], redraw = True)
             ax.set_yticks([])
             ax.set_yticklabels([])
             if features_names is not None:

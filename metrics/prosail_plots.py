@@ -557,7 +557,10 @@ def customized_box_plot(percentiles_tensor, axes, redraw = True, *args, **kwargs
     """
     Generates a customized boxplot based on the given percentile values
     """
-    n_box = percentiles_tensor.size(1)
+    if len(percentiles_tensor.size())=1:
+        n_box = 1
+    else:
+        n_box = percentiles_tensor.size(1)
     box_plot = axes.boxplot([[-9, -4, 2, 4, 9],]*n_box, *args, **kwargs) 
     # Creates len(percentiles) no of box plots
 

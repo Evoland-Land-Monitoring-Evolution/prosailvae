@@ -8,13 +8,10 @@ export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_P
 conda activate /work/scratch/zerahy/dotconda/juanvae
 export SRCDIR=/home/uz/zerahy/projects/    
 export VAEDIR=${SRCDIR}/prosailvae/prosailvae/
-export RSR_DIR=/work/scratch/zerahy/prosailvae/data/
-export DATADIR=/work/scratch/zerahy/prosailvae/data/
 export OUTDIR=/work/scratch/zerahy/prosailvae/results/37039097_jobarray/
-export TENSOR_DIR=/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/
 
 
-python ${VAEDIR}/metrics/results.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR
+python ${VAEDIR}/metrics/gather_results.py -r $OUTDIR 
 conda deactivate
 
 

@@ -6,6 +6,7 @@ Created on Thu Nov 17 11:46:20 2022
 @author: yoel
 """
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 import torch
@@ -518,16 +519,32 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
                         features_names=PROSAILVARS, format='slides', logscale=True, sharey=True):
     if len(metric_percentiles.size())==2:
         n_suplots = metric_percentiles.size(1)
-        fig, axs =  plt.subplots(1, n_suplots, dpi=150, sharey=sharey)
-        fig.tight_layout()
-        for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[:,i], axs[i], redraw = True)
-            axs[i].set_xticks([])
-            axs[i].set_xticklabels([])
+        if not sharey:
+            fig, axs =  plt.subplots(1, n_suplots, dpi=150, sharey=sharey)
+            fig.tight_layout()
+            for i in range(n_suplots):
+                bplot = customized_box_plot(metric_percentiles[:,i], axs[i], redraw=True, patch_artist=True, widths=(0.3))
+                bplot['boxes'].set_facecolor("green")
+                for median in bp['medians']:
+                    median.set(color='k', linewidth=2,)
+                axs[i].set_xticks([])
+                axs[i].set_xticklabels([])
+                if features_names is not None:
+                    axs[i].title.set_text(features_names[i])  
+                if logscale:
+                    axs[i].set_yscale('symlog', linthresh=1e-5)
+        else:
+            fig, axs =  plt.subplots(1, 1, dpi=150, sharey=sharey)
+            fig.tight_layout()
+            bplot = customized_box_plot(metric_percentiles, axs, redraw=True, patch_artist=True, widths=(0.3)*n_suplots)
+            bplot['boxes'].set_facecolor("green")
+            for median in bplot['medians']:
+                    median.set(color='k', linewidth=2,)
             if features_names is not None:
-                axs[i].title.set_text(features_names[i])  
+                axs.set_xticklabels([i+1 for i in range(n_suplots)], features_names[i])
+            axs.set_xticks([])
             if logscale:
-                axs[i].set_yscale('symlog', linthresh=1e-5)
+                axs.set_yscale('symlog', linthresh=1e-5)
     elif len(metric_percentiles.size())==3:
         n_models = metric_percentiles.size(0)
         if model_names is none or len(model_names)!=n_models:
@@ -552,7 +569,14 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
             else:
                 row = i//2
                 col = i%2
-            customized_box_plot(metric_percentiles[:,:,i], axs[row, col], redraw = True)
+            bplot = customized_box_plot(metric_percentiles[:,:,i], axs[row, col], redraw = True, 
+                                patch_artist=True, widths=(0.3)*n_models)
+            cmap = plt.cm.get_cmap('rainbow')
+            colors = [cmap(val/n_models) for val in range(n_models)]
+            for patch, color in zip(bplot['boxes'], colors):
+                patch.set_facecolor(color)
+            for median in bplot['medians']:
+                    median.set(color='k', linewidth=2,)
             axs[row, col].set_yticklabels([i+1 for i in range(n_models)], model_names)
             if features_names is not None:
                 axs[row, col].title.set_text([features_names[i]])  

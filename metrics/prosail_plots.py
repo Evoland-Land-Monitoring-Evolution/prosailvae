@@ -35,6 +35,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     ax = fig.add_axes([0,0,1,1])
     ax.bar(maer.columns, maer.values.reshape(-1),)
     plt.ylabel('Mean Absolute Error (Standardized)')
+    ax.xaxis.grid(True)
     fig.savefig(save_dir+"/MAEr.svg")
     
     fig = plt.figure(dpi=150)
@@ -43,6 +44,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     ax.bar(maer.columns, mare.detach().cpu().numpy())
     plt.ylabel('Mean Absolute Relative Error')
     plt.yscale('log')
+    ax.xaxis.grid(True)
     fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
@@ -512,13 +514,14 @@ def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     fig.savefig(res_dir+"/error_vs_angles.png")
     return
 
-def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, features_names=PROSAILVARS, format='slides'):
+def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_names=None, 
+                        features_names=PROSAILVARS, format='slides'):
     if len(metric_percentiles.size())==2:
         n_suplots = metric_percentiles.size(0)
-        fig, ax =  plt.subplots(1,n_suplots,dpi=150)
+        fig, axs =  plt.subplots(1, n_suplots, dpi=150)
         fig.tight_layout()
         for i in range(n_suplots):
-            customized_box_plot(metric_percentiles[i,:].unsqueeze(0), ax, redraw = True)
+            customized_box_plot(metric_percentiles[i,:].unsqueeze(0), axs[i], redraw = True)
             ax.set_yticks([])
             ax.set_yticklabels([])
             if features_names is not None:

@@ -2,6 +2,7 @@ import os
 import argparse
 import socket
 import pandas as pd
+import numpy as np
 import prosailvae
 import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
@@ -42,14 +43,20 @@ def main():
     val_losses = []
     ae_percentiles = torch.zeros((len(res_dirs, len(PROSAILVARS) ,5)))
     are_percentiles = torch.zeros((len(res_dirs, len(PROSAILVARS) ,5)))
+    if os.path.isfile(root_res_dir + "/model_names.txt"):
+        with open(root_res_dir + "/results_directory_names.txt") as f:
+            model_names =  [line.rstrip() for line in f]
+    else:
+        model_names = [str(i+1) for i in range(len(res_dirs))]
     for i, dir_name in enumerate(res_dirs):
         val_loss = pd.read_csv(root_res_dir+ "/" + dir_name + "/loss/valid_loss.csv")["loss_sum"].min()
         val_losses.append(val_loss)
         ae_percentiles[i,:,:] = torch.load(dir_name + '/metrics/ae_percentiles.pt')
-        plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_ae")
-        are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt')
-        plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_are")
+        are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt')     
         pass
+    plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_ae", model_names=model_names)
+    plot_metric_boxplot(ae_percentiles, gathered_res_dir, "agregated_are", model_names=model_names)
+    pd.DataFrame(data=np.array(val_losses).reshape(1,-1), columns=model_names).to_csv(gathered_res_dir+'/all_losses.csv')
     pass
 
 if __name__ == "__main__":

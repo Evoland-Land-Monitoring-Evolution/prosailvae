@@ -31,6 +31,8 @@ def get_results_dirs_names():
     if len(parser.root_results_dir)==0:
         root_res_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                                      os.pardir),"results/37099873_jobarray/")
+    else:
+        root_res_dir = parser.root_results_dir
     with open(root_res_dir + "/results_directory_names.txt") as f:
         res_dirs =  [line.rstrip() for line in f]
     return root_res_dir, res_dirs

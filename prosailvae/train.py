@@ -82,7 +82,7 @@ def get_prosailvae_train_parser():
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
     parser.add_argument("-a", dest="xp_array",
                         help="array training (false for single xp) ",
-                        type=int, default=False)
+                        type=bool, default=False)
     return parser
 
 def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer):

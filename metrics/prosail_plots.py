@@ -27,6 +27,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('Prediction Interval Coverage Probability')
+    fig.tight_layout()
     fig.savefig(save_dir+"/picp.svg")
     
     fig = plt.figure(dpi=200)
@@ -35,6 +36,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.legend()
     plt.xlabel('1-a')
     plt.ylabel('Mean Prediction Interval Width (Standardized)')
+    fig.tight_layout()
     fig.savefig(save_dir+"/MPIWr.svg")
     
     fig = plt.figure()
@@ -43,6 +45,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     ax.bar(maer.columns, maer.values.reshape(-1),)
     plt.ylabel('Mean Absolute Error (Standardized)')
     ax.yaxis.grid(True)
+    fig.tight_layout()
     fig.savefig(save_dir+"/MAEr.svg")
     
     fig = plt.figure(dpi=150)
@@ -52,6 +55,7 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     plt.ylabel('Mean Absolute Relative Error')
     plt.yscale('log')
     ax.yaxis.grid(True)
+    fig.tight_layout()
     fig.savefig(save_dir+"/mare.svg")
 
 def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):

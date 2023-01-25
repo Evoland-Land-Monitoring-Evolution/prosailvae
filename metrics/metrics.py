@@ -28,9 +28,9 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percent
     df_picp["alpha"] = alpha_pi
     df_picp.to_csv(metrics_dir + "/picp.csv")
     
-    il = get_ProsailVarsIntervalLen().to(mpiw.device)
-    mpiwr = (mpiw/il.view(-1,1)).transpose(0,1)
-    maer = mae/il
+    interval_length = get_ProsailVarsIntervalLen().to(mpiw.device)
+    mpiwr = (mpiw / interval_length.view(-1,1)).transpose(0,1)
+    maer = mae / interval_length
     df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
     df_mpiwr = pd.DataFrame(data=mpiwr.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
@@ -38,6 +38,8 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percent
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
     torch.save(ae_percentiles, metrics_dir + '/ae_percentiles.pt')
+    aer_percentiles = ae_percentiles / interval_length.view(-1,1)
+    torch.save(aer_percentiles, metrics_dir + '/aer_percentiles.pt')
     torch.save(are_percentiles, metrics_dir + '/are_percentiles.pt')
     # torch.save(piw_percentiles, '/piw_percentiles.pt')
 

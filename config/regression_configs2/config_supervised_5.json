@@ -23,9 +23,9 @@
     "dataset_file_prefix": "full_",
     "n_fold": null,
     "simulated_dataset": true,
-    "lr_recompute": 200,
+    "lr_recompute": 50,
     "loss_type": "diag_nll",
     "apply_norm_rec": false,
-    "exp_lr_decay": 0.97,
+    "exp_lr_decay": 0.98,
     "supervised_kl": false
 }

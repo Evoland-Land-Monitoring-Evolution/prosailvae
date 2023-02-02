@@ -37,6 +37,17 @@ def get_results_dirs_names():
         res_dirs =  [line.rstrip() for line in f]
     return root_res_dir, res_dirs
 
+def plot_losses(val_losses, gathered_res_dir, model_names=None):
+    if model_names is None:
+        model_names = [str(i+1) for i in range(len(val_losses))]
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(dip=150,tight_layout=True)
+    ax.scatter([i for i in range(len(val_losses))], val_losses, s=2, marker='o')
+    ax.set_xticklabels(model_names)
+    fig.savefig(gathered_res_dir + "/test_loss.svg")
+    pass
+
+
 def main():
     root_res_dir, res_dirs = get_results_dirs_names()
     gathered_res_dir = root_res_dir + "/aggregated_results/"
@@ -58,7 +69,9 @@ def main():
         pass
     plot_metric_boxplot(aer_percentiles, gathered_res_dir, "agregated_aer", model_names=model_names)
     plot_metric_boxplot(are_percentiles, gathered_res_dir, "agregated_are", model_names=model_names)
+    plot_losses(val_losses, gathered_res_dir, model_names=model_names)
     pd.DataFrame(data=np.array(val_losses).reshape(1,-1), columns=model_names).to_csv(gathered_res_dir+'/all_losses.csv')
+    plot_losses(val_losses, gathered_res_dir, model_names=model_names)
     pass
 
 if __name__ == "__main__":

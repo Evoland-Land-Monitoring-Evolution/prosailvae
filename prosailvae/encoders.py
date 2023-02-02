@@ -354,7 +354,7 @@ class ProsailDNNEncoder(Encoder):
 
         network = []
         network.append(nn.Linear(in_features=s2refl_size + 2 * 3, 
-                                out_features=res_block_layer_sizes)).to(device)
+                                out_features=res_block_layer_sizes).to(device))
         activation=None
         for i in range(n_res_block):
             

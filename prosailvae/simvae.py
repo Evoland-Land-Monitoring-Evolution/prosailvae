@@ -78,6 +78,13 @@ class SimVAE(nn.Module):
         self.beta_index = beta_index
         self.inference_mode = inference_mode
         self.supervised_model = supervised_model
+        multi_output_encoder=False
+        try:
+            a = self.encoder.dnet
+            multi_output_encoder=True
+        except:
+            pass
+        self.multi_output_encoder = multi_output_encoder
 
     def change_device(self, device):
         self.device=device
@@ -88,7 +95,10 @@ class SimVAE(nn.Module):
         pass
 
     def encode(self, x, angles):
-        y = self.encoder.encode(x, angles)
+        if self.multi_output_encoder:
+            _,y = self.encoder.encode(x, angles)
+        else:
+            y = self.encoder.encode(x, angles)
         return y
     
     def encode2lat_params(self, x, angles):
@@ -113,7 +123,10 @@ class SimVAE(nn.Module):
         if angles is None:
             angles = x[:,-3:]
             x = x[:,:-3]
+        
         y = self.encode(x, angles)
+        if self.multi_output_encoder:
+            y=y[-1,:,:]
         dist_params = self.lat_space.get_params_from_encoder(y)
         if self.inference_mode:
             return dist_params, None, None, None
@@ -251,13 +264,20 @@ class SimVAE(nn.Module):
         y = self.encode(s2_r, s2_a)
         if y.isnan().any():
             raise ValueError("NaN encountered during encoding, there are probably NaN values in network parameters.")
-        dist_params = self.lat_space.get_params_from_encoder(y)
+        params = self.lat_space.get_params_from_encoder(y=y)
+        if not self.multi_output_encoder:
+            loss_sum = self.lat_space.loss(ref_lat, params)
+            if loss_sum.isnan().any() or loss_sum.isinf().any():
+                raise ValueError
+            all_losses = {'lat_loss': loss_sum.item()}
+        else:
+            loss_sum = self.lat_space.loss(ref_lat, params[-1,:,:,:])
+            all_losses = {'main_lat_loss': loss_sum.item()}
+            for i in range(params.size(0)):
+                loss_i = self.lat_space.loss(ref_lat, params[i,:,:,:])
+                loss_sum += loss_i / params.size(0)
+                all_losses[f"{i}_lat_loss"] = loss_i.item()
 
-        loss_sum = self.lat_space.loss(ref_lat, dist_params)
-        if loss_sum.isnan().any() or loss_sum.isinf().any():
-            raise ValueError
-        all_losses = {'lat_loss': loss_sum.item()}
-       
         all_losses['loss_sum'] = loss_sum.item()
         for key in all_losses:
             if key not in normalized_loss_dict:

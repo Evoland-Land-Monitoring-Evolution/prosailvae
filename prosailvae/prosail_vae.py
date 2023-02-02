@@ -9,7 +9,7 @@ Created on Tue Nov  8 14:45:12 2022
 import torch
 import prosailvae
 from prosailvae.simvae import SimVAE
-from prosailvae.encoders import ProsailNNEncoder, ProsailRNNEncoder
+from prosailvae.encoders import ProsailNNEncoder, ProsailRNNEncoder, ProsailDNNEncoder
 # from prosailvae.decoders import TSSimulatorDecoder
 from prosailvae.latentspace import OrderedTruncatedGaussianLatent
 from prosailvae.simspaces import LinearVarSpace
@@ -61,6 +61,19 @@ def get_prosail_VAE(rsr_dir,
                             device=device,
                             norm_mean=refl_norm_mean,
                             norm_std=refl_norm_std)
+    elif encoder_type=='dnn':
+        encoder = ProsailDNNEncoder(s2refl_size=vae_params["input_size"], 
+                            output_size=output_size, 
+                            n_res_block = rnn_number,
+                            res_block_layer_sizes=vae_params["hidden_layers_size"][0],
+                            res_block_layer_depth=rnn_depth, 
+                            last_activation=vae_params["encoder_last_activation"], 
+                            device=device,
+                            norm_mean=refl_norm_mean,
+                            norm_std=refl_norm_std)
+    else:
+        raise NotImplementedError    
+
     if supervised_model is not None:
         kl_type = "tntn"
     else:

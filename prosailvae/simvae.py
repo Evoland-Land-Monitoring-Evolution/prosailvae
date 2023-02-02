@@ -147,6 +147,8 @@ class SimVAE(nn.Module):
         elif mode == 'lat_mode':
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             # latent mode
             z = self.lat_space.latent_mode(x)
             # transfer to simulator variable
@@ -157,6 +159,8 @@ class SimVAE(nn.Module):
         elif mode == "sim_mode":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
             z = self.sim_space.sim2z(sim)
@@ -165,6 +169,8 @@ class SimVAE(nn.Module):
         elif mode == "sim_median":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
@@ -173,6 +179,8 @@ class SimVAE(nn.Module):
         elif mode == "sim_expectation":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)

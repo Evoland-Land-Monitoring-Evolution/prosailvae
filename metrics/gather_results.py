@@ -38,11 +38,11 @@ def get_results_dirs_names():
     return root_res_dir, res_dirs
 
 def plot_losses(val_losses, gathered_res_dir, model_names=None):
-    if model_names is None:
+    if model_names is None or len(model_names)!=len(val_losses):
         model_names = [str(i+1) for i in range(len(val_losses))]
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(dpi=150,tight_layout=True)
-    ax.scatter([i for i in range(len(val_losses))], val_losses, s=10, marker='o')
+    ax.scatter([i for i in range(len(val_losses))], val_losses, s=20, marker='o')
     ax.set_xticklabels(model_names)
     fig.savefig(gathered_res_dir + "/test_loss.svg")
     pass

@@ -9,7 +9,7 @@ Created on Tue Nov  8 14:45:12 2022
 import torch
 import prosailvae
 from prosailvae.simvae import SimVAE
-from prosailvae.encoders import ProsailNNEncoder
+from prosailvae.encoders import ProsailNNEncoder, ProsailRNNEncoder
 # from prosailvae.decoders import TSSimulatorDecoder
 from prosailvae.latentspace import OrderedTruncatedGaussianLatent
 from prosailvae.simspaces import LinearVarSpace
@@ -36,17 +36,31 @@ def get_prosail_VAE(rsr_dir,
                     apply_norm_rec=True,
                     inference_mode=False,
                     loss_type="diag_nll",
-                    supervised_model=None):
+                    supervised_model=None,
+                    encoder_type='rnn',
+                    rnn_depth=2,
+                    rnn_number=3):
     latent_dim = 11
     output_size = latent_dim * 2
-    
-    encoder = ProsailNNEncoder(s2refl_size=vae_params["input_size"], 
-                        output_size=output_size, 
-                        hidden_layers_size=vae_params["hidden_layers_size"], 
-                        last_activation=vae_params["encoder_last_activation"], 
-                        device=device,
-                        norm_mean=refl_norm_mean,
-                        norm_std=refl_norm_std)
+    if encoder_type=='nn':
+
+        encoder = ProsailNNEncoder(s2refl_size=vae_params["input_size"], 
+                            output_size=output_size, 
+                            hidden_layers_size=vae_params["hidden_layers_size"], 
+                            last_activation=vae_params["encoder_last_activation"], 
+                            device=device,
+                            norm_mean=refl_norm_mean,
+                            norm_std=refl_norm_std)
+    elif encoder_type=='rnn':
+        encoder = ProsailRNNEncoder(s2refl_size=vae_params["input_size"], 
+                            output_size=output_size, 
+                            n_res_block = rnn_number,
+                            res_block_layer_sizes=vae_params["hidden_layers_size"][0],
+                            res_block_layer_depth=rnn_depth, 
+                            last_activation=vae_params["encoder_last_activation"], 
+                            device=device,
+                            norm_mean=refl_norm_mean,
+                            norm_std=refl_norm_std)
     if supervised_model is not None:
         kl_type = "tntn"
     else:
@@ -87,12 +101,17 @@ def load_prosailVAE(rsr_dir, vae_params, vae_file_path, optimizer=None, device='
                     refl_norm_mean=None, refl_norm_std=None,
                                             logger_name=None, patch_mode=None,
                                             apply_norm_rec=None,
-                                            loss_type=None, sup_prosail_vae=None):
+                                            loss_type=None, sup_prosail_vae=None, encoder_type='rnn',
+                                            rnn_depth=2,
+                                            rnn_number=3):
 
     prosail_vae = get_prosail_VAE(rsr_dir, vae_params, device='cpu', 
                                     refl_norm_mean=refl_norm_mean, refl_norm_std=refl_norm_std,
                                     logger_name=logger_name, patch_mode=patch_mode,
-                                    apply_norm_rec=apply_norm_rec, loss_type=loss_type, supervised_model=sup_prosail_vae)
+                                    apply_norm_rec=apply_norm_rec, loss_type=loss_type, supervised_model=sup_prosail_vae, 
+                                    encoder_type=encoder_type,
+                                            rnn_depth=rnn_depth,
+                                            rnn_number=rnn_number)
 
     nb_epoch, loss = prosail_vae.load_ae(vae_file_path, optimizer)
     prosail_vae.change_device(device)
@@ -117,7 +136,10 @@ def load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name, v
                                             refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                             logger_name=logger_name, patch_mode=not params_sup_kl_model["simulated_dataset"],
                                             apply_norm_rec=params_sup_kl_model["apply_norm_rec"],
-                                            loss_type=params_sup_kl_model["loss_type"])
+                                            loss_type=params_sup_kl_model["loss_type"],
+                                            encoder_type=params_sup_kl_model["encoder_type"],
+                                            rnn_depth=params_sup_kl_model["rnn_depth"],
+                                            rnn_number=params_sup_kl_model["rnn_number"])
     
     vae_params={"input_size":10,  
                 "hidden_layers_size":params["hidden_layers_size"], 
@@ -134,13 +156,19 @@ def load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name, v
                                             refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                             logger_name=logger_name, patch_mode=not params["simulated_dataset"],
                                             apply_norm_rec=params["apply_norm_rec"],
-                                            loss_type=params["loss_type"], sup_prosail_vae=sup_prosail_vae)
+                                            loss_type=params["loss_type"], sup_prosail_vae=sup_prosail_vae,
+                                            encoder_type=params["encoder_type"],
+                                            rnn_depth=params["rnn_depth"],
+                                            rnn_number=params["rnn_number"])
     else:
         prosail_vae = get_prosail_VAE(rsr_dir, vae_params, device=device, 
                                     refl_norm_mean=norm_mean, refl_norm_std=norm_std,
                                     logger_name=logger_name, patch_mode=not params["simulated_dataset"],
                                     apply_norm_rec=params["apply_norm_rec"], loss_type=params["loss_type"], 
-                                    supervised_model=sup_prosail_vae)
+                                    supervised_model=sup_prosail_vae,
+                                    encoder_type=params["encoder_type"],
+                                    rnn_depth=params["rnn_depth"],
+                                    rnn_number=params["rnn_number"])
     
     return prosail_vae
 # if __name__ == "__main__":

@@ -538,7 +538,7 @@ def plot_metric_boxplot(metric_percentiles, res_dir, metric_name='ae', model_nam
                 bplot = customized_box_plot(metric_percentiles[:,i], axs[i], redraw=True, patch_artist=True)
                 for box in bplot['boxes']:
                     box.set(color='green')
-                for median in bp['medians']:
+                for median in bplot['medians']:
                     median.set(color='k')
                 axs[i].set_xticks([])
                 axs[i].set_xticklabels([])

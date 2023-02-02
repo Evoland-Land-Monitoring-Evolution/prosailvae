@@ -279,8 +279,10 @@ class SimVAE(nn.Module):
                 raise ValueError
             all_losses = {'lat_loss': loss_sum.item()}
         else:
-            loss_sum = self.lat_space.loss(ref_lat, params[-1,:,:,:])
-            all_losses = {'main_lat_loss': loss_sum.item()}
+            main_loss = self.lat_space.loss(ref_lat, params[-1,:,:,:])
+            all_losses = {'main_lat_loss': main_loss.item()}
+            loss_sum = torch.zeros_like(main_loss)
+            loss_sum += main_loss
             for i in range(params.size(0)):
                 loss_i = self.lat_space.loss(ref_lat, params[i,:,:,:])
                 loss_sum += loss_i / params.size(0)

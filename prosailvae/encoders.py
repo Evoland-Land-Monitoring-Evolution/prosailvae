@@ -354,7 +354,7 @@ class ProsailDNNEncoder(Encoder):
 
         network = []
         network.append(nn.Linear(in_features=s2refl_size + 2 * 3, 
-                                out_features=res_block_layer_sizes))
+                                out_features=res_block_layer_sizes)).to(device)
         activation=None
         for i in range(n_res_block):
             
@@ -365,7 +365,7 @@ class ProsailDNNEncoder(Encoder):
             network.append(nnblock)
 
         self.device=device
-        self.dnet = nn.Sequential(*network)
+        self.dnet = nn.Sequential(*network).to(device)
         if norm_mean is None:
             norm_mean = torch.zeros((1,s2refl_size))
         if norm_std is None:
@@ -377,7 +377,7 @@ class ProsailDNNEncoder(Encoder):
         self.device=device
         self.norm_mean = self.norm_mean.to(device)
         self.norm_std = self.norm_std.to(device)
-        self.dnet = self.net.to(device)
+        self.dnet = self.dnet.to(device)
         self = self.to(device)
 
     def encode(self, s2_refl, angles):

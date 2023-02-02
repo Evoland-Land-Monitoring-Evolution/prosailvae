@@ -42,7 +42,7 @@ def plot_losses(val_losses, gathered_res_dir, model_names=None):
         model_names = [str(i+1) for i in range(len(val_losses))]
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(dpi=150,tight_layout=True)
-    ax.scatter([i for i in range(len(val_losses))], val_losses, s=20, marker='o')
+    ax.scatter([i+1 for i in range(len(val_losses))], val_losses, s=20, marker='o')
     ax.set_xticklabels(model_names)
     fig.savefig(gathered_res_dir + "/test_loss.svg")
     pass

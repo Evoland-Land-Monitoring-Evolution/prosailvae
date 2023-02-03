@@ -18,7 +18,7 @@ export CONFIG_LIST=${VAEDIR}/configs/list_configs_rnn.txt
 export CONFIG=$(sed -n ${PBS_ARRAY_INDEX}"p" $CONFIG_LIST)
 
 cd /work/scratch/zerahy/temp/
-qsub ${VAEDIR}/jobs/train_prosail_folds.sh $RSR_DIR $DATADIR $OUTDIR $TENSOR_DIR $CONFIG
+qsub ${VAEDIR}/jobs/train_prosail_folds.sh -F $RSR_DIR $DATADIR $OUTDIR $TENSOR_DIR $CONFIG
 
 
 

@@ -27,7 +27,7 @@ config = {      "batch_size": 256,
                 "rnn_depth":2,
                 "rnn_number":5
 }
-save_dir =  "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/configs"
+save_dir =  "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config"
 config_dir = "/rnn_configs/"
 if not os.path.isdir(save_dir+config_dir):
     os.makedirs(save_dir+config_dir)

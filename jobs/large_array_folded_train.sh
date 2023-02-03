@@ -14,7 +14,7 @@ export DATADIR=/work/scratch/zerahy/prosailvae/data/1e5_dataset_V2/
 export OUTDIR=/work/scratch/zerahy/prosailvae/results/BIG_${PBS_JOBID:0:8}_jobarray/${PBS_ARRAY_INDEX}/
 export TENSOR_DIR=/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/
 export NUM_WORKERS=12
-export CONFIG_LIST=${VAEDIR}/configs/list_configs_rnn.txt
+export CONFIG_LIST=${VAEDIR}/config/list_configs_rnn.txt
 export CONFIG=$(sed -n ${PBS_ARRAY_INDEX}"p" $CONFIG_LIST)
 
 cd /work/scratch/zerahy/temp/

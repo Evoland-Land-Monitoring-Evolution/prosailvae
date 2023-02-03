@@ -263,8 +263,7 @@ class SimVAE(nn.Module):
         
         return loss_sum, normalized_loss_dict
     
-    def compute_supervised_loss_over_batch(self, batch, normalized_loss_dict, 
-                                           len_loader=1):
+    def compute_supervised_loss_over_batch(self, batch, normalized_loss_dict, len_loader=1):
         s2_r = batch[0].to(self.device) 
         s2_a = batch[1].to(self.device)  
         ref_sim = batch[2].to(self.device)  
@@ -295,7 +294,35 @@ class SimVAE(nn.Module):
             normalized_loss_dict[key] += all_losses[key]/len_loader
         
         return loss_sum, normalized_loss_dict
-    
+
+    def compute_lat_nlls_batch(self, batch):
+        s2_r = batch[0].to(self.device) 
+        s2_a = batch[1].to(self.device)  
+        ref_sim = batch[2].to(self.device)  
+        ref_lat = self.sim_space.sim2z(ref_sim)
+        y = self.encode(s2_r, s2_a)
+        params = self.lat_space.get_params_from_encoder(y=y)
+        if not self.multi_output_encoder:
+            nll = self.lat_space.loss(ref_lat, params, reduction=None, reduction_nll=None)
+            if nll.isnan().any() or nll.isinf().any():
+                raise ValueError
+        else:
+            raise NotImplementedError
+        return nll
+
+    def compute_lat_nlls(self, dataloader, batch_per_epoch=None):
+        self.eval()
+        all_nlls = []
+        with torch.no_grad():
+            if batch_per_epoch is None:
+                batch_per_epoch = len(dataloader)
+            for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
+                nll_batch = self.compute_lat_nlls_batch(batch)
+                all_nlls.append(nll_batch)
+                if torch.isnan(nll_batch).any():
+                    self.logger.error("NaN Loss encountered during validation !")
+        all_nlls = torch.vstack(all_nlls)
+        return all_nlls
     def save_ae(self, epoch, optimizer, loss, path):
         torch.save({
             'epoch': epoch,

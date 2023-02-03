@@ -81,9 +81,11 @@ def truncated_gaussian_pdf(x, mu, sig, eps=1e-9):
 def truncated_gaussian_cdf(x, mu, sig, eps=1e-9):
     return  (x>1) + (x>=0) * (x<=1) * (normal_cdf(x, mu, sig) - normal_cdf(torch.tensor(0), mu, sig))/ (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig))
 
-def truncated_gaussian_nll(x, mu, sig, eps=1e-9):
+def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum'):
     likelihood = truncated_gaussian_pdf(x, mu, sig)
-    nll = -torch.log(likelihood + torch.tensor(eps)).sum(axis=1)
+    nll = -torch.log(likelihood + torch.tensor(eps))
+    if reduction =="sum":
+        nll = nll.sum(axis=1)
     if nll.isinf().any() or nll.isnan().any():
         raise ValueError()
     return nll

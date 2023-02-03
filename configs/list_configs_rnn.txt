@@ -1,0 +1,2 @@
+/rnn_configs/config_L_32_D_1_N_1.json
+/rnn_configs/config_L_64_D_1_N_1.json

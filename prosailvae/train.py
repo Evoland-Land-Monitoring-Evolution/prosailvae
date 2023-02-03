@@ -84,6 +84,10 @@ def get_prosailvae_train_parser():
     parser.add_argument("-a", dest="xp_array",
                         help="array training (false for single xp) ",
                         type=bool, default=False)
+                        
+    parser.add_argument("-p", dest="plot_results",
+                        help="toggle results plotting",
+                        type=bool, default=False)             
     return parser
 
 def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer):
@@ -195,7 +199,8 @@ def setupTraining():
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/",
-              "-a", "False"]
+              "-a", "False",
+              "-p", "False"]
         
         parser = get_prosailvae_train_parser().parse_args(args)    
     else:
@@ -332,7 +337,7 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
-        save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME)
+        save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
         save_array_xp_path(job_array_dir, res_dir)
     except Exception as e:
         traceback.print_exc()

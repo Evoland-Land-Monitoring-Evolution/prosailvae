@@ -144,12 +144,14 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
                                                            latent_dim=self.latent_dim)
         return pdfs, supports
     
-    def loss(self, z, params):
+    def loss(self, z, params, reduction="mean", reduction_nll="sum"):
         mu = params[:, :, 0].squeeze()
         sigma = params[:, :, 1].squeeze()
         # nll = ordered_truncated_gaussian_nll(z, mu, sigma, self.max_matrix, 
         #                                      device=self.device).mean()
-        nll = truncated_gaussian_nll(z, mu.unsqueeze(2), sigma.unsqueeze(2)).mean()
+        nll = truncated_gaussian_nll(z, mu.unsqueeze(2), sigma.unsqueeze(2), reduction=reduction_nll)
+        if reduction=='mean':
+            nll=nll.mean()
         return nll
     
     def kl(self, params, params2=None):

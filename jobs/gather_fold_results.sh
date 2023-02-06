@@ -1,5 +1,5 @@
 #PBS -N resgather
-#PBS -q qgpgpu
+#PBS -q qgpgpudev
 #PBS -l select=1:ncpus=4:mem=60G:ngpus=1  
 #PBS -l walltime=1:00:00
 #PBS -J 1-2:1

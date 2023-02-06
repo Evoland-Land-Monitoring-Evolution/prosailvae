@@ -1,0 +1,15 @@
+
+
+* ProsailVAE field validation data
+
+Data summary
+
+| Study Site | S2 Img | Tile   | Period                  | EPSG : CRS |
+|------------+--------+--------+-------------------------+------------|
+| France     |        | T31TCJ | 02/01/2017 - 29/09/2018 |      32631 |
+| Italy      |        | T33TWF | 17/12/2016 - 28/09/2018 |      32633 |
+| Spain      |        | T30TUM | 09/12/2016 - 10/10/2018 |      32630 |
+| Poland     |        | T33UXT | 01/01/2017 - 29/09/2018 |            |
+
+
+*Take into account that the Poland site is not in the theia zones, this imply that the Poland site is not available. I am working in fix this.

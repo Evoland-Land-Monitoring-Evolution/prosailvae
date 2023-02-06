@@ -223,7 +223,7 @@ def setupTraining():
     if params["supervised"]:
         params["simulated_dataset"]=True
 
-
+    params["k_fold"] = parser.n_xp
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     if len(parser.root_results_dir)==0:
         root_results_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),

@@ -1,8 +1,10 @@
 {
-    "batch_size": 256,
-    "epochs": 2,
+    "batch_size": 2048,
+    "epochs": 100,
     "lr": 0.001,
-    "hidden_layers_size": 64,
+    "hidden_layers_size": [
+        64
+    ],
     "test_size": 0.01,
     "valid_ratio": 0.01,
     "workers": 0,
@@ -12,7 +14,6 @@
     "beta_kl": 0,
     "beta_index": 0,
     "dataset_file_prefix": "full_",
-    "k_fold": 5,
     "simulated_dataset": true,
     "lr_recompute": 10,
     "loss_type": "diag_nll",

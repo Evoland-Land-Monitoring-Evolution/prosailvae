@@ -326,6 +326,7 @@ def configureEmissionTracker(parser):
         useEmissionTracker = False
         tracker = None
     return tracker, useEmissionTracker
+
 def save_array_xp_path(job_array_dir, res_dir):
     if job_array_dir is not None:
         if not os.path.isfile(job_array_dir + "/results_directory_names.txt"):
@@ -341,6 +342,8 @@ def main():
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
         save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
         save_array_xp_path(job_array_dir, res_dir)
+        if params["k_fold"] > 1:
+            save_array_xp_path(os.path.pardir(res_dir), res_dir)
     except Exception as e:
         traceback.print_exc()
         print(e)

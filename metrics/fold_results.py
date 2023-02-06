@@ -18,7 +18,7 @@ def get_prosailvae_results_gather_parser():
     parser = argparse.ArgumentParser(description='Parser for data generation')
 
     parser.add_argument("-r", dest="root_results_dir",
-                        help="path to root results direcotry",
+                        help="path to fold root results directory",
                         type=str, default="")
     return parser
 
@@ -53,7 +53,7 @@ def plot_losses(val_losses, gathered_res_dir, model_names=None):
 
 def main():
     root_res_dir, res_dirs = get_results_dirs_names()
-    gathered_res_dir = root_res_dir + "/aggregated_results/"
+    gathered_res_dir = root_res_dir + "/fold_results/"
     if not os.path.isdir(gathered_res_dir):
         os.makedirs(gathered_res_dir)
     val_losses = []

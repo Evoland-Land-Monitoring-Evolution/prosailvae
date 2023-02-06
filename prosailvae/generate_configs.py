@@ -3,8 +3,8 @@ import os
 import numpy as np
 
 
-config = {      "batch_size": 2048,
-                "epochs": 100,
+config = {      "batch_size": 4096,
+                "epochs": 200,
                 "lr": 0.001,
                 "hidden_layers_size": [256],
                 "test_size": 0.01,

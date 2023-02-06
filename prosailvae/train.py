@@ -84,7 +84,7 @@ def get_prosailvae_train_parser():
     parser.add_argument("-a", dest="xp_array",
                         help="array training (false for single xp) ",
                         type=bool, default=False)
-                        
+
     parser.add_argument("-p", dest="plot_results",
                         help="toggle results plotting",
                         type=bool, default=False)             
@@ -115,7 +115,7 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     pass
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0):
+                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, plot_gradient=False):
 
 
     logger = logging.getLogger(LOGGER_NAME)
@@ -141,9 +141,10 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
-                if not os.path.isdir(res_dir+"/gradient_flows"):
-                    os.makedirs(res_dir+"/gradient_flows")
-                plot_grad_flow(PROSAIL_VAE, savefile=res_dir+f"/gradient_flows/grad_flow_{epoch}.svg")
+                if plot_gradient:
+                    if not os.path.isdir(res_dir+"/gradient_flows"):
+                        os.makedirs(res_dir+"/gradient_flows")
+                    plot_grad_flow(PROSAIL_VAE, savefile=res_dir+f"/gradient_flows/grad_flow_{epoch}.svg")
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')
@@ -307,7 +308,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                          n_samples=params["n_samples"],
                                                          lr_recompute=params['lr_recompute'],
                                                          data_dir=data_dir, 
-                                                         exp_lr_decay=params["exp_lr_decay"]) 
+                                                         exp_lr_decay=params["exp_lr_decay"],
+                                                         plot_gradient=parser.plot_results) 
     logger.info("Training Completed !")
 
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df

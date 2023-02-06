@@ -16,7 +16,7 @@ config = {      "batch_size": 256,
                 "beta_kl": 0,
                 "beta_index": 0,
                 "dataset_file_prefix": "full_",
-                "n_fold": 5,
+                "k_fold": 5,
                 "simulated_dataset": True,
                 "lr_recompute": 10,
                 "loss_type": "diag_nll",
@@ -45,7 +45,7 @@ config_number=0
 for i in range(len(hidden_layers_width)):
     for j in range(len(rnn_depth)):
         for k in range(len(rnn_number)):
-            config["hidden_layers_size"] = hidden_layers_width[i]
+            config["hidden_layers_size"] = [hidden_layers_width[i]]
             config["rnn_depth"] = rnn_depth[j]
             config["rnn_number"] = rnn_number[k]
             configs_array[i,j,k,1] = hidden_layers_width[i]

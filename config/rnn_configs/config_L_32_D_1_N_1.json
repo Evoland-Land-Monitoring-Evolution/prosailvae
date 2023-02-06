@@ -12,7 +12,7 @@
     "beta_kl": 0,
     "beta_index": 0,
     "dataset_file_prefix": "full_",
-    "n_fold": 5,
+    "k_fold": 5,
     "simulated_dataset": true,
     "lr_recompute": 10,
     "loss_type": "diag_nll",

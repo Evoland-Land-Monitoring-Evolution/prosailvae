@@ -93,19 +93,6 @@ def main():
     with rio.open(raster_dataset_path) as raster:
         raster_data = raster.read()
 
-    # plot
-    # fig, ax = plt.subplots()
-
-    # compute the extent of the raster
-    # extent = [raster_data.bounds[0],
-    #           raster_data.bounds[1],
-    #           raster_data.bounds[2],
-    #           raster_data.bounds[3]]
-
-    # ax = rio_plot.show(raster_data, extent=extent, ax=ax)
-    # vector_data.plot(ax=ax)
-    # plt.show()
-
     # extract pixel values
     coord_list = [(x,y) for x,y
                   in zip(vector_data['geometry'].x,

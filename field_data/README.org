@@ -2,7 +2,9 @@
 
 * ProsailVAE field validation data
 
-Data summary
+
+
+** Data summary
 
 | Study Site | S2 Img | Tile   | Period                  | EPSG : CRS |
 |------------+--------+--------+-------------------------+------------|
@@ -26,5 +28,3 @@ In the field data are locations that are not in the Theia production zone:
 
 Is necessary modify the download code (mmdc-datacollection) for manage the PEPS MAJA option. To get the S2 data for this locations.
 
-
-*Take into account that the Poland site is not in the theia zones, this imply that the Poland site is not available. I am working in fix this.

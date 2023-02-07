@@ -10,23 +10,53 @@ Inspired by :
 https://geopandas.org/en/stable/gallery/geopandas_rasterio_sample.html
 https://github.com/ArjanCodes/2022-abtest/blob/main/from_config/main.py
 """
+# imports
+import argparse
+import json
+from dataclasses import dataclass
+import os
+from pathlib import Path
+
+import geopandas as gpd
+import rasterio as rio
+
+# configurations
+
+def get_parser() -> argparse.ArgumentParser:
+    """
+    Generate argument parser for CLI
+    """
+
+    arg_parser = argparse.ArgumentParser(
+        os.path.basename(__file__),
+        description="Create a time series validation dataset for prosailvae",
+    )
+
+    arg_parser.add_argument(
+        "--loglevel",
+        default="INFO",
+        choices=("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"),
+        help="Logger level (default: INFO. Should be one of "
+        "(DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+
+    arg_parser.add_argument(
+        "--input_config",
+        type=str,
+        help="full path to the config file",
+        required=True,
+    )
+
+    arg_parser.add_argument(
+        "--export_path", type=str, help="path to store results", required=True
+    )
+
+    return arg_parser
+
 
 # TODO Read Vector Data
 # TODO Read Raster Data
 # TODO Get point values
-#
-
-
-import sys,os
-from typing import Any
-import json
-from dataclasses import dataclass
-from pathlib import Path
-
-import matplotlib.pyplot as plt
-import geopandas as gpd
-import rasterio as rio
-import rasterio.plot as rio_plot
 
 @dataclass
 class Config:
@@ -86,4 +116,28 @@ def main():
 
 
 if __name__ == "__main__":
+    # Parser arguments
+    parser = get_parser()
+    args = parser.parse_args()
+
+    # check patch selection strategy
+    if not (args.patch_index or args.nb_patches):
+        parser.error(
+            "Not patch indexing strategy requested,"
+            " add --patch_index or --nb_patches"
+        )
+
+    # Configure logging
+    numeric_level = getattr(logging, args.loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError(f"Invalid log level:{args.loglevel}")
+
+    logging.basicConfig(
+        level=numeric_level,
+        datefmt="%y-%m-%d %H:%M:%S",
+        format="%(asctime)s :: %(levelname)s :: %(message)s",
+    )
+
+    # call main
     main()
+    logging.info("Export finish!")

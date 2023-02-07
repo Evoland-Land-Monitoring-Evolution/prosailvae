@@ -14,8 +14,10 @@ https://github.com/ArjanCodes/2022-abtest/blob/main/from_config/main.py
 import argparse
 import json
 from dataclasses import dataclass
+import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 import rasterio as rio
@@ -79,11 +81,29 @@ def read_config_file() -> Config:
     return Config(**config_dict)
 
 
-def vector_data(vector_filename: str) -> gpd.GeoDataFrame:
+def read_vector(vector_filename: str) -> gpd.GeoDataFrame:
     """
     Read the the vector data
     """
+    # read geo data
+    logging.info(f"reading vector file : {vector_filename}")
+    vector_data = gpd.read_file(vector_filename)
 
+    return vector_data
+
+def read_raster(raster_filename : str) -> Any:
+    """
+    read a raster file in a given extension
+    using rasterio functionallyties
+    """
+    raise NotImplementedError
+
+def compute_extent():
+    """
+    Compute the common extension between
+    the raster and the vector dataset
+    for save resources
+    """
     raise NotImplementedError
 
 def main():

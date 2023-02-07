@@ -17,6 +17,10 @@ def get_prosailvae_results_gather_parser():
                         type=str, default="")
     return parser
 
+def get_immediate_subdirectories(a_dir):
+    return [name for name in os.listdir(a_dir)
+            if os.path.isdir(os.path.join(a_dir, name))]
+
 def get_results_dirs_names():
     if socket.gethostname()=='CELL200973':
         args=[ "-r", ""]
@@ -27,7 +31,10 @@ def get_results_dirs_names():
         root_res_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                                      os.pardir),"results/37099873_jobarray/")
     else:
-        root_res_dir =  os.path.join(parser.root_results_dir, os.pardir)
+        sub_dir = get_immediate_subdirectories(parser.root_results_dir)
+        if "fold_results" in sub_dir:
+            sub_dir.remove('fold_results')
+        root_res_dir =  os.path.join(parser.root_results_dir, sub_dir[0])
     with open(root_res_dir + "/results_directory_names.txt") as f:
         res_dirs =  [line.rstrip() for line in f]
     return root_res_dir, res_dirs
@@ -48,7 +55,7 @@ def plot_losses(val_losses, gathered_res_dir, model_names=None):
 
 def main():
     root_res_dir, res_dirs = get_results_dirs_names()
-    gathered_res_dir = root_res_dir + "/fold_results/"
+    gathered_res_dir = os.path.join(root_res_dir, os.pardir) + "/fold_results/"
     if not os.path.isdir(gathered_res_dir):
         shutil.rmtree(gathered_res_dir)
         os.makedirs(gathered_res_dir)

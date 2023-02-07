@@ -19,6 +19,7 @@ Data summary
 ** TODO Add more validation sites:
 
 In the field data are locations that are not in the Theia production zone:
+- Argentina
 - Poland
 - Ukraine
 - United States

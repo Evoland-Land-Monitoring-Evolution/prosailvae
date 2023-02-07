@@ -75,9 +75,9 @@ def main():
         all_mpiwr[i,:,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/mpiwr.csv", index_col=[0]).values)
         all_mae[i,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/mae.csv", index_col=[0]).values).squeeze()
         all_maer[i,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/maer.csv", index_col=[0]).values).squeeze()
-        all_lat_nll[i,:] = torch.load(dir_name + '/params_nll.pt').squeeze()
-        all_aer_percentiles[i,:,:] = torch.load(dir_name + '/metrics/aer_percentiles.pt')
-        all_are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt')     
+        all_lat_nll[i,:] = torch.load(dir_name + '/params_nll.pt', map_location=torch.device('cpu')).squeeze()
+        all_aer_percentiles[i,:,:] = torch.load(dir_name + '/metrics/aer_percentiles.pt', map_location=torch.device('cpu'))
+        all_are_percentiles[i,:,:] = torch.load(dir_name + '/metrics/are_percentiles.pt', map_location=torch.device('cpu'))     
         pass
     pd.DataFrame(data=all_test_losses.reshape(1,-1).cpu().numpy(), columns=model_names).to_csv(gathered_res_dir+'/all_losses.csv')
     torch.save(all_picp, gathered_res_dir+'/picp.pt')

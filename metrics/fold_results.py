@@ -72,7 +72,7 @@ def main():
         all_test_losses[i,0] = test_loss
         all_picp[i,:,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/picp.csv", index_col=[0]).drop(columns=["alpha"]).values)
         all_mpiw[i,:,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/mpiw.csv", index_col=[0]).drop(columns=["alpha"]).values)
-        all_mpiwr[i,:,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/mpiwr.csv", index_col=[0]).drop(columns=["alpha"]).values)
+        all_mpiwr[i,:,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/mpiwr.csv", index_col=[0]).values)
         all_mae[i,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/mae.csv", index_col=[0]).values).squeeze()
         all_maer[i,:] = torch.from_numpy(pd.read_csv(dir_name + "/metrics/maer.csv", index_col=[0]).values).squeeze()
         all_lat_nll[i,:] = torch.load(dir_name + '/params_nll.pt').squeeze()

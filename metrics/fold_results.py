@@ -5,7 +5,7 @@ import pandas as pd
 import prosailvae
 import torch
 from prosailvae.ProsailSimus import PROSAILVARS
-
+import shutil
 def get_prosailvae_results_gather_parser():
     """
     Creates a new argument parser.
@@ -27,7 +27,7 @@ def get_results_dirs_names():
         root_res_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                                      os.pardir),"results/37099873_jobarray/")
     else:
-        root_res_dir =  os.path.join(parser.root_results_dir, os.pardir)
+        root_res_dir =  parser.root_results_dir
     with open(root_res_dir + "/results_directory_names.txt") as f:
         res_dirs =  [line.rstrip() for line in f]
     return root_res_dir, res_dirs
@@ -50,6 +50,7 @@ def main():
     root_res_dir, res_dirs = get_results_dirs_names()
     gathered_res_dir = root_res_dir + "/fold_results/"
     if not os.path.isdir(gathered_res_dir):
+        shutil.rmtree(gathered_res_dir)
         os.makedirs(gathered_res_dir)
     all_test_losses = torch.zeros((len(res_dirs),1))
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 

@@ -31,8 +31,11 @@ config_dir = "/rnn_configs/"
 if not os.path.isdir(save_dir+config_dir):
     os.makedirs(save_dir+config_dir)
 hidden_layers_width = np.array([2**k for k in range(5,12)])
-rnn_depth = np.arange(1,8)
-rnn_number = np.arange(1,12)
+rnn_depth = np.array([1,2,3,4,6,8])
+rnn_number = np.array([1,2,3,4,6,8,10])
+# hidden_layers_width = np.array([2**k for k in range(5,12)])
+# rnn_depth = np.arange(1,8)
+# rnn_number = np.arange(1,12)
 # hidden_layers_width = np.array([2**k for k in range(5,7)])
 # rnn_depth = np.arange(1,2)
 # rnn_number = np.arange(1,2)

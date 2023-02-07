@@ -59,6 +59,9 @@ def get_parser() -> argparse.ArgumentParser:
 # TODO Read Vector Data
 # TODO Read Raster Data
 # TODO Get point values
+# TODO Is there cases where the overlapping areas
+# between the vector and the raster data are not full
+# think in a strategy to manage this situation
 
 @dataclass
 class Config:
@@ -68,7 +71,13 @@ class Config:
     """
     raster: str
     vector: str
+    vector_field : str
 
+    def __post_init__(self) -> None:
+        if Path(raster).exists:
+            raise Exception(f"The dataset {raster} do not exist!")
+        if Path(vector).exists:
+            raise Exception(f"The dataset {vector} do not exist!")
 
 def read_config_file() -> Config:
     """
@@ -96,15 +105,25 @@ def read_raster(raster_filename : str) -> Any:
     read a raster file in a given extension
     using rasterio functionallyties
     """
+    with rio.open(raster_filename) as raster:
+        array = raster.read()
+        meta_array = raster.meta.copy()
+        raster_extent = [
+            *raster.bouns
+        ]
+
     raise NotImplementedError
 
-def compute_extent():
+def compute_extent(raster_extent : List[rio_coords.bounds],
+                   vector_extent : Any) -> Any:
     """
     Compute the common extension between
     the raster and the vector dataset
     for save resources
     """
     raise NotImplementedError
+
+
 
 def main():
 
@@ -115,10 +134,10 @@ def main():
     vector_dataset_path = config.vector
 
     # read geo data
-    vector_data = gpd.read_file(vector_dataset_path)
+    # vector_data = gpd.read_file(vector_dataset_path)
 
-    with rio.open(raster_dataset_path) as raster:
-        raster_data = raster.read()
+    # with rio.open(raster_dataset_path) as raster:
+    #     raster_data = raster.read()
 
     # extract pixel values
     coord_list = [(x,y) for x,y

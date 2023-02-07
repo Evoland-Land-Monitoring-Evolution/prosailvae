@@ -26,7 +26,8 @@ Following the structure of the ProsailVAE Project. I propose the use of json fil
 #+begin_src json
 {
     "raster_dataset_path" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T30TUM",
-    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/spain"
+    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/spain",
+    "vector_field" : "LAI_AccuPA"
 }
 
 #+end_src
@@ -36,7 +37,8 @@ Following the structure of the ProsailVAE Project. I propose the use of json fil
 #+begin_src json
 {
     "raster_dataset_path" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T31TCJ",
-    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/france"
+    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/france",
+    "vector_field" : "PAIeff – LAI2000, 3 rings"
 }
 
 #+end_src
@@ -47,7 +49,9 @@ Following the structure of the ProsailVAE Project. I propose the use of json fil
 #+begin_src json
 {
     "raster_dataset_path" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T33TWF",
-    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/italy"
+    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/italy",
+    "vector_field" : "LicorLAI"
+
 }
 
 #+end_src

@@ -79,6 +79,13 @@ def read_config_file() -> Config:
     return Config(**config_dict)
 
 
+def vector_data(vector_filename: str) -> gpd.GeoDataFrame:
+    """
+    Read the the vector data
+    """
+
+    raise NotImplementedError
+
 def main():
 
     # read config

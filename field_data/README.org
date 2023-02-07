@@ -12,4 +12,18 @@ Data summary
 | Poland     |        | T33UXT | 01/01/2017 - 29/09/2018 |            |
 
 
+
+
+
+
+** TODO Add more validation sites:
+
+In the field data are locations that are not in the Theia production zone:
+- Poland
+- Ukraine
+- United States
+
+Is necessary modify the download code (mmdc-datacollection) for manage the PEPS MAJA option. To get the S2 data for this locations.
+
+
 *Take into account that the Poland site is not in the theia zones, this imply that the Poland site is not available. I am working in fix this.

@@ -57,8 +57,9 @@ def main():
     root_res_dir, res_dirs = get_results_dirs_names()
     gathered_res_dir = os.path.join(root_res_dir, os.pardir) + "/fold_results/"
     if not os.path.isdir(gathered_res_dir):
-        shutil.rmtree(gathered_res_dir)
         os.makedirs(gathered_res_dir)
+    else:
+        shutil.rmtree(gathered_res_dir)
     all_test_losses = torch.zeros((len(res_dirs),1))
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]

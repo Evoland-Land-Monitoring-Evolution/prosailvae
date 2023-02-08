@@ -74,7 +74,9 @@ def main():
             model_names =  [line.rstrip() for line in f]
     else:
         model_names = [str(i+1) for i in range(len(res_dirs))]
+    
     for i, dir_name in enumerate(res_dirs):
+        print(dir_name)
         if os.path.isdir(dir_name + "/fold_results/"):
             test_loss = pd.read_csv(dir_name + "/fold_results/all_losses.csv", index_col=[0]).values
             all_test_losses[i,:] = torch.from_numpy(test_loss)

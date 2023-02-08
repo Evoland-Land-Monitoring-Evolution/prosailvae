@@ -77,8 +77,8 @@ def main():
         model_names = [str(i+1) for i in range(len(res_dirs))]
     for i, dir_name in enumerate(res_dirs):
         if os.path.isdir(dir_name + "/fold_results/"):
-            test_loss = pd.read_csv(dir_name + "/fold_results/test_loss.csv")["loss_sum"].values
-            all_test_losses[i,0] = test_loss
+            test_loss = pd.read_csv(dir_name + "/fold_results/test_loss.csv", index_col=[0]).values
+            all_test_losses[i,:] = torch.from_numpy(test_loss)
             all_picp[i,:,:,:] = torch.load(dir_name + "/fold_results/picp.csv")
             all_mpiw[i,:,:,:] = torch.load(dir_name + "/fold_results/mpiw.csv")
             all_mpiwr[i,:,:,:] = torch.load(dir_name + "/fold_results/mpiwr.csv")
@@ -88,7 +88,7 @@ def main():
             all_aer_percentiles[i,:,:,:] = torch.load(dir_name + '/fold_results/aer_percentiles.pt')
             all_are_percentiles[i,:,:,:] = torch.load(dir_name + '/fold_results/are_percentiles.pt')     
         pass
-    pd.DataFrame(data=all_test_losses.reshape(1,-1).cpu().numpy(), columns=model_names).to_csv(gathered_res_dir+'/all_losses.csv')
+    
     torch.save(all_picp, gathered_res_dir+'/picp.pt')
     torch.save(all_mpiw, gathered_res_dir+'/mpiw.pt')
     torch.save(all_mpiwr, gathered_res_dir+'/mpiwr.pt')
@@ -98,6 +98,7 @@ def main():
     torch.save(all_lat_nll, gathered_res_dir+'/lat_nll.pt')
     torch.save(all_aer_percentiles, gathered_res_dir+'/aer_percentiles.pt')
     torch.save(all_are_percentiles, gathered_res_dir+'/are_percentiles.pt')
+    pd.DataFrame(data=all_test_losses.cpu().numpy()).to_csv(gathered_res_dir+'/all_losses.csv')
     pass
 
 if __name__ == "__main__":

@@ -14,14 +14,17 @@ https://github.com/ArjanCodes/2022-abtest/blob/main/from_config/main.py
 import argparse
 import json
 from dataclasses import dataclass
+import dateutil
 import logging
+import glob
 import os
 from pathlib import Path
 from typing import Any, List, Union
 
+import pandas as pd
 import geopandas as gpd
 import rasterio as rio
-
+from rasterio import coords as rio_coords # check this
 # configurations
 
 def get_parser() -> argparse.ArgumentParser:
@@ -91,6 +94,26 @@ def read_config_file() -> Config:
     return Config(**config_dict)
 
 
+def raster_time_serie(raster_path : Union[str, Path]
+                      ) -> pd.DataFrame:
+    """
+    Scan the raster folder
+    and create a dataframe with the filenames and
+    the acquisitions date
+    """
+    raster_filenames = [filename for filename in
+                        glob.glob(f"{raster_path}/SENTINEL2*.tif")
+                        if not filename.endswith("old.tif")]
+    ts_df = pd.DataFrame(raster_filenames, columns=["s2_filenames"])
+    # get the acquisition date
+    get_acquisition_date = lambda x : dateutil.parser.parse(
+        x.split("/")[-1].split("_")[1].split("-")[0]
+    )
+    ts_df['s2_date'] = ts_df['s2_filenames'].apply(
+        get_acquisition_date).apply(
+            pd.to_datetime)
+    return ts_df
+
 def read_vector(vector_filename: str) -> gpd.GeoDataFrame:
     """
     Read the the vector data
@@ -112,7 +135,6 @@ def read_raster(raster_filename: str) -> Any:
         meta_array = raster.meta.copy()
 
     return array, meta_array
-    raise NotImplementedError
 
 
 # def compute_extent(raster_extent: List[rio_coords.bounds],

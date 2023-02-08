@@ -8,7 +8,6 @@ get the in situ measurements for validate the results.
 
 Inspired by :
 https://geopandas.org/en/stable/gallery/geopandas_rasterio_sample.html
-https://github.com/ArjanCodes/2022-abtest/blob/main/from_config/main.py
 """
 # imports
 import argparse
@@ -24,8 +23,7 @@ from typing import Any, List, Union
 import pandas as pd
 import geopandas as gpd
 import rasterio as rio
-from rasterio import coords as rio_coords # check this
-# configurations
+
 
 def get_parser() -> argparse.ArgumentParser:
     """
@@ -59,20 +57,13 @@ def get_parser() -> argparse.ArgumentParser:
     return arg_parser
 
 
-# TODO Read Vector Data
-# TODO Read Raster Data
-# TODO Get point values
-# TODO Is there cases where the overlapping areas
-# between the vector and the raster data are not full
-# think in a strategy to manage this situation
-
 @dataclass
 class Config:
     """
     Dataclass for hold the dataset
     filenames
     """
-    site : str
+    site: str
     raster: str
     vector: str
     vector_field : str
@@ -182,12 +173,20 @@ def main():
         vector_data = clean_italy(vector_data)
 
     # iterate over the vector dates
-    for idx, aja in enumerate(aja2):
+    for vector_ds in vector_data.iterrows():
         # get the n closest dates
+        vector_ds_date = dict(vector_ds[1])["Date"]
+        n_closest_dates = compute_time_deltas(
+            vector_ds_date,
+            raster_ts["s2_date"],
+            3
+        )
+        # select the raster img with the closest
+        # acquistions dates
 
-        #df.loc[df.timestamp == nearest(df.timestamp.to_list(),dt)].index[0]
-
-        noloserick = get_pixel_value(
+        # get the pixel values for those how match
+        # the criterium
+        ajs = get_pixel_value(
             tuple()[0],
             {vector_data["geometry"].x,
              vector_data["geometry"].y}

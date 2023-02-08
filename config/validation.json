@@ -1,4 +1,5 @@
 {
+    "site" : "italy",
     "raster" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T33TWF/",
     "vector" : "/home/uz/vinascj/src/prosailvae/field_data/italy/",
     "vector_field" : "LicorLAI"

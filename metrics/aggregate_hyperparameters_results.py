@@ -82,11 +82,11 @@ def main():
         if os.path.isdir(root_res_dir + dir_name + "/fold_results/"):
             test_loss = pd.read_csv(root_res_dir + dir_name + "/fold_results/all_losses.csv", index_col=[0]).values
             all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(-1,1)
-            all_picp[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/picp.csv")
-            all_mpiw[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.csv")
-            all_mpiwr[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.csv")
-            all_mae[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mae.csv").squeeze()
-            all_maer[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/maer.csv").squeeze()
+            all_picp[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/picp.pt")
+            all_mpiw[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.pt")
+            all_mpiwr[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.pt")
+            all_mae[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mae.pt").squeeze()
+            all_maer[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt").squeeze()
             all_lat_nll[i,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/params_nll.pt').squeeze()
             all_aer_percentiles[i,:,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/aer_percentiles.pt')
             all_are_percentiles[i,:,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt')     

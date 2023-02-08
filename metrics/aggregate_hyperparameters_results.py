@@ -87,7 +87,7 @@ def main():
             all_mpiwr[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.pt")
             all_mae[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mae.pt").squeeze()
             all_maer[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt").squeeze()
-            all_lat_nll[i,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/params_nll.pt').squeeze()
+            all_lat_nll[i,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/lat_nll.pt').squeeze()
             all_aer_percentiles[i,:,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/aer_percentiles.pt')
             all_are_percentiles[i,:,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt')     
         pass

@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Union
 
 import geopandas as gpd
 import rasterio as rio
@@ -74,10 +74,11 @@ class Config:
     vector_field : str
 
     def __post_init__(self) -> None:
-        if Path(raster).exists:
-            raise Exception(f"The dataset {raster} do not exist!")
-        if Path(vector).exists:
-            raise Exception(f"The dataset {vector} do not exist!")
+        if Path(self.raster).exists:
+            raise Exception(f"The dataset {self.raster} do not exist!")
+        if Path(self.vector).exists:
+            raise Exception(f"The dataset {self.vector} do not exist!")
+
 
 def read_config_file() -> Config:
     """
@@ -95,12 +96,13 @@ def read_vector(vector_filename: str) -> gpd.GeoDataFrame:
     Read the the vector data
     """
     # read geo data
-    logging.info(f"reading vector file : {vector_filename}")
+    logging.info("reading vector file : %s ", vector_filename)
     vector_data = gpd.read_file(vector_filename)
 
     return vector_data
 
-def read_raster(raster_filename : str) -> Any:
+
+def read_raster(raster_filename: str) -> Any:
     """
     read a raster file in a given extension
     using rasterio functionallyties
@@ -108,44 +110,48 @@ def read_raster(raster_filename : str) -> Any:
     with rio.open(raster_filename) as raster:
         array = raster.read()
         meta_array = raster.meta.copy()
-        raster_extent = [
-            *raster.bouns
-        ]
 
+    return array, meta_array
     raise NotImplementedError
 
-def compute_extent(raster_extent : List[rio_coords.bounds],
-                   vector_extent : Any) -> Any:
-    """
-    Compute the common extension between
-    the raster and the vector dataset
-    for save resources
-    """
-    raise NotImplementedError
 
+# def compute_extent(raster_extent: List[rio_coords.bounds],
+#                    vector_extent: Any) -> Any:
+#     """
+#     Compute the common extension between
+#     the raster and the vector dataset
+#     for save resources
+#     """
+#     raise NotImplementedError
 
 
 def main():
-
+    """
+    Entry point
+    """
     # read config
     config = read_config_file()
 
     raster_dataset_path = config.raster
     vector_dataset_path = config.vector
 
+    # get the raster time serie
+    raster_ts = raster_time_serie(raster_dataset_path)
+
     # read geo data
-    # vector_data = gpd.read_file(vector_dataset_path)
+    vector_data = read_vector(vector_dataset_path)
 
-    # with rio.open(raster_dataset_path) as raster:
-    #     raster_data = raster.read()
 
-    # extract pixel values
-    coord_list = [(x,y) for x,y
-                  in zip(vector_data['geometry'].x,
-                         vector_data['geometry'].y)]
 
-    vector_data['value'] = [x for x in raster_data.sample(coord_list)]
-    vector_data.head()
+    # raster_data = read_raster(raster_dataset_path)
+
+    # # extract pixel values
+    # coord_list = [(x,y) for x,y
+    #               in zip(vector_data['geometry'].x,
+    #                      vector_data['geometry'].y)]
+
+    # vector_data['value'] = [x for x in raster_data.sample(coord_list)]
+    # vector_data.head()
 
 
 if __name__ == "__main__":

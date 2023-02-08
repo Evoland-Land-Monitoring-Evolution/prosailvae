@@ -154,14 +154,11 @@ def main():
     # read config
     config = read_config_file()
 
-    raster_dataset_path = config.raster
-    vector_dataset_path = config.vector
-
     # get the raster time serie
-    raster_ts = raster_time_serie(raster_dataset_path)
+    raster_ts = raster_time_serie(config.raster)
 
     # read geo data
-    vector_data = read_vector(vector_dataset_path)
+    vector_data = read_vector(config.vector)
 
 
 
@@ -202,3 +199,28 @@ if __name__ == "__main__":
     # call main
     main()
     logging.info("Export finish!")
+
+
+
+
+
+# def clean_spain(vector_ds: gpd.GeoDataFrame
+#                 ) -> gpd.GeoDataFrame:
+#     """
+#     Manage the clean of Spain data
+#     """
+#     # time columns  'f_datetime', 'Time' 'Date' -> mix f_datetime + Date
+
+#     raise NotImplementedError
+
+
+
+
+# def compute_extent(raster_extent: List[rio_coords.bounds],
+#                    vector_extent: Any) -> Any:
+#     """
+#     Compute the common extension between
+#     the raster and the vector dataset
+#     for save resources
+#     """
+#     raise NotImplementedError

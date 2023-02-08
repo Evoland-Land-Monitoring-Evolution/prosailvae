@@ -77,9 +77,9 @@ class Config:
     vector_field : str
 
     def __post_init__(self) -> None:
-        if Path(self.raster).exists:
+        if not Path(self.raster).exists:
             raise Exception(f"The dataset {self.raster} do not exist!")
-        if Path(self.vector).exists:
+        if not Path(self.vector).exists:
             raise Exception(f"The dataset {self.vector} do not exist!")
 
 

@@ -72,6 +72,7 @@ class Config:
     Dataclass for hold the dataset
     filenames
     """
+    site : str
     raster: str
     vector: str
     vector_field : str
@@ -125,26 +126,42 @@ def read_vector(vector_filename: str) -> gpd.GeoDataFrame:
     return vector_data
 
 
-def read_raster(raster_filename: str) -> Any:
+def get_pixel_value(raster_filename: str,
+                    pixel_coords: Tuple[float,float]) -> List[float]:
     """
     read a raster file in a given extension
     using rasterio functionallyties
     """
     with rio.open(raster_filename) as raster:
-        array = raster.read()
-        meta_array = raster.meta.copy()
-
-    return array, meta_array
+        pixel_values = raster.sample(pixel_coords)
+    return pixel_values
 
 
-# def compute_extent(raster_extent: List[rio_coords.bounds],
-#                    vector_extent: Any) -> Any:
-#     """
-#     Compute the common extension between
-#     the raster and the vector dataset
-#     for save resources
-#     """
-#     raise NotImplementedError
+def clean_italy(vector_ds: gpd.GeoDataFrame
+                ) -> gpd.GeoDataFrame:
+    """
+    Normalize the dates
+    """
+    normalize_italy_date = lambda x : dateutil.parser.parse(x)
+    vector_ds['Date'] = vector_ds['Date'].apply(
+        normalize_italy_date).apply(
+            pd.to_datetime)
+
+    return vector_ds
+
+
+def compute_time_deltas(vector_timestamp: Any,
+                        raster_timestamp: List[Any],
+                        nb_acquisitions: int,
+                        ) -> List[Any]:
+    """
+    Compute the time difference between the field
+    campaing and the satellite acquisition
+    """
+    time_delta = [abs(vector_timestamp - raster_ts)
+                  for raster_ts in raster_timestamp]
+    return time_delta.sort()[nb_acquisitions]
+
 
 
 def main():
@@ -158,8 +175,25 @@ def main():
     raster_ts = raster_time_serie(config.raster)
 
     # read geo data
-    vector_data = read_vector(config.vector)
+    vector_data = read_vector(*glob.glob(f"{config.vector}/*.gpkg"))
 
+    # clean the data
+    if config.site == "italy":
+        vector_data = clean_italy(vector_data)
+
+    # iterate over the vector dates
+    for idx, aja in enumerate(aja2):
+        # get the n closest dates
+
+        #df.loc[df.timestamp == nearest(df.timestamp.to_list(),dt)].index[0]
+
+        noloserick = get_pixel_value(
+            tuple()[0],
+            {vector_data["geometry"].x,
+             vector_data["geometry"].y}
+        )
+
+        #df.loc[df.timestamp == nearest(df.timestamp.to_list(),dt)].index[0]
 
 
     # raster_data = read_raster(raster_dataset_path)
@@ -201,6 +235,13 @@ if __name__ == "__main__":
     logging.info("Export finish!")
 
 
+
+
+# def nearest(items, pivot):
+#     return pd.to_datetime(min(
+#         [i for i in items if i <= pivot],
+#         key=lambda x: abs(x - pivot)
+#     ))
 
 
 

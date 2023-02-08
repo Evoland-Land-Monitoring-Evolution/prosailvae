@@ -93,7 +93,7 @@ def main():
             if len(test_loss) < n_folds:
                 print(f"WARNING : not all folds were available in experiment {dir_name}")
                 diff_size = n_folds-len(test_loss)
-                test_loss = np.concatenate([test_loss, np.zeros((diff_size))])
+                test_loss = np.concatenate([test_loss, VALUE_ERROR * np.ones((diff_size))])
                 picp = torch.cat((picp, VALUE_ERROR * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
                 mpiw = torch.cat((mpiw, VALUE_ERROR * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
                 mpiwr = torch.cat((mpiwr, VALUE_ERROR * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)

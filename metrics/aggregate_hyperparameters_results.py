@@ -80,7 +80,18 @@ def main():
     VALUE_ERROR = 100000
     for i, dir_name in enumerate(res_dirs):
         print(dir_name)
-        if os.path.isdir(root_res_dir + dir_name + "/fold_results/"):
+        if not os.path.isdir(root_res_dir + dir_name + "/fold_results/"):
+            print(f"WARNING : no folds were available in experiment {dir_name}")
+            test_loss = VALUE_ERROR * np.ones((n_folds))
+            picp = VALUE_ERROR * torch.ones(n_folds, len(alpha_pi), len(PROSAILVARS))
+            mpiw = VALUE_ERROR * torch.ones(n_folds, len(alpha_pi), len(PROSAILVARS))
+            mpiwr = VALUE_ERROR * torch.ones(n_folds, len(alpha_pi), len(PROSAILVARS))
+            mae = VALUE_ERROR * torch.ones(n_folds, len(PROSAILVARS))
+            maer = VALUE_ERROR * torch.ones(n_folds, len(PROSAILVARS))
+            lat_nll = VALUE_ERROR * torch.ones(n_folds, len(PROSAILVARS))
+            aer_percentiles = VALUE_ERROR * torch.ones(n_folds, 5, len(PROSAILVARS))
+            are_percentiles = VALUE_ERROR * torch.ones(n_folds, 5, len(PROSAILVARS))
+        else:  
             test_loss = pd.read_csv(root_res_dir + dir_name + "/fold_results/all_losses.csv", index_col=[0]).values.reshape(-1)
             picp = torch.load(root_res_dir + dir_name + "/fold_results/picp.pt")
             mpiw = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.pt")
@@ -89,18 +100,9 @@ def main():
             maer = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt")
             lat_nll = torch.load(root_res_dir + dir_name + '/fold_results/lat_nll.pt')
             aer_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/aer_percentiles.pt')
-            are_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt')   
-            if len(test_loss)==0:
-                test_loss = VALUE_ERROR * np.ones((n_folds))
-                picp = VALUE_ERROR * torch.ones(n_folds, len(alpha_pi), len(PROSAILVARS))
-                mpiw = VALUE_ERROR * torch.ones(n_folds, len(alpha_pi), len(PROSAILVARS))
-                mpiwr = VALUE_ERROR * torch.ones(n_folds, len(alpha_pi), len(PROSAILVARS))
-                mae = VALUE_ERROR * torch.ones(n_folds, len(PROSAILVARS))
-                maer = VALUE_ERROR * torch.ones(n_folds, len(PROSAILVARS))
-                lat_nll = VALUE_ERROR * torch.ones(n_folds, len(PROSAILVARS))
-                aer_percentiles = VALUE_ERROR * torch.ones(n_folds, 5, len(PROSAILVARS))
-                are_percentiles = VALUE_ERROR * torch.ones(n_folds, 5, len(PROSAILVARS))
-            elif len(test_loss) < n_folds:
+            are_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt') 
+
+            if len(test_loss) < n_folds:
                 print(f"WARNING : not all folds were available in experiment {dir_name}")
                 diff_size = n_folds-len(test_loss)
                 test_loss = np.concatenate([test_loss, VALUE_ERROR * np.ones((diff_size))])

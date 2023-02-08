@@ -97,7 +97,7 @@ def main():
     torch.save(all_lat_nll, gathered_res_dir+'/lat_nll.pt')
     torch.save(all_aer_percentiles, gathered_res_dir+'/aer_percentiles.pt')
     torch.save(all_are_percentiles, gathered_res_dir+'/are_percentiles.pt')
-    pd.DataFrame(data=all_test_losses.cpu().numpy()).to_csv(gathered_res_dir+'/all_losses.csv')
+    pd.DataFrame(data=all_test_losses.cpu().squeeze().numpy()).to_csv(gathered_res_dir+'/all_losses.csv')
     pass
 
 if __name__ == "__main__":

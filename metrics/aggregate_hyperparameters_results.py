@@ -60,7 +60,7 @@ def main():
     root_res_dir, res_dirs = get_results_dirs_names()
     gathered_res_dir = root_res_dir + "/agregated_results/"
     os.makedirs(gathered_res_dir)
-    all_test_losses = torch.zeros((len(res_dirs), n_folds, 1))
+    all_test_losses = torch.zeros((len(res_dirs), n_folds))
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
     all_aer_percentiles = torch.zeros((len(res_dirs), n_folds, 5, len(PROSAILVARS)))
@@ -81,15 +81,36 @@ def main():
         print(dir_name)
         if os.path.isdir(root_res_dir + dir_name + "/fold_results/"):
             test_loss = pd.read_csv(root_res_dir + dir_name + "/fold_results/all_losses.csv", index_col=[0]).values
-            all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(-1,1)
-            all_picp[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/picp.pt")
-            all_mpiw[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.pt")
-            all_mpiwr[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.pt")
-            all_mae[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mae.pt").squeeze()
-            all_maer[i,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt").squeeze()
-            all_lat_nll[i,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/lat_nll.pt').squeeze()
-            all_aer_percentiles[i,:,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/aer_percentiles.pt')
-            all_are_percentiles[i,:,:,:] = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt')     
+            picp = torch.load(root_res_dir + dir_name + "/fold_results/picp.pt")
+            mpiw = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.pt")
+            mpiwr = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.pt")
+            mae = torch.load(root_res_dir + dir_name + "/fold_results/mae.pt").squeeze()
+            maer = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt").squeeze()
+            lat_nll = torch.load(root_res_dir + dir_name + '/fold_results/lat_nll.pt').squeeze()
+            aer_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/aer_percentiles.pt')
+            are_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt')     
+            if len(test_loss) < n_folds:
+                print(f"WARNING : not all folds were available in experiment {dir_name}")
+                diff_size = n_folds-len(test_loss)
+                test_loss = np.concatenate([test_loss, np.zeros((diff_size))])
+                picp = torch.cat((picp, torch.nan * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
+                mpiw = torch.cat((mpiw, torch.nan * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
+                mpiwr = torch.cat((mpiwr, torch.nan * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
+                mae = torch.cat((mae, torch.nan * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
+                maer = torch.cat((maer, torch.nan * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
+                lat_nll = torch.cat((lat_nll, torch.nan * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
+                aer_percentiles = torch.cat((aer_percentiles, torch.nan * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
+                are_percentiles = torch.cat((are_percentiles, torch.nan * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
+
+            all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(1,-1)
+            all_picp[i,:,:,:] = picp
+            all_mpiw[i,:,:,:] = mpiw
+            all_mpiwr[i,:,:,:] = mpiwr
+            all_mae[i,:,:] = mae
+            all_maer[i,:,:] = maer
+            all_lat_nll[i,:,:] = lat_nll
+            all_aer_percentiles[i,:,:,:] = aer_percentiles
+            all_are_percentiles[i,:,:,:] = are_percentiles
         pass
     
     torch.save(all_picp, gathered_res_dir+'/picp.pt')

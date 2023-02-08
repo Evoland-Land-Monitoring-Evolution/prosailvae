@@ -115,15 +115,15 @@ def main():
                 aer_percentiles = torch.cat((aer_percentiles, VALUE_ERROR * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
                 are_percentiles = torch.cat((are_percentiles, VALUE_ERROR * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
 
-            all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(1,-1)
-            all_picp[i,:,:,:] = picp
-            all_mpiw[i,:,:,:] = mpiw
-            all_mpiwr[i,:,:,:] = mpiwr
-            all_mae[i,:,:] = mae
-            all_maer[i,:,:] = maer
-            all_lat_nll[i,:,:] = lat_nll
-            all_aer_percentiles[i,:,:,:] = aer_percentiles
-            all_are_percentiles[i,:,:,:] = are_percentiles
+        all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(1,-1)
+        all_picp[i,:,:,:] = picp
+        all_mpiw[i,:,:,:] = mpiw
+        all_mpiwr[i,:,:,:] = mpiwr
+        all_mae[i,:,:] = mae
+        all_maer[i,:,:] = maer
+        all_lat_nll[i,:,:] = lat_nll
+        all_aer_percentiles[i,:,:,:] = aer_percentiles
+        all_are_percentiles[i,:,:,:] = are_percentiles
         pass
     
     torch.save(all_picp, gathered_res_dir+'/picp.pt')

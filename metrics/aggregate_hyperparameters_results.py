@@ -85,9 +85,9 @@ def main():
             picp = torch.load(root_res_dir + dir_name + "/fold_results/picp.pt")
             mpiw = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.pt")
             mpiwr = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.pt")
-            mae = torch.load(root_res_dir + dir_name + "/fold_results/mae.pt").squeeze()
-            maer = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt").squeeze()
-            lat_nll = torch.load(root_res_dir + dir_name + '/fold_results/lat_nll.pt').squeeze()
+            mae = torch.load(root_res_dir + dir_name + "/fold_results/mae.pt")
+            maer = torch.load(root_res_dir + dir_name + "/fold_results/maer.pt")
+            lat_nll = torch.load(root_res_dir + dir_name + '/fold_results/lat_nll.pt')
             aer_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/aer_percentiles.pt')
             are_percentiles = torch.load(root_res_dir + dir_name + '/fold_results/are_percentiles.pt')     
             if len(test_loss) < n_folds:

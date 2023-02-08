@@ -77,7 +77,7 @@ def main():
             model_names =  [line.rstrip() for line in f]
     else:
         model_names = [str(i+1) for i in range(len(res_dirs))]
-    
+    VALUE_ERROR = 100000
     for i, dir_name in enumerate(res_dirs):
         print(dir_name)
         if os.path.isdir(root_res_dir + dir_name + "/fold_results/"):
@@ -94,14 +94,14 @@ def main():
                 print(f"WARNING : not all folds were available in experiment {dir_name}")
                 diff_size = n_folds-len(test_loss)
                 test_loss = np.concatenate([test_loss, np.zeros((diff_size))])
-                picp = torch.cat((picp, torch.nan * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
-                mpiw = torch.cat((mpiw, torch.nan * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
-                mpiwr = torch.cat((mpiwr, torch.nan * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
-                mae = torch.cat((mae, torch.nan * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
-                maer = torch.cat((maer, torch.nan * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
-                lat_nll = torch.cat((lat_nll, torch.nan * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
-                aer_percentiles = torch.cat((aer_percentiles, torch.nan * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
-                are_percentiles = torch.cat((are_percentiles, torch.nan * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
+                picp = torch.cat((picp, VALUE_ERROR * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
+                mpiw = torch.cat((mpiw, VALUE_ERROR * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
+                mpiwr = torch.cat((mpiwr, VALUE_ERROR * torch.ones(diff_size, len(alpha_pi), len(PROSAILVARS))), dim=0)
+                mae = torch.cat((mae, VALUE_ERROR * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
+                maer = torch.cat((maer, VALUE_ERROR * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
+                lat_nll = torch.cat((lat_nll, VALUE_ERROR * torch.ones(diff_size, len(PROSAILVARS))), dim=0)
+                aer_percentiles = torch.cat((aer_percentiles, VALUE_ERROR * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
+                are_percentiles = torch.cat((are_percentiles, VALUE_ERROR * torch.ones(diff_size, 5, len(PROSAILVARS))), dim=0)
 
             all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(1,-1)
             all_picp[i,:,:,:] = picp

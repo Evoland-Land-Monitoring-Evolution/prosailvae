@@ -81,7 +81,7 @@ def main():
         print(dir_name)
         if os.path.isdir(root_res_dir + dir_name + "/fold_results/"):
             test_loss = pd.read_csv(root_res_dir + dir_name + "/fold_results/all_losses.csv", index_col=[0]).values
-            all_test_losses[i,:] = torch.from_numpy(test_loss)
+            all_test_losses[i,:] = torch.from_numpy(test_loss).reshape(-1,1)
             all_picp[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/picp.csv")
             all_mpiw[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiw.csv")
             all_mpiwr[i,:,:,:] = torch.load(root_res_dir + dir_name + "/fold_results/mpiwr.csv")

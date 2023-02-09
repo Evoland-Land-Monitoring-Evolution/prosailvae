@@ -252,7 +252,7 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     fold_res_dirs = get_immediate_subdirectories(res_dir)
     if os.path.isfile(res_dir+"/results_directory_names.txt"):
-        shutil.rmtree(res_dir+"/results_directory_names.txt")
+        os.remove(res_dir+"/results_directory_names.txt")
     for fold_res_dir in fold_res_dirs:
         params, params_sup_kl_model = setupResults(fold_res_dir)
         try:

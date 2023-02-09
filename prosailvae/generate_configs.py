@@ -17,7 +17,7 @@ config = {      "batch_size": 4096,
                 "beta_index": 0,
                 "dataset_file_prefix": "full_",
                 "simulated_dataset": True,
-                "lr_recompute": 50,
+                "lr_recompute": 201,
                 "loss_type": "diag_nll",
                 "apply_norm_rec": False,
                 "exp_lr_decay": 0.97,
@@ -27,19 +27,20 @@ config = {      "batch_size": 4096,
                 "rnn_number":5
 }
 save_dir =  "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config"
-config_dir = "/rnn_configs/"
+config_dir = "/rnn_configs_3/"
 if not os.path.isdir(save_dir+config_dir):
     os.makedirs(save_dir+config_dir)
 hidden_layers_width = np.array([2**k for k in range(5,12)])
-rnn_depth = np.array([1,2,3])
-rnn_number = np.array([4,6,8,10])
+rnn_depth = np.array([1,2,3,4,6,8])
+rnn_number = np.array([1,2,3,4,6,8,10])
+print(len(hidden_layers_width) * len(rnn_depth) * len(rnn_number))
 # hidden_layers_width = np.array([2**k for k in range(5,12)])
 # rnn_depth = np.arange(1,8)
 # rnn_number = np.arange(1,12)
 # hidden_layers_width = np.array([2**k for k in range(5,7)])
 # rnn_depth = np.arange(1,2)
 # rnn_number = np.arange(1,2)
-
+# print(len(hidden_layers_width) * len(rnn_depth) * len(rnn_number))
 list_name_rel_path = []
 configs_array = np.zeros((len(hidden_layers_width), len(rnn_depth), len(rnn_number),4))
 configs_idx = np.zeros((len(hidden_layers_width), len(rnn_depth), len(rnn_number)))

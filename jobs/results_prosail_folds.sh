@@ -10,7 +10,7 @@ export SRCDIR=/home/uz/zerahy/projects/
 export VAEDIR=${SRCDIR}/prosailvae/prosailvae/
 
 
-python ${VAEDIR}/prosailvae/results_batch.py -d ${FDATADIR} -r $FOUTDIR -rsr $FRSR_DIR -t $FTENSOR_DIR 
+python ${VAEDIR}/results/results_batch.py -d ${FDATADIR} -r $FOUTDIR -rsr $FRSR_DIR -t $FTENSOR_DIR 
 conda deactivate
 
 

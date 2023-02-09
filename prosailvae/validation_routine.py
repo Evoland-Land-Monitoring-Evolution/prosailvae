@@ -24,7 +24,6 @@ import pandas as pd
 import geopandas as gpd
 import rasterio as rio
 
-os.chdir("/home/uz/vinascj/src/prosailvae/prosailvae")
 
 def get_parser() -> argparse.ArgumentParser:
     """
@@ -132,7 +131,7 @@ def get_pixel_value(raster_filename: str,
                   x,y in
                   zip(pixel_coords['geometry'].x,
                       pixel_coords['geometry'].y)]
-
+    # extract pixel values
     with rio.open(raster_filename) as raster:
         pixel_values = [coords
                         for coords in raster.sample(coord_list)]
@@ -191,19 +190,19 @@ def main():
     aux_names = ['sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
                  'sun_zen', 'sun_az', 'even_zen', 'odd_zen', 'even_az', 'odd_az']
     col_names.extend(aux_names)
-    final_df = []
+    values_list = []
 
     # get the pandas groups by date
-    gb_date = vector_data.groupby("Date")
-    gb_date_key = next(iter(gb_date.groups.keys()))
-    gb_date.get_group(gb_date_key)
+    #gb_date = vector_data.groupby("Date")
+    #gb_date_key = next(iter(gb_date.groups.keys()))
+    #gb_date.get_group(gb_date_key)
 
     # iterate over the vector dates
-    for vector_ds in vector_data.iterrows():
+    for vector_ts, vector_ds in vector_data.groupby("Date"):
         # get the n closest dates
-        vector_ds_date = dict(vector_ds[1])["Date"]
+        #vector_ds_date = dict(vector_ds[1])["Date"]
         time_delta = compute_time_deltas(
-            vector_ds_date,
+            vector_ts,
             raster_ts["s2_date"]
         )
         raster_ts["time_delta"] = time_delta
@@ -215,10 +214,20 @@ def main():
             # the criterium
             s2_pix_values = get_pixel_value(
                 n_nearest[1]["s2_filenames"],
-                gb_date.get_group(gb_date_key),
+                vector_ds,
                 col_names
             )
-            final_df.append(s2_pix_values)
+            # append field and raster date
+            s2_pix_values["s2_date"] = [n_nearest[1]["s2_date"] for
+                                        i in range(len(s2_pix_values))]
+            s2_pix_values["field_date"] = [vector_ts for
+                                           i in range(len(s2_pix_values))]
+            values_list.append(s2_pix_values)
+    # get the final value
+    final_df = pd.concat(values_list)
+    # export file
+    final_df.to_csv(f"{args.export_path}/{config.site}.csv",
+                    index=False)
 
 
 if __name__ == "__main__":
@@ -244,6 +253,9 @@ if __name__ == "__main__":
         format="%(asctime)s :: %(levelname)s :: %(message)s",
     )
 
+
+    ### Entry Point
+    os.chdir("/home/uz/vinascj/src/prosailvae/prosailvae")
     # call main
-    main()
+    main(args)
     logging.info("Export finish!")

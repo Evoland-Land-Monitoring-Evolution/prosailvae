@@ -120,15 +120,26 @@ def read_vector(vector_filename: str) -> gpd.GeoDataFrame:
 
 
 def get_pixel_value(raster_filename: str,
-                    pixel_coords: Tuple[float,float]) -> List[float]:
+                    pixel_coords: gpd.GeoDataFrame,
+                    colnames: List[str],
+                    ) -> List[float]:
     """
     read a raster file in a given extension
     using rasterio functionallyties
     """
+    # get coordinates
+    coord_list = [(x,y) for
+                  x,y in
+                  zip(pixel_coords['geometry'].x,
+                      pixel_coords['geometry'].y)]
+
     with rio.open(raster_filename) as raster:
-        pixel_values = [raster.sample(coords)
-                        for coords in  pixel_coords]
-    return pixel_values
+        pixel_values = [coords
+                        for coords in raster.sample(coord_list)]
+    # DataFrame for store the values
+    out_df = pd.DataFrame(pixel_values, columns=colnames)
+
+    return out_df
 
 
 def clean_italy(vector_ds: gpd.GeoDataFrame
@@ -146,7 +157,6 @@ def clean_italy(vector_ds: gpd.GeoDataFrame
 
 def compute_time_deltas(vector_timestamp: Any,
                         raster_timestamp: List[Any],
-                        nb_acquisitions: int,
                         ) -> List[Any]:
     """
     Compute the time difference between the field
@@ -178,10 +188,15 @@ def main():
     # init export dataframe
     col_names = ["B"+str(i+1) for i in range(10)]
 
-    aux_names = [ 'sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
+    aux_names = ['sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
                  'sun_zen', 'sun_az', 'even_zen', 'odd_zen', 'even_az', 'odd_az']
-    band_names.extend(aux_names)
-    train_df = pd.DataFrame(columns=col_names)
+    col_names.extend(aux_names)
+    final_df = []
+
+    # get the pandas groups by date
+    gb_date = vector_data.groupby("Date")
+    gb_date_key = next(iter(gb_date.groups.keys()))
+    gb_date.get_group(gb_date_key)
 
     # iterate over the vector dates
     for vector_ds in vector_data.iterrows():
@@ -193,28 +208,17 @@ def main():
         )
         raster_ts["time_delta"] = time_delta
         n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
-        # # select the raster img with the closest
+        # select the raster img with the closest
         # acquistions dates
         for idx, n_nearest in enumerate(n_closest.iterrows()):
             # get the pixel values for those how match
             # the criterium
             s2_pix_values = get_pixel_value(
                 n_nearest[1]["s2_filenames"],
-                zip([vector_ds[1]["geometry"].x,
-                     vector_ds[1]["geometry"].y])
+                gb_date.get_group(gb_date_key),
+                col_names
             )
-
-
-
-    # raster_data = read_raster(raster_dataset_path)
-
-    # # extract pixel values
-    # coord_list = [(x,y) for x,y
-    #               in zip(vector_data['geometry'].x,
-    #                      vector_data['geometry'].y)]
-
-    # vector_data['value'] = [x for x in raster_data.sample(coord_list)]
-    # vector_data.head()
+            final_df.append(s2_pix_values)
 
 
 if __name__ == "__main__":
@@ -243,36 +247,3 @@ if __name__ == "__main__":
     # call main
     main()
     logging.info("Export finish!")
-
-
-
-
-# def nearest(items, pivot):
-#     return pd.to_datetime(min(
-#         [i for i in items if i <= pivot],
-#         key=lambda x: abs(x - pivot)
-#     ))
-
-
-#df.loc[df.timestamp == nearest(df.timestamp.to_list(),dt)].index[0]
-
-# def clean_spain(vector_ds: gpd.GeoDataFrame
-#                 ) -> gpd.GeoDataFrame:
-#     """
-#     Manage the clean of Spain data
-#     """
-#     # time columns  'f_datetime', 'Time' 'Date' -> mix f_datetime + Date
-
-#     raise NotImplementedError
-
-
-
-
-# def compute_extent(raster_extent: List[rio_coords.bounds],
-#                    vector_extent: Any) -> Any:
-#     """
-#     Compute the common extension between
-#     the raster and the vector dataset
-#     for save resources
-#     """
-#     raise NotImplementedError

@@ -16,4 +16,4 @@ export VAEDIR=${SRCDIR}/prosailvae/prosailvae
 
 python ${VAEDIR}/validation_routine.py \
     -input_config ~/src/prosailvae/config/validation.json \
-    --export_path /work/scratch/$USER/ \
+    --export_path /work/scratch/${USER}/ \

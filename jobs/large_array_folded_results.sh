@@ -16,7 +16,7 @@ export TENSOR_DIR=/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/t
 export NUM_WORKERS=12
 
 cd /work/scratch/zerahy/temp/
-qsub -v FRSR_DIR=$RSR_DIR,FDATADIR=$DATADIR,FOUTDIR=$OUTDIR,FTENSOR_DIR=$TENSOR_DIR ${VAEDIR}/jobs/train_prosail_folds.sh
+qsub -v FRSR_DIR=$RSR_DIR,FDATADIR=$DATADIR,FOUTDIR=$OUTDIR,FTENSOR_DIR=$TENSOR_DIR ${VAEDIR}/jobs/results_prosail_folds.sh
 
 
 

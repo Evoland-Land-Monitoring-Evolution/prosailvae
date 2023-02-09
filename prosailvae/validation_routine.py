@@ -18,12 +18,13 @@ import logging
 import glob
 import os
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Union, Tuple, List
 
 import pandas as pd
 import geopandas as gpd
 import rasterio as rio
 
+os.chdir("/home/uz/vinascj/src/prosailvae/prosailvae")
 
 def get_parser() -> argparse.ArgumentParser:
     """
@@ -106,6 +107,7 @@ def raster_time_serie(raster_path : Union[str, Path]
             pd.to_datetime)
     return ts_df
 
+
 def read_vector(vector_filename: str) -> gpd.GeoDataFrame:
     """
     Read the the vector data
@@ -124,7 +126,8 @@ def get_pixel_value(raster_filename: str,
     using rasterio functionallyties
     """
     with rio.open(raster_filename) as raster:
-        pixel_values = raster.sample(pixel_coords)
+        pixel_values = [raster.sample(coords)
+                        for coords in  pixel_coords]
     return pixel_values
 
 
@@ -150,9 +153,8 @@ def compute_time_deltas(vector_timestamp: Any,
     campaing and the satellite acquisition
     """
     time_delta = [abs(vector_timestamp - raster_ts)
-                  for raster_ts in raster_timestamp]
-    return time_delta.sort()[nb_acquisitions]
-
+                  for raster_ts in raster_timestamp.to_list()]
+    return time_delta
 
 
 def main():
@@ -172,27 +174,36 @@ def main():
     if config.site == "italy":
         vector_data = clean_italy(vector_data)
 
+
+    # init export dataframe
+    col_names = ["B"+str(i+1) for i in range(10)]
+
+    aux_names = [ 'sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
+                 'sun_zen', 'sun_az', 'even_zen', 'odd_zen', 'even_az', 'odd_az']
+    band_names.extend(aux_names)
+    train_df = pd.DataFrame(columns=col_names)
+
     # iterate over the vector dates
     for vector_ds in vector_data.iterrows():
         # get the n closest dates
         vector_ds_date = dict(vector_ds[1])["Date"]
-        n_closest_dates = compute_time_deltas(
+        time_delta = compute_time_deltas(
             vector_ds_date,
-            raster_ts["s2_date"],
-            3
+            raster_ts["s2_date"]
         )
-        # select the raster img with the closest
+        raster_ts["time_delta"] = time_delta
+        n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
+        # # select the raster img with the closest
         # acquistions dates
+        for idx, n_nearest in enumerate(n_closest.iterrows()):
+            # get the pixel values for those how match
+            # the criterium
+            s2_pix_values = get_pixel_value(
+                n_nearest[1]["s2_filenames"],
+                zip([vector_ds[1]["geometry"].x,
+                     vector_ds[1]["geometry"].y])
+            )
 
-        # get the pixel values for those how match
-        # the criterium
-        ajs = get_pixel_value(
-            tuple()[0],
-            {vector_data["geometry"].x,
-             vector_data["geometry"].y}
-        )
-
-        #df.loc[df.timestamp == nearest(df.timestamp.to_list(),dt)].index[0]
 
 
     # raster_data = read_raster(raster_dataset_path)
@@ -243,6 +254,7 @@ if __name__ == "__main__":
 #     ))
 
 
+#df.loc[df.timestamp == nearest(df.timestamp.to_list(),dt)].index[0]
 
 # def clean_spain(vector_ds: gpd.GeoDataFrame
 #                 ) -> gpd.GeoDataFrame:

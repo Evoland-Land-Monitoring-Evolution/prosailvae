@@ -222,6 +222,50 @@ def clean_italy(vector_ds: gpd.GeoDataFrame
 
     return vector_ds
 
+
+def get_pixels(n_nearest, vector_ds, col_names):
+    """
+    Extract the pixel values and append the field values
+    """
+    # the criterium
+    s2_pix_values = get_pixel_value(
+        n_nearest: Any,
+        vector_ds: gpd.GeoDataFrame,
+        col_names: List[str]
+    )
+    # append field and raster date
+    s2_pix_values["s2_filenames"] = [n_nearest[1]["s2_filenames"] for
+                                i in range(len(s2_pix_values))]
+    s2_pix_values["time_delta"] = [n_nearest[1]["time_delta"] for
+                                i in range(len(s2_pix_values))]
+    s2_pix_values["s2_date"] = [n_nearest[1]["s2_date"] for
+                                i in range(len(s2_pix_values))]
+    s2_pix_values["field_date"] = [vector_ts for
+                                    i in range(len(s2_pix_values))]
+    values_np = np.concatenate((np.array(s2_pix_values), np.array(vector_ds)),
+                            axis=1)
+    values_df = pd.DataFrame(
+        values_np,
+        columns = list(
+            *chain([list(s2_pix_values.columns) + (list(vector_ds.columns))])
+        )
+    )
+    return values_df
+
+def check_pixel_validity(values_df : gpd.GeoDataFrame
+                         ) -> gpd.GeoDataFrame
+    """
+    Check if the pixel are valids
+    """
+    # determinate if pixel are valid
+    if bool(int(values_df["cloud_mask"])):
+        # cloudy pixel
+        return None
+    else:
+        # clear pixel
+        return values_df
+
+
 def clean_france(vector_ds: gpd.GeoDataFrame
                 ) -> gpd.GeoDataFrame:
     """
@@ -294,39 +338,56 @@ def main():
         raster_ts["time_delta_after"] = raster_ts["time_delta"][raster_ts["time_delta"] >= timedelta()]
         raster_ts["time_delta_before"] = raster_ts["time_delta"][raster_ts["time_delta"] < timedelta()]
 
-        #n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
+        # n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
         # n_nearest = next(n_closest.iterrows())
+        # n_nearest = next(raster_ts.iterrows())
         # search for the nex valid data
         #for idx, n_nearest in enumerate(n_closest.iterrows()):
-        for idx, n_nearest in enumerate(raster_ts.iterrows()):
+        # for idx, n_nearest in enumerate(raster_ts.iterrows()):
+
+        # not clear date before not reached
+        while (): # Use walrus operator
+
+            # get pixel values
+            values_df = get_pixels(n_nearest, vector_ds, col_names)
+
+            if values_df is not None:
+                values_list.append(values_df)
+            else:
+                continue
+
             # get the pixel values for those how match
             # the criterium
-            s2_pix_values = get_pixel_value(
-                n_nearest[1]["s2_filenames"],
-                vector_ds,
-                col_names
-            )
-            # append field and raster date
-            s2_pix_values["s2_filenames"] = [n_nearest[1]["s2_filenames"] for
-                                        i in range(len(s2_pix_values))]
-            s2_pix_values["time_delta"] = [n_nearest[1]["time_delta"] for
-                                        i in range(len(s2_pix_values))]
-            s2_pix_values["s2_date"] = [n_nearest[1]["s2_date"] for
-                                        i in range(len(s2_pix_values))]
-            s2_pix_values["field_date"] = [vector_ts for
-                                           i in range(len(s2_pix_values))]
-            values_np = np.concatenate((np.array(s2_pix_values), np.array(vector_ds)),
-                                  axis=1)
-            values_df = pd.DataFrame(values_np,
-                                     columns = list(
-                                         *chain([list(s2_pix_values.columns) + (list(vector_ds.columns))]))
-            values_list.append(values_df)
+            # s2_pix_values = get_pixel_value(
+            #     n_nearest[1]["s2_filenames"],
+            #     vector_ds,
+            #     col_names
+            # )
+            # # append field and raster date
+            # s2_pix_values["s2_filenames"] = [n_nearest[1]["s2_filenames"] for
+            #                             i in range(len(s2_pix_values))]
+            # s2_pix_values["time_delta"] = [n_nearest[1]["time_delta"] for
+            #                             i in range(len(s2_pix_values))]
+            # s2_pix_values["s2_date"] = [n_nearest[1]["s2_date"] for
+            #                             i in range(len(s2_pix_values))]
+            # s2_pix_values["field_date"] = [vector_ts for
+            #                                i in range(len(s2_pix_values))]
+            # values_np = np.concatenate((np.array(s2_pix_values), np.array(vector_ds)),
+            #                       axis=1)
+            # values_df = pd.DataFrame(
+            #     values_np,
+            #     columns = list(
+            #         *chain([list(s2_pix_values.columns) + (list(vector_ds.columns))])
+            #     )
+            # )
+            # values_list.append(values_df)
     # get the final value
     final_df = pd.concat(values_list)
     # export file
     # final_df.to_csv(f"{args.export_path}/{config.site}.csv",
     final_df.to_csv(f"/work/scratch/vinascj/withoutfilter{config.site}.csv",
                     index=False)
+
 
 
 if __name__ == "__main__":

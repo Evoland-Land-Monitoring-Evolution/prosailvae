@@ -14,6 +14,7 @@ import argparse
 import json
 from dataclasses import dataclass
 import dateutil
+from datetime import timedelta
 import logging
 from itertools import chain
 import glob
@@ -26,6 +27,7 @@ import pandas as pd
 import geopandas as gpd
 import rasterio as rio
 
+os.chdir("/home/uz/vinascj/src/prosailvae/prosailvae")
 
 def get_parser() -> argparse.ArgumentParser:
     """
@@ -232,7 +234,17 @@ def clean_france(vector_ds: gpd.GeoDataFrame
 
     return vector_ds
 
+def clean_spain(vector_ds: gpd.GeoDataFrame
+                ) -> gpd.GeoDataFrame:
+    """
+    Normalize the dates
+    """
+    normalize_spain_date = lambda x : dateutil.parser.parse(str(x))
+    vector_ds['Date'] = vector_ds['Date DHP'].apply(
+        normalize_france_date).apply(
+            pd.to_datetime)
 
+    return vector_ds
 
 
 def main():
@@ -257,6 +269,10 @@ def main():
         # clean the data
         vector_data = clean_france(vector_data)
 
+    if config.site == "spain":
+        # read geo data
+        vector_data = read_vector(*glob.glob(f"{config.vector}/*.gpkg"))
+
 
     # init export dataframe
     col_names = ["B"+str(i+1) for i in range(10)]
@@ -275,10 +291,14 @@ def main():
             raster_ts["s2_date"]
         )
         raster_ts["time_delta"] = time_delta
-        n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
-        # select the raster img with the closest
-        # acquistions dates
-        for idx, n_nearest in enumerate(n_closest.iterrows()):
+        raster_ts["time_delta_after"] = raster_ts["time_delta"][raster_ts["time_delta"] >= timedelta()]
+        raster_ts["time_delta_before"] = raster_ts["time_delta"][raster_ts["time_delta"] < timedelta()]
+
+        #n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
+        # n_nearest = next(n_closest.iterrows())
+        # search for the nex valid data
+        #for idx, n_nearest in enumerate(n_closest.iterrows()):
+        for idx, n_nearest in enumerate(raster_ts.iterrows()):
             # get the pixel values for those how match
             # the criterium
             s2_pix_values = get_pixel_value(
@@ -295,20 +315,17 @@ def main():
                                         i in range(len(s2_pix_values))]
             s2_pix_values["field_date"] = [vector_ts for
                                            i in range(len(s2_pix_values))]
-            values_df = pd.concat([s2_pix_values, vector_ds],
-                                  axis=1, ignore_index=True)
-            values_df.columns = list(
-                *chain([
-                    list(s2_pix_values.columns)
-                    + (list(vector_ds.columns))
-                ])
-            )
+            values_np = np.concatenate((np.array(s2_pix_values), np.array(vector_ds)),
+                                  axis=1)
+            values_df = pd.DataFrame(values_np,
+                                     columns = list(
+                                         *chain([list(s2_pix_values.columns) + (list(vector_ds.columns))]))
             values_list.append(values_df)
     # get the final value
     final_df = pd.concat(values_list)
     # export file
     # final_df.to_csv(f"{args.export_path}/{config.site}.csv",
-    final_df.to_csv(f"/work/scratch/vinascj/aja{config.site}.csv",
+    final_df.to_csv(f"/work/scratch/vinascj/withoutfilter{config.site}.csv",
                     index=False)
 
 

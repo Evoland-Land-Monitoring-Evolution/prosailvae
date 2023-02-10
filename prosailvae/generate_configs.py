@@ -27,12 +27,12 @@ config = {      "batch_size": 4096,
                 "rnn_number":5
 }
 save_dir =  "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config"
-config_dir = "/rnn_configs_3/"
+config_dir = "/rnn_configs_4/"
 if not os.path.isdir(save_dir+config_dir):
     os.makedirs(save_dir+config_dir)
-hidden_layers_width = np.array([2**k for k in range(5,12)])
-rnn_depth = np.array([1,2,3,4,6,8])
-rnn_number = np.array([1,2,3,4,6,8,10])
+hidden_layers_width = np.array([2**k for k in range(6,12)])
+rnn_depth = np.array([2,3,4,5,6,7,8])
+rnn_number = np.array([2,3,4,6,7,8,10])
 print(len(hidden_layers_width) * len(rnn_depth) * len(rnn_number))
 # hidden_layers_width = np.array([2**k for k in range(5,12)])
 # rnn_depth = np.arange(1,8)

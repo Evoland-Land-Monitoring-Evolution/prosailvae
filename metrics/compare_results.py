@@ -44,6 +44,8 @@ def lat_nll_vs_test_nll(test_loss, lat_nll, save_dir=None):
         ax.set_ylabel(f"{PROSAILVARS[i]} loss (NLL)")
         ax.set_xscale("symlog",linthresh=1e-3)
         ax.set_yscale("symlog",linthresh=1e-2)
+        ax.set_xlim(right=-.01)
+        ax.set_ylim(top=-0.10)
         if save_dir is not None:
             fig.savefig(save_dir+f'/test_loss_vs_{PROSAILVARS[i]}_NLL.svg')
     pass
@@ -55,6 +57,8 @@ def test_loss_vs_N(test_loss, configs, save_dir=None):
     ax.scatter(configs[:,3], best_fold_loss, marker='+')
     ax.set_xlabel("RNN Length - Number of RNN blocks (N)")
     ax.set_ylabel("Test loss (NLL)")
+    # ax.set_yscale("symlog",linthresh=1e-3)
+    ax.set_ylim(top=-.01)
     if save_dir is not None:
         fig.savefig(save_dir+'/test_loss_vs_N.svg')
     return
@@ -65,6 +69,8 @@ def test_loss_vs_L(test_loss, configs, save_dir=None):
     ax.scatter(configs[:,1], best_fold_loss, marker='+')
     ax.set_xlabel("RNN Width - Size of layers (L)")
     ax.set_ylabel("Test loss (NLL)")
+    # ax.set_yscale("symlog",linthresh=1e-3)
+    ax.set_ylim(top=-.01)
     if save_dir is not None:
         fig.savefig(save_dir+'/test_loss_vs_L.svg')
     return
@@ -75,6 +81,8 @@ def test_loss_vs_D(test_loss, configs, save_dir=None):
     ax.scatter(configs[:,2], best_fold_loss, marker='+')
     ax.set_xlabel("RNN Depth - Depth of RNN blocks (D)")
     ax.set_ylabel("Test loss (NLL)")
+    # ax.set_yscale("symlog",linthresh=1e-3)
+    ax.set_ylim(top=-.01)
     if save_dir is not None:
         fig.savefig(save_dir+'/test_loss_vs_D.svg')
     return

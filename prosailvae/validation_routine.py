@@ -142,13 +142,17 @@ def get_pixel_value(raster_filename: str,
     # araay
     s2_array = np.array(pixel_values)
     # scale the reflectances
-    s2_array[:,:10] = s2_array[:,:10] #/ 10_000
+    # s2_array[:,:10] = s2_array[:,:10] / 10_000
+    #s2_stack_mask = (s2_array[:,:10] == -10000)
+    s2_array[:,:10] = s2_array[:,:10] / 10000
+    #s2_array[:,:10][s2_stack_mask] = np.nan
     # masks
-    s2_array_cloud = s2_array[:,11][s2_array[:,11] > 0 ] = 1
+    s2_array[:,11] = s2_array[:,11].astype(np.uint8)
+    s2_array_cloud = s2_array[:,11][s2_array[:,11]  > 0 ] = 1
     s2_array[:,11] = np.logical_or(
         s2_array_cloud,
-        np.logical_or( s2_array[:,10],
-                       s2_array[:,12]
+        np.logical_or( s2_array[:,10].astype(np.uint8) ,
+                       s2_array[:,12].astype(np.uint8)
         ))
     # compute the angles
     s2_array[:,14:] = join_even_odd_s2_angles(s2_array[:,14:])
@@ -210,18 +214,6 @@ def compute_time_deltas(vector_timestamp: Any,
     return time_delta
 
 
-def clean_italy(vector_ds: gpd.GeoDataFrame
-                ) -> gpd.GeoDataFrame:
-    """
-    Normalize the dates
-    """
-    normalize_italy_date = lambda x : dateutil.parser.parse(x)
-    vector_ds['Date'] = vector_ds['Date'].apply(
-        normalize_italy_date).apply(
-            pd.to_datetime)
-
-    return vector_ds
-
 
 def get_pixels(n_nearest, vector_ds, col_names):
     """
@@ -229,9 +221,9 @@ def get_pixels(n_nearest, vector_ds, col_names):
     """
     # the criterium
     s2_pix_values = get_pixel_value(
-        n_nearest: Any,
-        vector_ds: gpd.GeoDataFrame,
-        col_names: List[str]
+        n_nearest[1]["s2_filenames"],
+        vector_ds,
+        col_names,
     )
     # append field and raster date
     s2_pix_values["s2_filenames"] = [n_nearest[1]["s2_filenames"] for
@@ -252,21 +244,19 @@ def get_pixels(n_nearest, vector_ds, col_names):
     )
     return values_df
 
-def check_pixel_validity(values_df : gpd.GeoDataFrame
-                         ) -> gpd.GeoDataFrame
+def check_pixel_validity(values_df : gpd.GeoDataFrame,
+                         ) -> gpd.GeoDataFrame:
     """
     Check if the pixel are valids
     """
     # determinate if pixel are valid
-    if bool(int(values_df["cloud_mask"])):
-        # cloudy pixel
-        return None
-    else:
-        # clear pixel
-        return values_df
+    return [bool(i) for i in
+            values_df["cloud_mask"].apply(
+         lambda x : int(x)
+            ).to_list()]
 
 
-def clean_france(vector_ds: gpd.GeoDataFrame
+def clean_france(vector_ds: gpd.GeoDataFrame,
                 ) -> gpd.GeoDataFrame:
     """
     Normalize the dates
@@ -278,7 +268,7 @@ def clean_france(vector_ds: gpd.GeoDataFrame
 
     return vector_ds
 
-def clean_spain(vector_ds: gpd.GeoDataFrame
+def clean_spain(vector_ds: gpd.GeoDataFrame,
                 ) -> gpd.GeoDataFrame:
     """
     Normalize the dates
@@ -289,6 +279,19 @@ def clean_spain(vector_ds: gpd.GeoDataFrame
             pd.to_datetime)
 
     return vector_ds
+
+def clean_italy(vector_ds: gpd.GeoDataFrame,
+                ) -> gpd.GeoDataFrame:
+    """
+    Normalize the dates
+    """
+    normalize_italy_date = lambda x : dateutil.parser.parse(x)
+    vector_ds['Date'] = vector_ds['Date'].apply(
+        normalize_italy_date).apply(
+            pd.to_datetime)
+
+    return vector_ds
+
 
 
 def main():
@@ -317,71 +320,86 @@ def main():
         # read geo data
         vector_data = read_vector(*glob.glob(f"{config.vector}/*.gpkg"))
 
-
     # init export dataframe
     col_names = ["B"+str(i+1) for i in range(10)]
-
     aux_names = ['sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
                  'sun_zen', 'sun_az', 'even_zen', 'odd_zen', 'even_az', 'odd_az']
     col_names.extend(aux_names)
-    values_list = []
+    before_values_list = []
+    after_values_list = []
 
     # iterate over the vector dates
     #  vector_ts, vector_ds = next(iter(vector_data.groupby("Date")))
+    window_days = 30
     for vector_ts, vector_ds in vector_data.groupby("Date"):
         # get the closest dates
         time_delta = compute_time_deltas(
             vector_ts,
-            raster_ts["s2_date"]
+            raster_ts["s2_date"],
         )
         raster_ts["time_delta"] = time_delta
-        raster_ts["time_delta_after"] = raster_ts["time_delta"][raster_ts["time_delta"] >= timedelta()]
-        raster_ts["time_delta_before"] = raster_ts["time_delta"][raster_ts["time_delta"] < timedelta()]
+        days_before = vector_ts - timedelta(days=window_days)
+        days_after = vector_ts + timedelta(days=window_days)
 
-        # n_closest = raster_ts.sort_values(by="time_delta").iloc[:3, :]
-        # n_nearest = next(n_closest.iterrows())
-        # n_nearest = next(raster_ts.iterrows())
-        # search for the nex valid data
-        #for idx, n_nearest in enumerate(n_closest.iterrows()):
+        raster_ts["time_delta_after"] = raster_ts["time_delta"][raster_ts["time_delta"] >= timedelta(days=0)]
+        raster_ts["time_delta_before"] = raster_ts["time_delta"][raster_ts["time_delta"] < timedelta(days=0)]
+        raster_ts["time_delta_before"] = raster_ts["time_delta_before"].abs()
+        # select using a 20 days window
+        n_closest_before = raster_ts.set_index(raster_ts["s2_date"])[
+             days_before.strftime("%d-%m-%y") : vector_ts.strftime("%d-%m-%y")
+        ].sort_index()
+        n_closest_after = raster_ts.set_index(raster_ts["s2_date"])[
+            vector_ts.strftime("%d-%m-%y") : days_after.strftime("%d-%m-%y")
+        ].sort_index()
+
+        # iterate over
+        for idx_b, n_nearest_b in enumerate(n_closest_before.iterrows()):
+            # get pixel values
+            values_df_b = get_pixels(n_nearest_b, vector_ds, col_names)
+            # check pixel validity
+            val_check_b = check_pixel_validity(values_df_b)
+
+            for cloud_presence_b in val_check_b:
+                print(f"cloud presence before : {cloud_presence_b}")
+                if cloud_presence_b:
+                    before_values_list.append(values_df_a)
+                    break
+                else:
+                    continue
+
+
+        # iterate over
+        # idx_a, n_nearest_a =  next(enumerate(n_closest_after.iterrows()))
+        for idx_a, n_nearest_a in enumerate(n_closest_after.iterrows()):
+            # get pixel values
+            values_df_a = get_pixels(n_nearest_a, vector_ds, col_names)
+            # check pixel validity
+            val_check_a = check_pixel_validity(values_df_a)
+
+            for cloud_presence in val_check_a:
+                print(f"cloud presence : {cloud_presence}")
+                if cloud_presence:
+                    after_values_list.append(values_df_a)
+                    break
+                else:
+                    continue
+
+
+
+        # search for the nex valid data in the forward direction
         # for idx, n_nearest in enumerate(raster_ts.iterrows()):
 
-        # not clear date before not reached
-        while (): # Use walrus operator
-
-            # get pixel values
-            values_df = get_pixels(n_nearest, vector_ds, col_names)
-
-            if values_df is not None:
-                values_list.append(values_df)
-            else:
-                continue
-
-            # get the pixel values for those how match
-            # the criterium
-            # s2_pix_values = get_pixel_value(
-            #     n_nearest[1]["s2_filenames"],
-            #     vector_ds,
-            #     col_names
-            # )
-            # # append field and raster date
-            # s2_pix_values["s2_filenames"] = [n_nearest[1]["s2_filenames"] for
-            #                             i in range(len(s2_pix_values))]
-            # s2_pix_values["time_delta"] = [n_nearest[1]["time_delta"] for
-            #                             i in range(len(s2_pix_values))]
-            # s2_pix_values["s2_date"] = [n_nearest[1]["s2_date"] for
-            #                             i in range(len(s2_pix_values))]
-            # s2_pix_values["field_date"] = [vector_ts for
-            #                                i in range(len(s2_pix_values))]
-            # values_np = np.concatenate((np.array(s2_pix_values), np.array(vector_ds)),
-            #                       axis=1)
-            # values_df = pd.DataFrame(
-            #     values_np,
-            #     columns = list(
-            #         *chain([list(s2_pix_values.columns) + (list(vector_ds.columns))])
-            #     )
-            # )
-            # values_list.append(values_df)
+           # values_list.append(values_df)
     # get the final value
+    final_df_af = pd.concat(after_values_list)
+    final_df_af.to_csv(f"/work/scratch/vinascj/after_{config.site}.csv",
+                    index=True)
+    final_df_be = pd.concat(after_values_list)
+    final_df_be.to_csv(f"/work/scratch/vinascj/before_{config.site}.csv",
+                    index=True)
+    #
+    #
+    #
     final_df = pd.concat(values_list)
     # export file
     # final_df.to_csv(f"{args.export_path}/{config.site}.csv",
@@ -419,3 +437,9 @@ if __name__ == "__main__":
     # call main
     main(args)
     logging.info("Export finish!")
+    # n_nearest = next(n_closest.iterrows())
+    # n_nearest = next(raster_ts.iterrows())
+    #for idx, n_nearest in enumerate(n_closest.iterrows()):
+    # val_check set to True
+    # search for the nex valid data in the backward direction
+    # for idx, n_nearest_bef in enumerate(raster_ts.iterrows(n_closest_before)):

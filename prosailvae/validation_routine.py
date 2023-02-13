@@ -140,25 +140,24 @@ def get_pixel_value(raster_filename: str,
         pixel_values = [coords
                         for coords in raster.sample(coord_list)]
     # araay
-    s2_array = np.array(pixel_values)
+    s2_array = np.array(pixel_values, dtype=np.float64)
     # scale the reflectances
-    # s2_array[:,:10] = s2_array[:,:10] / 10_000
-    #s2_stack_mask = (s2_array[:,:10] == -10000)
-    s2_array[:,:10] = s2_array[:,:10] / 10000
-    #s2_array[:,:10][s2_stack_mask] = np.nan
+    s2_array[:,:10] = np.divide(s2_array[:,:10].astype(np.float64), 10_000)
     # masks
     s2_array[:,11] = s2_array[:,11].astype(np.uint8)
-    s2_array_cloud = s2_array[:,11][s2_array[:,11]  > 0 ] = 1
+    # print(f" Cloud Mask Pure : {np.unique(s2_array[:,11])}" )
     s2_array[:,11] = np.logical_or(
-        s2_array_cloud,
+        s2_array[:,11].astype(np.uint8), #s2_array_cloud,
         np.logical_or( s2_array[:,10].astype(np.uint8) ,
                        s2_array[:,12].astype(np.uint8)
         ))
+    # print(f"Sat B10:  { np.unique(s2_array[:,10].astype(np.uint8))}" )
+    # print(f"Cloud B11: {  np.unique(s2_array[:,11])}")
+    # print(f" Edge B12: {  np.unique(s2_array[:,12].astype(np.uint8))}")
     # compute the angles
     s2_array[:,14:] = join_even_odd_s2_angles(s2_array[:,14:])
     # DataFrame for store the values
     out_df = pd.DataFrame(s2_array, columns=colnames)
-
     return out_df
 
 def join_even_odd_s2_angles(s2_angles_data: np.array) -> np.array:
@@ -250,10 +249,11 @@ def check_pixel_validity(values_df : gpd.GeoDataFrame,
     Check if the pixel are valids
     """
     # determinate if pixel are valid
-    return [bool(i) for i in
-            values_df["cloud_mask"].apply(
-         lambda x : int(x)
-            ).to_list()]
+    validity = [bool(i) for i in
+                values_df["cloud_mask"].apply(
+                    lambda x : int(x)).to_list()]
+    values_df["cloud_mask"] = validity
+    return values_df
 
 
 def clean_france(vector_ds: gpd.GeoDataFrame,
@@ -330,7 +330,7 @@ def main():
 
     # iterate over the vector dates
     #  vector_ts, vector_ds = next(iter(vector_data.groupby("Date")))
-    window_days = 30
+    window_days = 25
     for vector_ts, vector_ds in vector_data.groupby("Date"):
         # get the closest dates
         time_delta = compute_time_deltas(
@@ -345,12 +345,22 @@ def main():
         raster_ts["time_delta_before"] = raster_ts["time_delta"][raster_ts["time_delta"] < timedelta(days=0)]
         raster_ts["time_delta_before"] = raster_ts["time_delta_before"].abs()
         # select using a 20 days window
-        n_closest_before = raster_ts.set_index(raster_ts["s2_date"])[
-             days_before.strftime("%d-%m-%y") : vector_ts.strftime("%d-%m-%y")
-        ].sort_index()
-        n_closest_after = raster_ts.set_index(raster_ts["s2_date"])[
-            vector_ts.strftime("%d-%m-%y") : days_after.strftime("%d-%m-%y")
-        ].sort_index()
+        n_closest = raster_ts.set_index(raster_ts["s2_date"])
+        n_closest.index.names = ["s2_date_idx"]
+        n_closest_before = n_closest.loc[
+            (n_closest["s2_date"] >= days_before.strftime("%Y-%m-%d")) &
+            (n_closest["s2_date"] < vector_ts.strftime("%Y-%m-%d"))
+        ]
+        n_closest_before.index.names = ["s2_date_idx"]
+        n_closest_before = n_closest_before.sort_index(ascending=False)
+        #
+        #
+        n_closest_after = n_closest.loc[
+            (n_closest["s2_date"] >= vector_ts.strftime("%Y-%m-%d")) &
+            (n_closest["s2_date"]  < days_after.strftime("%Y-%m-%d"))
+        ]
+        n_closest_after.index.names = ["s2_date_idx"]
+        n_closest_after = n_closest_after.sort_index(ascending=True)
 
         # iterate over
         for idx_b, n_nearest_b in enumerate(n_closest_before.iterrows()):
@@ -358,11 +368,12 @@ def main():
             values_df_b = get_pixels(n_nearest_b, vector_ds, col_names)
             # check pixel validity
             val_check_b = check_pixel_validity(values_df_b)
-
-            for cloud_presence_b in val_check_b:
+            # iterate over the dataframe
+            for _, cloud_presence_b in values_df_b["cloud_mask"].iteritems():
                 print(f"cloud presence before : {cloud_presence_b}")
-                if cloud_presence_b:
-                    before_values_list.append(values_df_a)
+                if not cloud_presence_b:
+                    print(f"cloud presence before : {cloud_presence_b} <<<<<------- ")
+                    before_values_list.append(values_df_b)
                     break
                 else:
                     continue
@@ -374,11 +385,12 @@ def main():
             # get pixel values
             values_df_a = get_pixels(n_nearest_a, vector_ds, col_names)
             # check pixel validity
-            val_check_a = check_pixel_validity(values_df_a)
+            values_df_a = check_pixel_validity(values_df_a)
 
-            for cloud_presence in val_check_a:
-                print(f"cloud presence : {cloud_presence}")
-                if cloud_presence:
+            for _, cloud_presence_a in values_df_a["cloud_mask"].iteritems():
+                print(f"cloud presence after : {cloud_presence_a}")
+                if not cloud_presence_a:
+                    print(f"cloud presence after : {cloud_presence_a} ------>>>>")
                     after_values_list.append(values_df_a)
                     break
                 else:
@@ -391,20 +403,22 @@ def main():
 
            # values_list.append(values_df)
     # get the final value
-    final_df_af = pd.concat(after_values_list)
-    final_df_af.to_csv(f"/work/scratch/vinascj/after_{config.site}.csv",
-                    index=True)
-    final_df_be = pd.concat(after_values_list)
-    final_df_be.to_csv(f"/work/scratch/vinascj/before_{config.site}.csv",
-                    index=True)
-    #
-    #
-    #
-    final_df = pd.concat(values_list)
+    if len(after_values_list) :
+        final_df_af = pd.concat(after_values_list)
+        final_df_af.to_csv(f"/work/scratch/vinascj/after_{config.site}.csv",
+                           index=False)
+
+    if len(before_values_list) :
+        final_df_be = pd.concat(before_values_list)
+        final_df_be.to_csv(f"/work/scratch/vinascj/before_{config.site}.csv",
+                           index=False)
+
+
+    # final_df = pd.concat(values_list)
     # export file
     # final_df.to_csv(f"{args.export_path}/{config.site}.csv",
-    final_df.to_csv(f"/work/scratch/vinascj/withoutfilter{config.site}.csv",
-                    index=False)
+    # final_df.to_csv(f"/work/scratch/vinascj/withoutfilter{config.site}.csv",
+    #                 index=False)
 
 
 

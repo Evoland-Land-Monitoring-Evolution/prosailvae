@@ -249,10 +249,13 @@ def check_pixel_validity(values_df : gpd.GeoDataFrame,
     Check if the pixel are valids
     """
     # determinate if pixel are valid
-    validity = [bool(i) for i in
-                values_df["cloud_mask"].apply(
-                    lambda x : int(x)).to_list()]
-    values_df["cloud_mask"] = validity
+    # validity = [bool(i) for i in
+    #             values_df["cloud_mask"].apply(
+    #                 lambda x : int(x)).to_list()]
+    # values_df["cloud_mask"] = validity
+
+    values_df["cloud_mask"] = values_df["cloud_mask"].apply(
+        lambda x : int(x)).to_list()
     return values_df
 
 
@@ -323,13 +326,12 @@ def main():
     # init export dataframe
     col_names = ["B"+str(i+1) for i in range(10)]
     aux_names = ['sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
-                 'sun_zen', 'sun_az', 'even_zen', 'odd_zen', 'even_az', 'odd_az']
+                 'cos(sun_zen)', 'sin(sun_az)', 'cos(join_zen)', 'sin(join_az)', 'cos(join_az)', 'sin(join_az)']
     col_names.extend(aux_names)
     before_values_list = []
     after_values_list = []
 
     # iterate over the vector dates
-    #  vector_ts, vector_ds = next(iter(vector_data.groupby("Date")))
     window_days = 25
     for vector_ts, vector_ds in vector_data.groupby("Date"):
         # get the closest dates
@@ -369,57 +371,42 @@ def main():
             # check pixel validity
             val_check_b = check_pixel_validity(values_df_b)
             # iterate over the dataframe
-            for _, cloud_presence_b in values_df_b["cloud_mask"].iteritems():
+            for cloud_idx_b, cloud_presence_b in values_df_b["cloud_mask"].iteritems():
                 print(f"cloud presence before : {cloud_presence_b}")
-                if not cloud_presence_b:
+                if not bool(cloud_presence_b):
                     print(f"cloud presence before : {cloud_presence_b} <<<<<------- ")
-                    before_values_list.append(values_df_b)
+                    before_values_list.append(values_df_b.iloc[cloud_idx_b,:])
                     break
                 else:
                     continue
 
-
         # iterate over
-        # idx_a, n_nearest_a =  next(enumerate(n_closest_after.iterrows()))
         for idx_a, n_nearest_a in enumerate(n_closest_after.iterrows()):
             # get pixel values
             values_df_a = get_pixels(n_nearest_a, vector_ds, col_names)
             # check pixel validity
             values_df_a = check_pixel_validity(values_df_a)
 
-            for _, cloud_presence_a in values_df_a["cloud_mask"].iteritems():
+            for cloud_idx_a, cloud_presence_a in values_df_a["cloud_mask"].iteritems():
                 print(f"cloud presence after : {cloud_presence_a}")
-                if not cloud_presence_a:
+                if not bool(cloud_presence_a):
                     print(f"cloud presence after : {cloud_presence_a} ------>>>>")
-                    after_values_list.append(values_df_a)
+                    after_values_list.append(values_df_a.iloc[cloud_idx_a,:])
                     break
                 else:
                     continue
 
 
-
-        # search for the nex valid data in the forward direction
-        # for idx, n_nearest in enumerate(raster_ts.iterrows()):
-
-           # values_list.append(values_df)
     # get the final value
     if len(after_values_list) :
-        final_df_af = pd.concat(after_values_list)
+        final_df_af = pd.concat(after_values_list, axis=1).T
         final_df_af.to_csv(f"/work/scratch/vinascj/after_{config.site}.csv",
                            index=False)
 
     if len(before_values_list) :
-        final_df_be = pd.concat(before_values_list)
+        final_df_be = pd.concat(before_values_list, axis=1).T
         final_df_be.to_csv(f"/work/scratch/vinascj/before_{config.site}.csv",
                            index=False)
-
-
-    # final_df = pd.concat(values_list)
-    # export file
-    # final_df.to_csv(f"{args.export_path}/{config.site}.csv",
-    # final_df.to_csv(f"/work/scratch/vinascj/withoutfilter{config.site}.csv",
-    #                 index=False)
-
 
 
 if __name__ == "__main__":
@@ -451,9 +438,3 @@ if __name__ == "__main__":
     # call main
     main(args)
     logging.info("Export finish!")
-    # n_nearest = next(n_closest.iterrows())
-    # n_nearest = next(raster_ts.iterrows())
-    #for idx, n_nearest in enumerate(n_closest.iterrows()):
-    # val_check set to True
-    # search for the nex valid data in the backward direction
-    # for idx, n_nearest_bef in enumerate(raster_ts.iterrows(n_closest_before)):

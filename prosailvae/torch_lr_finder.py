@@ -701,7 +701,7 @@ def get_prosailvae_train_parser():
     return parser       
 
 def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True,n_samples=20):
-    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
+    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2, old_lr = 1, old_lr_max_ratio = 10)
     lrtrainloader = lr_finder_loader(
                                     file_prefix=file_prefix, 
                                     sample_ids=None,
@@ -723,7 +723,8 @@ def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disa
     if model.decoder.loss_type == "mse":
         n_samples=1
     lr_finder.range_test(lrtrainloader, end_lr=10, num_iter=100, disable_tqdm=disable_tqdm,n_samples=n_samples)
-    lr_optimal = min(lr_finder.suggest_lr(), 1.0)
+    suggested_lr = lr_finder.suggest_lr()
+    lr_optimal = min(suggested_lr, old_lr_max_ratio * old_lr)
     if plot_lr:
         print(lr_optimal)
         lr_finder.plot(log_lr=True)

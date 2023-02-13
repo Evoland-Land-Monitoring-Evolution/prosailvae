@@ -90,12 +90,12 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)             
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer):
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0):
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
                 new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
-                optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+                optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2, old_lr=old_lr, old_lr_max_ratio=10)
                 if exp_lr_decay>0:
                     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
                     #                                         patience=exp_lr_decay, threshold=0.0001, 
@@ -105,7 +105,7 @@ def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, l
             except:
                 logger.error(f"Couldn't recompute lr at epoch {epoch} !")
                 print(f"Couldn't recompute lr at epoch {epoch} !")
-    return lr_scheduler, optimizer
+    return lr_scheduler, optimizer, new_lr
 
 def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     loss_type = PROSAIL_VAE.decoder.loss_type
@@ -127,6 +127,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     info_df = pd.DataFrame()
     best_val_loss = torch.inf
     total_ram = get_total_RAM()
+    old_lr = optimizer.param_groups[0]['lr']
     if exp_lr_decay > 0:
         # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
         #                                                             patience=exp_lr_decay, threshold=0.0001, 
@@ -137,7 +138,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
-            lr_scheduler, optimizer = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer)
+            lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=old_lr)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)

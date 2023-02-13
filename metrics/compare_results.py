@@ -95,17 +95,36 @@ def get_bests(test_loss, configs, n=5):
     top_n_configs = configs[sorted_n_best, :]
     return top_n_loss, top_n_configs
 
+def exclude_outliers(test_loss, lat_nll):
+    test_loss[np.isnan(test_loss)] = 10000
+    min_test_loss = test_loss.min(1).reshape(-1,1)
+    dist_to_min = test_loss - min_test_loss
+    outlier_filter = np.where(dist_to_min > np.abs(min_test_loss)/2)
+    test_loss[outlier_filter]=np.nan
+    lat_nll[outlier_filter[0],outlier_filter[1],:]=np.nan
+    return test_loss, lat_nll
+    
+def get_means(test_loss, lat_nll):
+    return torch.from_numpy(test_loss).nanmean(1).reshape(-1,1) ,  lat_nll.nanmean(1).unsqueeze(1)
+
+def get_available_folds_number(test_loss):
+    available_folds_number = test_loss.shape[1]
+    return available_folds_number - np.isnan(test_loss).astype(int).sum(1).reshape(-1,1)
+
 def main():
-    res_root_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rnn_hyper_2/"
+    res_root_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rnn_hyper_3/"
     configs, test_loss, lat_nll = preprocess_data(res_root_dir)
     plot_dir = res_root_dir + "/plots/"
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
-    top_n_loss, top_n_configs = get_bests(test_loss, configs, n=5)
-    test_loss_vs_D(test_loss, configs, save_dir=plot_dir)
-    test_loss_vs_N(test_loss, configs, save_dir=plot_dir)
-    test_loss_vs_L(test_loss, configs, save_dir=plot_dir)
-    lat_nll_vs_test_nll(test_loss, lat_nll, save_dir=plot_dir)
+    test_loss, lat_nll = exclude_outliers(test_loss, lat_nll)
+    available_folds_number = get_available_folds_number(test_loss)
+    mean_test_loss, mean_lat_nll = get_means(test_loss, lat_nll)
+    top_n_loss, top_n_configs = get_bests(mean_test_loss, configs, n=5)
+    test_loss_vs_D(mean_test_loss, configs, save_dir=plot_dir)
+    test_loss_vs_N(mean_test_loss, configs, save_dir=plot_dir)
+    test_loss_vs_L(mean_test_loss, configs, save_dir=plot_dir)
+    lat_nll_vs_test_nll(mean_test_loss, lat_nll, save_dir=plot_dir)
     pass
 
 if __name__=="__main__":

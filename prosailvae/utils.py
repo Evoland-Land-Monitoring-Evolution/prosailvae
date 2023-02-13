@@ -34,6 +34,7 @@ def get_CPU_usage():
     load1, _, _ = psutil.getloadavg()
     cpu_usage = (load1/os.cpu_count()) * 100
     return  "{:.2f} %".format(cpu_usage)
+
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -43,6 +44,7 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
+
 def save_dict(data_dict, dict_file_path):
     with open(dict_file_path, 'w') as fp:
         json.dump(data_dict, fp, indent=4, cls=NpEncoder)
@@ -51,6 +53,7 @@ def load_dict(dict_file_path):
     with open(dict_file_path, "r") as read_file:
         data_dict = json.load(read_file)
     return data_dict
+    
 def NaN_model_params(model):
     for name, param in model.named_parameters():
         if param.requires_grad:

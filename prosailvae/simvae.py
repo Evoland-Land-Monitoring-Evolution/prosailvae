@@ -201,8 +201,12 @@ class SimVAE(nn.Module):
             s2_r = batch[0].to(self.device) 
             s2_a = batch[1].to(self.device)  
         params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)     
-        if torch.isnan(params).any():
-            self.logger.error("NaN in inferred distribution parameters !")
+        if params.isnan().any() or params.isinf().any():
+            nan_in_params = NaN_model_params(self)
+            err_str = "NaN encountered during encoding, but there is no NaN in network parameters!"
+            if nan_in_params:
+                err_str = "NaN encountered during encoding, there are NaN in network parameters!"
+            raise ValueError(err_str)
         nan_rec = torch.isnan(rec[:,0,:]).detach()
         if nan_rec.any():
             n_samples = z.size(2)
@@ -269,8 +273,12 @@ class SimVAE(nn.Module):
         ref_sim = batch[2].to(self.device)  
         ref_lat = self.sim_space.sim2z(ref_sim)
         y = self.encode(s2_r, s2_a)
-        if y.isnan().any():
-            raise ValueError("NaN encountered during encoding, there are probably NaN values in network parameters.")
+        if y.isnan().any() or y.isinf().any():
+            nan_in_params = NaN_model_params(self)
+            err_str = "NaN encountered during encoding, but there is no NaN in network parameters!"
+            if nan_in_params:
+                err_str = "NaN encountered during encoding, there are NaN in network parameters!"
+            raise ValueError(err_str)
         params = self.lat_space.get_params_from_encoder(y=y)
         if not self.multi_output_encoder:
             loss_sum = self.lat_space.loss(ref_lat, params)

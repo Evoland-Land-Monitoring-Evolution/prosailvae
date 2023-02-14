@@ -50,7 +50,7 @@ def sample_param(param_dist, lai=None):
             sample = correlate_with_lai(lai, sample, param_dist[2],  param_dist[4])
     return sample
 
-def sample_prosail_vars(var_dists):
+def sample_prosail_vars(var_dists, static_angles=False):
     lai = sample_param(var_dists.lai, lai=None)
     N = sample_param(var_dists.N, lai=lai)
     cab = sample_param(var_dists.cab, lai=lai)
@@ -62,18 +62,23 @@ def sample_prosail_vars(var_dists):
     hspot = sample_param(var_dists.hspot, lai=lai)
     psoil = sample_param(var_dists.psoil, lai=lai)
     rsoil = sample_param(var_dists.rsoil, lai=lai)
-    tts = sample_param(var_dists.tts, lai=lai)
-    tto = sample_param(var_dists.tto, lai=lai)
-    psi = sample_param(var_dists.psi, lai=lai)
+    if static_angles:
+        tts = np.array([48.0])
+        tto = np.array([5.0])
+        psi = np.array([-56])
+    else:
+        tts = sample_param(var_dists.tts, lai=lai)
+        tto = sample_param(var_dists.tto, lai=lai)
+        psi = sample_param(var_dists.psi, lai=lai)
 
     return N, cab, car, cbrown, caw, cm, lai, lidfa, hspot, psoil, rsoil, tts, tto, psi
 
-def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir=''):
+def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir='', static_angles=False):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, 10))
     with numpyro.handlers.seed(rng_seed=5):
         for i in trange(nb_simus):
-            prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist)
+            prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist, static_angles=static_angles)
             
             psimulator = ProsailSimulator()
             ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
@@ -88,11 +93,12 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir=''):
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
-def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0):
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, static_angles=False):
     prosail_vars, prosail_s2_sim = simulate_prosail_dataset(data_dir,
                                                             nb_simus=nb_simus, 
                                                             noise=noise,
-                                                            rsr_dir=rsr_dir)
+                                                            rsr_dir=rsr_dir,
+                                                            static_angles=static_angles)
     norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
     torch.save(torch.from_numpy(prosail_vars), 
                data_dir + data_file_prefix + "prosail_sim_vars.pt") 
@@ -124,6 +130,9 @@ def get_data_generation_parser():
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data')
+    parser.add_argument("-sa", dest="static_angles",
+                        help="Set to True to generate prosail samples with a single angular configuration",
+                        type=bool, default=False)
     return parser
 
 if  __name__ == "__main__":
@@ -136,5 +145,5 @@ if  __name__ == "__main__":
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
-                 parser.n_samples, parser.noise)
+                 parser.n_samples, parser.noise, static_angles=parser.static_angles)
     

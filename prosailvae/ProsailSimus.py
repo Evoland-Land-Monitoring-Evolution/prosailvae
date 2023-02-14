@@ -11,6 +11,8 @@ import numpy as np
 import torch
 import prosail
 from prosail import spectral_lib
+from prosailvae.utils import gaussian_nll_loss
+from prosailvae.spectral_indices import NDVI, mNDVI750, ND_lma, NDII, LAI_savi, CRI2
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -36,7 +38,8 @@ RSR of the sensor.
                  device='cpu',
                  norm_mean=None,
                  norm_std=None,
-                 apply_norm=True):
+                 apply_norm=True,
+                 lossfn=gaussian_nll_loss):
           
         super().__init__()
         self.device=device
@@ -65,10 +68,21 @@ RSR of the sensor.
             norm_std = torch.ones((1, 10))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self.apply_norm=apply_norm
+        self.apply_norm = apply_norm
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
         
+    def change_device(self, device):
+        self.device = device
+        self.rsr = self.rsr.to(device)
+        self.norm_mean = self.norm_mean.to(device)
+        self.norm_std = self.norm_std.to(device)
+        self.s2norm_factor_d = self.s2norm_factor_d.to(device)
+        self.s2norm_factor_n = self.s2norm_factor_n.to(device)
+        self.solar = self.solar.to(device)
+
+        pass
+
     def __call__(self, prosail_output: torch.Tensor):
         return self.forward(prosail_output)
     
@@ -84,12 +98,63 @@ RSR of the sensor.
             axis=2) / self.s2norm_factor_d  
         return simu
     
+    def normalize(self, s2_r):
+        return (s2_r - self.norm_mean) / self.norm_std
+    
+    def unnormalize(self, s2_r):
+        if len(s2_r.size())==2:
+            return s2_r * self.norm_std + self.norm_mean
+        elif len(s2_r.size())==3:
+            return s2_r * self.norm_std.unsqueeze(0).unsqueeze(2) + self.norm_mean.unsqueeze(0).unsqueeze(2)
+        else:
+            raise NotImplementedError
+
     def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)
         if self.apply_norm:
-            simu = (simu - self.norm_mean) / self.norm_std
+            simu = self.normalize(simu)
         return simu  # type: ignore
+    
+    def index_loss(self, s2_r, s2_rec, lossfn=gaussian_nll_loss,
+                    index_terms=["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"]):
+                    
+        if len(s2_rec.size())>2:
+            n_samples = s2_rec.size(2)
+        else:
+            n_samples = 1
+            
+        u_s2_r = self.unnormalize(s2_r)
+        if self.apply_norm:
+            u_s2_rec = self.unnormalize(s2_rec)
+        else:
+            u_s2_rec = s2_rec
 
+        loss = torch.tensor(0.0).to(s2_r.device)
+        if "NDVI" in index_terms:
+            ndvi = NDVI(u_s2_r).view(-1,1)
+            ndvi_rec = NDVI(u_s2_rec).view(-1,1,n_samples)
+            loss += lossfn(ndvi, ndvi_rec)
+        if "mNDVI750" in index_terms:
+            mndvi750 = mNDVI750(u_s2_r).view(-1,1)
+            mndvi750_rec = mNDVI750(u_s2_rec).view(-1,1,n_samples)
+            loss += lossfn(mndvi750, mndvi750_rec)
+        if "CRI2" in index_terms:
+            cri2 = CRI2(u_s2_r).view(-1,1)
+            cri2_rec = CRI2(u_s2_rec).view(-1,1,n_samples)
+            loss += lossfn(cri2, cri2_rec)
+        if "NDII" in index_terms:
+            ndii = NDII(u_s2_r).view(-1,1)
+            ndii_rec = NDII(u_s2_rec).view(-1,1,n_samples)
+            loss += lossfn(ndii, ndii_rec)
+        if "ND_lma" in index_terms:
+            nd_lma = ND_lma(u_s2_r).view(-1,1)
+            nd_lma_rec = ND_lma(u_s2_rec).view(-1,1,n_samples)
+            loss += lossfn(nd_lma, nd_lma_rec)  
+        if "LAI_savi" in index_terms:
+            lai_savi = LAI_savi(u_s2_r).view(-1,1)
+            lai_savi_rec = LAI_savi(u_s2_rec).view(-1,1,n_samples)
+            loss += lossfn(lai_savi, lai_savi_rec)      
+        return loss
 
 class ProsailSimulator():
     def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu'):
@@ -99,6 +164,10 @@ class ProsailSimulator():
         self.device=device
     def __call__(self, params):
         return self.forward(params)
+
+    def change_device(self, device):
+        self.device=device
+        pass
 
     def forward(self, params):
         # params.shape == [x] => single sample

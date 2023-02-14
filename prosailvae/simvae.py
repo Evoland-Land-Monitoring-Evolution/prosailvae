@@ -8,7 +8,11 @@ Created on Thu Sep  1 08:25:49 2022
 import torch.nn as nn
 import torch
 import logging
-from prosailvae.utils import NaN_model_params
+from prosailvae.utils import NaN_model_params, select_rec_loss_fn
+from dataset.loaders import get_flattened_patch
+
+
+    
 
 class SimVAE(nn.Module):
     """
@@ -54,7 +58,8 @@ class SimVAE(nn.Module):
     """
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
-                 beta_kl=0, logger_name='PROSAIL-VAE logger'):
+                 beta_kl=0, beta_index=0, logger_name='PROSAIL-VAE logger',
+                 patch_mode=False, inference_mode=False, supervised_model=None):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -69,9 +74,31 @@ class SimVAE(nn.Module):
         self.beta_kl = beta_kl
         self.eval()
         self.logger = logging.getLogger(logger_name)
-        
+        self.patch_mode = patch_mode
+        self.beta_index = beta_index
+        self.inference_mode = inference_mode
+        self.supervised_model = supervised_model
+        multi_output_encoder=False
+        try:
+            a = self.encoder.dnet
+            multi_output_encoder=True
+        except:
+            pass
+        self.multi_output_encoder = multi_output_encoder
+
+    def change_device(self, device):
+        self.device=device
+        self.encoder.change_device(device)
+        self.lat_space.change_device(device)
+        self.sim_space.change_device(device)
+        self.decoder.change_device(device)
+        pass
+
     def encode(self, x, angles):
-        y = self.encoder.encode(x, angles)
+        if self.multi_output_encoder:
+            _,y = self.encoder.encode(x, angles)
+        else:
+            y = self.encoder.encode(x, angles)
         return y
     
     def encode2lat_params(self, x, angles):
@@ -91,14 +118,18 @@ class SimVAE(nn.Module):
         rec = self.decoder.decode(sim, dec_args)
         return rec
         
-    def forward(self, x, angles=None, n_samples=20):
+    def forward(self, x, angles=None, n_samples=1):
         # encoding
         if angles is None:
             angles = x[:,-3:]
             x = x[:,:-3]
-        y = self.encode(x, angles)
-        dist_params = self.lat_space.get_params_from_encoder(y)
         
+        y = self.encode(x, angles)
+        if self.multi_output_encoder:
+            y=y[-1,:,:]
+        dist_params = self.lat_space.get_params_from_encoder(y)
+        if self.inference_mode:
+            return dist_params, None, None, None
         # latent sampling
         z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
         
@@ -107,7 +138,6 @@ class SimVAE(nn.Module):
         
         # decoding
         rec = self.decode(sim, angles)
-        
         return dist_params, z, sim, rec
     
     def point_estimate_rec(self, x, angles, mode='random'):
@@ -117,6 +147,8 @@ class SimVAE(nn.Module):
         elif mode == 'lat_mode':
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             # latent mode
             z = self.lat_space.latent_mode(x)
             # transfer to simulator variable
@@ -127,6 +159,8 @@ class SimVAE(nn.Module):
         elif mode == "sim_mode":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
             z = self.sim_space.sim2z(sim)
@@ -135,6 +169,8 @@ class SimVAE(nn.Module):
         elif mode == "sim_median":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
@@ -143,6 +179,8 @@ class SimVAE(nn.Module):
         elif mode == "sim_expectation":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.multi_output_encoder:
+                dist_params = dist_params[-1,:,:,:].unsqueeze(3)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
@@ -153,14 +191,22 @@ class SimVAE(nn.Module):
             
         return dist_params, z, sim, rec
     
-    def compute_unsupervised_loss_over_batch(self, data, angles, normalized_loss_dict, 
-                                             len_loader=1, n_samples=1, eps=1e-9):
+    def compute_unsupervised_loss_over_batch(self, batch, normalized_loss_dict, 
+                                             len_loader=1, n_samples=1):
         # assert n_samples>1
-        batch_size = data.size(0)
-        data = data.view(batch_size, -1).float()
-        params, z, sim, rec = self.forward(data, n_samples=n_samples, angles=angles)     
-        if torch.isnan(params).any():
-            self.logger.error("NaN in inferred distribution parameters !")
+        if self.patch_mode:      
+            s2_r, s2_a = get_flattened_patch(batch, device=self.device)
+            s2_r = s2_r / 10000
+        else:
+            s2_r = batch[0].to(self.device) 
+            s2_a = batch[1].to(self.device)  
+        params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)     
+        if params.isnan().any() or params.isinf().any():
+            nan_in_params = NaN_model_params(self)
+            err_str = "NaN encountered during encoding, but there is no NaN in network parameters!"
+            if nan_in_params:
+                err_str = "NaN encountered during encoding, there are NaN in network parameters!"
+            raise ValueError(err_str)
         nan_rec = torch.isnan(rec[:,0,:]).detach()
         if nan_rec.any():
             n_samples = z.size(2)
@@ -179,22 +225,39 @@ class SimVAE(nn.Module):
             self.logger.debug("sim = ")
             self.logger.debug(f"{sim[nan_batch_idx[0], :, nan_sample_idx[0]].squeeze()}")
             self.logger.debug("angles = ")
-            self.logger.debug(f"{angles[nan_batch_idx[0], :].squeeze()}")
+            self.logger.debug(f"{s2_a[nan_batch_idx[0], :].squeeze()}")
             self.logger.debug("mu = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,0].squeeze()}")
             self.logger.debug("sigma = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,1].squeeze()}")
             
-        rec_loss = self.decoder.loss(data, rec)
+        rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum=rec_loss
         
         if self.beta_kl > 0:
-            kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
-            loss_sum+=kl_loss
+            if self.supervised_model is None:
+                kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
+
+            else:
+                # self.logger.info(f's2_r device : {s2_r.device}')
+                # self.logger.info(f'self.supervised_model.encoder : {self.supervised_model.encoder.device}')
+                # self.logger.info(f'self.supervised_model.encoder.net : {self.supervised_model.encoder.net.device}')
+                # self.logger.info(f'self.supervised_model.encoder.norm_mean : {self.supervised_model.encoder.norm_mean.device}')
+                # self.logger.info(f'self.supervised_model.encoder.norm_std : {self.supervised_model.encoder.norm_std.device}')
+                params2 = self.supervised_model.encode2lat_params(s2_r, s2_a)
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params2).sum(1).mean()
+
+            loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()
-            
+
+        if self.beta_index > 0:
+            rec_loss_fn = select_rec_loss_fn(self.decoder.loss_type)
+            index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec, lossfn=rec_loss_fn)
+            loss_sum += index_loss
+            loss_dict['index_loss'] = index_loss.item()
+
         loss_dict['loss_sum'] = loss_sum.item()
 
         for key in loss_dict:
@@ -204,15 +267,34 @@ class SimVAE(nn.Module):
         
         return loss_sum, normalized_loss_dict
     
-    def compute_supervised_loss_over_batch(self, data, angles, tgt, normalized_loss_dict, 
-                                           len_loader=1, n_samples=1):
-        
-        batch_size = data.size(0)
-        data = data.view(batch_size, -1).float()
-        params = self.encode2lat_params(data, angles)
-        loss_sum = self.lat_space.loss(tgt, params)
-        all_losses = {'lat_loss': loss_sum.item()}
-       
+    def compute_supervised_loss_over_batch(self, batch, normalized_loss_dict, len_loader=1):
+        s2_r = batch[0].to(self.device) 
+        s2_a = batch[1].to(self.device)  
+        ref_sim = batch[2].to(self.device)  
+        ref_lat = self.sim_space.sim2z(ref_sim)
+        y = self.encode(s2_r, s2_a)
+        if y.isnan().any() or y.isinf().any():
+            nan_in_params = NaN_model_params(self)
+            err_str = "NaN encountered during encoding, but there is no NaN in network parameters!"
+            if nan_in_params:
+                err_str = "NaN encountered during encoding, there are NaN in network parameters!"
+            raise ValueError(err_str)
+        params = self.lat_space.get_params_from_encoder(y=y)
+        if not self.multi_output_encoder:
+            loss_sum = self.lat_space.loss(ref_lat, params)
+            if loss_sum.isnan().any() or loss_sum.isinf().any():
+                raise ValueError
+            all_losses = {'lat_loss': loss_sum.item()}
+        else:
+            main_loss = self.lat_space.loss(ref_lat, params[-1,:,:,:])
+            all_losses = {'main_lat_loss': main_loss.item()}
+            loss_sum = torch.zeros_like(main_loss)
+            loss_sum += main_loss
+            for i in range(params.size(0)):
+                loss_i = self.lat_space.loss(ref_lat, params[i,:,:,:])
+                loss_sum += loss_i / params.size(0)
+                all_losses[f"{i}_lat_loss"] = loss_i.item()
+
         all_losses['loss_sum'] = loss_sum.item()
         for key in all_losses:
             if key not in normalized_loss_dict:
@@ -220,7 +302,35 @@ class SimVAE(nn.Module):
             normalized_loss_dict[key] += all_losses[key]/len_loader
         
         return loss_sum, normalized_loss_dict
-    
+
+    def compute_lat_nlls_batch(self, batch):
+        s2_r = batch[0].to(self.device) 
+        s2_a = batch[1].to(self.device)  
+        ref_sim = batch[2].to(self.device)  
+        ref_lat = self.sim_space.sim2z(ref_sim)
+        y = self.encode(s2_r, s2_a)
+        params = self.lat_space.get_params_from_encoder(y=y)
+        if not self.multi_output_encoder:
+            nll = self.lat_space.loss(ref_lat, params, reduction=None, reduction_nll=None)
+            if nll.isnan().any() or nll.isinf().any():
+                raise ValueError
+        else:
+            raise NotImplementedError
+        return nll
+
+    def compute_lat_nlls(self, dataloader, batch_per_epoch=None):
+        self.eval()
+        all_nlls = []
+        with torch.no_grad():
+            if batch_per_epoch is None:
+                batch_per_epoch = len(dataloader)
+            for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
+                nll_batch = self.compute_lat_nlls_batch(batch)
+                all_nlls.append(nll_batch)
+                if torch.isnan(nll_batch).any():
+                    self.logger.error("NaN Loss encountered during validation !")
+        all_nlls = torch.vstack(all_nlls)
+        return all_nlls
     def save_ae(self, epoch, optimizer, loss, path):
         torch.save({
             'epoch': epoch,
@@ -229,8 +339,9 @@ class SimVAE(nn.Module):
             'loss': loss,
             }, path)  
     
-    def load_ae(self, path, optimizer=None):
-        checkpoint = torch.load(path, map_location=self.device)
+    def load_ae(self, path, optimizer=None, weights_only=False):
+        # map_location = 'cuda:0' if self.device != torch.device('cpu') else 'cpu'
+        checkpoint = torch.load(path, map_location=self.device, weights_only=weights_only)
         self.load_state_dict(checkpoint['model_state_dict'])
         if optimizer is not None:
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -238,26 +349,23 @@ class SimVAE(nn.Module):
         loss = checkpoint['loss']
         return epoch, loss
     
-    def fit(self, dataloader, optimizer, supervised=False, n_samples=1):
+    def fit(self, dataloader, optimizer, n_samples=1, batch_per_epoch=None):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
-        for i, batch in enumerate(dataloader):
+        # for i, batch in zip(range(batch_per_epoch), test_dataloader):
+        if batch_per_epoch is None:
+            batch_per_epoch = len(dataloader)
+        for i, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
             optimizer.zero_grad()
-            s2_refl = batch[0].to(self.device) 
-            angles = batch[1].to(self.device) 
-            s2_refl.requires_grad = True
-            angles.requires_grad = True
             
-            if not supervised:
-                loss_sum, _ = self.compute_unsupervised_loss_over_batch(s2_refl, 
-                                                                        angles, 
+            if not self.supervised:
+                loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader)
             else:
-                tgt = batch[2].to(self.device) 
-                tgt.requires_grad = True
-                loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, tgt, 
-                    train_loss_dict, n_samples=n_samples, len_loader=len_loader)
+                loss_sum, _ = self.compute_supervised_loss_over_batch(batch, train_loss_dict, 
+                                                        len_loader=len_loader)
+                
             if torch.isnan(loss_sum).any():
                 self.logger.error(f"NaN Loss encountered during training at batch {i}!")
                 
@@ -268,42 +376,66 @@ class SimVAE(nn.Module):
         self.eval()
         return train_loss_dict
 
-    def validate(self, dataloader, supervised=False, n_samples=1):
+    def validate(self, dataloader, n_samples=1, batch_per_epoch=None):
         self.eval()
         valid_loss_dict = {}
         len_loader = len(dataloader.dataset)
         with torch.no_grad():
-            for _, batch in enumerate(dataloader):
-                s2_refl = batch[0].to(self.device)  
-                angles = batch[1].to(self.device) 
-                if not supervised:
-                    loss_sum, _ = self.compute_unsupervised_loss_over_batch(s2_refl, angles, 
+            if batch_per_epoch is None:
+                batch_per_epoch = len(dataloader)
+            for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
+                if not self.supervised:
+                    loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
                 else:
-                    tgt = batch[2].to(self.device) 
-                    loss_sum, _ = self.compute_supervised_loss_over_batch(s2_refl, angles, tgt, 
-                        valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
+                    loss_sum, _ = self.compute_supervised_loss_over_batch(batch, valid_loss_dict, 
+                                                        len_loader=len_loader)
             if torch.isnan(loss_sum).any():
                 self.logger.error("NaN Loss encountered during validation !")
         return valid_loss_dict
 
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
-    eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu) / torch.max(sigma, eps)).mean(1).sum(1) +  \
-            torch.log(torch.max(sigma.squeeze(1), eps)).sum(1)
-from prosailvae.dist_utils import kl_tn_uniform     
-     
-def lr_finder_elbo(model_outputs, label, beta=1):
-    dist_params, z, sim, rec = model_outputs
-    rec_err_var = torch.var(rec-label.unsqueeze(2), 2).unsqueeze(2)
-    rec_loss = gaussian_nll(label.unsqueeze(2), rec, rec_err_var).mean() 
-    loss_sum=rec_loss
+# def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
+#     eps = torch.tensor(eps).to(device)
+#     return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
+#             torch.log(torch.max(sigma, eps)).sum(1)
+from prosailvae.dist_utils import kl_tn_uniform, truncated_gaussian_nll
+from prosailvae.utils import gaussian_nll, gaussian_nll_loss, full_gaussian_nll_loss, mse_loss
+
+class lr_finder_elbo(nn.Module):
+    def __init__(self, index_loss, beta_kl=1, beta_index=0, loss_type='diag_nll', ssimulator=None) -> None:
+        super(lr_finder_elbo,self).__init__()
+        self.beta_kl = beta_kl
+        self.beta_index = beta_index
+        self.index_loss = index_loss
+        self.loss_type = loss_type
+        self.ssimulator = ssimulator 
+        pass
+
+    def lr_finder_elbo_inner(self, model_outputs, label):
+        dist_params, _, _, rec = model_outputs
+
+        if self.ssimulator.apply_norm:
+            label = self.ssimulator.normalize(label)
+        rec_loss_fn = select_rec_loss_fn(self.loss_type)
+        rec_loss = rec_loss_fn(label, rec)
+        loss_sum = rec_loss.mean()
+        sigma = dist_params[:, :, 1].squeeze()
+        mu = dist_params[:, :, 0].squeeze()
+        if self.beta_kl > 0:
+            kl_loss = self.beta_kl * kl_tn_uniform(mu, sigma).sum(1).mean()
+            loss_sum += kl_loss
+        if self.beta_index>0:
+            index_loss = self.beta_index * self.index_loss(label, rec, lossfn=rec_loss_fn)
+            loss_sum += index_loss
+        return loss_sum
+
+    def forward(self, model_outputs, label):
+        return self.lr_finder_elbo_inner(model_outputs, label)
+
+def lr_finder_sup_nll(model_outputs, label):
+    dist_params, _, _, _ = model_outputs
     sigma = dist_params[:, :, 1].squeeze()
     mu = dist_params[:, :, 0].squeeze()
-    kl = kl_tn_uniform(mu, sigma) 
-    
-    kl_loss = beta * kl.sum(1).mean()
-    loss_sum+=kl_loss
-
-    return loss_sum
+    loss = truncated_gaussian_nll(label, mu, sigma).mean() 
+    return loss

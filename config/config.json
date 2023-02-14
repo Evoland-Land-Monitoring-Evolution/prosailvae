@@ -6,7 +6,6 @@
         400,
         500,
         500,
-        500,
         300,
         100
     ],
@@ -14,10 +13,12 @@
     "valid_ratio": 0.01,
     "workers": 0,
     "encoder_last_activation": null,
-    "n_samples": 10,
+    "n_samples": 12,
     "supervised": false,
     "beta_kl": 1,
+    "beta_index": 1,
     "k_fold": 0,
     "dataset_file_prefix": "full_",
-    "n_fold": null
+    "n_fold": null,
+    "simulated_dataset":true
 }

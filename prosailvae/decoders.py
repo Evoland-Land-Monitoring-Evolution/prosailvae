@@ -7,12 +7,10 @@ Created on Wed Aug 31 14:23:46 2022
 """
 import torch.nn as nn
 import torch
+from prosailvae.utils import select_rec_loss_fn, gaussian_nll_loss, full_gaussian_nll_loss, mse_loss
 
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
-    eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu) / torch.max(sigma, eps)).mean(1).sum(1) +  \
-            torch.log(torch.max(sigma.squeeze(1), eps)).sum(1)
+
 
 class Decoder(nn.Module):
 
@@ -24,12 +22,19 @@ class Decoder(nn.Module):
 
 class ProsailSimulatorDecoder(Decoder):
     
-    def __init__(self, prosailsimulator, ssimulator, device='cpu'):
+    def __init__(self, prosailsimulator, ssimulator, device='cpu', loss_type='diag_nll'):
         super().__init__()
         self.device = device
         self.prosailsimulator = prosailsimulator
         self.ssimulator = ssimulator
-        
+        self.loss_type = loss_type
+    
+    def change_device(self, device):
+        self.device=device
+        self.ssimulator.change_device(device)
+        self.prosailsimulator.change_device(device)
+        pass
+
     def decode(self, z, angles):
         n_samples = z.size(2)
         batch_size = z.size(0)
@@ -39,7 +44,6 @@ class ProsailSimulatorDecoder(Decoder):
         rec = self.ssimulator(self.prosailsimulator(sim_input)).reshape(batch_size, 
                                                                         n_samples, 
                                                                         -1).transpose(1,2)
-        
         return rec
     
     # def loss(self, tgt, rec):        
@@ -48,7 +52,9 @@ class ProsailSimulatorDecoder(Decoder):
     #     return rec_loss
     
     def loss(self, tgt, rec):        
-        rec_err_var = torch.var(rec-tgt.unsqueeze(2), 2).unsqueeze(2)
-        rec_loss = gaussian_nll(tgt.unsqueeze(2), rec, rec_err_var, device=self.device).mean() 
+        if self.ssimulator.apply_norm:
+            tgt = self.ssimulator.normalize(tgt)
+        rec_loss_fn = select_rec_loss_fn(self.loss_type)
+        rec_loss = rec_loss_fn(tgt, rec)
         return rec_loss
 

@@ -11,10 +11,12 @@ import pandas as pd
 from tqdm import tqdm
 import os 
 from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
+import matplotlib.pyplot as plt
 
-def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
+def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
     metrics_dir = res_dir + "/metrics/"
-    os.makedirs(metrics_dir)
+    if not os.path.isdir(metrics_dir):
+        os.makedirs(metrics_dir)
     pd.DataFrame(data=mae.view(1,len(PROSAILVARS)).detach().cpu().numpy(), columns=PROSAILVARS, 
                  index=[0]).to_csv(metrics_dir + "/mae.csv")
     df_mpwi = pd.DataFrame(data=mpiw.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
@@ -26,15 +28,41 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi):
     df_picp["alpha"] = alpha_pi
     df_picp.to_csv(metrics_dir + "/picp.csv")
     
-    il = get_ProsailVarsIntervalLen().to(mpiw.device)
-    mpiwr = (mpiw/il.view(-1,1)).transpose(0,1)
-    maer = mae/il
+    interval_length = get_ProsailVarsIntervalLen().to(mpiw.device)
+    mpiwr = (mpiw / interval_length.view(-1,1)).transpose(0,1)
+    maer = mae / interval_length
     df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
     df_mpiwr = pd.DataFrame(data=mpiwr.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 
                            columns=PROSAILVARS)
     df_maer.to_csv(metrics_dir + "/maer.csv")
     df_mpiwr.to_csv(metrics_dir + "/mpiwr.csv")
+    torch.save(ae_percentiles, metrics_dir + '/ae_percentiles.pt')
+    aer_percentiles = ae_percentiles / interval_length.view(1,-1).detach().cpu().numpy()
+    torch.save(aer_percentiles, metrics_dir + '/aer_percentiles.pt')
+    torch.save(are_percentiles, metrics_dir + '/are_percentiles.pt')
+    # torch.save(piw_percentiles, '/piw_percentiles.pt')
+
+def get_percentiles_from_box_plots(bp):
+    percentiles = torch.zeros((5,len(bp['boxes'])))
+    for i in range(len(bp['boxes'])):
+        percentiles[0,i] = torch.from_numpy(np.asarray(bp['caps'][2*i].get_ydata()[0]))
+        percentiles[1,i] = torch.from_numpy(np.asarray(bp['boxes'][i].get_ydata()[0]))
+        percentiles[2,i] = torch.from_numpy(np.asarray(bp['medians'][i].get_ydata()[0]))
+        percentiles[3,i] = torch.from_numpy(np.asarray(bp['boxes'][i].get_ydata()[2]))
+        percentiles[4,i] = torch.from_numpy(np.asarray(bp['caps'][2*i + 1].get_ydata()[0]))
+                        #    (bp['fliers'][i].get_xdata(),
+                        #     bp['fliers'][i].get_ydata()))
+    return percentiles
+
+def get_box_plot_percentiles(tensor):
+    fig, ax = plt.subplots()
+    all_tensor_percentiles = torch.zeros((5, tensor.size(1)))
+    for i in range(tensor.size(1)):
+        bp = ax.boxplot([tensor[:,i].numpy(),])
+        percentiles = get_percentiles_from_box_plots(bp)
+        all_tensor_percentiles[:,i] = percentiles.squeeze()
+    return all_tensor_percentiles
 
 def get_metrics(prosailVAE, loader,  
                 n_pdf_sample_points=3001,
@@ -50,15 +78,22 @@ def get_metrics(prosailVAE, loader,
     pi_upper = (1-np.array(alpha_conf)/2).tolist()
     tgt_dist = torch.tensor([]).to(device)
     rec_dist = torch.tensor([]).to(device)
+    s2_r_dist = torch.tensor([]).to(device)
+    angles_dist = torch.tensor([]).to(device)
+    sim_pdfs = torch.tensor([]).to(device)
+    sim_supports = torch.tensor([]).to(device)
     ssimulator = prosailVAE.decoder.ssimulator
     with torch.no_grad():
         for i, batch in enumerate(tqdm(loader, desc='Computing metrics', leave=True)):
-            data = batch[0].to(device)
+            s2_r = batch[0].to(device)
+            s2_r_dist = torch.concat([s2_r_dist, s2_r], axis=0)
             angles = batch[1].to(device)
             tgt = batch[2].to(device)
-            dist_params, z_mode, prosail_params_mode, rec = prosailVAE.point_estimate_rec(data, angles, mode='sim_mode')
+            dist_params, z_mode, prosail_params_mode, rec = prosailVAE.point_estimate_rec(s2_r, angles, mode='sim_mode')
             lat_pdfs, lat_supports = prosailVAE.lat_space.latent_pdf(dist_params)
-            pheno_pdfs, pheno_supports = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            sim_pdfs_i, sim_supports_i = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            sim_pdfs = torch.concat([sim_pdfs, sim_pdfs_i], axis=0)
+            sim_supports = torch.concat([sim_supports, sim_supports_i], axis=0)
             pheno_pi_lower = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
             pheno_pi_upper = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
             error_i = prosail_params_mode.squeeze() - tgt
@@ -73,8 +108,12 @@ def get_metrics(prosailVAE, loader,
             pic_i = torch.logical_and(tgt.unsqueeze(2) > pheno_pi_lower, 
                                       tgt.unsqueeze(2) < pheno_pi_upper).float()
             pic = torch.concat([pic, pic_i], axis=0)
+            angles_dist = torch.concat([angles_dist, angles], axis=0)
     mae = error.abs().mean(axis=0)     
+    ae_percentiles = get_box_plot_percentiles(error.abs().detach().cpu())
     picp = pic.mean(axis=0)    
     mpiw = piw.mean(axis=0)
+    piw_percentiles = None # get_box_plot_percentiles(piw.detach().cpu())
     mare = rel_error.mean(axis=0)
-    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist
+    are_percentiles = get_box_plot_percentiles(rel_error.detach().cpu())
+    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist, sim_pdfs, sim_supports, ae_percentiles, are_percentiles, piw_percentiles

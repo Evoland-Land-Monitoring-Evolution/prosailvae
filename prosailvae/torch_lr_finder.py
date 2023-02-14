@@ -16,6 +16,10 @@ from torch.utils.data import DataLoader
 
 from packaging import version
 
+from prosailvae.simvae import lr_finder_elbo, lr_finder_sup_nll
+from dataset.loaders import lr_finder_loader
+import torch.optim as optim
+
 PYTORCH_VERSION = version.parse(torch.__version__)
 
 import argparse
@@ -193,6 +197,8 @@ class LRFinder(object):
         diverge_th=5,
         accumulation_steps=1,
         non_blocking_transfer=True,
+        disable_tqdm=True,
+        n_samples=20
     ):
         """Performs the learning rate range test.
         Arguments:
@@ -308,16 +314,17 @@ class LRFinder(object):
                     "or child of `ValDataLoaderIter`.".format(type(val_loader))
                 )
 
-        for iteration in tqdm(range(num_iter)):
+        for iteration in tqdm(range(num_iter),disable=disable_tqdm):
             # Train on batch and retrieve loss
             loss = self._train_batch(
                 train_iter,
                 accumulation_steps,
-                non_blocking_transfer=non_blocking_transfer,
+                non_blocking_transfer=non_blocking_transfer, 
+                n_samples=n_samples
             )
             if val_loader:
                 loss = self._validate(
-                    val_iter, non_blocking_transfer=non_blocking_transfer
+                    val_iter, non_blocking_transfer=non_blocking_transfer,n_samples=n_samples
                 )
 
             # Update the learning rate
@@ -358,7 +365,7 @@ class LRFinder(object):
             if "initial_lr" in param_group:
                 raise RuntimeError("Optimizer already has a scheduler attached to it")
 
-    def _train_batch(self, train_iter, accumulation_steps, non_blocking_transfer=True):
+    def _train_batch(self, train_iter, accumulation_steps, non_blocking_transfer=True, n_samples=20):
         self.model.train()
         total_loss = None  # for late initialization
 
@@ -370,7 +377,7 @@ class LRFinder(object):
             )
 
             # Forward pass
-            outputs = self.model(inputs)
+            outputs = self.model(inputs, n_samples=n_samples)
             loss = self.criterion(outputs, labels)
 
             # Loss should be averaged in each step
@@ -415,7 +422,7 @@ class LRFinder(object):
         labels = move(labels, self.device, non_blocking=non_blocking)
         return inputs, labels
 
-    def _validate(self, val_iter, non_blocking_transfer=True):
+    def _validate(self, val_iter, non_blocking_transfer=True, n_samples=20):
         # Set model to evaluation mode and disable gradient computation
         running_loss = 0
         self.model.eval()
@@ -427,7 +434,7 @@ class LRFinder(object):
                 )
 
                 # Forward pass and loss computation
-                outputs = self.model(inputs)
+                outputs = self.model(inputs, n_samples=n_samples)
                 loss = self.criterion(outputs, labels)
                 running_loss += loss.item() * len(labels)
 
@@ -670,7 +677,7 @@ def get_prosailvae_train_parser():
     
     parser.add_argument("-c", dest="config_file",
                         help="name of config json file on config directory.",
-                        type=str, default="config.json")
+                        type=str, default="config_dev.json")
     
     parser.add_argument("-x", dest="n_xp",
                         help="Number of experience (to use in case of kfold)",
@@ -691,15 +698,48 @@ def get_prosailvae_train_parser():
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
        
-    return parser                
+    return parser       
+
+def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True,n_samples=20):
+    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2, old_lr = 1, old_lr_max_ratio = 10)
+    lrtrainloader = lr_finder_loader(
+                                    file_prefix=file_prefix, 
+                                    sample_ids=None,
+                                    batch_size=64,
+                                    data_dir=data_dir,
+                                    supervised=model.supervised)
+    inference_mode = model.inference_mode
+    if model.supervised:
+        criterion = lr_finder_sup_nll
+        model.inference_mode = True
+    else:
+        criterion = lr_finder_elbo(index_loss=model.decoder.ssimulator.index_loss,
+                                    beta_kl=model.beta_kl, beta_index=model.beta_index, 
+                                    loss_type=model.decoder.loss_type, 
+                                    ssimulator=model.decoder.ssimulator)
+
+    lr_finder = LRFinder(model, optimizer, criterion, device=model.device)
+
+    if model.decoder.loss_type == "mse":
+        n_samples=1
+    lr_finder.range_test(lrtrainloader, end_lr=10, num_iter=100, disable_tqdm=disable_tqdm,n_samples=n_samples)
+    suggested_lr = lr_finder.suggest_lr()
+    lr_optimal = min(suggested_lr, old_lr_max_ratio * old_lr)
+    if plot_lr:
+        print(lr_optimal)
+        lr_finder.plot(log_lr=True)
+    model.inference_mode = inference_mode
+    lr_finder.reset()
+    return lr_optimal     
+
 if __name__ == "__main__":
 
-    from prosailvae.simvae import lr_finder_elbo
-    from dataset.loaders import lr_finder_loader, get_norm_coefs
+    
+    from dataset.loaders import get_norm_coefs
     import prosailvae
     from prosailvae.utils import load_dict
     from prosailvae.prosail_vae import get_prosail_VAE
-    import torch.optim as optim
+    
     parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)
     
@@ -717,20 +757,13 @@ if __name__ == "__main__":
                 "hidden_layers_size":params["hidden_layers_size"], 
                 "encoder_last_activation":params["encoder_last_activation"],
                 "supervised":params["supervised"],  
-                "beta_kl":params["beta_kl"]}
+                "beta_kl":params["beta_kl"],
+                "beta_index":0}
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    inference_mode = params["supervised"]
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
-                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std)
+                                  refl_norm_mean=norm_mean, refl_norm_std=norm_std, 
+                                  inference_mode=inference_mode)
     model = prosail_VAE
-    criterion = lr_finder_elbo
-    lrtrainloader = lr_finder_loader(
-                                    file_prefix="small_test_", 
-                                    sample_ids=None,
-                                    batch_size=64,
-                                    data_dir=data_dir)
-    optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-2)
-    lr_finder = LRFinder(model, optimizer, criterion, device="cpu")
-    lr_finder.range_test(lrtrainloader, val_loader=lrtrainloader, end_lr=1, num_iter=100, step_mode="linear")
-    lr_optimal = lr_finder.suggest_lr()
-    lr_finder.plot(log_lr=False) # to inspect the loss-learning rate graph
-    lr_finder.reset() 
+    
+    lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True, disable_tqdm=False)

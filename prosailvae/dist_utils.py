@@ -42,6 +42,32 @@ def kl_tn_uniform(mu, sigma, a=torch.tensor(0.0), b=torch.tensor(1.0)):
     kl = - torch.log(sigma.float() * Z.float()) - torch.log(torch.tensor(2*pi))/2 - 1/2 - (alpha * phi_alpha - beta* phi_beta)/(2*Z) + torch.log(b-a) # + mu * (phi_alpha - phi_beta)/(2 * sigma * Z)
     return kl
 
+def kl_tntn(mu1, sigma1, mu2, sigma2, a=torch.tensor(0.0), b=torch.tensor(1.0)):
+    alpha1 = (a - mu1) / sigma1
+    beta1 = (b - mu1) / sigma1
+    phi_alpha1 = torch.exp(-alpha1**2/2) / torch.sqrt(torch.tensor(2*pi))
+    phi_beta1 = torch.exp(-beta1**2/2) / torch.sqrt(torch.tensor(2*pi))
+    Phi_alpha1 = 0.5 * (1 + torch.erf(alpha1/(2**0.5))) 
+    Phi_beta1 = 0.5 * (1 + torch.erf(beta1/(2**0.5))) 
+    eta1 = Phi_beta1 - Phi_alpha1
+    alpha2 = (a - mu2) / sigma2
+    beta2 = (b - mu2) / sigma2
+    Phi_alpha2 = 0.5 * (1 + torch.erf(alpha2/(2**0.5))) 
+    Phi_beta2 = 0.5 * (1 + torch.erf(beta2/(2**0.5))) 
+    eta2 = Phi_beta2 - Phi_alpha2
+    sigma22 = sigma2.pow(2)
+    sigma12 = sigma1.pow(2)
+    K1 = alpha1 * phi_alpha1 - beta1 * phi_beta1
+    N1 = phi_alpha1 - phi_beta1
+    kl = - 1/2
+    kl += torch.log(sigma2 * eta2) - torch.log(sigma1 * eta1) 
+    kl += - K1 / (2 * eta1) * (1 - sigma12 / sigma22)
+    kl += (mu1 - mu2).pow(2) / 2 / sigma22
+    kl += sigma12 / 2 / sigma22
+    kl += (mu1 - mu2) * sigma1 / eta1 / sigma22 * N1
+    return kl
+
+
 def numerical_kl_tn_uniform(mu, sigma, support=torch.arange(0,1, 0.001)):
     p = truncated_gaussian_pdf(support, mu, sigma)
     log_p = torch.log(p)
@@ -55,8 +81,14 @@ def truncated_gaussian_pdf(x, mu, sig, eps=1e-9):
 def truncated_gaussian_cdf(x, mu, sig, eps=1e-9):
     return  (x>1) + (x>=0) * (x<=1) * (normal_cdf(x, mu, sig) - normal_cdf(torch.tensor(0), mu, sig))/ (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig))
 
-def truncated_gaussian_nll(x, mu, sig, eps=1e-9):
-    return -torch.log(truncated_gaussian_pdf(x, mu, sig) + torch.tensor(eps)).sum(axis=1)
+def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum'):
+    likelihood = truncated_gaussian_pdf(x, mu, sig)
+    nll = -torch.log(likelihood + torch.tensor(eps))
+    if reduction =="sum":
+        nll = nll.sum(axis=1)
+    if nll.isinf().any() or nll.isnan().any():
+        raise ValueError()
+    return nll
 
 def get_truncated_gaussian_pdf(mu, sigma, support_sampling=0.001):
     support = torch.arange(support_sampling, 1, support_sampling)
@@ -94,7 +126,6 @@ def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampl
         pdfs[:, i, :] = (prod_cdfs.view(batch_size, -1) * prod_pdfs_invcdfs.sum(axis=1))
     return pdfs, supports
 
-
 def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device='cpu'):
     
     n_lat = max_matrix.size(1)
@@ -104,11 +135,13 @@ def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device
         cdfs_at_zi = truncated_gaussian_cdf(z[:,i].view(-1,1), mu, sigma).to(device)
         max_mat_col = max_matrix[:,i]
         max_mat_mask = max_mat_col.repeat(z.size(0),1)
+        # masked select is probably triggering some errors, see : https://discuss.pytorch.org/t/logbackward-returned-nan-values-in-its-0th-output/92820/7
         selected_cdfs = torch.masked_select(cdfs_at_zi, max_mat_mask.bool()).view(z.size(0),-1)
         selected_pdfs = torch.masked_select(pdfs_at_zi, max_mat_mask.bool()).view(z.size(0),-1)
         prod_cdfs = torch.prod(selected_cdfs, 1).view(-1,1)
         prod_pdfs_invcdfs = selected_pdfs / (selected_cdfs + eps)
         max_pdf_lat[:,i] = (prod_cdfs * prod_pdfs_invcdfs.sum(axis=1).view(-1,1)).squeeze()
+    #TODO: correct error in backward pass here.
     log_max_pdf_i = torch.log(max_pdf_lat + eps)
     nll = -log_max_pdf_i
     return nll.sum(axis=1) 

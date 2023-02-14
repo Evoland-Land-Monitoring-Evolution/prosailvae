@@ -1,0 +1,25 @@
+#PBS -N prslhypertrain
+#PBS -q qgpgpudev
+#PBS -l select=1:ncpus=4:mem=60G:ngpus=1  
+#PBS -l walltime=1:00:00
+#PBS -J 1-2:1
+
+module load conda
+export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_PATH
+conda activate /work/scratch/zerahy/dotconda/juanvae
+export SRCDIR=/home/uz/zerahy/projects/    
+export VAEDIR=${SRCDIR}/prosailvae/prosailvae/
+export RSR_DIR=/work/scratch/zerahy/prosailvae/data/
+export DATADIR=/work/scratch/zerahy/prosailvae/data/1e5_dataset_V2/
+export OUTDIR=/work/scratch/zerahy/prosailvae/results/BIG_${PBS_JOBID:0:8}_jobarray/${PBS_ARRAY_INDEX}/
+export TENSOR_DIR=/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/
+export NUM_WORKERS=12
+export CONFIG_LIST=${VAEDIR}/config/list_configs_rnn.txt
+export CONFIG=$(sed -n ${PBS_ARRAY_INDEX}"p" $CONFIG_LIST)
+
+cd /work/scratch/zerahy/temp/
+qsub -v FRSR_DIR=$RSR_DIR,FDATADIR=$DATADIR,FOUTDIR=$OUTDIR,FTENSOR_DIR=$TENSOR_DIR,FCONFIG=$CONFIG ${VAEDIR}/jobs/train_prosail_folds.sh
+
+
+
+

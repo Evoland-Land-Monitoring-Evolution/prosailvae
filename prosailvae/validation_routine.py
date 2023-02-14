@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright: (c) 2022 CESBIO / Centre National d'Etudes Spatiales
+# Copyright: (c) 2023 CESBIO / Centre National d'Etudes Spatiales
 """
 
 Example of how to read a raster and a vector file with the objective
@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 from typing import Any, List, Union, Tuple, List
 
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -70,7 +71,6 @@ class Config:
     site: str
     raster: str
     vector: str
-    vector_field : str
 
     def __post_init__(self) -> None:
         if not Path(self.raster).exists:
@@ -79,14 +79,14 @@ class Config:
             raise Exception(f"The dataset {self.vector} do not exist!")
 
 
-def read_config_file() -> Config:
+def read_config_file(config_file : str) -> Config:
     """
     Func for retrieve the config file
     """
-    current_path = Path.cwd()
-    parent_path = current_path.parent
-    config_file = parent_path / "config" / "validation.json"
-    config_dict = json.loads(config_file.read_text())
+    # current_path = Path.cwd()
+    # parent_path = current_path.parent
+    # config_file = parent_path / "config" / "validation.json"
+    config_dict = json.loads(Path(config_file).read_text())
     return Config(**config_dict)
 
 
@@ -145,15 +145,11 @@ def get_pixel_value(raster_filename: str,
     s2_array[:,:10] = np.divide(s2_array[:,:10].astype(np.float64), 10_000)
     # masks
     s2_array[:,11] = s2_array[:,11].astype(np.uint8)
-    # print(f" Cloud Mask Pure : {np.unique(s2_array[:,11])}" )
     s2_array[:,11] = np.logical_or(
         s2_array[:,11].astype(np.uint8), #s2_array_cloud,
         np.logical_or( s2_array[:,10].astype(np.uint8) ,
                        s2_array[:,12].astype(np.uint8)
         ))
-    # print(f"Sat B10:  { np.unique(s2_array[:,10].astype(np.uint8))}" )
-    # print(f"Cloud B11: {  np.unique(s2_array[:,11])}")
-    # print(f" Edge B12: {  np.unique(s2_array[:,12].astype(np.uint8))}")
     # compute the angles
     s2_array[:,14:] = join_even_odd_s2_angles(s2_array[:,14:])
     # DataFrame for store the values
@@ -214,7 +210,7 @@ def compute_time_deltas(vector_timestamp: Any,
 
 
 
-def get_pixels(n_nearest, vector_ds, col_names):
+def get_pixels(n_nearest, vector_ts, vector_ds, col_names):
     """
     Extract the pixel values and append the field values
     """
@@ -248,12 +244,6 @@ def check_pixel_validity(values_df : gpd.GeoDataFrame,
     """
     Check if the pixel are valids
     """
-    # determinate if pixel are valid
-    # validity = [bool(i) for i in
-    #             values_df["cloud_mask"].apply(
-    #                 lambda x : int(x)).to_list()]
-    # values_df["cloud_mask"] = validity
-
     values_df["cloud_mask"] = values_df["cloud_mask"].apply(
         lambda x : int(x)).to_list()
     return values_df
@@ -297,13 +287,15 @@ def clean_italy(vector_ds: gpd.GeoDataFrame,
 
 
 
-def main():
+def main(args : argparse.ArgumentParser):
     """
     Entry point
     """
     # read config
-    config = read_config_file()
-
+    config = read_config_file(args.input_config)
+    logging.info(f"Reading config : {args.input_config}")
+    logging.info(f"Vector Folder : {config.vector}")
+    logging.info(f"Raster Folder : {config.raster}")
     # get the raster time serie
     raster_ts = raster_time_serie(config.raster)
 
@@ -333,7 +325,7 @@ def main():
 
     # iterate over the vector dates
     window_days = 25
-    for vector_ts, vector_ds in vector_data.groupby("Date"):
+    for vector_ts, vector_ds in tqdm(vector_data.groupby("Date"), desc="Extracting Pixel Values :"):
         # get the closest dates
         time_delta = compute_time_deltas(
             vector_ts,
@@ -367,14 +359,14 @@ def main():
         # iterate over
         for idx_b, n_nearest_b in enumerate(n_closest_before.iterrows()):
             # get pixel values
-            values_df_b = get_pixels(n_nearest_b, vector_ds, col_names)
+            values_df_b = get_pixels(n_nearest_b, vector_ts, vector_ds, col_names)
             # check pixel validity
             val_check_b = check_pixel_validity(values_df_b)
             # iterate over the dataframe
             for cloud_idx_b, cloud_presence_b in values_df_b["cloud_mask"].iteritems():
-                print(f"cloud presence before : {cloud_presence_b}")
+                # print(f"cloud presence before : {cloud_presence_b}")
                 if not bool(cloud_presence_b):
-                    print(f"cloud presence before : {cloud_presence_b} <<<<<------- ")
+                    # print(f"cloud presence before : {cloud_presence_b} <<<<<------- ")
                     before_values_list.append(values_df_b.iloc[cloud_idx_b,:])
                     break
                 else:
@@ -383,14 +375,14 @@ def main():
         # iterate over
         for idx_a, n_nearest_a in enumerate(n_closest_after.iterrows()):
             # get pixel values
-            values_df_a = get_pixels(n_nearest_a, vector_ds, col_names)
+            values_df_a = get_pixels(n_nearest_a, vector_ts, vector_ds, col_names)
             # check pixel validity
             values_df_a = check_pixel_validity(values_df_a)
 
             for cloud_idx_a, cloud_presence_a in values_df_a["cloud_mask"].iteritems():
-                print(f"cloud presence after : {cloud_presence_a}")
+                # print(f"cloud presence after : {cloud_presence_a}")
                 if not bool(cloud_presence_a):
-                    print(f"cloud presence after : {cloud_presence_a} ------>>>>")
+                    # print(f"cloud presence after : {cloud_presence_a} ------>>>>")
                     after_values_list.append(values_df_a.iloc[cloud_idx_a,:])
                     break
                 else:
@@ -400,26 +392,23 @@ def main():
     # get the final value
     if len(after_values_list) :
         final_df_af = pd.concat(after_values_list, axis=1).T
-        final_df_af.to_csv(f"/work/scratch/vinascj/after_{config.site}.csv",
+        final_df_af.to_csv(
+            f"{args.export_path}/after_{config.site}_{config.raster.split('/')[-2]}.csv",
                            index=False)
+        logging.info(f"Exported to : {args.export_path}/after_{config.site}_{config.raster.split('/')[-2]}.csv")
 
     if len(before_values_list) :
         final_df_be = pd.concat(before_values_list, axis=1).T
-        final_df_be.to_csv(f"/work/scratch/vinascj/before_{config.site}.csv",
+        final_df_be.to_csv(
+            f"{args.export_path}/before_{config.site}_{config.raster.split('/')[-2]}.csv",
                            index=False)
+        logging.info(f"Exported to : {args.export_path}/before_{config.site}.csv")
 
 
 if __name__ == "__main__":
     # Parser arguments
     parser = get_parser()
     args = parser.parse_args()
-
-    # check patch selection strategy
-    if not (args.patch_index or args.nb_patches):
-        parser.error(
-            "Not patch indexing strategy requested,"
-            " add --patch_index or --nb_patches"
-        )
 
     # Configure logging
     numeric_level = getattr(logging, args.loglevel.upper(), None)
@@ -434,7 +423,5 @@ if __name__ == "__main__":
 
 
     ### Entry Point
-    os.chdir("/home/uz/vinascj/src/prosailvae/prosailvae")
-    # call main
     main(args)
     logging.info("Export finish!")

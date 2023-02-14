@@ -16,7 +16,7 @@ then
     exit 1
 fi
 
-export target=/work/scratch/$USER/virtualenv/$name
+export target=/work/scratch/$USER/dotconda/$name
 
 if ! [ -z "$2" ]
 then

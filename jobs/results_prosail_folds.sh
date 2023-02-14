@@ -1,7 +1,7 @@
 #PBS -N prosailresbatch
-#PBS -q qgpgpu
+#PBS -q qgpgpudev
 #PBS -l select=1:ncpus=4:mem=60G:ngpus=1  
-#PBS -l walltime=02:00:00
+#PBS -l walltime=00:30:00
 
 module load conda
 export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_PATH

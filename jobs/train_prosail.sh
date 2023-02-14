@@ -13,6 +13,7 @@ export DATADIR=/work/scratch/zerahy/prosailvae/data/1e5_dataset_V2/
 export OUTDIR=/work/scratch/zerahy/prosailvae/results/${PBS_JOBID:0:8}_jobarray/
 export TENSOR_DIR=/work/CESBIO/projects/MAESTRIA/prosail_validation/toyexample/torchfiles/
 export NUM_WORKERS=12
+export CONFIG=config.json
 
-CUDA_LAUNCH_BLOCKING=1 python ${VAEDIR}/prosailvae/train.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR
+CUDA_LAUNCH_BLOCKING=1 python ${VAEDIR}/prosailvae/train.py -d ${DATADIR} -r $OUTDIR -rsr $RSR_DIR -t $TENSOR_DIR -c $CONFIG -p True -a True
 conda deactivate

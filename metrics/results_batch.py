@@ -48,6 +48,10 @@ def get_prosailvae_results_parser():
     parser.add_argument("-t", dest="tensor_dir",
                         help="directory of mmdc tensor files",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
+
+    parser.add_argument("-p", dest="plot_results",
+                        help="toggle results plotting",
+                        type=bool, default=False)   
     return parser
 
 
@@ -259,7 +263,7 @@ def main():
             vae_file_path = fold_res_dir + '/prosailvae_weights.tar'
             PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, 
                                     logger_name=LOGGER_NAME, vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model)
-            save_results(PROSAIL_VAE, fold_res_dir, data_dir, LOGGER_NAME=LOGGER_NAME)
+            save_results(PROSAIL_VAE, fold_res_dir, data_dir, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
             save_array_xp_path(res_dir, fold_res_dir)
         except Exception as e:
             traceback.print_exc()

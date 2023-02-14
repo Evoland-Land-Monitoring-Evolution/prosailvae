@@ -1,4 +1,5 @@
 #PBS -N xpgather
+#PBS -q qgpgpudev
 #PBS -l select=1:ncpus=4:mem=60G:ngpus=1  
 #PBS -l walltime=1:00:00
 
@@ -7,7 +8,7 @@ export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_P
 conda activate /work/scratch/zerahy/dotconda/juanvae
 export SRCDIR=/home/uz/zerahy/projects/    
 export VAEDIR=${SRCDIR}/prosailvae/prosailvae/
-export OUTDIR=/work/scratch/zerahy/prosailvae/results/BIG_37758640_jobarray/
+export OUTDIR=/work/scratch/zerahy/prosailvae/results/BIG_37963322_jobarray//
 
 
 python ${VAEDIR}/metrics/aggregate_hyperparameters_results.py -r $OUTDIR 

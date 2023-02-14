@@ -1,8 +1,8 @@
 #PBS -N prslhypertrain
 #PBS -q qgpgpudev
-#PBS -l select=1:ncpus=4:mem=60G:ngpus=1  
-#PBS -l walltime=1:00:00
-#PBS -J 1-2:1
+#PBS -l select=1:ncpus=4:mem=10G:ngpus=1  
+#PBS -l walltime=12:00:00
+#PBS -J 1-294:1
 
 module load conda
 export LD_LIBRARY_PATH=/work/scratch/zerahy/dotconda/prosailvae/lib:$LD_LIBRAY_PATH

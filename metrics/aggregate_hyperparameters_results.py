@@ -57,7 +57,7 @@ def plot_losses(val_losses, gathered_res_dir, model_names=None):
 
 
 def main():
-    n_folds = 3
+    n_folds = 5
     root_res_dir, res_dirs = get_results_dirs_names()
     gathered_res_dir = root_res_dir + "/agregated_results/"
     os.makedirs(gathered_res_dir)

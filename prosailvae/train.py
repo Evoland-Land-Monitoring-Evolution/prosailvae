@@ -91,6 +91,7 @@ def get_prosailvae_train_parser():
     return parser
 
 def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0):
+    new_lr=old_lr
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
@@ -279,7 +280,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     
     
 
-    PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name=LOGGER_NAME,
+    PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, logger_name=LOGGER_NAME,
                                                         vae_file_path=None, params_sup_kl_model=params_sup_kl_model)
     lr = params['lr']
     if lr is None:

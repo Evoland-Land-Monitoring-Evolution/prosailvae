@@ -130,7 +130,7 @@ def load_prosailVAE(rsr_dir, vae_params, vae_file_path, optimizer=None, device='
     prosail_vae.change_device(device)
     return prosail_vae, nb_epoch, loss
 
-def load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name, vae_file_path=None, params_sup_kl_model=None):
+def load_PROSAIL_VAE_with_supervised_kl(params, rsr_dir, data_dir, logger_name, vae_file_path=None, params_sup_kl_model=None):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     sup_prosail_vae=None
@@ -143,7 +143,6 @@ def load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name, v
                 "beta_index":params_sup_kl_model["beta_index"],
                 }
         norm_mean, norm_std = get_norm_coefs(data_dir, params_sup_kl_model["dataset_file_prefix"])
-        rsr_dir = parser.rsr_dir
         sup_prosail_vae, _, _ = load_prosailVAE(rsr_dir, vae_params=vae_params,vae_file_path=params_sup_kl_model['sup_model_weights_path'],
                                             optimizer=None, device=device,
                                             refl_norm_mean=norm_mean, refl_norm_std=norm_std,
@@ -162,7 +161,6 @@ def load_PROSAIL_VAE_with_supervised_kl(params, parser, data_dir, logger_name, v
                 "beta_index":params["beta_index"],
                 }
     norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
-    rsr_dir = parser.rsr_dir
     if vae_file_path is not None:
         prosail_vae, _, _ = load_prosailVAE(rsr_dir, vae_params=vae_params,vae_file_path=vae_file_path,
                                             optimizer=None, device=device,

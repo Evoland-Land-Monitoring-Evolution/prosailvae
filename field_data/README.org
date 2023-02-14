@@ -1,0 +1,80 @@
+
+
+* ProsailVAE field validation data
+
+
+
+** Data summary
+
+| Study Site    | Tile                          | Period                  | EPSG-CRS | Raster available |
+|---------------+-------------------------------+-------------------------+----------+------------------|
+| France        | 31TCJ                         | 02/01/2017 - 29/09/2018 |    32631 | True             |
+| Italy         | 33TWF                         | 17/12/2016 - 28/09/2018 |    32633 | True             |
+| Spain         | 30TUM                         | 09/12/2016 - 10/10/2018 |    32630 | True             |
+| Poland        | 33UXT                         | 01/01/2017 - 29/09/2018 |    32633 | False            |
+| Ukraine       | 36UUA - 35UQR                 | 12/05/2018 - 02/11/2018 |    32636 | False            |
+| Argentina     | 20HNC - 20HNB - 20HMB - 20HMC | 16/11/2018 - 23/11/2018 |    32320 | False            |
+| United States | 14TMT                         | 01/05/2017 - 05/11/2021 |    32614 | False            |
+
+
+** Data Output form
+
+| B1  | B2 | B3 | Bn | ... | Az | Date_sat | Date_field | LAI |
+|-----+----+----+----+-----+----+----------+------------+-----|
+| P1  |    |    |    |     |    |          |            |     |
+| P2  |    |    |    |     |    |          |            |     |
+| P3  |    |    |    |     |    |          |            |     |
+| ... |    |    |    |     |    |          |            |     |
+| Pn  |    |    |    |     |    |          |            |     |
+
+** Configuration File
+
+Following the structure of the ProsailVAE Project. I propose the use of json file for configure the parameters in the validation protocol as follow:
+
+*** Spain Site
+
+#+begin_src json
+{
+    "raster_dataset_path" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T30TUM",
+    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/spain",
+    "vector_field" : "LAI_AccuPA"
+}
+
+#+end_src
+
+*** France Site
+
+#+begin_src json
+{
+    "raster_dataset_path" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T31TCJ",
+    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/france",
+    "vector_field" : "PAIeff – LAI2000, 3 rings"
+}
+
+#+end_src
+
+
+*** Italy Site
+
+#+begin_src json
+{
+    "raster_dataset_path" : "/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/T33TWF",
+    "vector_dataset_path" : "/home/uz/vinascj/src/prosailvae/field_data/italy",
+    "vector_field" : "LicorLAI"
+
+}
+
+#+end_src
+
+
+
+** TODO Add more validation sites:
+
+In the field data are locations that are not in the Theia production zone:
+- Argentina
+- Poland
+- Ukraine
+- United States
+
+Is necessary modify the download code (mmdc-datacollection) for manage the PEPS MAJA option. To get the S2 data for this locations.
+

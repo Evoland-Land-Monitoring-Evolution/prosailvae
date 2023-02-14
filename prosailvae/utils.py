@@ -53,7 +53,7 @@ def load_dict(dict_file_path):
     with open(dict_file_path, "r") as read_file:
         data_dict = json.load(read_file)
     return data_dict
-    
+
 def NaN_model_params(model):
     for name, param in model.named_parameters():
         if param.requires_grad:
@@ -124,7 +124,7 @@ def cuda_cholesky(A):
 def plot_grad_flow(model, savefile=None):
     '''Plots the gradients flowing through different layers in the net during training.
     Can be used for checking for possible gradient vanishing / exploding problems.
-    
+    https://discuss.pytorch.org/t/check-gradient-flow-in-network/15063
     Usage: Plug this function in Trainer class after loss.backwards() as 
     "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
     named_parameters = model.named_parameters()

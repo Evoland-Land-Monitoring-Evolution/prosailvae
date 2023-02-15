@@ -11,7 +11,7 @@ import os
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
 
 def get_S2_bands(df_validation_data):
-    data = torch.from_numpy(df_validation_data[["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"]].values)
+    data = torch.from_numpy(df_validation_data[['B2', 'B3', 'B4', 'B8', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values)
     return data
 
 def convert_angles(angles):
@@ -24,17 +24,15 @@ def convert_angles(angles):
 
     return torch.concat((sun_zen, obs_zen, rel_azi), axis=1)
 def get_angles(df_validation_data):
-    angles = torch.from_numpy(df_validation_data[['cos(sun_zen)', 'sin(sun_az)',
-                                                'cos(join_zen)', 'sin(join_az)', 'cos(join_az)','sin(join_az).1']].values)
+    angles = torch.from_numpy(df_validation_data[['sun_zen', 'sun_az', 'join_zen', 'join_az']].values)
     angles = convert_angles(angles)
     return angles
 
 def get_all_possible_LAIs(df_validation_data):
-    data = torch.from_numpy(df_validation_data[['PAIeff – CE', 'PAIeff CE V5.1',
-       'PAIeff – P57', 'PAIeff Miller', 'PAIeff – LAI2000, 3 rings',
-       'PAIeff – LAI2000, 4 rings', 'PAIeff – LAI2000, 5 rings',
-       'PAItrue – CE', 'PAItrue – CE V5.1', 'PAItrue – P57',
-       'PAItrue – Miller']].values)
+    data = torch.from_numpy(df_validation_data[['PAIeff–CE', 'PAIeffCEV5.1',
+       'PAIeff–P57', 'PAIeffMiller', 'PAIeff–LAI20003rings',
+       'PAIeff–LAI20004rings', 'PAIeff–LAI20005rings', 'PAItrue–CE',
+       'PAItrue–CEV5.1', 'PAItrue–P57', 'PAItrue–Miller']].values)
     return data
 
 def clean_validation_data(df_validation_data):

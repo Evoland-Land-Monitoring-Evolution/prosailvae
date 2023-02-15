@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 from typing import Any, List, Union, Tuple, List
 
+from sensorsio.sentinel2 import Sentinel2
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
@@ -141,6 +142,10 @@ def get_pixel_value(raster_filename: str,
                         for coords in raster.sample(coord_list)]
     # araay
     s2_array = np.array(pixel_values, dtype=np.float64)
+    # set the dtypes
+    s2_array[:,:10]= s2_array[:,:10].astype(np.float64)
+    s2_array[:,10:14]= s2_array[:,10:14].astype(int)
+    s2_array[:,:14]= s2_array[:,:14].astype(np.float64)
     # scale the reflectances
     s2_array[:,:10] = np.divide(s2_array[:,:10].astype(np.float64), 10_000)
     # masks
@@ -151,9 +156,13 @@ def get_pixel_value(raster_filename: str,
                        s2_array[:,12].astype(np.uint8)
         ))
     # compute the angles
-    s2_array[:,14:] = join_even_odd_s2_angles(s2_array[:,14:])
+    s2_array[:,14:18] = join_even_odd_s2_angles(s2_array[:,14:])
+    # Form output array
+    s2_data_out = np.zeros((s2_array.shape[0], 18))
+    s2_data_out[:,:14] = s2_array[:,:14]
+    s2_data_out[:,14:] = s2_array[:,14:18]
     # DataFrame for store the values
-    out_df = pd.DataFrame(s2_array, columns=colnames)
+    out_df = pd.DataFrame(s2_data_out, columns=colnames)
     return out_df
 
 def join_even_odd_s2_angles(s2_angles_data: np.array) -> np.array:
@@ -187,14 +196,12 @@ def join_even_odd_s2_angles(s2_angles_data: np.array) -> np.array:
 
     return np.concatenate(
         [
-            np.cos(np.deg2rad(sun_zen)),
-            np.cos(np.deg2rad(sun_az)),
-            np.sin(np.deg2rad(sun_az)),
-            np.cos(np.deg2rad(join_zen)),
-            np.cos(np.deg2rad(join_az)),
-            np.sin(np.deg2rad(join_az)),
+            sun_zen,
+            sun_az,
+            join_zen,
+            join_az,
         ],
-    ).reshape(s2_angles_data.shape)
+    ).reshape(s2_angles_data.shape[0],4)
 
 
 def compute_time_deltas(vector_timestamp: Any,
@@ -227,8 +234,6 @@ def get_pixels(n_nearest, vector_ts, vector_ds, col_names):
                                 i in range(len(s2_pix_values))]
     s2_pix_values["s2_date"] = [n_nearest[1]["s2_date"] for
                                 i in range(len(s2_pix_values))]
-    s2_pix_values["field_date"] = [vector_ts for
-                                    i in range(len(s2_pix_values))]
     values_np = np.concatenate((np.array(s2_pix_values), np.array(vector_ds)),
                             axis=1)
     values_df = pd.DataFrame(
@@ -244,8 +249,15 @@ def check_pixel_validity(values_df : gpd.GeoDataFrame,
     """
     Check if the pixel are valids
     """
-    values_df["cloud_mask"] = values_df["cloud_mask"].apply(
+    values_df['sat_mask'] = values_df['sat_mask'].apply(
         lambda x : int(x)).to_list()
+    values_df['cloud_mask'] = values_df['cloud_mask'].apply(
+        lambda x : int(x)).to_list()
+    values_df['edge_mask'] = values_df['edge_mask'].apply(
+        lambda x : int(x)).to_list()
+    values_df['geophysical_mask'] = values_df['geophysical_mask'].apply(
+        lambda x : int(x)).to_list()
+
     return values_df
 
 
@@ -255,9 +267,12 @@ def clean_france(vector_ds: gpd.GeoDataFrame,
     Normalize the dates
     """
     normalize_france_date = lambda x : dateutil.parser.parse(str(x))
-    vector_ds['Date'] = vector_ds['Date DHP'].apply(
+    vector_ds['field_date'] = vector_ds['Date DHP'].apply(
         normalize_france_date).apply(
             pd.to_datetime)
+
+    # delete duplicate columns
+    vector_ds = vector_ds.drop(['Date DHP', 'Date DHP.1'], axis=1)
 
     return vector_ds
 
@@ -267,9 +282,12 @@ def clean_spain(vector_ds: gpd.GeoDataFrame,
     Normalize the dates
     """
     normalize_spain_date = lambda x : dateutil.parser.parse(str(x))
-    vector_ds['Date'] = vector_ds['Date DHP'].apply(
-        normalize_france_date).apply(
+    vector_ds['field_date'] = vector_ds['f_datetime'].apply(
+        normalize_spain_date).apply(
             pd.to_datetime)
+
+    # delete duplicate columns
+    vector_ds = vector_ds.drop(['f_datetime', 'Time'], axis=1)
 
     return vector_ds
 
@@ -279,9 +297,12 @@ def clean_italy(vector_ds: gpd.GeoDataFrame,
     Normalize the dates
     """
     normalize_italy_date = lambda x : dateutil.parser.parse(x)
-    vector_ds['Date'] = vector_ds['Date'].apply(
+    vector_ds['field_date'] = vector_ds['Date'].apply(
         normalize_italy_date).apply(
             pd.to_datetime)
+
+    # delete duplicate columns
+    vector_ds = vector_ds.drop(['Date'], axis=1)
 
     return vector_ds
 
@@ -314,18 +335,22 @@ def main(args : argparse.ArgumentParser):
     if config.site == "spain":
         # read geo data
         vector_data = read_vector(*glob.glob(f"{config.vector}/*.gpkg"))
+        # clean the data
+        vector_data = clean_spain(vector_data)
 
     # init export dataframe
-    col_names = ["B"+str(i+1) for i in range(10)]
+    col_names =  [i.value for i in Sentinel2.GROUP_10M + Sentinel2.GROUP_20M]
     aux_names = ['sat_mask', 'cloud_mask', 'edge_mask','geophysical_mask',
-                 'cos(sun_zen)', 'sin(sun_az)', 'cos(join_zen)', 'sin(join_az)', 'cos(join_az)', 'sin(join_az)']
+                 'sun_zen','sun_az','join_zen','join_az']
+
+                 #'cos(sun_zen)', 'sin(sun_az)', 'cos(join_zen)', 'sin(join_az)', 'cos(join_az)', 'sin(join_az)']
     col_names.extend(aux_names)
     before_values_list = []
     after_values_list = []
 
     # iterate over the vector dates
     window_days = 25
-    for vector_ts, vector_ds in tqdm(vector_data.groupby("Date"), desc="Extracting Pixel Values :"):
+    for vector_ts, vector_ds in tqdm(vector_data.groupby('field_date'), desc="Extracting Pixel Values :"):
         # get the closest dates
         time_delta = compute_time_deltas(
             vector_ts,
@@ -392,6 +417,13 @@ def main(args : argparse.ArgumentParser):
     # get the final value
     if len(after_values_list) :
         final_df_af = pd.concat(after_values_list, axis=1).T
+        # remove special character
+        final_df_af.columns = final_df_af.columns.str.replace(' ', '')
+        final_df_af.columns = final_df_af.columns.str.replace(',', '')
+        # reorder columns
+        column_list_af = final_df_af.columns
+        new_order_columns_af= list(column_list_af[-2:]) + list(column_list_af[:-2])
+        final_df_af = final_df_af[new_order_columns_af]
         final_df_af.to_csv(
             f"{args.export_path}/after_{config.site}_{config.raster.split('/')[-2]}.csv",
                            index=False)
@@ -399,6 +431,13 @@ def main(args : argparse.ArgumentParser):
 
     if len(before_values_list) :
         final_df_be = pd.concat(before_values_list, axis=1).T
+        final_df_be.columns = final_df_be.columns.str.replace(' ', '')
+        final_df_be.columns = final_df_be.columns.str.replace(',', '')
+        # reorder columns
+        column_list_be = final_df_be.columns
+        new_order_columns_be = list(column_list_be[-2:]) + list(column_list_be[:-2])
+        final_df_be = final_df_be[new_order_columns_be]
+
         final_df_be.to_csv(
             f"{args.export_path}/before_{config.site}_{config.raster.split('/')[-2]}.csv",
                            index=False)

@@ -3,9 +3,14 @@ import prosailvae
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 from prosailvae.utils import load_dict, save_dict
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
-from dataset.preprocess_small_validation_file import get_small_validation_data
+from dataset.preprocess_small_validation_file import get_small_validation_data, LAI_columns
+from dataset.loaders import  get_simloader
 import torch
 import logging
+import matplotlib.pyplot as plt
+import numpy as np
+from dataset.generate_dataset import simulate_prosail_samples_close_to_ref
+import socket
 LOGGER_NAME = "PROSAIL-VAE validation"
 
 def get_model(model_dir):
@@ -27,11 +32,186 @@ def get_model(model_dir):
                                 logger_name=LOGGER_NAME, vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model)
     return PROSAIL_VAE
 
-def main():
+def compare_reflectances(s2_r, s2_r_sim, site):
+    fig, ax = plt.subplots(dpi=200)
+    dis = 0.3
+    bp_real = ax.boxplot(s2_r.transpose(0,1),positions=torch.arange(0,20,2)-dis, widths=0.2,patch_artist=True, showfliers=False)
+    bp_sim = ax.boxplot(s2_r_sim.transpose(0,1), positions=torch.arange(0,20,2)+dis, widths=0.2,patch_artist=True, showfliers=False)
+   
+    for patch in bp_real['boxes']:
+        patch.set_facecolor("green")
+
+    for patch in bp_sim['boxes']:
+        patch.set_facecolor("red")
+    ax.set_xticks(torch.arange(0,20,2))
+    ax.set_xticklabels(BANDS)
+    ax.set_ylabel("Reflectance")
+    ax.legend([bp_real["boxes"][0], bp_sim["boxes"][0]], ['Validation', 'Simulated'], loc='upper left')
+    ax.set_title(f'Reflectance boxplots for {site} site')
+    return fig, ax
+
+def compare_lai(lais, lai_sim, site):
+    fig, ax = plt.subplots(dpi=200)
+    dis = 0.3
+    bp_real = ax.boxplot(lais.transpose(0,1),positions=[-dis], widths=0.2,patch_artist=True, showfliers=False)
+    bp_sim = ax.boxplot(lai_sim.transpose(0,1), positions=[dis], widths=0.2,patch_artist=True, showfliers=False)
+   
+    for patch in bp_real['boxes']:
+        patch.set_facecolor("green")
+
+    for patch in bp_sim['boxes']:
+        patch.set_facecolor("red")
+    ax.set_xticks([])
+    ax.set_xticklabels([])
+    ax.set_ylabel("LAI")
+    ax.legend([bp_real["boxes"][0], bp_sim["boxes"][0]], ['Validation', 'Simulated'], loc='upper left')
+    ax.set_title(f'LAI boxplots for {site} site')
+    return fig, ax
+
+def lut_pred(s2_r, s2_r_sim, lai_sim):
+    preds = torch.zeros((s2_r.size(0)))
+    for i in range(s2_r.size(0)):
+        s2_r_rmae = ((s2_r_sim - s2_r[i,:].unsqueeze(0))/s2_r_sim.max(0)[0].unsqueeze(0)).abs().mean(1)
+        idx_closest = s2_r_rmae.argmin()
+        preds[i] = lai_sim[idx_closest,:]
+    return preds
+
+def lut_advanced_pred(s2_r, s2_r_sim, lai_sim, s2_a, s2_a_sim):
+    preds = torch.zeros((s2_r.size(0)))
+    for i in range(s2_r.size(0)):
+        s2_r_rmae = ((s2_r_sim - s2_r[i,:].unsqueeze(0))/s2_r_sim.max(0)[0].unsqueeze(0)).abs().mean(1)
+        min_mae = s2_r_rmae.min()
+        close_refl_idx = torch.where(s2_r_rmae < 1.2 * min_mae)[0]
+        close_refl_lai_sim = lai_sim[close_refl_idx,:]
+        close_refl_s2_a_sim = s2_a_sim[close_refl_idx,:]
+        s2_a_rmae = ((close_refl_s2_a_sim - s2_a[i,:].unsqueeze(0))/s2_a_sim.max(0)[0].unsqueeze(0)).abs().mean(1)
+        idx_closest_angle = torch.argmin(s2_a_rmae)
+        closest_lai = close_refl_lai_sim[idx_closest_angle,:]
+        preds[i] = closest_lai
+    return preds
+
+def plot_lai_preds(lais, lai_pred, time_delta, site):
+    fig, ax = plt.subplots()
+    i=0
+    lai_i = lais[:,i]
+    sc = ax.scatter(lai_pred, lai_i, c=time_delta.abs())
+    ax.plot([min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],
+            [min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],'k--')
+    ax.set_xlabel('Predicted LAI')
+    ax.set_ylabel(f"{site} {LAI_columns(site)[i]}")
+    ax.set_aspect('equal', 'box')
+    # plt.gray()
+    cbar = plt.colorbar(sc)
+    cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
+    cbar.ax.yaxis.set_label_coords(0.0,0.5)
+    plt.show()
+    return fig, ax
+
+def compare_datasets():
     model_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/best_regression/"
+    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/"
+    results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+    loader = get_simloader(file_prefix="full_", data_dir=data_dir)
     PROSAIL_VAE = get_model(model_dir)
-    s2_r, s2_a, lais = get_small_validation_data()
-    dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode')
+    for site in ["spain", "italy", "france"]:
+        print(site)
+        relative_s2_time="both"
+        s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
+        dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode')
+        print(s2_r.size())
+        sim_lai = sim[:,6,:]
+        # for i in range(lais.size(1)):
+        s2_r_sim = loader.dataset[:][0]
+        s2_a_sim = loader.dataset[:][1]
+        prosail_var_sim = loader.dataset[:][2]
+        lai_sim = prosail_var_sim[:,6].unsqueeze(1)
+        idx_valid_data = 0
+        valid_angles = s2_a[idx_valid_data,:]
+        valid_refl = s2_r[idx_valid_data,:]
+
+        fig, ax = compare_reflectances(s2_r, s2_r_sim, site)
+        fig.savefig(results_dir+f'/{site}_refl_distribution.svg')
+        if site != "france":
+            fig, ax = compare_lai(lais, lai_sim, site)
+            fig.savefig(results_dir+f'/{site}_LAI_distribution.svg')
+            lut_lai = lut_pred(s2_r, s2_r_sim, lai_sim)
+            lut_lai_advanced = lut_advanced_pred(s2_r, s2_r_sim, lai_sim, s2_a, s2_a_sim)  
+            fig, ax = plot_lai_preds(lais, lut_lai_advanced, time_delta, site)
+            fig.savefig(results_dir+f'/{site}_LUT_w_angles_LAI_pred.svg')
+            fig, ax = plot_lai_preds(lais, lut_lai, time_delta, site)
+            fig.savefig(results_dir+f'/{site}_LUT_LAI_pred.svg')
+            fig, ax = plot_lai_preds(lais, sim_lai, time_delta, site)
+            fig.savefig(results_dir+f'/{site}_prosail_vae_LAI_pred.svg')
+        plt.close('all')
+    return
+
+def plot_s2r_vs_s2_r_pred(s2_r, s2_r_pred, prosail_vars=None, angles=None, site="italy", ):
+    fig, ax = plt.subplots(dpi=200,tight_layout=True)
+    ax.scatter(torch.arange(0,20,2), s2_r, c="g", marker="o")
+    ax.scatter(torch.arange(0,20,2), s2_r_pred, c="r" , marker="+")
+
+    ax.set_xticks(torch.arange(0,20,2))
+    ax.set_xticklabels(BANDS)
+    ax.set_ylabel("Reflectance")
+    ax.legend(['Validation', 'Simulated'], loc='upper left')
+    fig.suptitle(f'Closest matching simulated reflectance for {site} site')
+    if prosail_vars is not None:
+        title_str = ''
+        for i in range(len(PROSAILVARS)):
+            title_str += ' {}={:.3f} |'.format(PROSAILVARS[i], prosail_vars[i])
+            if ((i+1) % 4) == 0:
+                title_str += '\n'
+        if angles is not None:
+            title_str += "\ntts={:.1f} | tto={:.1f} | psi={:.1f}".format(angles[0], angles[1], angles[2])
+        ax.set_title(title_str)
+    return fig, ax
+
+def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100):
+
+    B5_mode=False
+    s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
+    abs_time_delta = time_delta.abs().numpy()
+
+    (top_n_delta, top_n_s2_r, top_n_s2_a, 
+     top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=3)
+    for idx_in_situ_sample in range(len(top_n_delta)):
+        if top_n_delta[idx_in_situ_sample]<5:
+            lai = top_n_lais[idx_in_situ_sample,0]
+            s2_r_ref = top_n_s2_r[idx_in_situ_sample,:].reshape(1,-1)
+            tts = top_n_s2_a[idx_in_situ_sample, 0]
+            tto = top_n_s2_a[idx_in_situ_sample, 1]
+            psi = top_n_s2_a[idx_in_situ_sample, 2]
+            (best_prosail_vars, best_prosail_s2_sim, 
+            n_drawn_samples) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir=rsr_dir, lai=lai, tts=tts, 
+                                                tto=tto, psi=psi, eps_mae=1e-3, max_iter=max_iter, samples_per_iter=samples_per_iter, B5_mode=B5_mode)
+            fig, ax = plot_s2r_vs_s2_r_pred(s2_r_ref, best_prosail_s2_sim, best_prosail_vars, top_n_s2_a[idx_in_situ_sample, :],site=site )
+            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_closest_reflectance_match.svg')
+    pass
+
+def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
+    smallest_time_delta = np.nanmin(abs_time_delta,1)
+    ind_n_best = np.argpartition(smallest_time_delta, n)[:n]
+    sorted_n_best = ind_n_best[np.argsort(smallest_time_delta[ind_n_best])]
+    top_n_delta = smallest_time_delta[sorted_n_best]
+    top_n_s2_r = s2_r[sorted_n_best, :]
+    top_n_s2_a = s2_a[sorted_n_best, :]
+    top_n_lais = lais[sorted_n_best, :]
+    return top_n_delta, top_n_s2_r, top_n_s2_a, top_n_lais
+
+def main():
+    if socket.gethostname()=='CELL200973':
+        relative_s2_time="both"
+        site='spain'
+        rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
+        results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
+    else:
+        rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
+        results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"
+        relative_s2_time="both"
+        for site in ["spain", "france", "italy"]:
+            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=5000)
     pass
 
 if __name__ == "__main__":

@@ -168,14 +168,14 @@ def plot_s2r_vs_s2_r_pred(s2_r, s2_r_pred, prosail_vars=None, angles=None, site=
         ax.set_title(title_str)
     return fig, ax
 
-def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100):
+def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3):
 
     B5_mode=False
     s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
     abs_time_delta = time_delta.abs().numpy()
 
     (top_n_delta, top_n_s2_r, top_n_s2_a, 
-     top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=3)
+     top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=n)
     for idx_in_situ_sample in range(len(top_n_delta)):
         if top_n_delta[idx_in_situ_sample]<5:
             lai = top_n_lais[idx_in_situ_sample,0]
@@ -211,7 +211,7 @@ def main():
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"
         relative_s2_time="both"
         for site in ["spain", "france", "italy"]:
-            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=5000)
+            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=5000, n=6)
     pass
 
 if __name__ == "__main__":

@@ -146,25 +146,26 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir='', static
     return prosail_vars, prosail_s2_sim
 
 def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir='', lai=None, tts=None, 
-                                          tto=None, psi=None, eps_mae = 1e-3, max_iter=100, samples_per_iter=1024, B5_mode=False):
+                                          tto=None, psi=None, eps_mae = 1e-3, max_iter=100, samples_per_iter=1024):
     best_prosail_vars = np.ones((1, 14))
     best_prosail_s2_sim = np.ones((1, 10))
     best_mae = np.inf
     iter = 0
     psimulator = ProsailSimulator()
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
+    bins=200
+    aggregate_s2_hist = np.zeros((bins, 10))
     with numpyro.handlers.seed(rng_seed=5):
         while best_mae > eps_mae and iter < max_iter :
             if iter%10==0:
                 print(f"{iter} - {best_mae}")
             prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter)
             prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
+            
+            aggregate_s2_hist += np.apply_along_axis(lambda a: np.histogram(a, bins=bins, range=[0.0, 1.0])[0], 0, prosail_s2_sim)
             if noise > 0:
                 raise NotImplementedError
-            if B5_mode:
-                mare = np.abs((s2_r_ref[:,3] - prosail_s2_sim[:,3])/(s2_r_ref[:,3]+1e-8))
-            else:
-                mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
+            mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
             best_mae_iter = mare.min()
 
             if best_mae_iter < best_mae:
@@ -177,7 +178,7 @@ def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir='', lai=Non
     else:
         print(f"A sample with mae better than {eps_mae} was generated in {max_iter} iterations with {samples_per_iter} samples each ({max_iter * samples_per_iter} samples) ")    
 
-    return best_prosail_vars, best_prosail_s2_sim, max_iter * samples_per_iter
+    return best_prosail_vars, best_prosail_s2_sim, max_iter * samples_per_iter, aggregate_s2_hist
 
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)

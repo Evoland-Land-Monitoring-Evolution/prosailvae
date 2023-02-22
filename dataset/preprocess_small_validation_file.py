@@ -24,7 +24,7 @@ def LAI_columns(site):
     return LAI_columns
 
 def get_S2_bands(df_validation_data):
-    data = torch.from_numpy(df_validation_data[['B2', 'B3', 'B4', 'B8', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values)
+    data = torch.from_numpy(df_validation_data[['B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B8A', 'B11', 'B12']].values)
     return data
 
 def convert_angles(angles):

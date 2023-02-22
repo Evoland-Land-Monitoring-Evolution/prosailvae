@@ -168,9 +168,123 @@ def plot_s2r_vs_s2_r_pred(s2_r, s2_r_pred, prosail_vars=None, angles=None, site=
         ax.set_title(title_str)
     return fig, ax
 
+def get_quantiles_from_hist(hist, bin_range=[0,1]):
+    hist = hist / hist.sum(0)
+    hist_range = np.linspace(bin_range[0], bin_range[1], hist.shape[0])
+    quantiles = np.zeros((6, hist.shape[1]))
+    cdf = np.cumsum(hist, 0)
+    q1 = np.apply_along_axis(lambda a: hist_range[np.where(a < 0.25)[0][-1]], 0, cdf)
+    median = np.apply_along_axis(lambda a: hist_range[np.where(a < 0.50)[0][-1]], 0, cdf)
+    q3 = np.apply_along_axis(lambda a: hist_range[np.where(a < 0.75)[0][-1]], 0, cdf)
+    # iqr = q3 - q1
+    # k = 1.5
+    min_q = np.apply_along_axis(lambda a: hist_range[np.where(a > 0)[0][0]], 0, cdf)
+    max_q = np.apply_along_axis(lambda a: hist_range[np.where(a < 1.0)[0][-1]], 0, cdf)
+    means = (hist * hist_range.reshape(-1,1)).sum(0)
+    quantiles[0, :] = np.maximum(min_q, bin_range[0])
+    quantiles[1, :] = q1
+    quantiles[2, :] = median
+    quantiles[3, :] = q3
+    quantiles[4, :] = np.minimum(max_q, bin_range[1])
+    quantiles[5, :] = means
+    return quantiles
+
+
+def h_customized_box_plot(percentiles, axes, redraw = True, *args, **kwargs):
+    """
+    Generates a customized boxplot based on the given percentile values
+    """
+    if len(percentiles.shape)==1:
+        n_box = 1
+        percentiles = percentiles.reshape(-1,1)
+    else:
+        n_box = percentiles.shape[1]
+    if percentiles.shape[0]==6:
+        showmeans = True
+        meanpointprops = dict(marker='D', markeredgecolor='black',
+                      markerfacecolor='white')
+        box_plot = axes.boxplot([[-9, -4, 2, 4, 9],]*n_box, vert=False, meanprops=meanpointprops, meanline=False, showmeans=showmeans, *args, **kwargs) 
+    else:
+        showmeans = False
+        box_plot = axes.boxplot([[-9, -4, 2, 4, 9],]*n_box, vert=False, showmeans=showmeans, *args, **kwargs) 
+    # Creates len(percentiles) no of box plots
+
+    min_x, max_x = float('inf'), -float('inf')
+
+    for box_no in range(n_box):
+        pdata = percentiles[:,box_no]
+        if len(pdata) == 6:
+            (q1_start, q2_start, q3_start, q4_start, q4_end, means) = pdata
+        elif len(pdata) == 5:
+            (q1_start, q2_start, q3_start, q4_start, q4_end) = pdata
+            mean = None
+        else:
+            raise ValueError("Percentile arrays for customized_box_plot must have either 5 or 6 values")
+
+        # Lower cap
+        box_plot['caps'][2*box_no].set_xdata([q1_start, q1_start])
+        # xdata is determined by the width of the box plot
+
+        # Lower whiskers
+        box_plot['whiskers'][2*box_no].set_xdata([q1_start, q2_start])
+
+        # Higher cap
+        box_plot['caps'][2*box_no + 1].set_xdata([q4_end, q4_end])
+
+        # Higher whiskers
+        box_plot['whiskers'][2*box_no + 1].set_xdata([q4_start, q4_end])
+
+        # Box
+        path = box_plot['boxes'][box_no].get_path()
+        path.vertices[0][0] = q2_start
+        path.vertices[1][0] = q2_start
+        path.vertices[2][0] = q4_start
+        path.vertices[3][0] = q4_start
+        path.vertices[4][0] = q2_start
+
+        # Median
+        box_plot['medians'][box_no].set_xdata([q3_start, q3_start])
+
+        # Mean
+        if means is not None:
+            
+            box_plot['means'][box_no].set_xdata([means])
+        # else:
+        min_x = min(q1_start, min_x)
+        max_x = max(q4_end, max_x)
+
+        # The y axis is rescaled to fit the new box plot completely with 10% 
+        # of the maximum value at both ends
+        axes.set_xlim([min_x*1.1, max_x*1.1])
+
+    # If redraw is set to true, the canvas is updated.
+    if redraw:
+        axes.figure.canvas.draw()
+
+    return box_plot
+
+def plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=None):
+    quantiles = get_quantiles_from_hist(aggregate_s2_hist, bin_range=[0,1])
+    fig, ax = plt.subplots(dpi=200)
+    bplot = h_customized_box_plot(quantiles, ax, redraw = True)
+    # if colors is None :
+    #     cmap = plt.cm.get_cmap('rainbow')
+    #     colors = [cmap(val/10) for val in range(10)]
+    # for patch, color in zip(bplot['boxes'], colors):
+    #     patch.set_facecolor(color)
+    # for median in bplot['medians']:
+    #         median.set(color='k', linewidth=2,)
+    # axs[row, col].set_xticklabels(model_names)
+    s = ax.scatter(s2_r_ref, np.arange(1,11))
+    ax.xaxis.grid(True) 
+    ax.set_yticklabels(BANDS)
+    ax.set_title("lai={:.1f} | tts={:.1f} | tto={:.1f} | psi={:.1f}".format(lai, tts, tto, psi))
+    ax.set_xlabel("Reflectances")
+    ax.legend([bplot["boxes"][0], s] , ["Simulation distribution", "S2 Bands"])
+    return fig, ax
+
 def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3):
 
-    B5_mode=False
     s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
     abs_time_delta = time_delta.abs().numpy()
 
@@ -184,10 +298,12 @@ def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_
             tto = top_n_s2_a[idx_in_situ_sample, 1]
             psi = top_n_s2_a[idx_in_situ_sample, 2]
             (best_prosail_vars, best_prosail_s2_sim, 
-            n_drawn_samples) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir=rsr_dir, lai=lai, tts=tts, 
-                                                tto=tto, psi=psi, eps_mae=1e-3, max_iter=max_iter, samples_per_iter=samples_per_iter, B5_mode=B5_mode)
+            n_drawn_samples, aggregate_s2_hist) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir=rsr_dir, lai=lai, tts=tts, 
+                                                tto=tto, psi=psi, eps_mae=1e-3, max_iter=max_iter, samples_per_iter=samples_per_iter)
             fig, ax = plot_s2r_vs_s2_r_pred(s2_r_ref, best_prosail_s2_sim, best_prosail_vars, top_n_s2_a[idx_in_situ_sample, :],site=site )
             fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_closest_reflectance_match.svg')
+            fig, ax = plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=None)
+            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_simulation_distribution.svg')
     pass
 
 def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
@@ -206,12 +322,13 @@ def main():
         site='spain'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
+        find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=10, n=2)
     else:
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"
         relative_s2_time="both"
         for site in ["spain", "france", "italy"]:
-            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=5000, n=6)
+            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=500, n=4)
     pass
 
 if __name__ == "__main__":

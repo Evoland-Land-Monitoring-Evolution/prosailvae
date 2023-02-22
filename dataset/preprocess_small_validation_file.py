@@ -46,11 +46,15 @@ def get_all_possible_LAIs(df_validation_data, site):
     return data
 
 
-def clean_validation_data(df_validation_data, site):
+def clean_validation_data(df_validation_data, site, lai_min=None):
     LAIs = get_all_possible_LAIs(df_validation_data, site)
     nan_rows = torch.where(LAIs.isnan().any(1))[0].numpy().tolist()
     df_validation_data.drop(nan_rows,inplace=True)
     df_validation_data.reset_index(inplace=True)
+    if lai_min is not None:
+        low_lai_rows = torch.where((LAIs<lai_min).any(1))[0].numpy().tolist()
+        df_validation_data.drop(low_lai_rows,inplace=True)
+        df_validation_data.reset_index(inplace=True)
     s2_r = get_S2_bands(df_validation_data)
     zero_bands = torch.where(s2_r.sum(1)==0)[0].numpy().tolist()
     df_validation_data.drop(zero_bands,inplace=True)
@@ -146,7 +150,7 @@ def filter_positions(s2_r,s2_a,lais,time_delta,positions, dates):
 
     return s2_r,s2_a,lais,time_delta,positions
 
-def get_small_validation_data(relative_s2_time ='before', site = "france", filter_if_available_positions=False):
+def get_small_validation_data(relative_s2_time ='before', site = "france", filter_if_available_positions=False, lai_min=1.5):
     # relative_s2_time ='before' # "after"
     # site = "france" # "spain", "italy"
     if site =="france":
@@ -179,7 +183,7 @@ def get_small_validation_data(relative_s2_time ='before', site = "france", filte
             path_to_file = PATH_TO_DATA_DIR + filename
             assert os.path.isfile(path_to_file)
             df_validation_data = pd.read_csv(path_to_file)
-            clean_validation_data(df_validation_data, site)
+            clean_validation_data(df_validation_data, site, lai_min=lai_min)
             s2_r.append(get_S2_bands(df_validation_data).float())
             s2_a.append(get_angles(df_validation_data).float())
             lais.append(get_all_possible_LAIs(df_validation_data, site=site).float())

@@ -283,9 +283,9 @@ def plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=Non
     ax.legend([bplot["boxes"][0], s] , ["Simulation distribution", "S2 Bands"])
     return fig, ax
 
-def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3):
+def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, lai_min=1.5):
 
-    s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
+    s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=lai_min)
     abs_time_delta = time_delta.abs().numpy()
 
     (top_n_delta, top_n_s2_r, top_n_s2_a, 
@@ -319,10 +319,10 @@ def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
 def main():
     if socket.gethostname()=='CELL200973':
         relative_s2_time="both"
-        site='spain'
+        site='italy'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
-        find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=10, n=2)
+        find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=200, n=4)
     else:
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"

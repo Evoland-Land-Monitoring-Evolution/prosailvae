@@ -49,17 +49,20 @@ def get_all_possible_LAIs(df_validation_data, site):
 def clean_validation_data(df_validation_data, site, lai_min=None):
     LAIs = get_all_possible_LAIs(df_validation_data, site)
     nan_rows = torch.where(LAIs.isnan().any(1))[0].numpy().tolist()
-    df_validation_data.drop(nan_rows,inplace=True)
-    df_validation_data.reset_index(inplace=True)
+    if len(nan_rows) > 0:
+        df_validation_data.drop(nan_rows,inplace=True)
+        df_validation_data.reset_index(inplace=True)
     if lai_min is not None:
         LAIs = get_all_possible_LAIs(df_validation_data, site)
         low_lai_rows = torch.where((LAIs<lai_min).any(1))[0].numpy().tolist()
-        df_validation_data.drop(low_lai_rows,inplace=True)
-        df_validation_data.reset_index(inplace=True)
+        if len(low_lai_rows) > 0:
+            df_validation_data.drop(low_lai_rows,inplace=True)
+            df_validation_data.reset_index(inplace=True)
     s2_r = get_S2_bands(df_validation_data)
     zero_bands = torch.where(s2_r.sum(1)==0)[0].numpy().tolist()
-    df_validation_data.drop(zero_bands,inplace=True)
-    df_validation_data.reset_index(inplace=True)
+    if len(zero_bands) > 0:
+        df_validation_data.drop(zero_bands,inplace=True)
+        df_validation_data.reset_index(inplace=True)
     pass
 
 def get_time_delta(df_validation_data):

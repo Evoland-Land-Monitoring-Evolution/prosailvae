@@ -52,6 +52,7 @@ def clean_validation_data(df_validation_data, site, lai_min=None):
     df_validation_data.drop(nan_rows,inplace=True)
     df_validation_data.reset_index(inplace=True)
     if lai_min is not None:
+        LAIs = get_all_possible_LAIs(df_validation_data, site)
         low_lai_rows = torch.where((LAIs<lai_min).any(1))[0].numpy().tolist()
         df_validation_data.drop(low_lai_rows,inplace=True)
         df_validation_data.reset_index(inplace=True)

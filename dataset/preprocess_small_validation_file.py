@@ -11,7 +11,7 @@ import os
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed_2/"
 def LAI_columns(site):
     if site =="france":
-        LAI_columns = ['PAIeff–CE', 'PAIeffCEV5.1','PAIeff–P57']
+        LAI_columns = ['PAIeff – CE', 'PAIeff CE V5.1', 'PAIeff – P57']
                     #    , 'PAIeffMiller', 'PAIeff–LAI20003rings',
                     #     'PAIeff–LAI20004rings', 'PAIeff–LAI20005rings', 'PAItrue–CE',
                     #     'PAItrue–CEV5.1', 'PAItrue–P57', 'PAItrue–Miller']

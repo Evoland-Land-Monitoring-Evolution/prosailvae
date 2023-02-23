@@ -349,7 +349,7 @@ def main():
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"
         relative_s2_time="both"
-        exclude_lai=False
+        exclude_lai=True
         max_delta = 3
         for site in ["spain1", "spain2", "italy1", "italy2", "france"]:
             find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 

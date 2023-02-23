@@ -147,7 +147,7 @@ def compare_datasets():
         plt.close('all')
     return
 
-def plot_s2r_vs_s2_r_pred(s2_r, s2_r_pred, prosail_vars=None, angles=None, site="italy", ):
+def plot_s2r_vs_s2_r_pred(s2_r, s2_r_pred, prosail_vars=None, angles=None, site="italy", lai_ref=None, best_mae=None, delta_t=None):
     fig, ax = plt.subplots(dpi=200,tight_layout=True)
     ax.scatter(torch.arange(0,20,2), s2_r, c="g", marker="o")
     ax.scatter(torch.arange(0,20,2), s2_r_pred, c="r" , marker="+")
@@ -161,10 +161,17 @@ def plot_s2r_vs_s2_r_pred(s2_r, s2_r_pred, prosail_vars=None, angles=None, site=
         title_str = ''
         for i in range(len(PROSAILVARS)):
             title_str += ' {}={:.3f} |'.format(PROSAILVARS[i], prosail_vars[i])
+            if PROSAILVARS[i] == "lai":
+                if lai_ref is not None:
+                    title_str += ' {}={:.3f} |'.format("LAI ref", lai_ref)
             if ((i+1) % 4) == 0:
                 title_str += '\n'
         if angles is not None:
             title_str += "\ntts={:.1f} | tto={:.1f} | psi={:.1f}".format(angles[0], angles[1], angles[2])
+        if best_mae is not None :
+            title_str += "\nmae={:.4f} |".format(best_mae)
+        if delta_t is not None :
+            title_str += " dt={:.0f}".format(delta_t)
         ax.set_title(title_str)
     return fig, ax
 
@@ -263,7 +270,7 @@ def h_customized_box_plot(percentiles, axes, redraw = True, *args, **kwargs):
 
     return box_plot
 
-def plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=None):
+def plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=None, lai_ref=None):
     quantiles = get_quantiles_from_hist(aggregate_s2_hist, bin_range=[0,1])
     fig, ax = plt.subplots(dpi=200)
     bplot = h_customized_box_plot(quantiles, ax, redraw = True)
@@ -278,32 +285,44 @@ def plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=Non
     s = ax.scatter(s2_r_ref, np.arange(1,11))
     ax.xaxis.grid(True) 
     ax.set_yticklabels(BANDS)
-    ax.set_title("lai={:.1f} | tts={:.1f} | tto={:.1f} | psi={:.1f}".format(lai, tts, tto, psi))
+    title = ""
+    if lai_ref is not None:
+        title = "lai ref={:.1f} | ".format(lai_ref)
+    title += "lai={:.1f} | tts={:.1f} | tto={:.1f} | psi={:.1f}".format(lai, tts, tto, psi)
+    ax.set_title(title)
     ax.set_xlabel("Reflectances")
     ax.legend([bplot["boxes"][0], s] , ["Simulation distribution", "S2 Bands"])
     return fig, ax
 
-def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, lai_min=1.5):
+def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, lai_min=1.5, exclude_lai=False, max_delta=3):
 
     s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=lai_min)
-    abs_time_delta = time_delta.abs().numpy()
+    abs_time_delta = time_delta.abs().numpy().reshape(-1,1)
 
     (top_n_delta, top_n_s2_r, top_n_s2_a, 
      top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=n)
     for idx_in_situ_sample in range(len(top_n_delta)):
-        if top_n_delta[idx_in_situ_sample]<5:
-            lai = top_n_lais[idx_in_situ_sample,0]
+        delta_t = top_n_delta[idx_in_situ_sample]
+        if delta_t < max_delta:
+            lai_ref = top_n_lais[idx_in_situ_sample,0]
             s2_r_ref = top_n_s2_r[idx_in_situ_sample,:].reshape(1,-1)
             tts = top_n_s2_a[idx_in_situ_sample, 0]
             tto = top_n_s2_a[idx_in_situ_sample, 1]
             psi = top_n_s2_a[idx_in_situ_sample, 2]
+            if exclude_lai:
+                lai = None
+            else:
+                lai = lai_ref
             (best_prosail_vars, best_prosail_s2_sim, 
-            n_drawn_samples, aggregate_s2_hist) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir=rsr_dir, lai=lai, tts=tts, 
+            n_drawn_samples, aggregate_s2_hist,
+            best_mae) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir=rsr_dir, lai=lai, tts=tts, 
                                                 tto=tto, psi=psi, eps_mae=1e-3, max_iter=max_iter, samples_per_iter=samples_per_iter)
-            fig, ax = plot_s2r_vs_s2_r_pred(s2_r_ref, best_prosail_s2_sim, best_prosail_vars, top_n_s2_a[idx_in_situ_sample, :],site=site )
-            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_closest_reflectance_match.svg')
+            lai = best_prosail_vars[6]
+            fig, ax = plot_s2r_vs_s2_r_pred(s2_r_ref, best_prosail_s2_sim, best_prosail_vars, 
+                                            top_n_s2_a[idx_in_situ_sample, :],site=site, lai_ref=lai_ref, best_mae=best_mae, delta_t=delta_t)
+            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_lai_ref_{not exclude_lai}_closest_reflectance_match.svg')
             fig, ax = plot_s2_sim_dist(s2_r_ref, aggregate_s2_hist, lai, tts, tto, psi, colors=None)
-            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_simulation_distribution.svg')
+            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_lai_ref_{not exclude_lai}_simulation_distribution.svg')
     pass
 
 def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
@@ -319,16 +338,22 @@ def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
 def main():
     if socket.gethostname()=='CELL200973':
         relative_s2_time="both"
-        site='france'
+        site='italy1'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
-        find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=200, n=4)
+        exclude_lai=True
+        max_delta = 3
+        find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
+                              samples_per_iter=1024, max_iter=50, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
     else:
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"
         relative_s2_time="both"
-        for site in ["spain", "france", "italy"]:
-            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=500, n=4)
+        exclude_lai=True
+        max_delta = 3
+        for site in ["france", "spain1", "spain2", "italy1", "italy2"]:
+            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
+                                  samples_per_iter=1024, max_iter=300, n=5, exclude_lai=exclude_lai, max_delta=max_delta)
     pass
 
 if __name__ == "__main__":

@@ -146,7 +146,8 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir='', static
     return prosail_vars, prosail_s2_sim
 
 def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir='', lai=None, tts=None, 
-                                          tto=None, psi=None, eps_mae = 1e-3, max_iter=100, samples_per_iter=1024):
+                                          tto=None, psi=None, eps_mae = 1e-3, max_iter=100, 
+                                          samples_per_iter=1024):
     best_prosail_vars = np.ones((1, 14))
     best_prosail_s2_sim = np.ones((1, 10))
     best_mae = np.inf
@@ -178,7 +179,7 @@ def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir='', lai=Non
     else:
         print(f"A sample with mae better than {eps_mae} was generated in {max_iter} iterations with {samples_per_iter} samples each ({max_iter * samples_per_iter} samples) ")    
 
-    return best_prosail_vars, best_prosail_s2_sim, max_iter * samples_per_iter, aggregate_s2_hist
+    return best_prosail_vars, best_prosail_s2_sim, max_iter * samples_per_iter, aggregate_s2_hist, best_mae
 
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)

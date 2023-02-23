@@ -8,16 +8,16 @@ else:
     from dataset.loaders import convert_angles
 import os 
 
-PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
+PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed_2/"
 def LAI_columns(site):
     if site =="france":
         LAI_columns = ['PAIeff–CE', 'PAIeffCEV5.1','PAIeff–P57']
                     #    , 'PAIeffMiller', 'PAIeff–LAI20003rings',
                     #     'PAIeff–LAI20004rings', 'PAIeff–LAI20005rings', 'PAItrue–CE',
                     #     'PAItrue–CEV5.1', 'PAItrue–P57', 'PAItrue–Miller']
-    elif site =="spain":
+    elif site in ["spain1", "spain2"]:
         LAI_columns = [ 'LicorLAI'] # [ 'LicorLAI', 'Pocket_LAI']
-    elif site =="italy":
+    elif site in ["italy1", "italy2"]:
         LAI_columns = ['LicorLAI']
     else:
         raise NotImplementedError
@@ -71,9 +71,9 @@ def get_time_delta(df_validation_data):
 def get_position(df_validation_data, site):
     if site == 'france':
         return torch.from_numpy(df_validation_data[['X-WGS84', 'Y-WGS84']].values)
-    elif site =='italy':
+    elif site in ["italy1", "italy2"]:
         return torch.from_numpy(df_validation_data[['Latitude', 'Longitude']].values)
-    elif site =='spain':
+    elif site in ["spain1", "spain2"]:
         return torch.from_numpy(df_validation_data[['X_UTM', 'Y_UTM']].values)
     else:
         raise NotImplementedError
@@ -154,19 +154,41 @@ def filter_positions(s2_r,s2_a,lais,time_delta,positions, dates):
 
     return s2_r,s2_a,lais,time_delta,positions
 
-def get_small_validation_data(relative_s2_time ='before', site = "france", filter_if_available_positions=False, lai_min=1.5):
-    # relative_s2_time ='before' # "after"
-    # site = "france" # "spain", "italy"
+def get_filename(site, relative_s2_time):
     if site =="france":
         tile = "T31TCJ"
-    elif site =="spain":
+        filename = f"{relative_s2_time}_france_{tile}_gai.csv"
+    elif site =="spain1":
         tile = "T30TUM"
-    elif site =="italy":
+        filename = f"{relative_s2_time}_spain_{tile}_2017.csv"
+    elif site =="spain2":
+        tile = "T30TUM"
+        filename = f"{relative_s2_time}_spain_{tile}_2018.csv"
+    elif site =="italy1":
         tile = "T33TWF"
+        filename = f"{relative_s2_time}_italy_{tile}_.csv"
+    elif site =="italy2":
+        tile = "T33TWG"
+        filename = f"{relative_s2_time}_italy_{tile}_.csv"
     else:
         raise NotImplementedError
+    return filename
+
+def get_small_validation_data(relative_s2_time='before', site="france", filter_if_available_positions=False, lai_min=1.5):
+    # relative_s2_time ='before' # "after"
+    # site = "france" # "spain", "italy"
+    # if site =="france":
+    #     tile = "T31TCJ"
+    # elif site =="spain":
+    #     tile = "T30TUM"
+    # elif site =="italy":
+    #     tile = "T33TWF"
+    # else:
+    #     raise NotImplementedError
+    
     if relative_s2_time != "both":
-        filename = f"{relative_s2_time}_{site}_{tile}.csv"
+        # filename = f"{relative_s2_time}_{site}_{tile}.csv"
+        filename = get_filename(site, relative_s2_time)
         path_to_file = PATH_TO_DATA_DIR + filename
         assert os.path.isfile(path_to_file)
         df_validation_data = pd.read_csv(path_to_file)
@@ -183,7 +205,7 @@ def get_small_validation_data(relative_s2_time ='before', site = "france", filte
         positions = []
         dates = []
         for relative_s2_time in ["before", "after"]:
-            filename = f"{relative_s2_time}_{site}_{tile}.csv"
+            filename = get_filename(site, relative_s2_time)
             path_to_file = PATH_TO_DATA_DIR + filename
             assert os.path.isfile(path_to_file)
             df_validation_data = pd.read_csv(path_to_file)

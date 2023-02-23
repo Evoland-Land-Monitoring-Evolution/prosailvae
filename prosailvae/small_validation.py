@@ -338,7 +338,7 @@ def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
 def main():
     if socket.gethostname()=='CELL200973':
         relative_s2_time="both"
-        site='italy1'
+        site='spain2'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
         exclude_lai=True
@@ -351,7 +351,7 @@ def main():
         relative_s2_time="both"
         exclude_lai=True
         max_delta = 3
-        for site in ["spain1", "spain2", "italy1", "italy2", "france"]:
+        for site in ["italy1", "italy2", "france"]:
             find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
                                   samples_per_iter=1024, max_iter=300, n=5, exclude_lai=exclude_lai, max_delta=max_delta)
     pass

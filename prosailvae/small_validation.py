@@ -351,7 +351,7 @@ def main():
         relative_s2_time="both"
         exclude_lai=False
         max_delta = 3
-        for site in ["france", "spain1", "spain2", "italy1", "italy2"]:
+        for site in ["spain1", "spain2", "italy1", "italy2", "france"]:
             find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
                                   samples_per_iter=1024, max_iter=300, n=5, exclude_lai=exclude_lai, max_delta=max_delta)
     pass

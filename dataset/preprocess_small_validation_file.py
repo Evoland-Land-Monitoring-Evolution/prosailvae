@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import torch
 import prosailvae
+import matplotlib.pyplot as plt
+from scipy.stats import lognorm
+
 if __name__ == "__main__":
     from loaders import convert_angles
 else:
@@ -174,6 +177,25 @@ def get_filename(site, relative_s2_time):
         raise NotImplementedError
     return filename
 
+def get_all_validation_data(lai_min=1.5):
+    all_s2_r = []
+    all_s2_a = []
+    all_lais = []
+    all_dt = []
+
+    for site in ["france", "italy1", "italy2", "spain1", "spain2"]:
+        s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time="both", site=site, filter_if_available_positions=True, lai_min=lai_min)
+        if len(s2_r) > 0:
+            all_s2_r.append(s2_r)
+            all_s2_a.append(s2_a)
+            all_lais.append(lais)
+            all_dt.append(time_delta)
+    all_s2_r = torch.vstack(all_s2_r)
+    all_s2_a = torch.vstack(all_s2_a)
+    all_lais = torch.vstack(all_lais)
+    all_dt = torch.vstack(all_dt)
+    return all_s2_r, all_s2_a, all_lais, all_dt
+
 def get_small_validation_data(relative_s2_time='before', site="france", filter_if_available_positions=False, lai_min=1.5):
     # relative_s2_time ='before' # "after"
     # site = "france" # "spain", "italy"
@@ -185,7 +207,12 @@ def get_small_validation_data(relative_s2_time='before', site="france", filter_i
     #     tile = "T33TWF"
     # else:
     #     raise NotImplementedError
-    
+    s2_r = []
+    s2_a = []
+    lais = []
+    time_delta = []
+    positions = []
+    # dates = []
     if relative_s2_time != "both":
         # filename = f"{relative_s2_time}_{site}_{tile}.csv"
         filename = get_filename(site, relative_s2_time)
@@ -198,32 +225,62 @@ def get_small_validation_data(relative_s2_time='before', site="france", filter_i
         lais = get_all_possible_LAIs(df_validation_data, site=site).float()
         time_delta = get_time_delta(df_validation_data)
     else:
-        s2_r = []
-        s2_a = []
-        lais = []
-        time_delta = []
-        positions = []
-        dates = []
         for relative_s2_time in ["before", "after"]:
             filename = get_filename(site, relative_s2_time)
             path_to_file = PATH_TO_DATA_DIR + filename
             assert os.path.isfile(path_to_file)
             df_validation_data = pd.read_csv(path_to_file)
             clean_validation_data(df_validation_data, site, lai_min=lai_min)
+            try:
+                time_delta.append(get_time_delta(df_validation_data).unsqueeze(1))
+            except:
+                print(f"Warning, with site {site}, time {relative_s2_time}, and min lai {lai_min}, no data was available." )
+                continue
             s2_r.append(get_S2_bands(df_validation_data).float())
             s2_a.append(get_angles(df_validation_data).float())
             lais.append(get_all_possible_LAIs(df_validation_data, site=site).float())
-            time_delta.append(get_time_delta(df_validation_data).unsqueeze(1))
-            positions.append(get_position(df_validation_data, site))
-            dates.append(get_date(df_validation_data).unsqueeze(1))
-        count_unique_measures(positions, dates, lais)
+            # positions.append(get_position(df_validation_data, site))
+            # dates.append(get_date(df_validation_data).unsqueeze(1))
+        # count_unique_measures(positions, dates, lais)
         # if filter_if_available_positions:
         #     s2_r,s2_a,lais,time_delta,positions = filter_positions(s2_r,s2_a,lais,time_delta,positions, dates)
-        s2_r = torch.vstack(s2_r)
-        s2_a = torch.vstack(s2_a)
-        lais = torch.vstack(lais)
-        time_delta = torch.vstack(time_delta)
-        positions = torch.vstack(positions)
+        if len(s2_r) >0:
+            s2_r = torch.vstack(s2_r)
+            s2_a = torch.vstack(s2_a)
+            lais = torch.vstack(lais)
+            time_delta = torch.vstack(time_delta)
+        # positions = torch.vstack(positions)
     return s2_r, s2_a, lais, time_delta 
 
+def lognorm(x, mu=0,sigma=1):
+   pdf = np.exp(-np.square(np.log(x-mu))/(2*sigma**2)) / (x * sigma * np.sqrt(2*np.pi))
+   return pdf
 
+def main():
+    lai_min=1.5
+    all_s2_r, all_s2_a, all_lais, all_dt = get_all_validation_data(lai_min=lai_min)
+    max_dt = 3
+
+    fig, ax = plt.subplots(dpi=150)
+    ax.hist(all_lais.squeeze(), bins=30)
+
+    lai_filtered = all_lais.squeeze()[all_dt.squeeze()<max_dt]
+    sigma2 = (torch.log( 1 + lai_filtered.var()/lai_filtered.mean().square())).numpy()
+    mu = torch.log(lai_filtered.mean()).numpy() - 0.5*sigma2
+    sigma = np.sqrt(sigma2)
+    mu = 1.3
+    sigma = 0.7
+    x = np.arange(lai_min, 10, 0.01)
+    pdf = lognorm(x, mu=mu,sigma=sigma)
+    fig, ax = plt.subplots(dpi=150)
+    # weights = np.ones_like(lai_filtered.numpy()) / len(lai_filtered)
+    _,_,h = ax.hist(lai_filtered.numpy(), bins=20, density=True, label="In-situ LAI")
+    
+    ax.set_xlabel(f"LAI (max dt = {max_dt} days)")
+    ax.plot(x, pdf, label="Proposed prior distribution")
+    ax.legend()
+    fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/all_lai_dist.png")
+    return
+
+if __name__=="__main__":
+    main()

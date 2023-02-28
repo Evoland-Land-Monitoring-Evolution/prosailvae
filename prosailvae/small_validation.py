@@ -115,7 +115,7 @@ def compare_datasets():
         os.makedirs(results_dir)
     loader = get_simloader(file_prefix="full_", data_dir=data_dir)
     PROSAIL_VAE = get_model(model_dir)
-    for site in ["spain", "italy", "france"]:
+    for site in ["italy1", "italy2", "france", "spain"]:
         print(site)
         relative_s2_time="both"
         s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)

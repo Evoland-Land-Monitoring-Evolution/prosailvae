@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from dataset.generate_dataset import simulate_prosail_samples_close_to_ref
 import socket
+from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 LOGGER_NAME = "PROSAIL-VAE validation"
 
 def get_model(model_dir):
@@ -298,7 +299,8 @@ def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_
 
     s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=lai_min)
     abs_time_delta = time_delta.abs().numpy().reshape(-1,1)
-
+    psimulator = ProsailSimulator()
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
     (top_n_delta, top_n_s2_r, top_n_s2_a, 
      top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=n)
     for idx_in_situ_sample in range(len(top_n_delta)):
@@ -315,7 +317,7 @@ def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_
                 lai = lai_ref
             (best_prosail_vars, best_prosail_s2_sim, 
             n_drawn_samples, aggregate_s2_hist,
-            best_mae) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir=rsr_dir, lai=lai, tts=tts, 
+            best_mae) = simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=psimulator, ssimulator=ssimulator, lai=lai, tts=tts, 
                                                 tto=tto, psi=psi, eps_mae=1e-3, max_iter=max_iter, samples_per_iter=samples_per_iter)
             lai = best_prosail_vars[6]
             fig, ax = plot_s2r_vs_s2_r_pred(s2_r_ref, best_prosail_s2_sim, best_prosail_vars, 
@@ -338,13 +340,13 @@ def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
 def main():
     if socket.gethostname()=='CELL200973':
         relative_s2_time="both"
-        site='france'
+        site='italy1'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
         exclude_lai=False
         max_delta = 4
         find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
-                              samples_per_iter=1024, max_iter=200, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
+                              samples_per_iter=1024, max_iter=100, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
     else:
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"

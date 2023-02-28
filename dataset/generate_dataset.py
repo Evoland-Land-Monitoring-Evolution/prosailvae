@@ -128,15 +128,12 @@ def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=Non
 
     return prosail_vars
 
-def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir='', static_angles=False):
+def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=None, static_angles=False):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, 10))
     with numpyro.handlers.seed(rng_seed=5):
         for i in trange(nb_simus):
             prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist, static_angles=static_angles)
-            
-            psimulator = ProsailSimulator()
-            ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
             mean = ssimulator(psimulator(torch.from_numpy(prosail_vars[i,:]).view(1,-1).float())).numpy()
             if noise>0:
                 sigma = numpyro.sample("sigma", dist.Uniform(0., noise))
@@ -145,15 +142,13 @@ def simulate_prosail_dataset(data_dir, nb_simus=100, noise=0, rsr_dir='', static
                 prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
-def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, rsr_dir='', lai=None, tts=None, 
+def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
                                           tto=None, psi=None, eps_mae = 1e-3, max_iter=100, 
                                           samples_per_iter=1024):
     best_prosail_vars = np.ones((1, 14))
     best_prosail_s2_sim = np.ones((1, 10))
     best_mae = np.inf
     iter = 0
-    psimulator = ProsailSimulator()
-    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
     bins=200
     aggregate_s2_hist = np.zeros((bins, 10))
     with numpyro.handlers.seed(rng_seed=5):
@@ -185,10 +180,13 @@ def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
 def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, static_angles=False):
-    prosail_vars, prosail_s2_sim = simulate_prosail_dataset(data_dir,
-                                                            nb_simus=nb_simus, 
+
+    psimulator = ProsailSimulator()
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
+    prosail_vars, prosail_s2_sim = simulate_prosail_dataset(nb_simus=nb_simus, 
                                                             noise=noise,
-                                                            rsr_dir=rsr_dir,
+                                                            psimulator=psimulator,
+                                                            ssimulator=ssimulator,
                                                             static_angles=static_angles)
     norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
     torch.save(torch.from_numpy(prosail_vars), 

@@ -700,8 +700,8 @@ def get_prosailvae_train_parser():
        
     return parser       
 
-def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True,n_samples=20):
-    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2, old_lr = 1, old_lr_max_ratio = 10)
+def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True,n_samples=20, old_lr = 1, old_lr_max_ratio = 10):
+    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
     lrtrainloader = lr_finder_loader(
                                     file_prefix=file_prefix, 
                                     sample_ids=None,

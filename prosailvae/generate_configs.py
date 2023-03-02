@@ -4,7 +4,7 @@ import numpy as np
 
 
 config = {      "batch_size": 4096,
-                "epochs": 200,
+                "epochs": 50,
                 "lr": 0.001,
                 "hidden_layers_size": [256],
                 "test_size": 0.01,

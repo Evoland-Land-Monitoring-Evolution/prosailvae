@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 
-config = {      "batch_size": 4096,
+config = {      "batch_size": 2048,
                 "epochs": 50,
                 "lr": 0.001,
                 "hidden_layers_size": [256],
@@ -17,7 +17,7 @@ config = {      "batch_size": 4096,
                 "beta_index": 0,
                 "dataset_file_prefix": "full_",
                 "simulated_dataset": True,
-                "lr_recompute": 50,
+                "lr_recompute": 25,
                 "loss_type": "diag_nll",
                 "apply_norm_rec": False,
                 "exp_lr_decay": 0.97,

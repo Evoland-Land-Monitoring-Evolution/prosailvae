@@ -95,8 +95,8 @@ def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, l
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
-                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir)
-                optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2, old_lr=old_lr, old_lr_max_ratio=10)
+                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir, old_lr=old_lr, old_lr_max_ratio=10)
+                optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                 if exp_lr_decay>0:
                     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
                     #                                         patience=exp_lr_decay, threshold=0.0001, 

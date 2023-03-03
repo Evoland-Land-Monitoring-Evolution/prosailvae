@@ -427,14 +427,14 @@ class ProsailCNNEncoder(nn.Module):
             ],
             [],
         )
-        self.cnet = nn.Sequential(*enc_blocks)
+        self.cnet = nn.Sequential(*enc_blocks).to(device)
         self.nb_enc_cropped_hw = sum(
             [(kernel_size - 1) // 2 for kernel_size in enc_kernel_sizes]
         )
-        self.mu_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1)
+        self.mu_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1).to(device)
         self.logvar_conv = nn.Conv2d(
             encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1
-        )
+        ).to(device)
         if norm_mean is None:
             norm_mean = torch.zeros((lat_space_size,1,1,))
         if norm_std is None:
@@ -486,5 +486,7 @@ class ProsailCNNEncoder(nn.Module):
         self.norm_mean = self.norm_mean.to(device)
         self.norm_std = self.norm_std.to(device)
         self.cnet = self.dnet.to(device)
+        self.mu_conv = self.mu_conv.to(device)
+        self.logvar_conv = self.logvar_conv.to(device)
         self = self.to(device)
 

@@ -55,7 +55,7 @@ def select_encoder(encoder_type, vae_params, device, refl_norm_mean, refl_norm_s
     elif encoder_type=='cnn':
         encoder_sizes = [vae_params["input_size"] + 2 * 3] + vae_params["hidden_layers_size"] + [output_size]
         enc_kernel_sizes = [3] * len(encoder_sizes)
-        encoder = ProsailCNNEncoder(encoder_sizes=encoder_sizes, enc_kernel_sizes=enc_kernel_sizes)
+        encoder = ProsailCNNEncoder(encoder_sizes=encoder_sizes, enc_kernel_sizes=enc_kernel_sizes, device=device)
     else:
         raise NotImplementedError    
     return encoder

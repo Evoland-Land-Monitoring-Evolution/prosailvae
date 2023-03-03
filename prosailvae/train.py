@@ -9,7 +9,7 @@ from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
-from metrics.results import save_results, get_res_dir_path
+from metrics.results import save_results, save_results_2d, get_res_dir_path
 
 import torch.optim as optim
 import torch
@@ -344,7 +344,15 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
-        save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, cnn=params['encoder_type']=="cnn")
+        if params['encoder_type']=="cnn":
+            _,_, test_loader = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
+                                                         batch_size=1,
+                                                         max_open_files=4,
+                                                         num_workers=1,
+                                                         pin_memory=False)
+            save_results_2d(PROSAIL_VAE, test_loader, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
+        else:
+            save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir,os.path.pardir), res_dir)

@@ -168,6 +168,10 @@ class SimVAE(nn.Module):
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
             z = self.sim_space.sim2z(sim)
+            # Quickfix for angle dimension:
+            if len(angles.size())==4:
+                angles = angles.permute(0,2,3,1)
+                angles = angles.reshape(-1, 3)
             rec = self.decode(sim, angles)
             
         elif mode == "sim_median":

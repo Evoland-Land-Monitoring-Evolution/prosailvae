@@ -19,6 +19,7 @@ import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 
 
+
 def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
     
@@ -675,3 +676,45 @@ def customized_box_plot(percentiles_tensor, axes, redraw = True, *args, **kwargs
         axes.figure.canvas.draw()
 
     return box_plot
+
+def gammacorr(s2_r,gamma=2):
+    return s2_r.pow(1/gamma)
+
+def normalize_patch_for_plot(s2_r_rgb, sr_min=None, sr_max=None):
+    if len(s2_r_rgb.size())==3:
+        assert s2_r_rgb.size(2)==3
+        s2_r_rgb = s2_r_rgb.unsqueeze(0)
+    else:
+        assert s2_r_rgb.size(3)==3
+    if sr_min is None or sr_max is None:
+        sr = s2_r_rgb.reshape(-1, 3)
+        sr_min = sr.min(0)[0]
+        sr_max = sr.max(0)[0]
+    else:
+        assert sr_min.squeeze().size(0)==3
+        assert sr_max.squeeze().size(0)==3
+    sr_min = sr_min.squeeze().unsqueeze(0).unsqueeze(0).unsqueeze(0)
+    sr_max = sr_max.squeeze().unsqueeze(0).unsqueeze(0).unsqueeze(0)
+    return (s2_r_rgb - sr_min) / (sr_max - sr_min), sr_min, sr_max
+
+def plot_patch_pairs(s2_r_pred, s2_r_ref, idx=0):
+    # s2_r = swap_reflectances(s2_r)
+    mean_l2_err = (s2_r_pred - s2_r_ref).pow(2).mean(1).unsqueeze(1).permute(0,2,3,1).detach().cpu()
+    s2_r_ref_n, sr_min, sr_max = normalize_patch_for_plot(s2_r_ref[:,:3,:,:].permute(0,2,3,1).detach().cpu(), sr_min=None, sr_max=None)
+    s2_r_ref_n_rgb = s2_r_ref_n[:,:,:,torch.tensor([2,1,0])] + 0.0
+    s2_r_pred_n, sr_min, sr_max = normalize_patch_for_plot(s2_r_pred[:,:3,:,:].permute(0,2,3,1).detach().cpu(), sr_min=sr_min, sr_max=sr_max)
+    s2_r_pred_n_rgb = s2_r_pred_n[:,:,:,torch.tensor([2,1,0])] + 0.0
+    fig, ax = plt.subplots(1, 3, dpi=150, figsize=(3,9))
+    ax[0].imshow(gammacorr(s2_r_ref_n_rgb[idx,:,:,:]))
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    ax[0].set_title("Original patch")
+    ax[1].imshow(gammacorr(s2_r_pred_n_rgb[idx,:,:,:]))
+    ax[1].set_xticks([])
+    ax[1].set_yticks([])
+    ax[1].set_title("Reconstructed patch")
+    ax[2].imshow(gammacorr(mean_l2_err[idx,:,:,:]))
+    ax[2].set_xticks([])
+    ax[2].set_yticks([])
+    ax[2].set_title("L2 errors")
+    return fig, ax

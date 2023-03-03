@@ -208,6 +208,8 @@ class SimVAE(nn.Module):
                 # s2_r = s2_r / 10000
             else:
                 (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+                s2_r = s2_r.to(self.device)
+                s2_a = s2_a.to(self.device)
                 if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
                     s2_r = s2_r[:,:,:16,:16]
                     s2_a = s2_a[:,:,:16,:16]

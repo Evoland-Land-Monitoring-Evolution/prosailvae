@@ -56,7 +56,8 @@ def get_prosailvae_results_parser():
 
 
 
-def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False):
+def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df=None, 
+                 LOGGER_NAME='PROSAIL-VAE logger', plot_results=False, cnn=False):
     device = PROSAIL_VAE.device
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -93,65 +94,69 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     torch.save(nlls, res_dir + "/params_nll.pt")
     if plot_results:
         plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
-    (mae, mpiw, picp, mare, 
-    sim_dist, tgt_dist, rec_dist,
-    angles_dist, s2_r_dist,
-    sim_pdfs, sim_supports, ae_percentiles, 
-    are_percentiles, piw_percentiles) = get_metrics(PROSAIL_VAE, loader, 
-                              n_pdf_sample_points=3001,
-                              alpha_conf=alpha_pi)
-    logger.info("Metrics computed.")
+    if cnn:
+        print("Warning, metrics must be evaluated on patches")
+        raise NotImplementedError
+    else:
+        (mae, mpiw, picp, mare, 
+        sim_dist, tgt_dist, rec_dist,
+        angles_dist, s2_r_dist,
+        sim_pdfs, sim_supports, ae_percentiles, 
+        are_percentiles, piw_percentiles) = get_metrics(PROSAIL_VAE, loader, 
+                                n_pdf_sample_points=3001,
+                                alpha_conf=alpha_pi)
+        logger.info("Metrics computed.")
 
-    save_metrics(res_dir, mae, mpiw, picp, alpha_pi, 
-                ae_percentiles, are_percentiles, piw_percentiles)
-    maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
-    mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
-    if plot_results:
-        # Plotting results
-        metrics_dir = res_dir + "/metrics_plot/"
-        if not os.path.isdir(metrics_dir):
-            os.makedirs(metrics_dir)
-        
-        logger.info("Plotting metrics.")
-        
-        plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
-        plot_metric_boxplot(ae_percentiles, res_dir, metric_name='ae', logscale=True)
-        plot_metric_boxplot(are_percentiles, res_dir, metric_name='are')
-        # plot_metric_boxplot(piw_percentiles, res_dir, metric_name='piw')
-        rec_dir = res_dir + "/reconstruction/"
-        if not os.path.isdir(rec_dir):
-            os.makedirs(rec_dir)
-        logger.info("Plotting reconstructions")
-        plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
-        
-        logger.info("Plotting PROSAIL parameter distributions")
-        plot_param_dist(metrics_dir, sim_dist, tgt_dist)
-        logger.info("Plotting PROSAIL parameters, reference vs prediction")
-        plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50)
-        plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
-        ssimulator = PROSAIL_VAE.decoder.ssimulator
-        refl_dist = loader.dataset[:][0]
-        plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
-                    ssimulator=PROSAIL_VAE.decoder.ssimulator)
-        
-        normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-        normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-        logger.info("Plotting reflectance distribution")
-        plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator)
-        logger.info("Plotting reconstructed reflectance components pair plots")
-        pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
-                res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
-        logger.info("Plotting reference reflectance components pair plots")
-        pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
-                res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
-        logger.info("Plotting inferred PROSAIL parameters pair plots")
-        pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-                res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
-        logger.info("Plotting reference PROSAIL parameters pair plots")
-        pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
-                res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
-        logger.info("Plotting reconstruction error against angles")
-        plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
+        save_metrics(res_dir, mae, mpiw, picp, alpha_pi, 
+                    ae_percentiles, are_percentiles, piw_percentiles)
+        maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
+        mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
+        if plot_results:
+            # Plotting results
+            metrics_dir = res_dir + "/metrics_plot/"
+            if not os.path.isdir(metrics_dir):
+                os.makedirs(metrics_dir)
+            
+            logger.info("Plotting metrics.")
+            
+            plot_metrics(metrics_dir, alpha_pi, maer, mpiwr, picp, mare)
+            plot_metric_boxplot(ae_percentiles, res_dir, metric_name='ae', logscale=True)
+            plot_metric_boxplot(are_percentiles, res_dir, metric_name='are')
+            # plot_metric_boxplot(piw_percentiles, res_dir, metric_name='piw')
+            rec_dir = res_dir + "/reconstruction/"
+            if not os.path.isdir(rec_dir):
+                os.makedirs(rec_dir)
+            logger.info("Plotting reconstructions")
+            plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20)
+            
+            logger.info("Plotting PROSAIL parameter distributions")
+            plot_param_dist(metrics_dir, sim_dist, tgt_dist)
+            logger.info("Plotting PROSAIL parameters, reference vs prediction")
+            plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50)
+            plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist)
+            ssimulator = PROSAIL_VAE.decoder.ssimulator
+            refl_dist = loader.dataset[:][0]
+            plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
+                        ssimulator=PROSAIL_VAE.decoder.ssimulator)
+            
+            normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+            normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+            logger.info("Plotting reflectance distribution")
+            plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator)
+            logger.info("Plotting reconstructed reflectance components pair plots")
+            pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
+                    res_dir=metrics_dir, filename='normed_rec_pair_plot.png')
+            logger.info("Plotting reference reflectance components pair plots")
+            pair_plot(normed_refl_dist, tensor_2=None, features = BANDS, 
+                    res_dir=metrics_dir, filename='normed_s2bands_pair_plot.png')
+            logger.info("Plotting inferred PROSAIL parameters pair plots")
+            pair_plot(sim_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
+                    res_dir=metrics_dir, filename='sim_prosail_pair_plot.png')
+            logger.info("Plotting reference PROSAIL parameters pair plots")
+            pair_plot(tgt_dist.squeeze(), tensor_2=None, features = PROSAILVARS, 
+                    res_dir=metrics_dir, filename='ref_prosail_pair_plot.png')
+            logger.info("Plotting reconstruction error against angles")
+            plot_rec_error_vs_angles(s2_r_dist, rec_dist, angles_dist,  res_dir=metrics_dir)
     
     logger.info("Program completed.")
     return

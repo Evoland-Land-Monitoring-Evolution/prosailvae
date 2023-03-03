@@ -78,10 +78,12 @@ def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
 
 def gaussian_nll_loss(tgt, recs):
     # rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
-    if len(recs.size())<3:
+    if len(recs.size()) < 3:
         raise ValueError("NLL needs more than 1 samples of distribution.")
-    rec_err_var = torch.var(recs, 2)
-    return gaussian_nll(tgt, recs.mean(2), rec_err_var, device=tgt.device).mean() 
+    elif recs.size(2)==1:
+        raise ValueError("NLL needs more than 1 samples of distribution.")
+    rec_err_var = torch.var(recs, 2).unsqueeze(2)
+    return gaussian_nll(tgt, recs.mean(2).unsqueeze(2), rec_err_var, device=tgt.device).mean() 
 
 def full_gaussian_nll_loss(tgt, recs):
     err = recs # - tgt.unsqueeze(2)

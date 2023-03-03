@@ -21,21 +21,7 @@ import sys
 import matplotlib.pyplot as plt
 
 import argparse
-def get_S2_data_preprocess_parser():
-    """
-    Creates a new argument parser.
-    """
-    parser = argparse.ArgumentParser(description='Parser for data generation')
-    parser.add_argument("-rsr", dest="rsr_dir",
-        help="directory of rsr files",
-        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
-    parser.add_argument("-d", dest="tensor_dir",
-        help="directory of tensor files",
-        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/')
-    parser.add_argument("-bpe", dest="batch_par_epoch",
-        help="Number of 32x32 patchs per epochs",
-        type=int, default=100)    
-    return parser
+
 
 thirdparties_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/thirdparties/"
 # thirdparties_path = "/work/scratch/zerahy/src/thirdparties/"
@@ -55,6 +41,22 @@ from src.mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDat
                                                         create_tensors_path)     
 
 
+def get_S2_data_preprocess_parser():
+    """
+    Creates a new argument parser.
+    """
+    parser = argparse.ArgumentParser(description='Parser for data generation')
+    parser.add_argument("-rsr", dest="rsr_dir",
+        help="directory of rsr files",
+        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
+    parser.add_argument("-d", dest="tensor_dir",
+        help="directory of tensor files",
+        type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/')
+    parser.add_argument("-bpe", dest="batch_par_epoch",
+        help="Number of 32x32 patchs per epochs",
+        type=int, default=100)    
+    return parser
+
 def get_mmdc_dataset_mean_std(loader, max_batch=100):
     S1 = torch.zeros(10)
     S2 = torch.zeros(10)
@@ -69,13 +71,54 @@ def get_mmdc_dataset_mean_std(loader, max_batch=100):
     std = torch.sqrt(S2 / n - mean.pow(2))
     return mean, std
 
+def normalize_patch_for_plot(s2_r_rgb, sr_min=None, sr_max=None):
+    if len(s2_r_rgb.size())==3:
+        assert s2_r_rgb.size(2)==3
+        s2_r_rgb = s2_r_rgb.unsqueeze(0)
+    else:
+        assert s2_r_rgb.size(3)==3
+    if sr_min is None or sr_max is None:
+        sr = s2_r_rgb.reshape(-1, 3)
+        sr_min = sr.min(0)[0]
+        sr_max = sr.max(0)[0]
+    else:
+        assert sr_min.squeeze().size(0)==3
+        assert sr_max.squeeze().size(0)==3
+    sr_min = sr_min.squeeze().unsqueeze(0).unsqueeze(0).unsqueeze(0)
+    sr_max = sr_max.squeeze().unsqueeze(0).unsqueeze(0).unsqueeze(0)
+    return (s2_r_rgb - sr_min) / (sr_max - sr_min) 
+
+# def swap_reflectances(s2_r):
+#     bands_correct_ordering = torch.tensor([0,1,2,4,5,6,3,7,8,9])
+#     return s2_r[:,bands_correct_ordering,:,:]
+
+
+def gammacorr(s2_r,gamma=2):
+    return s2_r.pow(1/gamma)
+
+def plot_patch(s2_r, idx=1):
+    # s2_r = swap_reflectances(s2_r)
+    s2_r_n = normalize_patch_for_plot(s2_r[:,:3,:,:].permute(0,2,3,1), sr_min=None, sr_max=None)
+    s2_r_n_rgb = s2_r_n[:,:,:,torch.tensor([2,1,0])] + 0.0
+    fig, ax = plt.subplots(dpi=100)
+    plt.imshow(gammacorr(s2_r_n_rgb[idx,:,:,:]))
+    ax.set_xticks([])
+    ax.set_yticks([])
+    return fig, ax
+
 def analyse_angles(loader, max_batch=100):
 
     a = torch.tensor([])
+    s2_r = torch.tensor([])    
     for idx, batch in zip(range(max_batch), loader):
-        (_, s2_a, _, _, _, _, _) = destructure_batch(batch)
+        (s2_x, s2_a, s2_m, s1_x, s1_a_asc, s1_a_desc, srtm_x) = destructure_batch(batch)
         angles = s2_a.transpose(0,1).reshape(6,-1).transpose(0,1)
         a = torch.concat((a, angles), axis=0)
+        s2_r = torch.concat((s2_r, s2_x), axis=0)
+    plot_patch(s2_r, idx=1)
+    fig, ax = plt.subplots(dpi=100)
+    im = ((s2_x.squeeze()[:1,:,:].permute((1,2,0))/10000).flip(2).cpu().numpy()*255).astype('int')
+    plt.imshow(im, cmap='Blues')
     fig, ax = plt.subplots(2,3,dpi=100)
     ax[0,0].hist(a[:,0].numpy(),bins=50)
     ax[1,0].hist(a[:,1].numpy(),bins=50)

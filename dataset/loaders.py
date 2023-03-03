@@ -293,12 +293,13 @@ def convert_angles(angles):
     s_obs_azi = angles[:,5].unsqueeze(1)
 
     c_rel_azi = c_obs_azi * c_sun_azi + s_obs_azi * s_sun_azi
-    s_rel_azi = s_obs_azi * c_sun_azi - c_obs_azi * s_sun_azi
+    s_rel_azi = c_obs_azi * s_sun_azi - s_obs_azi * c_sun_azi 
 
     sun_zen = torch.rad2deg(torch.arccos(c_sun_zen))
     obs_zen = torch.rad2deg(torch.arccos(c_obs_zen))
-    rel_azi = torch.rad2deg(torch.atan2(s_rel_azi, c_rel_azi))
-
+    rel_azi = torch.rad2deg(torch.atan2(s_rel_azi, c_rel_azi)) % 360
+    sun_azi = torch.rad2deg(torch.atan2(s_sun_azi, c_sun_azi)) % 360
+    obs_azi = torch.rad2deg(torch.atan2(s_obs_azi, c_obs_azi)) % 360
     return torch.concat((sun_zen, obs_zen, rel_azi), axis=1)
 
 def flatten_patch(s2_refl, angles):
@@ -329,18 +330,18 @@ def get_mmdc_loaders(tensors_dir="",
 
     train_data_files = [
         list(i) for i in create_tensors_path(
-        path_to_exported_files=f"{tensors_dir}/T*",
+        path_to_exported_files=f"{tensors_dir}/",
         datasplit="train")
         ]
     # print(f"{train_data_files}")
     val_data_files = [
         list(i) for i in create_tensors_path(
-        path_to_exported_files=f"{tensors_dir}/T*",
+        path_to_exported_files=f"{tensors_dir}/",
         datasplit="val")
         ]
     test_data_files = [
         list(i) for i in create_tensors_path(
-        path_to_exported_files=f"{tensors_dir}/T*",
+        path_to_exported_files=f"{tensors_dir}/",
         datasplit="test")
         ]
     # define iterable dataset

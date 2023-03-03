@@ -10,8 +10,8 @@ import torch
 import logging
 from prosailvae.utils import NaN_model_params, select_rec_loss_fn
 from dataset.loaders import get_flattened_patch
-
-
+from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
+import socket
     
 
 class SimVAE(nn.Module):
@@ -59,7 +59,7 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
                  beta_kl=0, beta_index=0, logger_name='PROSAIL-VAE logger',
-                 patch_mode=False, inference_mode=False, supervised_model=None):
+                 flat_patch_mode=False, inference_mode=False, supervised_model=None):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -74,7 +74,7 @@ class SimVAE(nn.Module):
         self.beta_kl = beta_kl
         self.eval()
         self.logger = logging.getLogger(logger_name)
-        self.patch_mode = patch_mode
+        self.flat_patch_mode = flat_patch_mode
         self.beta_index = beta_index
         self.inference_mode = inference_mode
         self.supervised_model = supervised_model
@@ -137,6 +137,10 @@ class SimVAE(nn.Module):
         sim = self.transfer_latent(z)
         
         # decoding
+        # Quickfix for angle dimension:
+        if len(angles.size())==4:
+            angles = angles.permute(0,2,3,1)
+            angles = angles.reshape(-1, 3)
         rec = self.decode(sim, angles)
         return dist_params, z, sim, rec
     
@@ -192,11 +196,17 @@ class SimVAE(nn.Module):
         return dist_params, z, sim, rec
     
     def compute_unsupervised_loss_over_batch(self, batch, normalized_loss_dict, 
-                                             len_loader=1, n_samples=1):
+                                             len_loader=1, n_samples=1, mmdc_dataset=True):
         # assert n_samples>1
-        if self.patch_mode:      
-            s2_r, s2_a = get_flattened_patch(batch, device=self.device)
-            s2_r = s2_r / 10000
+        if mmdc_dataset==True:
+            if self.flat_patch_mode:      
+                s2_r, s2_a = get_flattened_patch(batch, device=self.device)
+                # s2_r = s2_r / 10000
+            else:
+                (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+                if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
+                    s2_r = s2_r[:,:,:16,:16]
+                    s2_a = s2_a[:,:,:16,:16]
         else:
             s2_r = batch[0].to(self.device) 
             s2_a = batch[1].to(self.device)  
@@ -230,7 +240,10 @@ class SimVAE(nn.Module):
             self.logger.debug(f"{params[nan_batch_idx[0],:,0].squeeze()}")
             self.logger.debug("sigma = ")
             self.logger.debug(f"{params[nan_batch_idx[0],:,1].squeeze()}")
-            
+        
+        # TODO : remove Quickfix to reshape s2_r like rec:
+        if len(s2_r.size())==4:
+            s2_r = s2_r.permute(0,2,3,1).reshape(rec.size(0), rec.size(1),1)
         rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
@@ -349,7 +362,7 @@ class SimVAE(nn.Module):
         loss = checkpoint['loss']
         return epoch, loss
     
-    def fit(self, dataloader, optimizer, n_samples=1, batch_per_epoch=None):
+    def fit(self, dataloader, optimizer, n_samples=1, batch_per_epoch=None, mmdc_dataset=False):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
@@ -361,7 +374,7 @@ class SimVAE(nn.Module):
             
             if not self.supervised:
                 loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
-                    train_loss_dict, n_samples=n_samples, len_loader=len_loader)
+                    train_loss_dict, n_samples=n_samples, len_loader=len_loader, mmdc_dataset=mmdc_dataset)
             else:
                 loss_sum, _ = self.compute_supervised_loss_over_batch(batch, train_loss_dict, 
                                                         len_loader=len_loader)
@@ -376,7 +389,7 @@ class SimVAE(nn.Module):
         self.eval()
         return train_loss_dict
 
-    def validate(self, dataloader, n_samples=1, batch_per_epoch=None):
+    def validate(self, dataloader, n_samples=1, batch_per_epoch=None, mmdc_dataset=False):
         self.eval()
         valid_loss_dict = {}
         len_loader = len(dataloader.dataset)
@@ -386,7 +399,7 @@ class SimVAE(nn.Module):
             for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
                 if not self.supervised:
                     loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
-                        valid_loss_dict, n_samples=n_samples, len_loader=len_loader)
+                        valid_loss_dict, n_samples=n_samples, len_loader=len_loader, mmdc_dataset=mmdc_dataset)
                 else:
                     loss_sum, _ = self.compute_supervised_loss_over_batch(batch, valid_loss_dict, 
                                                         len_loader=len_loader)

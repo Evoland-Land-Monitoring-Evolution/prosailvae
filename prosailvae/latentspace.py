@@ -65,6 +65,7 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
 
     def get_params_from_encoder(self, y):
         if len(y.size())==3:
+            # Input dimension (B x L x 2)
             params = torch.zeros((y.size(0), y.size(1), self.latent_dim, 2)).to(y.device)
             for i in range(y.size(0)):
                 output_i = y[i,:,:]
@@ -77,7 +78,8 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
                 params_i = torch.stack([ordered_mu_i, sigma_i], dim=2)
                 params[i,:,:,:] = params_i.squeeze(3)
         elif len(y.size())==2:
-            y = y.view(-1, 2, self.latent_dim)
+            # input size (B x 2L)
+            y = y.reshape(y.size(0), 2, self.latent_dim)
             mu = torch.sigmoid(y[:, 0, :].view(-1, self.latent_dim, 1))
             ordered_mu = rectify(mu, self.max_matrix)
             logstd = torch.sigmoid(y[:, 1, :].view(-1, self.latent_dim, 1)) 

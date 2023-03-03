@@ -116,7 +116,7 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     pass
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, plot_gradient=False):
+                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, plot_gradient=False, mmdc_dataset=False):
 
 
     logger = logging.getLogger(LOGGER_NAME)
@@ -142,7 +142,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=old_lr)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
-                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples)
+                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
                 if plot_gradient:
                     if not os.path.isdir(res_dir+"/gradient_flows"):
                         os.makedirs(res_dir+"/gradient_flows")
@@ -157,7 +157,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
                 traceback.print_exc()
                 break
             try:
-                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples)
+                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
                 if exp_lr_decay>0:
                     # lr_scheduler.step(valid_loss_dict['loss_sum'])
                     lr_scheduler.step()
@@ -285,6 +285,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     lr = params['lr']
     if lr is None:
         try:
+            raise NotImplementedError
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"])
         except:
             lr = 1e-3
@@ -311,7 +312,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                          lr_recompute=params['lr_recompute'],
                                                          data_dir=data_dir, 
                                                          exp_lr_decay=params["exp_lr_decay"],
-                                                         plot_gradient=parser.plot_results) 
+                                                         plot_gradient=parser.plot_results,
+                                                         mmdc_dataset = not params["simulated_dataset"]) 
     logger.info("Training Completed !")
 
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df
@@ -342,7 +344,7 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     try:
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
-        save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
+        save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, cnn=params['encoder_type']=="cnn")
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir,os.path.pardir), res_dir)

@@ -90,6 +90,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
         with torch.no_grad():
             for i, batch in zip(range(min(len(loader),1)),loader):
                 (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+                s2_r = s2_r.to(PROSAIL_VAE.device)
+                s2_a = s2_a.to(PROSAIL_VAE.device)
                 if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
                     s2_r = s2_r[:,:,:16,:16]
                     s2_a = s2_a[:,:,:16,:16]

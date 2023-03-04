@@ -119,6 +119,7 @@ class SimVAE(nn.Module):
         return rec
         
     def forward(self, x, angles=None, n_samples=1):
+        
         # encoding
         if angles is None:
             angles = x[:,-3:]

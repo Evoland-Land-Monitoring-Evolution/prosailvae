@@ -90,12 +90,13 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)             
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0):
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0, tensors_dir=None):
     new_lr=old_lr
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
-                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir, old_lr=old_lr, old_lr_max_ratio=10)
+                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir, old_lr=old_lr, old_lr_max_ratio=10, 
+                                            tensors_dir=tensors_dir)
                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                 if exp_lr_decay>0:
                     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
@@ -116,7 +117,8 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     pass
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, plot_gradient=False, mmdc_dataset=False):
+                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, 
+                  plot_gradient=False, mmdc_dataset=False, tensors_dir=None):
 
 
     logger = logging.getLogger(LOGGER_NAME)
@@ -139,7 +141,9 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
-            lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=old_lr)
+            lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, 
+                                                           data_dir, optimizer, old_lr=old_lr, 
+                                                           tensors_dir=tensors_dir if mmdc_dataset else None)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
@@ -285,8 +289,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     lr = params['lr']
     if lr is None:
         try:
-            raise NotImplementedError
-            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"])
+            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"], 
+                                    tensors_dir=parser.tensor_dir if not params["simulated_dataset"] else None)
         except:
             lr = 1e-3
             logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
@@ -313,7 +317,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                          data_dir=data_dir, 
                                                          exp_lr_decay=params["exp_lr_decay"],
                                                          plot_gradient=parser.plot_results,
-                                                         mmdc_dataset = not params["simulated_dataset"]) 
+                                                         mmdc_dataset = not params["simulated_dataset"],
+                                                         tensors_dir=parser.tensor_dir) 
     logger.info("Training Completed !")
 
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df

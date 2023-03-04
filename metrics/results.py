@@ -79,7 +79,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
     # Computing metrics
     PROSAIL_VAE.eval()
     logger.info("Computing inference metrics with test dataset...")
-    test_loss = PROSAIL_VAE.validate(loader)
+    test_loss = PROSAIL_VAE.validate(loader, mmdc_dataset=True, n_samples=10)
     pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     if plot_results:
         plot_dir = res_dir + "/plots/"

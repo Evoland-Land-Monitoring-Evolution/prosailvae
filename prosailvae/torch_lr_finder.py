@@ -24,6 +24,8 @@ PYTORCH_VERSION = version.parse(torch.__version__)
 
 import argparse
 
+from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
+
 try:
     from apex import amp
 
@@ -48,8 +50,13 @@ class DataLoaderIter(object):
                 "`TrainDataLoaderIter` or `ValDataLoaderIter` and override the "
                 "`inputs_labels_from_batch` method.".format(type(batch_data))
             )
-
-        inputs, labels, *_ = batch_data
+        #TODO remove quickfix for mmdc dataset
+        if len(batch_data) == 1:
+            (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch_data)
+            labels = s2_r + 0.0
+            inputs = torch.concat((s2_r, s2_a), axis=1)
+        else:
+            inputs, labels, *_ = batch_data
 
         return inputs, labels
 
@@ -700,14 +707,18 @@ def get_prosailvae_train_parser():
        
     return parser       
 
-def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disable_tqdm=True,n_samples=20, old_lr = 1, old_lr_max_ratio = 10):
+def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", 
+                       disable_tqdm=True,n_samples=20, old_lr = 1, old_lr_max_ratio = 10,
+                       tensors_dir=None):
+    model.lr_find_mode = True
     optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
     lrtrainloader = lr_finder_loader(
                                     file_prefix=file_prefix, 
                                     sample_ids=None,
                                     batch_size=64,
                                     data_dir=data_dir,
-                                    supervised=model.supervised)
+                                    supervised=model.supervised,
+                                    tensors_dir=tensors_dir)
     inference_mode = model.inference_mode
     if model.supervised:
         criterion = lr_finder_sup_nll
@@ -723,6 +734,7 @@ def get_PROSAIL_VAE_lr(model, data_dir, plot_lr=False, file_prefix="test_", disa
     if model.decoder.loss_type == "mse":
         n_samples=1
     lr_finder.range_test(lrtrainloader, end_lr=10, num_iter=100, disable_tqdm=disable_tqdm,n_samples=n_samples)
+    model.lr_find_mode = False
     suggested_lr = lr_finder.suggest_lr()
     lr_optimal = min(suggested_lr, old_lr_max_ratio * old_lr)
     if plot_lr:

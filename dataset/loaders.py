@@ -154,40 +154,51 @@ def load_test_ids(file_prefix="s2_", data_dir=None):
 
 def lr_finder_loader(sample_ids=None, 
                      batch_size=1024, num_workers=0, file_prefix="s2_", 
-                     data_dir=None, supervised=False):
-    if data_dir is None:
-        data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                             os.pardir),"data/")
-    s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
-    len_dataset = s2_refl.size(0)
-    
-    prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
-    angles = prosail_sim_vars[:,-3:]
-    prosail_parameters = prosail_sim_vars[:,:-3]
-    if sample_ids is None:
-        sample_ids = torch.arange(0,len_dataset) 
-        sub_s2_refl = s2_refl
-        sub_angles = angles
-        sub_prosail_parameters = prosail_parameters
-    else:
-        assert (sample_ids < len_dataset).all()
-        sub_s2_refl = s2_refl[sample_ids,:]
-        sub_angles = angles[sample_ids,:]
-        sub_prosail_parameters = prosail_parameters[sample_ids,:]
-    if supervised:
-        dataset = TensorDataset(torch.concat((sub_s2_refl.float(),
-                                sub_angles.float()), axis=1), 
-                                sub_prosail_parameters.float(),
-                                )
-    else:
-        dataset = TensorDataset(torch.concat((sub_s2_refl.float(),
-                                sub_angles.float()), axis=1), 
-                                sub_s2_refl.float(),
-                                )
+                     data_dir=None, supervised=False, tensors_dir=None):
+    if tensors_dir is None:
+        if data_dir is None:
+            data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+                                                    os.pardir),"data/")
+        s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
+        len_dataset = s2_refl.size(0)
 
-    loader = DataLoader(dataset,
-                        batch_size=batch_size,
-                        num_workers=num_workers)
+        prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
+        angles = prosail_sim_vars[:,-3:]
+        prosail_parameters = prosail_sim_vars[:,:-3]
+        if sample_ids is None:
+            sample_ids = torch.arange(0,len_dataset) 
+            sub_s2_refl = s2_refl
+            sub_angles = angles
+            sub_prosail_parameters = prosail_parameters
+        else:
+            assert (sample_ids < len_dataset).all()
+            sub_s2_refl = s2_refl[sample_ids,:]
+            sub_angles = angles[sample_ids,:]
+            sub_prosail_parameters = prosail_parameters[sample_ids,:]
+
+        if supervised:
+            dataset = TensorDataset(torch.concat((sub_s2_refl.float(),
+                                    sub_angles.float()), axis=1), 
+                                    sub_prosail_parameters.float(),
+                                    )
+        else:
+            dataset = TensorDataset(torch.concat((sub_s2_refl.float(),
+                                    sub_angles.float()), axis=1), 
+                                    sub_s2_refl.float(),
+                                    )
+
+        loader = DataLoader(dataset,
+                            batch_size=batch_size,
+                            num_workers=num_workers)
+        
+    else:
+        _,loader,_, = get_mmdc_loaders(tensors_dir=tensors_dir,
+                                        batch_size=1,
+                                        batch_par_epoch=100,
+                                        max_open_files=4,
+                                        num_workers=1,
+                                        pin_memory=False)
+        # raise NotImplementedError
     return loader
     
 

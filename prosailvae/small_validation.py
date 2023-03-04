@@ -355,7 +355,7 @@ def main():
         max_delta = 3
         for site in ["france", "italy1", "italy2"]:
             find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
-                                  samples_per_iter=1024, max_iter=500, n=5, exclude_lai=exclude_lai, max_delta=max_delta)
+                                  samples_per_iter=1024, max_iter=300, n=20, exclude_lai=exclude_lai, max_delta=max_delta)
     pass
 
 if __name__ == "__main__":

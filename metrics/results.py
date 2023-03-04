@@ -98,7 +98,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
                 params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode') 
                 s2_r_pred =  rec[:,:,0].reshape(1,s2_r.size(2),s2_r.size(2),10).permute(0,3,1,2)
                 fig, ax = plot_patch_pairs(s2_r_pred, s2_r, idx=0)
-                fig.savefig(f"{plots}/patch_rec_rgb_{i}.svg")
+                fig.savefig(f"{plot_dir}/patch_rec_rgb_{i}.svg")
                 if i > n_rec_plots:
                     break
     logger.info("Metrics computed.")

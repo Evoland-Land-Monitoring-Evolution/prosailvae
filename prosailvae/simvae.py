@@ -254,7 +254,7 @@ class SimVAE(nn.Module):
         rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
-        loss_sum=rec_loss
+        loss_sum = rec_loss
         
         if self.beta_kl > 0:
             if self.supervised_model is None:

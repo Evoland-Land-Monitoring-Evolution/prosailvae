@@ -258,7 +258,7 @@ def main():
     if os.path.isfile(res_dir+"/results_directory_names.txt"):
         os.remove(res_dir+"/results_directory_names.txt")
     for fold_res_dir in fold_res_dirs:
-        params, params_sup_kl_model = setupResults(fold_res_dir)
+        params, res_dir, params_sup_kl_model = setupResults(fold_res_dir)
         try:
             vae_file_path = fold_res_dir + '/prosailvae_weights.tar'
             PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, 

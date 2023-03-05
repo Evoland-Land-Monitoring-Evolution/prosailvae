@@ -289,6 +289,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     lr = params['lr']
     if lr is None:
         try:
+            raise NotImplementedError
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"], 
                                     tensors_dir=parser.tensor_dir if not params["simulated_dataset"] else None)
         except:

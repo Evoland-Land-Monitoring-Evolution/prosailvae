@@ -704,7 +704,7 @@ def plot_patch_pairs(s2_r_pred, s2_r_ref, idx=0):
     s2_r_ref_n_rgb = s2_r_ref_n[:,:,:,torch.tensor([2,1,0])] + 0.0
     s2_r_pred_n, sr_min, sr_max = normalize_patch_for_plot(s2_r_pred[:,:3,:,:].permute(0,2,3,1).detach().cpu(), sr_min=sr_min, sr_max=sr_max)
     s2_r_pred_n_rgb = s2_r_pred_n[:,:,:,torch.tensor([2,1,0])] + 0.0
-    fig, ax = plt.subplots(1, 3, dpi=150, figsize=(3,9))
+    fig, ax = plt.subplots(1, 3, dpi=150, figsize=(9,3))
     ax[0].imshow(gammacorr(s2_r_ref_n_rgb[idx,:,:,:]))
     ax[0].set_xticks([])
     ax[0].set_yticks([])

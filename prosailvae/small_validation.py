@@ -9,9 +9,12 @@ import torch
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
-from dataset.generate_dataset import simulate_prosail_samples_close_to_ref
+from dataset.generate_dataset import simulate_prosail_samples_close_to_ref, simulate_lai_with_rec_error_hist, simulate_lai_with_rec_error_hist_with_enveloppe
 import socket
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
+
+from matplotlib.colors import LogNorm
+
 LOGGER_NAME = "PROSAIL-VAE validation"
 
 def get_model(model_dir):
@@ -109,14 +112,14 @@ def plot_lai_preds(lais, lai_pred, time_delta, site):
     return fig, ax
 
 def compare_datasets():
-    model_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/best_regression/"
+    model_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/best_regression_2/"
     data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/"
     results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
     loader = get_simloader(file_prefix="full_", data_dir=data_dir)
     PROSAIL_VAE = get_model(model_dir)
-    for site in ["italy1", "italy2", "france", "spain"]:
+    for site in [ "spain1", "spain2", "italy1", "italy2", "france", "spain1"]:
         print(site)
         relative_s2_time="both"
         s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
@@ -134,7 +137,7 @@ def compare_datasets():
 
         fig, ax = compare_reflectances(s2_r, s2_r_sim, site)
         fig.savefig(results_dir+f'/{site}_refl_distribution.svg')
-        if site != "france":
+        if site != "franc":
             fig, ax = compare_lai(lais, lai_sim, site)
             fig.savefig(results_dir+f'/{site}_LAI_distribution.svg')
             lut_lai = lut_pred(s2_r, s2_r_sim, lai_sim)
@@ -327,6 +330,78 @@ def find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, samples_
             fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_lai_ref_{not exclude_lai}_simulation_distribution.svg')
     pass
 
+def plot_lai_vs_mc_error_2d_hist(heatmap, extent, aggregate_lai_hist, min_lai=0, max_lai=10, lai_ref=None,
+                                 lai_pred=None, min_err=None, site='france', dt = 0, log_err=True,
+                                 all_cases_in_enveloppe_err=[],all_cases_in_enveloppe_LAI=[]):
+    fig, axs = plt.subplots(2, sharex=True, gridspec_kw={"height_ratios": (.15, .85)}, dpi=200)
+    axs[1].set_xlim([extent[0], extent[1]])
+    if log_err:
+        axs[1].set_yscale('log') 
+        x = np.linspace(extent[0], extent[1], heatmap.shape[0]+1)
+        y = np.logspace(np.log10(extent[2]), np.log10(extent[3]), heatmap.shape[1]+1)
+        pc = axs[1].pcolor(x,y,heatmap.transpose(1,0),cmap='BrBG', norm=LogNorm())
+        if min_err is not None:
+            axs[1].set_ylim(max(min_err - 2e-3, 5e-3), None)
+    else:
+        axs[1].imshow(heatmap.transpose(1,0), extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
+        axs[1].set_ylim([extent[2],extent[3]]) 
+    axs[0].plot(np.linspace(min_lai, max_lai, len(aggregate_lai_hist)), aggregate_lai_hist.reshape(-1))
+    axs[0].axvline([lai_ref],c="black", ls='--')
+    axs[0].axvline([lai_pred],c="red", ls='--')
+    # axs[1].imshow(heatmap.transpose(1,0), extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
+    # axs[1].imshow(heatmap.transpose(1,0), interpolation='nearest',cmap='BrBG', origin='lower')
+    axs[1].axvline([lai_ref],c="black", ls='--', label='Reference LAI')
+    axs[1].axvline([lai_pred], c="red", ls='--', label='LAI for closest simulated reflectance')
+    axs[1].axhline([min_err],c="red", ls='-.', label='Error for closest simulated reflectance')
+    if len(all_cases_in_enveloppe_err)>0:
+        median_lai = np.median(all_cases_in_enveloppe_LAI)
+        axs[1].axvline([median_lai], c="green", ls='--', label='median LAI for simulated reflectances within uncertainty')
+        axs[0].axvline([median_lai], c="green", ls='--')
+        axs[1].scatter(all_cases_in_enveloppe_LAI, all_cases_in_enveloppe_err, c='g', marker='+', s=1)
+    axs[1].legend(fontsize=6)
+    axs[1].set_aspect('auto')
+    axs[1].set_xlabel('LAI')
+    axs[1].set_ylabel('Mean Absolute Relative Error')
+    axs[0].set_title(f'Error of simulated reflectances vs LAI (Site : {site} | dt : {dt})')
+    axs[0].set_ylim(0,None)
+    axs[0].set_ylabel('Distribution')
+    return fig, axs
+
+def mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, lai_min=1.5, max_delta=3, 
+                        uniform_mode=True, lai_corr=False, lai_conv_override=None):
+    s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=lai_min)
+    if len(time_delta)==0:
+        print("No data with specified requirement was available.")
+        return 
+    abs_time_delta = time_delta.abs().numpy().reshape(-1,1)
+    psimulator = ProsailSimulator()
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
+    (top_n_delta, top_n_s2_r, top_n_s2_a, 
+     top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=n)
+    for idx_in_situ_sample in range(len(top_n_delta)):
+        delta_t = top_n_delta[idx_in_situ_sample]
+        if delta_t <= max_delta:
+            lai_ref = top_n_lais[idx_in_situ_sample,0]
+            s2_r_ref = top_n_s2_r[idx_in_situ_sample,:].reshape(1,-1)
+            tts = top_n_s2_a[idx_in_situ_sample, 0]
+            tto = top_n_s2_a[idx_in_situ_sample, 1]
+            psi = top_n_s2_a[idx_in_situ_sample, 2]
+            (best_prosail_vars, best_prosail_s2_sim, 
+             heatmap, extent, aggregate_lai_hist, 
+             best_mae,  
+             all_cases_in_enveloppe_err, all_cases_in_enveloppe_LAI) = simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulator=psimulator, ssimulator=ssimulator, tts=tts, 
+                                                tto=tto, psi=psi, max_iter=max_iter, samples_per_iter=samples_per_iter, lai_conv_override=lai_conv_override,
+                                                weiss_mode=site=="weiss", uniform_mode=uniform_mode, lai_corr=lai_corr,
+                                                )
+            lai_pred = best_prosail_vars[6]
+            fig, ax = plot_lai_vs_mc_error_2d_hist(heatmap, extent, aggregate_lai_hist, min_lai=0, max_lai=10, lai_ref=lai_ref,
+                                                    lai_pred=lai_pred, min_err=best_mae, site=site, dt=delta_t,
+                                                    all_cases_in_enveloppe_err=all_cases_in_enveloppe_err,
+                                                    all_cases_in_enveloppe_LAI=all_cases_in_enveloppe_LAI)
+            fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_uni_{uniform_mode}_lai_vs_mc_sim_error_2d_hist.svg')
+
+    pass
+
 def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
     smallest_time_delta = np.nanmin(abs_time_delta,1)
     ind_n_best = np.argpartition(smallest_time_delta, n)[:n]
@@ -340,22 +415,28 @@ def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
 def main():
     if socket.gethostname()=='CELL200973':
         relative_s2_time="both"
-        site='italy1'
+        site='weiss'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
         exclude_lai=False
         max_delta = 4
-        find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
-                              samples_per_iter=1024, max_iter=100, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
+        mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, 
+                            lai_min=3, max_delta=3,uniform_mode=True, lai_corr=True, lai_conv_override=1000)
+        # find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
+        #                       samples_per_iter=1024, max_iter=100, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
+        # compare_datasets()                        
     else:
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"
         relative_s2_time="both"
         exclude_lai=False
         max_delta = 3
-        for site in ["france", "italy1", "italy2"]:
-            find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
-                                  samples_per_iter=1024, max_iter=300, n=20, exclude_lai=exclude_lai, max_delta=max_delta)
+        site="weiss"
+        mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=300, n=10, 
+                            lai_min=3, max_delta=3, uniform_mode=True, lai_corr=True, lai_conv_override=1000)
+        # for site in ["france", "italy1", "italy2"]:
+        #     find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
+        #                           samples_per_iter=1024, max_iter=300, n=20, exclude_lai=exclude_lai, max_delta=max_delta)
     pass
 
 if __name__ == "__main__":

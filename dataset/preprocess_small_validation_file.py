@@ -213,6 +213,23 @@ def get_small_validation_data(relative_s2_time='before', site="france", filter_i
     time_delta = []
     positions = []
     # dates = []
+    if site=='weiss':
+        path_to_file = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/InputNoNoise_2.csv"
+        assert os.path.isfile(path_to_file)
+        df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
+        n_obs = len(df_validation_data)
+        s2_r = torch.full((n_obs, 10),0.01)
+        s2_r[:,1:6] = torch.as_tensor(df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7']].values)
+        s2_r[:,7:] = torch.as_tensor(df_validation_data[['B8A', 'B11', 'B12']].values)
+        s2_r[:,6] = torch.as_tensor(df_validation_data['B8A'].values)
+        s2_a = torch.zeros((n_obs, 3))
+        s2_a[:,0] = torch.as_tensor(np.arccos(df_validation_data['cos(thetas)'].values))
+        s2_a[:,1] = torch.as_tensor(np.arccos(df_validation_data['cos(thetav)'].values))
+        s2_a[:,2] = torch.as_tensor(np.arccos(df_validation_data['cos(phiv-phis)'].values))
+        lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
+        time_delta = torch.zeros((n_obs,1))
+        return s2_r, s2_a, lais, time_delta 
+    
     if relative_s2_time != "both":
         # filename = f"{relative_s2_time}_{site}_{tile}.csv"
         filename = get_filename(site, relative_s2_time)

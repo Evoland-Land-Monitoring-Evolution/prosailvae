@@ -277,15 +277,16 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
                 raise NotImplementedError
             if weiss_mode:
                 mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
-                enveloppe_low = prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] * (1 - sigma * MD / 100 ) - sigma * AD
-                enveloppe_high = prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] * (1 + sigma * MD / 100 ) + sigma * AD
-                cases_in_sigma_enveloppe = np.logical_and((s2_r_ref[:,[1,2,3,4,5,7,8,9]]  < enveloppe_high).all(1),
-                                                           (s2_r_ref[:,[1,2,3,4,5,7,8,9]] > enveloppe_low).all(1))            
+                enveloppe_low = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 - sigma * MD / 100 ) - sigma * AD
+                enveloppe_high = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 + sigma * MD / 100 ) + sigma * AD
+                cases_in_sigma_enveloppe = np.logical_and((prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] < enveloppe_high).all(1),
+                                                           (prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] > enveloppe_low).all(1))            
             else:
                 mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
-                enveloppe_low = prosail_s2_sim * (1 - sigma * MD / 100 ) - sigma * AD
-                enveloppe_high = prosail_s2_sim * (1 + sigma * MD / 100 ) + sigma * AD
-                cases_in_sigma_enveloppe = np.logical_and((s2_r_ref  < enveloppe_high).all(1), (s2_r_ref > enveloppe_low).all(1))
+                enveloppe_low = s2_r_ref * (1 - sigma * MD / 100 ) - sigma * AD
+                enveloppe_high = s2_r_ref * (1 + sigma * MD / 100 ) + sigma * AD
+                cases_in_sigma_enveloppe = np.logical_and((prosail_s2_sim  < enveloppe_high).all(1), 
+                                                          (prosail_s2_sim > enveloppe_low).all(1))
 
             if cases_in_sigma_enveloppe.any():
                 all_cases_in_enveloppe_err.append(mare[cases_in_sigma_enveloppe].reshape(-1,1))

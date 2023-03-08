@@ -421,7 +421,7 @@ def main():
         exclude_lai=False
         max_delta = 4
         mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, 
-                            lai_min=3, max_delta=3,uniform_mode=True, lai_corr=True, lai_conv_override=1000)
+                            lai_min=2.5, max_delta=3,uniform_mode=True, lai_corr=True, lai_conv_override=1000)
         # find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
         #                       samples_per_iter=1024, max_iter=100, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
         # compare_datasets()                        

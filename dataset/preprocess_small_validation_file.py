@@ -223,9 +223,9 @@ def get_small_validation_data(relative_s2_time='before', site="france", filter_i
         s2_r[:,7:] = torch.as_tensor(df_validation_data[['B8A', 'B11', 'B12']].values)
         s2_r[:,6] = torch.as_tensor(df_validation_data['B8A'].values)
         s2_a = torch.zeros((n_obs, 3))
-        s2_a[:,0] = torch.as_tensor(np.arccos(df_validation_data['cos(thetas)'].values))
-        s2_a[:,1] = torch.as_tensor(np.arccos(df_validation_data['cos(thetav)'].values))
-        s2_a[:,2] = torch.as_tensor(np.arccos(df_validation_data['cos(phiv-phis)'].values))
+        s2_a[:,0] = torch.as_tensor(np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values)))
+        s2_a[:,1] = torch.as_tensor(np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values)))
+        s2_a[:,2] = torch.as_tensor(np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values)))
         lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
         time_delta = torch.zeros((n_obs,1))
         return s2_r, s2_a, lais, time_delta 

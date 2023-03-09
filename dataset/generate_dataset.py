@@ -147,6 +147,32 @@ def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=
                 prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
+def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, n_samples_per_batch=1024):
+    prosail_vars = np.zeros((nb_simus, 14))
+    prosail_s2_sim = np.zeros((nb_simus, 10))
+    
+    n_full_batch = nb_simus // n_samples_per_batch
+    last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
+
+    for i in range(n_full_batch):
+        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=n_samples_per_batch)
+        sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())).numpy()
+        if noise>0:
+            sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)
+            add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
+            sim_s2_r += add_noise
+        prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
+
+    prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch)
+    sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
+    if noise>0:
+        sigma = np.random.rand((last_batch,1)) * noise * np.ones_like(sim_s2_r)
+        add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
+        sim_s2_r += add_noise
+    prosail_s2_sim[n_full_batch*n_samples_per_batch:,:] = sim_s2_r
+    return prosail_vars, prosail_s2_sim
+
+
 def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
                                           tto=None, psi=None, eps_mae = 1e-3, max_iter=100, 
                                           samples_per_iter=1024):
@@ -313,15 +339,15 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
-def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, static_angles=False):
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0):
 
     psimulator = ProsailSimulator()
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
-    prosail_vars, prosail_s2_sim = simulate_prosail_dataset(nb_simus=nb_simus, 
+    prosail_vars, prosail_s2_sim = np_simulate_prosail_dataset(nb_simus=nb_simus, 
                                                             noise=noise,
                                                             psimulator=psimulator,
                                                             ssimulator=ssimulator,
-                                                            static_angles=static_angles)
+                                                            n_samples_per_batch=1024)
     norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
     torch.save(torch.from_numpy(prosail_vars), 
                data_dir + data_file_prefix + "prosail_sim_vars.pt") 
@@ -340,7 +366,7 @@ def get_data_generation_parser():
 
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
-                        type=int, default=1000)
+                        type=int, default=5000)
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
                         type=str, default="small_test_")
@@ -368,5 +394,5 @@ if  __name__ == "__main__":
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
-                 parser.n_samples, parser.noise, static_angles=parser.static_angles)
+                 parser.n_samples, parser.noise)
     

@@ -64,9 +64,9 @@ RSR of the sensor.
         self.rsr = self.rsr[:,bands,:]
         
         if norm_mean is None:
-            norm_mean = torch.zeros((1, 10))
+            norm_mean = torch.zeros((1, len(bands)))
         if norm_std is None:
-            norm_std = torch.ones((1, 10))
+            norm_std = torch.ones((1, len(bands)))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
         self.apply_norm = apply_norm
@@ -237,40 +237,68 @@ class ProsailVarsDist:
         """
     sentinel2_max_tto = np.rad2deg(np.arctan(145/786))
     solar_max_zenith_angle = 60
-    Dists = {'N': {'min': 1.2, 'max': 1.8, 'mean': 1.5, 'std': 0.3, 'lai_conv': 10,
-                   'law': 'gaussian'},
-             'cab': {'min': 20.0, 'max': 90.0, 'mean': 45.0, 'std': 30.0, 'lai_conv': 10,
-                     'law': 'gaussian'},
-             'car': {'min': 0, 'max': 2, 'mean': 1, 'std': 0.5, 'lai_conv': 10,
-                      'law': 'gaussian'},
-             'cbrown': {'min': 0.0, 'max': 2.0, 'mean': 0.0, 'std': 0.3, 'lai_conv': 10,
-                        'law': 'gaussian'},
-             'caw': {'min': 0.004, 'max': 0.04, 'mean': 0.01, 'std': 0.01, 'lai_conv': 10,
-                     'law': 'gaussian'},
-             'cm': {'min': 0.003, 'max': 0.011, 'mean': 0.005, 'std': 0.005, 'lai_conv': 10,
+    # Dists = {'N': {'min': 1.2, 'max': 1.8, 'mean': 1.5, 'std': 0.3, 'lai_conv': 10,
+    #                'law': 'gaussian'},
+    #          'cab': {'min': 20.0, 'max': 90.0, 'mean': 45.0, 'std': 30.0, 'lai_conv': 10,
+    #                  'law': 'gaussian'},
+    #          'car': {'min': 0, 'max': 2, 'mean': 1, 'std': 0.5, 'lai_conv': 10,
+    #                   'law': 'gaussian'},
+    #          'cbrown': {'min': 0.0, 'max': 2.0, 'mean': 0.0, 'std': 0.3, 'lai_conv': 10,
+    #                     'law': 'gaussian'},
+    #          'caw': {'min': 0.004, 'max': 0.04, 'mean': 0.01, 'std': 0.01, 'lai_conv': 10,
+    #                  'law': 'gaussian'},
+    #          'cm': {'min': 0.003, 'max': 0.011, 'mean': 0.005, 'std': 0.005, 'lai_conv': 10,
+    #                 'law': 'gaussian'},
+    #         #  'lai': {'min': 0.0, 'max': 10.0, 'mean': 1.7, 'std': 0.35, 'lai_conv': None,
+    #         #          'law': 'lognormal'},
+    #         # 'lai': {'min': 0.0, 'max': 10.0, 'mean': 1.2, 'std': 0.7, 'lai_conv': None,
+    #         #          'law': 'lognormal'},
+    #         'lai': {'min': 0.0, 'max': 10.0, 'mean': 2.0, 'std': 2.0, 'lai_conv': None,
+    #                  'law': 'lognormal'},
+    #          'lidfa': {'min': 5.0, 'max': 80.0, 'mean': 40.0, 'std': 20.0, 'lai_conv': 10,
+    #                    'law': 'gaussian'},
+    #          'hspot': {'min': 0.0, 'max': 0.05, 'mean': 0.01, 'std': 0.025, 'lai_conv': 10,
+    #                    'law': 'gaussian'},
+    #          'psoil': {'min': 0.0, 'max': 1.0, 'mean': None, 'std': None, 'lai_conv': None,
+    #                    'law': 'uniform'},
+    #          'rsoil': {'min': 0.3, 'max': 3.5, 'mean': None, 'std': None, 'lai_conv': None,
+    #           'law': 'uniform'},
+    #          'tts' : {'min': 0.0, 'max': solar_max_zenith_angle, 'mean': None, 'std': None, 'lai_conv': None,
+    #           'law': 'uniform'},
+    #          'tto' : {'min': 0.0, 'max': sentinel2_max_tto, 'mean': None, 'std': None, 'lai_conv': None,
+    #           'law': 'uniform'},
+    #          'psi' : {'min': 0.0, 'max': 360, 'mean': None, 'std': None, 'lai_conv': None,
+    #           'law': 'uniform'}
+    #          }
+    Dists = {'N': {'min': 1.2, 'max': 2.2, 'mean': 1.5, 'std': 0.3, 'lai_conv': 10,
+                'law': 'gaussian'},
+            'cab': {'min': 20.0, 'max': 90.0, 'mean': 45.0, 'std': 30.0, 'lai_conv': 10,
                     'law': 'gaussian'},
-            #  'lai': {'min': 0.0, 'max': 10.0, 'mean': 1.7, 'std': 0.35, 'lai_conv': None,
-            #          'law': 'lognormal'},
-            # 'lai': {'min': 0.0, 'max': 10.0, 'mean': 1.2, 'std': 0.7, 'lai_conv': None,
-            #          'law': 'lognormal'},
+            'car': {'min': 0, 'max': 2, 'mean': 1, 'std': 0.5, 'lai_conv': 10,
+                    'law': 'gaussian'},
+            'cbrown': {'min': 0.0, 'max': 2.0, 'mean': 0.0, 'std': 0.3, 'lai_conv': 10,
+                    'law': 'gaussian'},
+            'caw': {'min': 0.0075, 'max': 0.075, 'mean': 0.02, 'std': 0.02, 'lai_conv': 10,
+                    'law': 'gaussian'},
+            'cm': {'min': 0.003, 'max': 0.011, 'mean': 0.005, 'std': 0.005, 'lai_conv': 10,
+                'law': 'gaussian'},
             'lai': {'min': 0.0, 'max': 10.0, 'mean': 2.0, 'std': 2.0, 'lai_conv': None,
-                     'law': 'lognormal'},
-             'lidfa': {'min': 5.0, 'max': 80.0, 'mean': 40.0, 'std': 20.0, 'lai_conv': 10,
-                       'law': 'gaussian'},
-             'hspot': {'min': 0.0, 'max': 0.05, 'mean': 0.01, 'std': 0.025, 'lai_conv': 10,
-                       'law': 'gaussian'},
-             'psoil': {'min': 0.0, 'max': 1.0, 'mean': None, 'std': None, 'lai_conv': None,
-                       'law': 'uniform'},
-             'rsoil': {'min': 0.3, 'max': 3.5, 'mean': None, 'std': None, 'lai_conv': None,
-              'law': 'uniform'},
-             'tts' : {'min': 0.0, 'max': solar_max_zenith_angle, 'mean': None, 'std': None, 'lai_conv': None,
-              'law': 'uniform'},
-             'tto' : {'min': 0.0, 'max': sentinel2_max_tto, 'mean': None, 'std': None, 'lai_conv': None,
-              'law': 'uniform'},
-             'psi' : {'min': 0.0, 'max': 360, 'mean': None, 'std': None, 'lai_conv': None,
-              'law': 'uniform'}
-             }
-    
+                    'law': 'lognormal'},
+            'lidfa': {'min': 30.0, 'max': 80.0, 'mean': 60.0, 'std': 20.0, 'lai_conv': 10,
+                    'law': 'gaussian'},
+            'hspot': {'min': 0.1, 'max': 0.5, 'mean': 0.1, 'std': 0.5, 'lai_conv': 10,
+                    'law': 'gaussian'},
+            'psoil': {'min': 0.0, 'max': 1.0, 'mean': None, 'std': None, 'lai_conv': None,
+                    'law': 'uniform'},
+            'rsoil': {'min': 0.3, 'max': 3.5, 'mean': None, 'std': None, 'lai_conv': None,
+            'law': 'uniform'},
+            'tts' : {'min': 0.0, 'max': solar_max_zenith_angle, 'mean': None, 'std': None, 'lai_conv': None,
+            'law': 'uniform'},
+            'tto' : {'min': 0.0, 'max': sentinel2_max_tto, 'mean': None, 'std': None, 'lai_conv': None,
+            'law': 'uniform'},
+            'psi' : {'min': 0.0, 'max': 360, 'mean': None, 'std': None, 'lai_conv': None,
+            'law': 'uniform'}
+            }
     #   N         | Leaf structure parameter
     N = (Dists['N']['min'], Dists['N']['max'], Dists['N']['mean'],
          Dists['N']['std'], Dists['N']['lai_conv'], Dists['N']['law'], "N")

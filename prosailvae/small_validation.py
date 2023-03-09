@@ -347,12 +347,12 @@ def plot_lai_vs_mc_error_2d_hist(heatmap, extent, aggregate_lai_hist, min_lai=0,
         axs[1].set_ylim([extent[2],extent[3]]) 
     axs[0].plot(np.linspace(min_lai, max_lai, len(aggregate_lai_hist)), aggregate_lai_hist.reshape(-1))
     axs[0].axvline([lai_ref],c="black", ls='--')
-    axs[0].axvline([lai_pred],c="red", ls='--')
+    # axs[0].axvline([lai_pred],c="red", ls='--')
     # axs[1].imshow(heatmap.transpose(1,0), extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
     # axs[1].imshow(heatmap.transpose(1,0), interpolation='nearest',cmap='BrBG', origin='lower')
     axs[1].axvline([lai_ref],c="black", ls='--', label='Reference LAI')
-    axs[1].axvline([lai_pred], c="red", ls='--', label='LAI for closest simulated reflectance')
-    axs[1].axhline([min_err],c="red", ls='-.', label='Error for closest simulated reflectance')
+    # axs[1].axvline([lai_pred], c="red", ls='--', label='LAI for closest simulated reflectance')
+    # axs[1].axhline([min_err],c="red", ls='-.', label='Error for closest simulated reflectance')
     if len(all_cases_in_enveloppe_err)>0:
         median_lai = np.median(all_cases_in_enveloppe_LAI)
         axs[1].axvline([median_lai], c="green", ls='--', label='median LAI for simulated reflectances within uncertainty')
@@ -378,11 +378,14 @@ def mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_pe
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
     (top_n_delta, top_n_s2_r, top_n_s2_a, 
      top_n_lais) = sort_by_smallest_deltas(abs_time_delta, s2_r.numpy(), s2_a.numpy(), lais.numpy(), n=n)
+    lai_preds = []
+    lai_refs = []
     for idx_in_situ_sample in range(len(top_n_delta)):
         delta_t = top_n_delta[idx_in_situ_sample]
         if delta_t <= max_delta:
             lai_ref = top_n_lais[idx_in_situ_sample,0]
             s2_r_ref = top_n_s2_r[idx_in_situ_sample,:].reshape(1,-1)
+            lai_refs.append(lai_ref)
             tts = top_n_s2_a[idx_in_situ_sample, 0]
             tto = top_n_s2_a[idx_in_situ_sample, 1]
             psi = top_n_s2_a[idx_in_situ_sample, 2]
@@ -394,11 +397,13 @@ def mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_pe
                                                 weiss_mode=site=="weiss", uniform_mode=uniform_mode, lai_corr=lai_corr,
                                                 )
             lai_pred = best_prosail_vars[6]
+            lai_preds.append(lai_pred)
             fig, ax = plot_lai_vs_mc_error_2d_hist(heatmap, extent, aggregate_lai_hist, min_lai=0, max_lai=10, lai_ref=lai_ref,
                                                     lai_pred=lai_pred, min_err=best_mae, site=site, dt=delta_t,
                                                     all_cases_in_enveloppe_err=all_cases_in_enveloppe_err,
                                                     all_cases_in_enveloppe_LAI=all_cases_in_enveloppe_LAI)
             fig.savefig(results_dir+f'/{site}_{idx_in_situ_sample}_uni_{uniform_mode}_lai_vs_mc_sim_error_2d_hist.svg')
+    
 
     pass
 

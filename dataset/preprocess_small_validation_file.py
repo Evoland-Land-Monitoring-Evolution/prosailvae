@@ -227,7 +227,15 @@ def get_small_validation_data(relative_s2_time='before', site="france", filter_i
         s2_a[:,1] = torch.as_tensor(np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values)))
         s2_a[:,2] = torch.as_tensor(np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values)))
         lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
+        lai_bv_net = torch.as_tensor(df_validation_data['lai_bvnet'].values.reshape(-1,1))
         time_delta = torch.zeros((n_obs,1))
+        import matplotlib.pyplot as plt
+        plt.figure(dpi=200)
+        plt.scatter(lai_bv_net, lais, s=2)
+        plt.xlabel('LAI BVNET')
+        plt.ylabel("LAI True")
+        plt.axis('equal')
+        plt.plot([0,15],[0,15], 'k--')
         return s2_r, s2_a, lais, time_delta 
     
     if relative_s2_time != "both":

@@ -339,10 +339,13 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
-def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0):
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False):
 
     psimulator = ProsailSimulator()
-    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr")
+    bands = [1,2,3,4,5,6,7,8,11,12]
+    if weiss_mode:
+        bands = [2, 3, 4, 5, 6, 8, 11, 12]
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
     prosail_vars, prosail_s2_sim = np_simulate_prosail_dataset(nb_simus=nb_simus, 
                                                             noise=noise,
                                                             psimulator=psimulator,
@@ -382,6 +385,9 @@ def get_data_generation_parser():
     parser.add_argument("-sa", dest="static_angles",
                         help="Set to True to generate prosail samples with a single angular configuration",
                         type=bool, default=False)
+    parser.add_argument("-w", dest="weiss_mode",
+                        help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
+                        type=bool, default=False)
     return parser
 
 if  __name__ == "__main__":
@@ -394,5 +400,5 @@ if  __name__ == "__main__":
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
-                 parser.n_samples, parser.noise)
+                 parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode)
     

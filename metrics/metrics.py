@@ -134,10 +134,12 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
                                                                 dt_max=dt_max, method="closest")
         prosail_ref_params = torch.zeros((s2_r.size(0), 11))
         prosail_ref_params[:,6] = lais.squeeze()
-        juan_dataset = TensorDataset(s2_r, s2_a, prosail_ref_params)
+        juan_dataset = TensorDataset(s2_r.to(PROSAIL_VAE.device), 
+                                     s2_a.to(PROSAIL_VAE.device), 
+                                     prosail_ref_params.to(PROSAIL_VAE.device))
         juan_loader = DataLoader(juan_dataset,
                                 batch_size=256,
-                                num_workers=0).to(PROSAIL_VAE.device)
+                                num_workers=0)
         lai_nlls = PROSAIL_VAE.compute_lat_nlls(juan_loader).mean(0).squeeze()[6]
         list_lai_nlls.append(lai_nlls)
         _, _, prosail_params_mode, _ = PROSAIL_VAE.point_estimate_rec(s2_r.to(PROSAIL_VAE.device), s2_a.to(PROSAIL_VAE.device), mode='sim_mode')

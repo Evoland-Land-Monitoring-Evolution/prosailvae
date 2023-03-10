@@ -87,6 +87,9 @@ def get_prosailvae_train_parser():
 
     parser.add_argument("-p", dest="plot_results",
                         help="toggle results plotting",
+                        type=bool, default=False)
+    parser.add_argument("-w", dest="weiss_mode",
+                        help="removes B2 and B8 bands for validation with weiss data",
                         type=bool, default=False)             
     return parser
 
@@ -207,7 +210,8 @@ def setupTraining():
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/",
               "-a", "False",
-              "-p", "False"]
+              "-p", "False",
+              "-w", ""]
         
         parser = get_prosailvae_train_parser().parse_args(args)    
     else:
@@ -283,9 +287,9 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     
     
-
+    print(f"Weiss mode : {parser.weiss_mode}")
     PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, logger_name=LOGGER_NAME,
-                                                        vae_file_path=None, params_sup_kl_model=params_sup_kl_model)
+                                                        vae_file_path=None, params_sup_kl_model=params_sup_kl_model, weiss_mode=parser.weiss_mode)
     lr = params['lr']
     if lr is None:
         try:

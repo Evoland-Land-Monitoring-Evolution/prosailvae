@@ -718,3 +718,19 @@ def plot_patch_pairs(s2_r_pred, s2_r_ref, idx=0):
     ax[2].set_yticks([])
     ax[2].set_title("L2 errors")
     return fig, ax
+
+def plot_lai_preds(lais, lai_pred, time_delta, site):
+    fig, ax = plt.subplots()
+    lai_i = lais.squeeze()
+    sc = ax.scatter(lai_pred, lai_i, c=time_delta.abs())
+    ax.plot([min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],
+            [min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],'k--')
+    ax.set_xlabel('Predicted LAI')
+    ax.set_ylabel(f"{site} LAI")# {LAI_columns(site)[i]}")
+    ax.set_aspect('equal', 'box')
+    # plt.gray()
+    cbar = plt.colorbar(sc)
+    cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
+    cbar.ax.yaxis.set_label_coords(0.0,0.5)
+    plt.show()
+    return fig, ax

@@ -12,6 +12,9 @@ from tqdm import tqdm
 import os 
 from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader, TensorDataset
+from dataset.juan_datapoints import get_interpolated_validation_data
+import prosailvae
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
     metrics_dir = res_dir + "/metrics/"
@@ -64,11 +67,12 @@ def get_box_plot_percentiles(tensor):
         all_tensor_percentiles[:,i] = percentiles.squeeze()
     return all_tensor_percentiles
 
-def get_metrics(prosailVAE, loader,  
+def get_metrics(PROSAIL_VAE, loader,  
                 n_pdf_sample_points=3001,
                 alpha_conf=[0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]):
     
-    device = prosailVAE.device
+    
+    device = PROSAIL_VAE.device
     error = torch.tensor([]).to(device)
     rel_error = torch.tensor([]).to(device)
     pic = torch.tensor([]).to(device)
@@ -82,20 +86,20 @@ def get_metrics(prosailVAE, loader,
     angles_dist = torch.tensor([]).to(device)
     sim_pdfs = torch.tensor([]).to(device)
     sim_supports = torch.tensor([]).to(device)
-    ssimulator = prosailVAE.decoder.ssimulator
+    ssimulator = PROSAIL_VAE.decoder.ssimulator
     with torch.no_grad():
         for i, batch in enumerate(tqdm(loader, desc='Computing metrics', leave=True)):
             s2_r = batch[0].to(device)
             s2_r_dist = torch.concat([s2_r_dist, s2_r], axis=0)
             angles = batch[1].to(device)
             tgt = batch[2].to(device)
-            dist_params, z_mode, prosail_params_mode, rec = prosailVAE.point_estimate_rec(s2_r, angles, mode='sim_mode')
-            lat_pdfs, lat_supports = prosailVAE.lat_space.latent_pdf(dist_params)
-            sim_pdfs_i, sim_supports_i = prosailVAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            dist_params, z_mode, prosail_params_mode, rec = PROSAIL_VAE.point_estimate_rec(s2_r, angles, mode='sim_mode')
+            lat_pdfs, lat_supports = PROSAIL_VAE.lat_space.latent_pdf(dist_params)
+            sim_pdfs_i, sim_supports_i = PROSAIL_VAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
             sim_pdfs = torch.concat([sim_pdfs, sim_pdfs_i], axis=0)
             sim_supports = torch.concat([sim_supports, sim_supports_i], axis=0)
-            pheno_pi_lower = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
-            pheno_pi_upper = prosailVAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
+            pheno_pi_lower = PROSAIL_VAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_lower, n_pdf_sample_points=n_pdf_sample_points)
+            pheno_pi_upper = PROSAIL_VAE.sim_space.sim_quantiles(lat_pdfs, lat_supports, alpha=pi_upper, n_pdf_sample_points=n_pdf_sample_points)
             error_i = prosail_params_mode.squeeze() - tgt
             tgt_dist = torch.concat([tgt_dist, tgt], axis=0)
             error = torch.concat([error, error_i], axis=0)
@@ -116,4 +120,38 @@ def get_metrics(prosailVAE, loader,
     piw_percentiles = None # get_box_plot_percentiles(piw.detach().cpu())
     mare = rel_error.mean(axis=0)
     are_percentiles = get_box_plot_percentiles(rel_error.detach().cpu())
-    return mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist, sim_pdfs, sim_supports, ae_percentiles, are_percentiles, piw_percentiles
+
+    return (mae, mpiw, picp, mare, sim_dist, tgt_dist, rec_dist, angles_dist, s2_r_dist, sim_pdfs, 
+            sim_supports, ae_percentiles, are_percentiles, piw_percentiles)
+
+def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
+                                sites = ["france", "spain1", "italy1", "italy2"]):
+    list_lai_nlls = []
+    list_lai_preds = []
+    dt_list = []
+    for site in sites:
+        s2_r, s2_a, lais, dt = get_interpolated_validation_data(site, juan_data_dir_path, lai_min=lai_min, 
+                                                                dt_max=dt_max, method="closest")
+        prosail_ref_params = torch.zeros((s2_r.size(0), 11))
+        prosail_ref_params[:,6] = lais.squeeze()
+        juan_dataset = TensorDataset(s2_r, s2_a, prosail_ref_params)
+        juan_loader = DataLoader(juan_dataset,
+                                batch_size=256,
+                                num_workers=0)
+        lai_nlls = PROSAIL_VAE.compute_lat_nlls(juan_loader).mean(0).squeeze()[6]
+        list_lai_nlls.append(lai_nlls)
+        _, _, prosail_params_mode, _ = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode')
+        lai_pred = prosail_params_mode[:,6,:]
+        list_lai_preds.append(torch.cat((lai_pred, lais), axis=1))
+        dt_list.append(dt)
+
+    return list_lai_nlls, list_lai_preds, dt_list
+
+def get_weiss_validation_metrics(s2_r_weiss, prosail_params_weiss, prosailVAE):
+    print("WARNING, weiss dataset only has 8 bands")
+    weiss_dataset = TensorDataset(s2_r_weiss, prosail_params_weiss)
+    weiss_loader = DataLoader(weiss_dataset,
+                            batch_size=256,
+                            num_workers=0)
+    
+    return

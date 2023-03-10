@@ -1,11 +1,15 @@
 import os
 import logging
 if __name__ == "__main__":
-    from metrics import get_metrics, save_metrics
-    from prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, plot_metric_boxplot, plot_patch_pairs
+    from metrics import get_metrics, save_metrics, get_juan_validation_metrics
+    from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
+                              plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
+                              plot_metric_boxplot, plot_patch_pairs, plot_lai_preds)
 else:
-    from metrics.metrics import get_metrics, save_metrics
-    from metrics.prosail_plots import plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, plot_metric_boxplot, plot_patch_pairs
+    from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics
+    from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
+                                       plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
+                                       plot_metric_boxplot, plot_patch_pairs, plot_lai_preds)
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -105,7 +109,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
     
     return 
 
-def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False):
+def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, 
+                 all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,
+                 juan_validation=True):
     device = PROSAIL_VAE.device
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -140,6 +146,21 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, all_val
     pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     nlls = PROSAIL_VAE.compute_lat_nlls(loader).mean(0).squeeze()
     torch.save(nlls, res_dir + "/params_nll.pt")
+    juan_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
+    juan_validation_dir = res_dir + "/juan_validation/"
+    
+    if juan_validation:
+        if not os.path.isdir(juan_validation_dir):
+            os.makedirs(juan_validation_dir)
+        sites = ["france", "spain1", "italy1", "italy2"]
+        j_list_lai_nlls, list_lai_preds, j_dt_list = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, sites=sites)
+        for i, site in enumerate(sites):
+            torch.save(j_list_lai_nlls[i], juan_validation_dir + f"/{site}_lai_nll.pt")
+            torch.save(list_lai_preds[i], juan_validation_dir + f"/{site}_lai_ref_pred.pt")
+            torch.save(j_dt_list[i], juan_validation_dir + f"/{site}_dt.pt")
+            if plot_results:
+                fig, ax = plot_lai_preds(list_lai_preds[i][:,1], list_lai_preds[i][:,0], j_dt_list[i], site)
+                fig.savefig(juan_validation_dir + f"/{site}_lai_pred_vs_true.png")
     if plot_results:
         plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     (mae, mpiw, picp, mare, 

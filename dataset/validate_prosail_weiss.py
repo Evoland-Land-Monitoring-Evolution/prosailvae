@@ -13,8 +13,8 @@ from tqdm import trange
 
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
 
-def load_refl_angles():
-    path_to_file = PATH_TO_DATA_DIR + "/InputNoNoise_2.csv"
+def load_refl_angles(path_to_data_dir):
+    path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
     assert os.path.isfile(path_to_file)
     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
     n_obs = len(df_validation_data)
@@ -23,13 +23,13 @@ def load_refl_angles():
     tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
     tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
     psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
-    lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
-    lai_bv_net = torch.as_tensor(df_validation_data['lai_bvnet'].values.reshape(-1,1))
-    time_delta = torch.zeros((n_obs,1))
+    # lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
+    # lai_bv_net = torch.as_tensor(df_validation_data['lai_bvnet'].values.reshape(-1,1))
+    # time_delta = torch.zeros((n_obs,1))
     return s2_r, tts, tto, psi
 
-def load_prosail_params():
-    path_to_file = PATH_TO_DATA_DIR + "/Sentinel2_Laws.txt"
+def load_prosail_params(path_to_data_dir):
+    path_to_file = path_to_data_dir + "/Sentinel2_Laws.txt"
     prosail_params = np.loadtxt(path_to_file, skiprows=1)
     N = prosail_params[:,4].reshape(-1,1)
     cab = prosail_params[:,5].reshape(-1,1)
@@ -58,9 +58,9 @@ def plot_bands_scatter_plots(s2_r, s2_r_sim, vars_names = ["B3", "B4", "B5", "B6
         axs[row, col].set_aspect('equal', 'box')
     return fig, axs
 
-def main():
-    s2_r, tts, tto, psi = load_refl_angles()
-    N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil = load_prosail_params()
+def load_weiss_dataset(path_to_data_dir):
+    s2_r, tts, tto, psi = load_refl_angles(path_to_data_dir)
+    N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil = load_prosail_params(path_to_data_dir)
     prosail_vars = np.zeros((N.shape[0], 14))
     prosail_vars[:,6] = lai.reshape(-1)
     prosail_vars[:,0] = N.reshape(-1)
@@ -76,6 +76,11 @@ def main():
     prosail_vars[:,11] = tts.reshape(-1)
     prosail_vars[:,12] = tto.reshape(-1)
     prosail_vars[:,13] = psi.reshape(-1)
+    return s2_r, prosail_vars
+
+def main():
+    s2_r, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
+    lai = prosail_vars[:,6]
 
     rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
     results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"

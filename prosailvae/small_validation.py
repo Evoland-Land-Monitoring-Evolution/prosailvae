@@ -4,6 +4,7 @@ from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 from prosailvae.utils import load_dict, save_dict
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from dataset.preprocess_small_validation_file import get_small_validation_data, LAI_columns
+from metrics.prosail_plots import plot_lai_preds
 from dataset.loaders import  get_simloader
 import torch
 import logging
@@ -94,22 +95,7 @@ def lut_advanced_pred(s2_r, s2_r_sim, lai_sim, s2_a, s2_a_sim):
         preds[i] = closest_lai
     return preds
 
-def plot_lai_preds(lais, lai_pred, time_delta, site):
-    fig, ax = plt.subplots()
-    i=0
-    lai_i = lais[:,i]
-    sc = ax.scatter(lai_pred, lai_i, c=time_delta.abs())
-    ax.plot([min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],
-            [min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],'k--')
-    ax.set_xlabel('Predicted LAI')
-    ax.set_ylabel(f"{site} {LAI_columns(site)[i]}")
-    ax.set_aspect('equal', 'box')
-    # plt.gray()
-    cbar = plt.colorbar(sc)
-    cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
-    cbar.ax.yaxis.set_label_coords(0.0,0.5)
-    plt.show()
-    return fig, ax
+
 
 def compare_datasets():
     model_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/best_regression_2/"
@@ -420,16 +406,16 @@ def sort_by_smallest_deltas(abs_time_delta, s2_r, s2_a, lais, n=5):
 def main():
     if socket.gethostname()=='CELL200973':
         relative_s2_time="both"
-        site='weiss'
+        site='france'
         rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
         results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
         exclude_lai=False
         max_delta = 4
-        mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, 
-                            lai_min=2.5, max_delta=3,uniform_mode=True, lai_corr=True, lai_conv_override=1000)
+        # mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=2, n=3, 
+        #                     lai_min=2.5, max_delta=3,uniform_mode=True, lai_corr=True, lai_conv_override=1000)
         # find_close_simulation(relative_s2_time, site, rsr_dir, results_dir, 
-        #                       samples_per_iter=1024, max_iter=100, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
-        # compare_datasets()                        
+        #                       samples_per_iter=1024, max_iter=2, n=2, exclude_lai=exclude_lai, max_delta=max_delta)
+        compare_datasets()                        
     else:
         rsr_dir = '/work/scratch/zerahy/prosailvae/data/'
         results_dir = "/work/scratch/zerahy/prosailvae/results/prosail_mc/"

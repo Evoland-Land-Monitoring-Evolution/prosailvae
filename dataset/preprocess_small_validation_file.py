@@ -11,7 +11,7 @@ else:
     from dataset.loaders import convert_angles
 import os 
 
-PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed_2/"
+PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
 def LAI_columns(site):
     if site =="france":
         LAI_columns = ['PAIeff – CE', 'PAIeff CE V5.1', 'PAIeff – P57']
@@ -80,6 +80,7 @@ def get_position(df_validation_data, site):
         return torch.from_numpy(df_validation_data[['X_UTM', 'Y_UTM']].values)
     else:
         raise NotImplementedError
+    
 def get_date(df_validation_data):
     return torch.from_numpy(df_validation_data["field_date"].str.replace("-","").values.astype(int))
 
@@ -196,6 +197,73 @@ def get_all_validation_data(lai_min=1.5):
     all_dt = torch.vstack(all_dt)
     return all_s2_r, all_s2_a, all_lais, all_dt
 
+def get_interpolated_validation_data(site, path_to_data_dir, lai_min=0, dt_max = 15, method="closest"):
+    filename_b = get_filename(site, "before")
+    filename_a = get_filename(site, "after")
+    path_to_file_b = path_to_data_dir + filename_b
+    path_to_file_a = path_to_data_dir + filename_a
+    assert os.path.isfile(path_to_file_b)
+    assert os.path.isfile(path_to_file_a)
+    df_validation_data_b = pd.read_csv(path_to_file_b)
+    df_validation_data_a = pd.read_csv(path_to_file_a)
+    clean_validation_data(df_validation_data_a, site, lai_min=lai_min)
+    clean_validation_data(df_validation_data_b, site, lai_min=lai_min)
+    dt_b = get_time_delta(df_validation_data_b).unsqueeze(1)
+    dt_a = get_time_delta(df_validation_data_a).unsqueeze(1)
+    out_of_date_range_samples = np.logical_not(np.logical_or(np.abs(dt_b.numpy()) <= dt_max, np.abs(dt_a.numpy()) <= dt_max).astype(bool))
+    df_validation_data_b.drop(np.where(out_of_date_range_samples.reshape(-1))[0],inplace=True)
+    df_validation_data_b.reset_index(inplace=True)
+    df_validation_data_a.drop(np.where(out_of_date_range_samples.reshape(-1))[0],inplace=True)
+    df_validation_data_a.reset_index(inplace=True)
+    dt_b = get_time_delta(df_validation_data_b).unsqueeze(1)
+    dt_a = get_time_delta(df_validation_data_a).unsqueeze(1)
+    lais = get_all_possible_LAIs(df_validation_data_b, site=site).float()
+    s2_r_b = get_S2_bands(df_validation_data_b).float()
+    s2_a_b = get_angles(df_validation_data_b).float()
+    s2_r_a = get_S2_bands(df_validation_data_a).float()
+    s2_a_a = get_angles(df_validation_data_a).float()
+
+    s2_r = torch.zeros_like(s2_r_a)
+    s2_a = torch.zeros_like(s2_a_a)
+    dt = torch.zeros_like(dt_a)
+    # If dt > dt_max, using the other measurement
+    dt_a_ge_max = (dt_a.abs() > dt_max).squeeze()
+    dt_b_ge_max = (dt_b.abs() > dt_max).squeeze()
+    s2_r[dt_b_ge_max,:] = s2_r_a[dt_b_ge_max]
+    s2_r[dt_a_ge_max,:] = s2_r_b[dt_a_ge_max]
+    s2_a[dt_b_ge_max,:] = s2_a_a[dt_b_ge_max]
+    s2_a[dt_a_ge_max,:] = s2_a_b[dt_a_ge_max]
+    dt[dt_b_ge_max] = dt_a[dt_b_ge_max]
+    dt[dt_a_ge_max] = dt_b[dt_a_ge_max]
+    dt_a[dt_a_ge_max] = dt_b[dt_a_ge_max]
+    dt_b[dt_b_ge_max] = dt_a[dt_b_ge_max]
+
+    if method =="closest":
+        # Using reflectances and angles of the measurement with smallest absolute dt
+        dt_a_le_b = (dt_b.abs() <= dt_a.abs()).squeeze()
+        dt_b_le_a = (dt_a.abs() <= dt_b.abs()).squeeze()
+        s2_r[dt_b_le_a,:] = s2_r_b[dt_b_le_a]
+        s2_r[dt_a_le_b,:] = s2_r_a[dt_a_le_b]
+        s2_a[dt_b_le_a,:] = s2_a_b[dt_b_le_a]
+        s2_a[dt_a_le_b,:] = s2_a_a[dt_a_le_b]
+        dt[dt_b_le_a] = dt_b[dt_b_le_a]
+        dt[dt_a_le_b] = dt_a[dt_a_le_b]
+
+    elif method == "linear":
+
+        # Interpolating remaining reflectances and angles
+        idx_dt_le_max = torch.logical_and(dt_b.abs() <= dt_max, dt_b.abs() <= dt_max).squeeze()
+        s2_r[idx_dt_le_max,:] = s2_r_a[idx_dt_le_max] - (s2_r_a[idx_dt_le_max] - s2_r_b[idx_dt_le_max]) / (dt_a[idx_dt_le_max] - dt_b[idx_dt_le_max]) * dt_a[idx_dt_le_max]
+        s2_a[idx_dt_le_max,:] = s2_a_a[idx_dt_le_max] - (s2_a_a[idx_dt_le_max] - s2_a_b[idx_dt_le_max]) / (dt_a[idx_dt_le_max] - dt_b[idx_dt_le_max]) * dt_a[idx_dt_le_max]
+        dt[dt_b.abs() <= dt_a.abs()] = dt_b[dt_b.abs() <= dt_a.abs()]
+        dt[dt_a.abs() <= dt_b.abs()] = dt_a[dt_a.abs() <= dt_b.abs()]
+
+    else: 
+        raise NotImplementedError
+
+
+    return s2_r, s2_a, lais, dt 
+
 def get_small_validation_data(relative_s2_time='before', site="france", filter_if_available_positions=False, lai_min=1.5):
     # relative_s2_time ='before' # "after"
     # site = "france" # "spain", "italy"
@@ -306,6 +374,8 @@ def main():
     ax.legend()
     fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/all_lai_dist.png")
     return
+
+
 
 if __name__=="__main__":
     main()

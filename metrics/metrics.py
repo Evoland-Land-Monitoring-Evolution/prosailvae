@@ -141,10 +141,10 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
         juan_loader = DataLoader(juan_dataset,
                                 batch_size=256,
                                 num_workers=0)
-        lai_nlls = PROSAIL_VAE.compute_lat_nlls(juan_loader).mean(0).squeeze()[6]
+        lai_nlls = PROSAIL_VAE.compute_lat_nlls(juan_loader).mean(0).squeeze()[6].cpu()
         list_lai_nlls.append(lai_nlls)
         _, _, prosail_params_mode, _ = PROSAIL_VAE.point_estimate_rec(s2_r.to(PROSAIL_VAE.device), s2_a.to(PROSAIL_VAE.device), mode='sim_mode')
-        lai_pred = prosail_params_mode[:,6,:]
+        lai_pred = prosail_params_mode[:,6,:].cpu()
         list_lai_preds.append(torch.cat((lai_pred, lais), axis=1))
         dt_list.append(dt)
 
@@ -164,7 +164,7 @@ def get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path):
         weiss_loader = DataLoader(weiss_dataset,
                                 batch_size=512,
                                 num_workers=0)
-        lai_nlls = PROSAIL_VAE.compute_lat_nlls(weiss_loader).mean(0).squeeze()[6]
+        lai_nlls = PROSAIL_VAE.compute_lat_nlls(weiss_loader).mean(0).squeeze()[6].cpu()
         lai_pred = []
         for i, b in enumerate(weiss_loader):
             s2_r = b[0]
@@ -173,7 +173,7 @@ def get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path):
             dist_params = PROSAIL_VAE.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = PROSAIL_VAE.lat_space.latent_pdf(dist_params)
             prosail_params_mode = PROSAIL_VAE.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
-            lai = prosail_params_mode[:,6,:]
+            lai = prosail_params_mode[:,6,:].cpu()
             lai_pred.append(lai)
         lai_pred = torch.cat(lai_pred, axis=0)
         lai_pred = torch.cat((lai_pred, lais), axis=1)

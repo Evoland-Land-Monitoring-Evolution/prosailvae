@@ -704,6 +704,9 @@ def get_prosailvae_train_parser():
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
+    parser.add_argument("-w", dest="weiss_mode",
+                        help="remove B2 and B8",
+                        type=bool, default=False)
        
     return parser       
 
@@ -765,7 +768,10 @@ if __name__ == "__main__":
     norm_mean, norm_std = get_norm_coefs(data_dir, params["dataset_file_prefix"])
     
     rsr_dir = parser.rsr_dir
-    vae_params={"input_size":10,  
+    bands = [1,2,3,4,5,6,7,8,11,12]
+    if parser.weiss_mode:
+        bands = [2, 3, 4, 5, 6, 8, 11, 12]
+    vae_params={"input_size":len(bands),  
                 "hidden_layers_size":params["hidden_layers_size"], 
                 "encoder_last_activation":params["encoder_last_activation"],
                 "supervised":params["supervised"],  
@@ -775,7 +781,7 @@ if __name__ == "__main__":
     inference_mode = params["supervised"]
     prosail_VAE = get_prosail_VAE(rsr_dir, vae_params=vae_params, device=device,
                                   refl_norm_mean=norm_mean, refl_norm_std=norm_std, 
-                                  inference_mode=inference_mode)
+                                  inference_mode=inference_mode, bands=bands)
     model = prosail_VAE
     
     lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True, disable_tqdm=False)

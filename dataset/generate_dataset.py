@@ -149,7 +149,7 @@ def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=
 
 def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, n_samples_per_batch=1024):
     prosail_vars = np.zeros((nb_simus, 14))
-    prosail_s2_sim = np.zeros((nb_simus, 10))
+    prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
     
     n_full_batch = nb_simus // n_samples_per_batch
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
@@ -369,13 +369,13 @@ def get_data_generation_parser():
 
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
-                        type=int, default=5000)
+                        type=int, default=1000)
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
-                        type=str, default="small_test_")
+                        type=str, default="weiss_test_")
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
-                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
     parser.add_argument("-s", dest="noise",
                         help="gaussian noise level on simulated data",
                         type=float, default=0)
@@ -387,7 +387,7 @@ def get_data_generation_parser():
                         type=bool, default=False)
     parser.add_argument("-w", dest="weiss_mode",
                         help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
-                        type=bool, default=False)
+                        type=bool, default=True)
     return parser
 
 if  __name__ == "__main__":

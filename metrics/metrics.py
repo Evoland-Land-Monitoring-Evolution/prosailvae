@@ -14,6 +14,7 @@ from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 from dataset.juan_datapoints import get_interpolated_validation_data
+from dataset.validate_prosail_weiss import load_weiss_dataset
 import prosailvae
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
@@ -149,11 +150,32 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
 
     return list_lai_nlls, list_lai_preds, dt_list
 
-def get_weiss_validation_metrics(s2_r_weiss, prosail_params_weiss, prosailVAE):
-    print("WARNING, weiss dataset only has 8 bands")
-    weiss_dataset = TensorDataset(s2_r_weiss, prosail_params_weiss)
-    weiss_loader = DataLoader(weiss_dataset,
-                            batch_size=256,
-                            num_workers=0)
-    
-    return
+
+def get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path):
+    with torch.no_grad():
+        s2_r, prosail_vars = load_weiss_dataset(weiss_data_dir_path)
+        s2_a = prosail_vars[:,-3:]
+        prosail_ref_params = prosail_vars[:,:11]
+        lais = torch.as_tensor(prosail_vars[:,6]).float().to(PROSAIL_VAE.device).view(-1,1)
+        s2_r = torch.as_tensor(s2_r).float().to(PROSAIL_VAE.device)
+        s2_a = torch.as_tensor(s2_a).float().to(PROSAIL_VAE.device) 
+        prosail_ref_params = torch.as_tensor(prosail_ref_params).float().to(PROSAIL_VAE.device)
+        weiss_dataset = TensorDataset(s2_r, s2_a, prosail_ref_params)
+        weiss_loader = DataLoader(weiss_dataset,
+                                batch_size=512,
+                                num_workers=0)
+        lai_nlls = PROSAIL_VAE.compute_lat_nlls(weiss_loader).mean(0).squeeze()[6]
+        lai_pred = []
+        for i, b in enumerate(weiss_loader):
+            s2_r = b[0]
+            s2_a = b[1]
+            y = PROSAIL_VAE.encode(s2_r, s2_a)
+            dist_params = PROSAIL_VAE.lat_space.get_params_from_encoder(y)
+            lat_pdfs, lat_supports = PROSAIL_VAE.lat_space.latent_pdf(dist_params)
+            prosail_params_mode = PROSAIL_VAE.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
+            lai = prosail_params_mode[:,6,:]
+            lai_pred.append(lai)
+        lai_pred = torch.cat(lai_pred, axis=0)
+        lai_pred = torch.cat((lai_pred, lais), axis=1)
+
+    return lai_nlls, lai_pred

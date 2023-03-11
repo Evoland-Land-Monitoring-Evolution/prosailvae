@@ -93,13 +93,15 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)             
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0, tensors_dir=None):
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0, 
+                 tensors_dir=None, weiss_mode=False):
     new_lr=old_lr
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
                 new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir, old_lr=old_lr, old_lr_max_ratio=10, 
-                                            tensors_dir=tensors_dir)
+                                    file_prefix="weiss_test_" if weiss_mode else "test_",
+                                            tensors_dir=tensors_dir, )
                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                 if exp_lr_decay>0:
                     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
@@ -121,7 +123,7 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
                   res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, 
-                  plot_gradient=False, mmdc_dataset=False, tensors_dir=None):
+                  plot_gradient=False, mmdc_dataset=False, tensors_dir=None, weiss_mode=False):
 
 
     logger = logging.getLogger(LOGGER_NAME)
@@ -146,7 +148,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
             switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
             lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, 
                                                            data_dir, optimizer, old_lr=old_lr, 
-                                                           tensors_dir=tensors_dir if mmdc_dataset else None)
+                                                           tensors_dir=tensors_dir if mmdc_dataset else None, weiss_mode=weiss_mode)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
@@ -211,7 +213,7 @@ def setupTraining():
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/",
               "-a", "False",
               "-p", "False",
-              "-w", ""]
+              "-w", "True"]
         
         parser = get_prosailvae_train_parser().parse_args(args)    
     else:
@@ -289,12 +291,14 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     
     print(f"Weiss mode : {parser.weiss_mode}")
     PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, logger_name=LOGGER_NAME,
-                                                        vae_file_path=None, params_sup_kl_model=params_sup_kl_model, weiss_mode=parser.weiss_mode)
+                                                        vae_file_path=None, params_sup_kl_model=params_sup_kl_model, 
+                                                        weiss_mode=parser.weiss_mode)
     lr = params['lr']
     if lr is None:
         try:
             # raise NotImplementedError
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"], 
+                                    file_prefix="weiss_test_" if parser.weiss_mode else "test_",
                                     tensors_dir=parser.tensor_dir if not params["simulated_dataset"] else None)
         except:
             lr = 1e-3
@@ -323,7 +327,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                          exp_lr_decay=params["exp_lr_decay"],
                                                          plot_gradient=parser.plot_results,
                                                          mmdc_dataset = not params["simulated_dataset"],
-                                                         tensors_dir=parser.tensor_dir) 
+                                                         tensors_dir=parser.tensor_dir,
+                                                         weiss_mode=parser.weiss_mode) 
     logger.info("Training Completed !")
 
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df
@@ -362,7 +367,7 @@ def main():
                                                          pin_memory=False)
             save_results_2d(PROSAIL_VAE, test_loader, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
         else:
-            save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
+            save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, weiss_mode=parser.weiss_mode)
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir,os.path.pardir), res_dir)

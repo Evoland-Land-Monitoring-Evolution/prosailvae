@@ -1,12 +1,12 @@
 import os
 import logging
 if __name__ == "__main__":
-    from metrics import get_metrics, save_metrics, get_juan_validation_metrics
+    from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                               plot_metric_boxplot, plot_patch_pairs, plot_lai_preds)
 else:
-    from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics
+    from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds)
@@ -111,7 +111,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
 
 def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, 
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,
-                 juan_validation=True):
+                 juan_validation=True, weiss_mode=False):
     device = PROSAIL_VAE.device
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -134,7 +134,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     
     # Computing metrics
     logger.info("Loading test loader...")
-    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
+    loader = get_simloader(file_prefix="weiss_test_" if weiss_mode else "test_", data_dir=data_dir)
     logger.info("Test loader, loaded.")
     
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
@@ -146,20 +146,33 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     nlls = PROSAIL_VAE.compute_lat_nlls(loader).mean(0).squeeze()
     torch.save(nlls, res_dir + "/params_nll.pt")
-    juan_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
-    juan_validation_dir = res_dir + "/juan_validation/"
     
-    if juan_validation:
+    
+    if weiss_mode:
+        weiss_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
+        weiss_validation_dir = res_dir + "/weiss_validation/"
+        if not os.path.isdir(weiss_validation_dir):
+            os.makedirs(weiss_validation_dir)
+        lai_nlls, lai_preds = get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path)
+        torch.save(lai_nlls.cpu(), weiss_validation_dir + f"/weiss_lai_nll.pt")
+        torch.save(lai_preds.cpu(), weiss_validation_dir + f"/weiss_lai_ref_pred.pt")
+        if plot_results:
+            fig, ax = plot_lai_preds(lai_preds[:,1].cpu(), list_lai_preds[:,0].cpu(), site)
+            fig.savefig(weiss_validation_dir + f"/weiss_lai_pred_vs_true.png")
+
+    if juan_validation and not weiss_mode:
+        juan_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
+        juan_validation_dir = res_dir + "/juan_validation/"
         if not os.path.isdir(juan_validation_dir):
             os.makedirs(juan_validation_dir)
         sites = ["france", "spain1", "italy1", "italy2"]
         j_list_lai_nlls, list_lai_preds, j_dt_list = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, sites=sites)
         for i, site in enumerate(sites):
-            torch.save(j_list_lai_nlls[i], juan_validation_dir + f"/{site}_lai_nll.pt")
-            torch.save(list_lai_preds[i], juan_validation_dir + f"/{site}_lai_ref_pred.pt")
-            torch.save(j_dt_list[i], juan_validation_dir + f"/{site}_dt.pt")
+            torch.save(j_list_lai_nlls[i].cpu(), juan_validation_dir + f"/{site}_lai_nll.pt")
+            torch.save(list_lai_preds[i].cpu(), juan_validation_dir + f"/{site}_lai_ref_pred.pt")
+            torch.save(j_dt_list[i].cpu(), juan_validation_dir + f"/{site}_dt.pt")
             if plot_results:
-                fig, ax = plot_lai_preds(list_lai_preds[i][:,1], list_lai_preds[i][:,0], j_dt_list[i], site)
+                fig, ax = plot_lai_preds(list_lai_preds[i][:,1].cpu(), list_lai_preds[i][:,0].cpu(), j_dt_list[i], site)
                 fig.savefig(juan_validation_dir + f"/{site}_lai_pred_vs_true.png")
     if plot_results:
         plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)

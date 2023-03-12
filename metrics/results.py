@@ -157,7 +157,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         torch.save(lai_nlls.cpu(), weiss_validation_dir + f"/weiss_lai_nll.pt")
         torch.save(lai_preds.cpu(), weiss_validation_dir + f"/weiss_lai_ref_pred.pt")
         if plot_results:
-            fig, ax = plot_lai_preds(lai_preds[:,1].cpu(), list_lai_preds[:,0].cpu(), site)
+            fig, ax = plot_lai_preds(lai_preds[:,1].cpu(), lai_preds[:,0].cpu(), site)
             fig.savefig(weiss_validation_dir + f"/weiss_lai_pred_vs_true.png")
 
     if juan_validation and not weiss_mode:

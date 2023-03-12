@@ -156,7 +156,7 @@ def get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path):
         s2_r, prosail_vars = load_weiss_dataset(weiss_data_dir_path)
         s2_a = prosail_vars[:,-3:]
         prosail_ref_params = prosail_vars[:,:11]
-        lais = torch.as_tensor(prosail_vars[:,6]).float().to(PROSAIL_VAE.device).view(-1,1)
+        lais = torch.as_tensor(prosail_vars[:,6]).float().cpu().view(-1,1)
         s2_r = torch.as_tensor(s2_r).float().to(PROSAIL_VAE.device)
         s2_a = torch.as_tensor(s2_a).float().to(PROSAIL_VAE.device) 
         prosail_ref_params = torch.as_tensor(prosail_ref_params).float().to(PROSAIL_VAE.device)

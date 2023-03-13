@@ -86,6 +86,8 @@ def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum'):
     nll = -torch.log(likelihood + torch.tensor(eps))
     if reduction =="sum":
         nll = nll.sum(axis=1)
+    elif reduction == "lai":
+        nll = nll[:,6,:]
     if nll.isinf().any() or nll.isnan().any():
         raise ValueError()
     return nll

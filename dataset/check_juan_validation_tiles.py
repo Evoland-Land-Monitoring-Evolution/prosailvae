@@ -30,7 +30,7 @@ plt.imshow(tensor_visu)
 plt.show()
 
 fig, ax = plt.subplots(figsize=(5 * tensor_visu.shape[1]/tensor_visu.shape[0], 5))
-plt.imshow(tensor[13])
+plt.imshow(tensor[12])
 plt.colorbar()
 plt.show()
 

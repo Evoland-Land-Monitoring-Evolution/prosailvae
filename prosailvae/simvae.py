@@ -59,7 +59,8 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space, 
                  supervised=False,  device='cpu', 
                  beta_kl=0, beta_index=0, logger_name='PROSAIL-VAE logger',
-                 flat_patch_mode=False, inference_mode=False, supervised_model=None):
+                 flat_patch_mode=False, inference_mode=False, supervised_model=None,
+                 lat_nll=""):
         
         super(SimVAE, self).__init__()
         # encoder
@@ -85,6 +86,7 @@ class SimVAE(nn.Module):
         except:
             pass
         self.multi_output_encoder = multi_output_encoder
+        self.lat_nll = "lai_nll"
 
     def change_device(self, device):
         self.device=device
@@ -300,8 +302,11 @@ class SimVAE(nn.Module):
                 err_str = "NaN encountered during encoding, there are NaN in network parameters!"
             raise ValueError(err_str)
         params = self.lat_space.get_params_from_encoder(y=y)
+        reduction_nll = "sum"
+        if self.lat_nll == "lai_nll":
+            reduction_nll = "lai"
         if not self.multi_output_encoder:
-            loss_sum = self.lat_space.loss(ref_lat, params)
+            loss_sum = self.lat_space.loss(ref_lat, params, reduction_nll=reduction_nll)
             if loss_sum.isnan().any() or loss_sum.isinf().any():
                 raise ValueError
             all_losses = {'lat_loss': loss_sum.item()}

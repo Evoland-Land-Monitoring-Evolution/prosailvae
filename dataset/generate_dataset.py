@@ -15,6 +15,7 @@ import os
 import argparse
 import prosailvae
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, ProsailVarsDist
+from metrics.metrics import load_weiss_dataset
 from tqdm import trange
 import scipy.stats as stats
 
@@ -359,7 +360,31 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
                data_dir + data_file_prefix + "prosail_s2_sim_refl.pt") 
     torch.save(norm_mean, parser.data_dir + data_file_prefix+ "norm_mean.pt") 
     torch.save(norm_std, parser.data_dir + data_file_prefix + "norm_std.pt") 
+
+
+def save_weiss_dataset(data_dir):
+
+    PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
+    prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
+    nb_test_samples = 5000
+    test_prosail_s2_sim = prosail_s2_sim[:nb_test_samples,:]
+    test_prosail_vars = prosail_vars[:nb_test_samples,:]
+    train_prosail_s2_sim = prosail_s2_sim[nb_test_samples:,:]
+    train_prosail_vars = prosail_vars[nb_test_samples:,:]
+    torch.save(torch.from_numpy(test_prosail_vars), 
+               data_dir + "weiss_test_prosail_sim_vars.pt") 
     
+    torch.save(torch.from_numpy(test_prosail_s2_sim), 
+               data_dir + "weiss_test_prosail_s2_sim_refl.pt") 
+    
+    torch.save(torch.from_numpy(train_prosail_vars), 
+               data_dir + "weiss_prosail_sim_vars.pt") 
+    
+    torch.save(torch.from_numpy(train_prosail_s2_sim), 
+               data_dir + "weiss_prosail_s2_sim_refl.pt") 
+    norm_mean, norm_std = get_refl_normalization(train_prosail_s2_sim)
+    torch.save(norm_mean, parser.data_dir + "weiss_norm_mean.pt") 
+    torch.save(norm_std, parser.data_dir + "weiss_norm_std.pt") 
 
 def get_data_generation_parser():
     """
@@ -388,6 +413,10 @@ def get_data_generation_parser():
     parser.add_argument("-w", dest="weiss_mode",
                         help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
                         type=bool, default=True)
+    
+    parser.add_argument("-wd", dest="weiss_dataset",
+                        help="Set to True to generate a training dataset from weiss data",
+                        type=bool, default=False)
     return parser
 
 if  __name__ == "__main__":
@@ -399,6 +428,11 @@ if  __name__ == "__main__":
         data_dir = parser.data_dir
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
-    save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
-                 parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode)
+    if parser.weiss_dataset:
+        save_weiss_dataset(data_dir)
+    else:
+        save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
+                        parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode)
+
+
     

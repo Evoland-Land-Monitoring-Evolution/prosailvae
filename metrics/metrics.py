@@ -134,7 +134,7 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
         s2_r, s2_a, lais, dt = get_interpolated_validation_data(site, juan_data_dir_path, lai_min=lai_min, 
                                                                 dt_max=dt_max, method="closest")
         if weiss_mode:
-            s2_r = s2_r[:, torch.tensor([2,3,4,5,7,8,9])]
+            s2_r = s2_r[:, torch.tensor([1,2,3,4,5,7,8,9])]
         prosail_ref_params = torch.zeros((s2_r.size(0), 11))
         prosail_ref_params[:,6] = lais.squeeze()
         juan_dataset = TensorDataset(s2_r.to(PROSAIL_VAE.device), 

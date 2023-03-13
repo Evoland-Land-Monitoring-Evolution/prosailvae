@@ -59,7 +59,9 @@ def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig.tight_layout()
     fig.savefig(save_dir+"/mare.svg")
 
-def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
+def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50, bands_name=None):
+    if bands_name is None:
+        bands_name = BANDS
     original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
     prosail_VAE.decoder.ssimulator.apply_norm = False
     recs_dist = torch.tensor([]).to(prosail_VAE.device)
@@ -101,8 +103,8 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50):
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         
         axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
-        axs[axi, axj].set_ylabel(BANDS[i])
-        axs[axi, axj].set_xlabel("rec. " + BANDS[i])
+        axs[axi, axj].set_ylabel(bands_name[i])
+        axs[axi, axj].set_xlabel("rec. " + bands_name[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
     plt.show()
     fig.savefig(res_dir + '/2d_rec_dist.svg')
@@ -157,7 +159,9 @@ def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
     
     pass
 
-def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
+def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=None):
+    if bands_name is None:
+        bands_name = BANDS
     original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
     prosail_VAE.decoder.ssimulator.apply_norm = False
     for i in range(n_plots):
@@ -185,11 +189,11 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
         
         
         
-        rec_samples = [rec_samples[j,:] for j in range(len(BANDS))]
+        rec_samples = [rec_samples[j,:] for j in range(len(bands_name))]
         sim_samples = sim.squeeze().detach().cpu().numpy()
         sim_samples = [sim_samples[j,:] for j in range(len(PROSAILVARS))]
         
-        ind1 = np.arange(len(BANDS))
+        ind1 = np.arange(len(bands_name))
         ax1.set_xlim(0,1)
         v1 = ax1.violinplot(rec_samples, points=100, positions=ind1,
                showmeans=True, showextrema=True, showmedians=False, vert=False)
@@ -210,7 +214,7 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10):
                     ind1-0.1, color='black',s=15)
     
         ax1.set_yticks(ind1)
-        ax1.set_yticklabels(BANDS)
+        ax1.set_yticklabels(bands_name)
         ax1.xaxis.grid(True)
 
         for j in range(len(PROSAILVARS)):
@@ -347,7 +351,9 @@ def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist):
                  ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]],color='black')
         fig.savefig(res_dir + f'/pred_vs_ref_{PROSAILVARS[i]}.svg')
 
-def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=None):
+def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=None, bands_name=None):
+    if bands_name is None:
+        bands_name = BANDS
 
     filename='/sim_refl_dist.svg'
     xmax=1
@@ -359,11 +365,11 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
         xmin=-6
     fig = plt.figure(figsize=(18,12), dpi=150,)
     ax2=[]
-    gs = fig.add_gridspec(len(BANDS),1)
-    for j in range(len(BANDS)):
+    gs = fig.add_gridspec(len(bands_name),1)
+    for j in range(len(bands_name)):
         ax2.append(fig.add_subplot(gs[j, 0]))
     
-    for j in range(len(BANDS)):
+    for j in range(len(bands_name)):
         v2 = ax2[j].violinplot(rec_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
 
@@ -403,7 +409,7 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
             
         ax2[j].set_yticks([0])
         ax2[j].set_yticklabels([])
-        ax2[j].set_ylabel(BANDS[j])
+        ax2[j].set_ylabel(bands_name[j])
         ax2[j].xaxis.grid(True)
         
         

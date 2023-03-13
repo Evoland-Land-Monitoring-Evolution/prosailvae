@@ -126,13 +126,15 @@ def get_metrics(PROSAIL_VAE, loader,
             sim_supports, ae_percentiles, are_percentiles, piw_percentiles)
 
 def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
-                                sites = ["france", "spain1", "italy1", "italy2"]):
+                                sites = ["france", "spain1", "italy1", "italy2"], weiss_mode=False):
     list_lai_nlls = []
     list_lai_preds = []
     dt_list = []
     for site in sites:
         s2_r, s2_a, lais, dt = get_interpolated_validation_data(site, juan_data_dir_path, lai_min=lai_min, 
                                                                 dt_max=dt_max, method="closest")
+        if weiss_mode:
+            s2_r = s2_r[:, torch.tensor([2,3,4,5,7,8,9])]
         prosail_ref_params = torch.zeros((s2_r.size(0), 11))
         prosail_ref_params[:,6] = lais.squeeze()
         juan_dataset = TensorDataset(s2_r.to(PROSAIL_VAE.device), 

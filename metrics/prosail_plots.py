@@ -734,7 +734,7 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
         cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
         cbar.ax.yaxis.set_label_coords(0.0,0.5)
     else:
-        sc = ax.scatter(lai_pred, lai_i)
+        sc = ax.scatter(lai_pred, lai_i, s=1)
     ax.plot([min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],
             [min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],'k--')
     ax.set_xlabel('Predicted LAI')

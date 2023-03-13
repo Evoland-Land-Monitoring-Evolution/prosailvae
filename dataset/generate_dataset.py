@@ -15,7 +15,7 @@ import os
 import argparse
 import prosailvae
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, ProsailVarsDist
-from metrics.metrics import load_weiss_dataset
+from dataset.validate_prosail_weiss import load_weiss_dataset
 from tqdm import trange
 import scipy.stats as stats
 

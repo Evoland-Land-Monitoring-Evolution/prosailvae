@@ -179,7 +179,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                 fig, ax = plot_lai_preds(list_lai_preds[i][:,1].cpu(), list_lai_preds[i][:,0].cpu(), j_dt_list[i], site)
                 fig.savefig(juan_validation_dir + f"/{site}_lai_pred_vs_true.png")
     if plot_results:
-        plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
+        plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50, bands_name=bands_name)
     (mae, mpiw, picp, mare, 
     sim_dist, tgt_dist, rec_dist,
     angles_dist, s2_r_dist,
@@ -224,7 +224,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
         normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
         logger.info("Plotting reflectance distribution")
-        plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator)
+        plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator, bands_name=bands_name)
         logger.info("Plotting reconstructed reflectance components pair plots")
         pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
                 res_dir=metrics_dir, filename='normed_rec_pair_plot.png')

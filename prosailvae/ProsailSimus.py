@@ -282,7 +282,7 @@ class ProsailVarsDist:
                     'law': 'gaussian'},
             'cm': {'min': 0.003, 'max': 0.011, 'mean': 0.005, 'std': 0.005, 'lai_conv': 10,
                 'law': 'gaussian'},
-            'lai': {'min': 0.0, 'max': 10.0, 'mean': 2.0, 'std': 2.0, 'lai_conv': None,
+            'lai': {'min': 0.0, 'max': 15.0, 'mean': 2.0, 'std': 2.0, 'lai_conv': None,
                     'law': 'lognormal'},
             'lidfa': {'min': 30.0, 'max': 80.0, 'mean': 60.0, 'std': 20.0, 'lai_conv': 10,
                     'law': 'gaussian'},

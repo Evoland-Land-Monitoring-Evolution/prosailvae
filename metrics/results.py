@@ -171,6 +171,8 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         sites = ["france", "spain1", "italy1", "italy2"]
         j_list_lai_nlls, list_lai_preds, j_dt_list = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
                                                                                  sites=sites, weiss_mode=weiss_mode)
+        all_lai_preds = torch.cat(list_lai_preds)
+        all_dt_list  = torch.cat(j_dt_list)
         for i, site in enumerate(sites):
             torch.save(j_list_lai_nlls[i].cpu(), juan_validation_dir + f"/{site}_lai_nll.pt")
             torch.save(list_lai_preds[i].cpu(), juan_validation_dir + f"/{site}_lai_ref_pred.pt")
@@ -178,6 +180,9 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
             if plot_results:
                 fig, ax = plot_lai_preds(list_lai_preds[i][:,1].cpu(), list_lai_preds[i][:,0].cpu(), j_dt_list[i], site)
                 fig.savefig(juan_validation_dir + f"/{site}_lai_pred_vs_true.png")
+        if plot_results:
+            fig, ax = plot_lai_preds(all_lai_preds[:,1].cpu(), all_lai_preds[:,0].cpu(), all_dt_list, "all")
+            fig.savefig(juan_validation_dir + f"/all_lai_pred_vs_true.png")
     if plot_results:
         plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50, bands_name=bands_name)
     (mae, mpiw, picp, mare, 

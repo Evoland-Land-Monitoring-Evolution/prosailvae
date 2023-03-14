@@ -4,12 +4,14 @@ if __name__ == "__main__":
     from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                              plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D)
+                              plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
+                              all_loss_curve)
 else:
     from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                                       plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D)
+                                       plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
+                                       all_loss_curve)
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -79,6 +81,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
     if info_df is not None:
         if plot_results:
             loss_curve(info_df, save_file=loss_dir+"lr.svg", log_scale=True)
+            all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, save_file=loss_dir+"lr.svg")
     
     # Computing metrics
     PROSAIL_VAE.eval()

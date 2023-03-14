@@ -218,7 +218,7 @@ def setupResults(res_dir):
         logger.info(f'{key} : {params[key]}')
     logger.info('========================================================================')
 
-    return params, res_dir, params_sup_kl_model
+    return params, params_sup_kl_model
     
 def configureEmissionTracker(parser):
     logger = logging.getLogger(LOGGER_NAME)
@@ -258,7 +258,7 @@ def main():
     if os.path.isfile(res_dir+"/results_directory_names.txt"):
         os.remove(res_dir+"/results_directory_names.txt")
     for fold_res_dir in fold_res_dirs:
-        params, res_dir, params_sup_kl_model = setupResults(fold_res_dir)
+        params, params_sup_kl_model = setupResults(fold_res_dir)
         try:
             vae_file_path = fold_res_dir + '/prosailvae_weights.tar'
             PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, 
@@ -273,14 +273,14 @@ def main():
     pass
     pass
 
-def save_array_xp_path(job_array_dir, res_dir):
+def save_array_xp_path(job_array_dir, fold_res_dir):
     if job_array_dir is not None:
         if not os.path.isfile(job_array_dir + "/results_directory_names.txt"):
             with open(job_array_dir + "/results_directory_names.txt", 'w') as outfile:
-                outfile.write(f"{res_dir}\n")
+                outfile.write(f"{fold_res_dir}\n")
         else:
             with open(job_array_dir + "/results_directory_names.txt", 'a') as outfile:
-                outfile.write(f"{res_dir}\n")
+                outfile.write(f"{fold_res_dir}\n")
 
 def get_immediate_subdirectories(a_dir):
     return [os.path.join(a_dir, name) for name in os.listdir(a_dir)

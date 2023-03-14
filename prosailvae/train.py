@@ -109,7 +109,9 @@ def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, l
                     #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
                     #                                         eps=1e-08, verbose=False)
                     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
-            except:
+            except Exception as e:
+                traceback.print_exc()
+                print(e)
                 logger.error(f"Couldn't recompute lr at epoch {epoch} !")
                 print(f"Couldn't recompute lr at epoch {epoch} !")
     return lr_scheduler, optimizer, new_lr
@@ -300,7 +302,9 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"], 
                                     file_prefix="weiss_test_" if parser.weiss_mode else "test_",
                                     tensors_dir=parser.tensor_dir if not params["simulated_dataset"] else None)
-        except:
+        except Exception as e:
+            traceback.print_exc()
+            print(e)
             lr = 1e-3
             logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
             print(f"Couldn't recompute lr at initialization ! Using lr={lr}")

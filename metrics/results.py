@@ -157,7 +157,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
             os.makedirs(weiss_validation_dir)
         weiss_data_dir_path = os.path.join(data_dir, os.pardir) + "/weiss/"
         prosail_ref_params = torch.load(weiss_data_dir_path+ "weiss_test_prosail_sim_vars.pt").to(PROSAIL_VAE.device)
-        s2_r = torch.load(weiss_data_dir_path + "weiss_test_s2_sim_refl.pt").to(PROSAIL_VAE.device)
+        s2_r = torch.load(weiss_data_dir_path + "weiss_test_prosail_s2_sim_refl.pt").to(PROSAIL_VAE.device)
         s2_a = prosail_ref_params[:,-3:]
         prosail_ref_params = prosail_ref_params[:,:-3]
         lai_nlls, lai_preds, sim_pdfs, sim_supports = get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params)

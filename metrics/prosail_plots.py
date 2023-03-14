@@ -315,7 +315,7 @@ def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=F
     axs[1].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
     for i in range(3):
         axs[i].set_yscale('symlog', linthresh=1e-5)
-        axs[i].legend(s=8)
+        axs[i].legend(fontsize=8)
     axs[2].set_xlabel('epoch')
     axs[0].set_ylabel('Train loss')
     axs[1].set_ylabel('Valid loss')

@@ -555,7 +555,7 @@ class ProsailRCNNEncoder(nn.Module):
                  crnn_group_sizes: list[int]=[64,64], 
                  crnn_group_depth: list[int]=[2,2], 
                  crnn_group_kernel_sizes: list[int]=[3,3],
-                 crnn_group_n = [1,1]
+                 crnn_group_n = [1,1],
                  device='cpu', norm_mean=None, norm_std=None, lat_space_size=11):
         """
         Constructor

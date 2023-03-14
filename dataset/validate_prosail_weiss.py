@@ -14,7 +14,7 @@ def load_refl_angles(path_to_data_dir):
     assert os.path.isfile(path_to_file)
     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
     n_obs = len(df_validation_data)
-    s2_r = torch.as_tensor(df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values)
+    s2_r = df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values
    
     tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
     tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
@@ -77,7 +77,7 @@ def load_weiss_dataset(path_to_data_dir):
 def main():
     s2_r, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
     lai = prosail_vars[:,6]
-
+    s2_r = torch.as_tensor(s2_r)
     rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
     results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
     psimulator = ProsailSimulator()

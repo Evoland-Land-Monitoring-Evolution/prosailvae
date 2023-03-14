@@ -1,0 +1,26 @@
+{
+    "batch_size": 2048,
+    "epochs": 50,
+    "lr": 0.001,
+    "hidden_layers_size": [
+        1024
+    ],
+    "test_size": 0.01,
+    "valid_ratio": 0.01,
+    "workers": 0,
+    "encoder_last_activation": null,
+    "n_samples": 1,
+    "supervised": true,
+    "beta_kl": 0,
+    "beta_index": 0,
+    "dataset_file_prefix": "weiss_",
+    "simulated_dataset": true,
+    "lr_recompute": 51,
+    "loss_type": "diag_nll",
+    "apply_norm_rec": false,
+    "exp_lr_decay": 0.98,
+    "supervised_kl": false,
+    "encoder_type": "rnn",
+    "rnn_depth": 3,
+    "rnn_number": 7
+}

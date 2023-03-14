@@ -278,7 +278,7 @@ def loss_curve(loss_df, save_file, log_scale=False):
     epochs = loss_df["epoch"]
     fig, ax = plt.subplots(dpi=150)
     ax.set_yscale('symlog', linthresh=1e-5)
-    if "loss_sum" in loss_names
+    if "loss_sum" in loss_names:
         loss_sum_min = loss_df['loss_sum'].values.min()
         loss_sum_min_epoch = loss_df['loss_sum'].values.argmin()
         ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min")

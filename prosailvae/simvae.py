@@ -86,7 +86,7 @@ class SimVAE(nn.Module):
         except:
             pass
         self.multi_output_encoder = multi_output_encoder
-        self.lat_nll = "lai_nll"
+        self.lat_nll = lat_nll
 
     def change_device(self, device):
         self.device=device

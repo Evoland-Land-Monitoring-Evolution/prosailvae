@@ -769,7 +769,7 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     fig, ax = plt.subplots()
     lai_i = lais.squeeze()
     if time_delta is not None:
-        sc = ax.scatter(lai_pred, lai_i, c=time_delta.abs())
+        sc = ax.scatter(lai_pred, lai_i, c=time_delta.abs(), s=5)
         cbar = plt.colorbar(sc)
         cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
         cbar.ax.yaxis.set_label_coords(0.0,0.5)

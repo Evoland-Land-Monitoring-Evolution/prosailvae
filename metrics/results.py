@@ -81,7 +81,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
     if info_df is not None:
         if plot_results:
             loss_curve(info_df, save_file=loss_dir+"lr.svg", log_scale=True)
-            all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, save_file=loss_dir+"lr.svg")
+            all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, save_file=loss_dir+"all_loss.svg")
     
     # Computing metrics
     PROSAIL_VAE.eval()

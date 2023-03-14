@@ -236,6 +236,7 @@ class ProsailRNNEncoder(Encoder):
         resnet = []
         resnet.append(nn.Linear(in_features=s2refl_size + 2 * 3, 
                                 out_features=res_block_layer_sizes))
+        resnet.append(nn.ReLU())
 
         for i in range(n_res_block):
             # resblock = nn.RNN(input_size=res_block_layer_sizes, hidden_size=res_block_layer_depth, 
@@ -490,14 +491,72 @@ class ProsailCNNEncoder(nn.Module):
         self.logvar_conv = self.logvar_conv.to(device)
         self = self.to(device)
 
+class EncoderCResNetBlock(Encoder):
+    """ 
+    A class used to represent a residual CNN block of for a CNN auto encoder. 
+    ...
+
+    Attributes
+    ----------
+    net : nn.Sequential
+        NN layers of the encoder
+    
+    Methods
+    -------
+    encode(x)
+        Encode time series x using net.
+    """
+    def __init__(self,
+                 output_size=128, 
+                 depth=2,
+                 kernel_size=3,
+                 last_activation=None, 
+                 device='cpu', 
+                 input_size,
+                 stride=1): 
+        super().__init__()
+
+        layers = []        
+        for i in range(depth):
+            layers.append(nn.Conv2d(
+                        input_size,
+                        output_size,
+                        kernel_size=kernel_size,
+                        padding="same",
+                        stride=stride
+                    ))
+            if i < depth-1:
+                layers.append(nn.ReLU())
+        
+        if last_activation is not None :
+            layers.append(last_activation)
+        self.device=device
+        self.net = nn.Sequential(*layers).to(device)
+        
+    def change_device(self, device):
+        self.device=device
+        self.net = self.net.to(device)
+        self = self.to(device)
+
+    def forward(self, x):
+        y=self.net(x)
+        return y + x
+
 class ProsailRCNNEncoder(nn.Module):
     """
     Implements an encoder with alternate
     convolutional and Relu layers
     """
 
-    def __init__(self, encoder_sizes: list[int]=[20,20], enc_kernel_sizes: list[int]=[3,3],
-                 device='cpu', norm_mean=None, norm_std=None, lat_space_size=10):
+    def __init__(self, 
+                 n_bands=8,
+                 first_layer_kernel=7,
+                 first_layer_size=64,
+                 crnn_group_sizes: list[int]=[64,64], 
+                 crnn_group_depth: list[int]=[2,2], 
+                 crnn_group_kernel_sizes: list[int]=[3,3],
+                 crnn_group_n = [1,1]
+                 device='cpu', norm_mean=None, norm_std=None, lat_space_size=11):
         """
         Constructor
 
@@ -507,27 +566,18 @@ class ProsailRCNNEncoder(nn.Module):
 
         super().__init__()
         self.device=device
-        enc_blocks: list[nn.Module] = sum(
-            [
-                [
-                    nn.Conv2d(
-                        in_layer,
-                        out_layer,
-                        kernel_size=kernel_size,
-                        padding="same",
-                    ),
-                    nn.ReLU(),
-                ]
-                for in_layer, out_layer, kernel_size in zip(
-                    encoder_sizes, encoder_sizes[1:], enc_kernel_sizes
-                )
-            ],
-            [],
-        )
-        self.cnet = nn.Sequential(*enc_blocks).to(device)
-        self.nb_enc_cropped_hw = sum(
-            [(kernel_size - 1) // 2 for kernel_size in enc_kernel_sizes]
-        )
+        network = []
+        network.append(nn.Conv2d(n_bands, first_layer_size, first_layer_kernel))
+        input_sizes = [first_layer_size] + crnn_group_sizes
+        assert len(crnn_group_sizes) == len(crnn_group_depth) and len(crnn_group_depth) == len(crnn_group_kernel_sizes) and len(crnn_group_kernel_sizes) == len(crnn_group_n)
+        for i in range(len(crnn_group_n)):
+            for _ in range(crnn_group_n[i]):
+                network.append(EncoderCResNetBlock(output_size=crnn_group_sizes[i],
+                                                   depth=crnn_group_depth[i],
+                                                   kernel_size=crnn_group_kernel_sizes[i],
+                                                   input_size=input_sizes[i]))
+                network.append(nn.ReLU())
+        self.cnet = nn.Sequential(*network).to(device)
         self.mu_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1).to(device)
         self.logvar_conv = nn.Conv2d(
             encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1
@@ -538,22 +588,6 @@ class ProsailRCNNEncoder(nn.Module):
             norm_std = torch.ones((lat_space_size,1,1))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-
-    # def forward(self, x: torch.Tensor):
-    #     """
-    #     Forward pass of the convolutionnal encoder
-
-    #     :param x: Input tensor of shape [N,C_in,H,W]
-
-    #     :return: Output Dataclass that holds mu and var
-    #              tensors of shape [N,C_out,H,W]
-    #     """
-    #     normed_x = (x - self.norm_mean) / self.norm_std
-    #     y = cnet(normed_x)
-    #     y_mu = self.mu_conv(y)
-    #     y_logvar = self.logvar_conv(y)
-
-    #     return torch.concat([y_mu, y_logvar], axis=1)
 
     def encode(self, s2_refl, angles):
         """

@@ -113,52 +113,60 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50, bands_name=None):
     pass
 
 def plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50):
-
     n_lats = sim_pdfs.size(1)
     N = sim_pdfs.size(0)
     fig_all, axs_all = plt.subplots(2, n_lats//2 + n_lats%2, dpi=120, tight_layout=True, figsize=(1 + 2*(n_lats//2 + n_lats%2), 1+2*2))
     for i in range(n_lats):
-        xs = sim_supports[:,i,:].detach().cpu().numpy()
-        # xs_05 = np.quantile(xs,0.05)
-        # xs_95 = np.quantile(xs,0.95)
-        ys = tgt_dist[:,i].detach().cpu().numpy()
-        min_b = np.quantile(ys,0.05)
-        max_b = np.quantile(ys,0.95)
-        weights = sim_pdfs[:,i,:].detach().cpu().numpy()
-        # min_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["min"]
-        # max_b = ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]
-        # min_b = min(xs_05,ys_05)
-        # max_b = max(xs_95,ys_95)
-        xedges = np.linspace(min_b, max_b, nbin)
-        yedges = np.linspace(min_b, max_b, nbin)
-        heatmap = 0
-        for j in range(N):
-            xj = xs[j,:]
-            yj = ys[j]
-            wj = weights[j,:]
-            hist, xedges, yedges = np.histogram2d(
-                np.ones_like(xj) * yj, xj, bins=[xedges, yedges], weights=wj)
-            heatmap += hist
-
-        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        heatmap, extent = compute_dist_heatmap(tgt_dist[:,i], sim_pdfs[:,i,:], sim_supports[:,i,:], nbin=nbin)
         # heatmap = np.flipud(np.rot90(heatmap))
-        fig, ax = plt.subplots(dpi=120)
-        ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
-        ax.set_ylabel(PROSAILVARS[i])
-        ax.set_xlabel("Predicted distribution of " + PROSAILVARS[i])
-        ax.plot([min_b, max_b], [min_b, max_b], c='w')
-        axs_all[i%2, i//2].imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
-        axs_all[i%2, i//2].set_ylabel(PROSAILVARS[i])
-        axs_all[i%2, i//2].set_xlabel("Pred. " + PROSAILVARS[i])
-        axs_all[i%2, i//2].plot([min_b, max_b], [min_b, max_b], c='w')
+        fig, ax = plot_single_lat_hist_2D(heatmap, extent, res_dir=None, fig=None, ax=None, var_name=PROSAILVARS[i])
         fig.savefig(res_dir + f'/2d_pred_dist_{PROSAILVARS[i]}.svg')
-        plt.close('all')
+        fig_all, axs_all[i%2, i//2] = plot_single_lat_hist_2D(heatmap, extent, res_dir=None, fig=fig_all, 
+                                                              ax=axs_all[i%2, i//2], var_name=PROSAILVARS[i])
     if n_lats%2==1:
         fig_all.delaxes(axs_all[-1, -1])
     fig_all.savefig(res_dir + f'/2d_pred_dist_PROSAIL_VARS.svg')
-    
+    plt.close('all')
     pass
 
+def compute_dist_heatmap(tgt_dist, sim_pdf, sim_support, nbin=50):
+    N = sim_pdf.size(0)
+    xs = sim_support.detach().cpu().numpy()
+    ys = tgt_dist.detach().cpu().numpy()
+    min_b = np.quantile(ys,0.05)
+    max_b = np.quantile(ys,0.95)
+    weights = sim_pdfs.detach().cpu().numpy()
+    xedges = np.linspace(min_b, max_b, nbin)
+    yedges = np.linspace(min_b, max_b, nbin)
+    heatmap = 0
+    for j in range(N):
+        xj = xs[j,:]
+        yj = ys[j]
+        wj = weights[j,:]
+        hist, xedges, yedges = np.histogram2d(
+            np.ones_like(xj) * yj, xj, bins=[xedges, yedges], weights=wj)
+        heatmap += hist
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]    
+    return heatmap, extent
+
+def plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=None, sim_pdf=None, sim_support=None,
+                            res_dir=None, fig=None, ax=None, var_name=None, nbin=50):
+    if heatmap is None or extent is None:
+        if tgt_dist is not None and sim_pdf is not None and sim_support is not None:
+            heatmap, extent = compute_dist_heatmap(tgt_dist, sim_pdf, sim_support, nbin=50)
+        else:
+            raise ValueError("Please input either heatmap and extent, or tgt_dist, sim_pdf and sim_support")
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(dpi=120)
+    ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
+    ax.plot([extent[0], extent[1]], [extent[0], extent[1]], c='w')
+    if var_name is not None:
+        ax.set_ylabel(f"{var_name}")
+        ax.set_xlabel(f"Predicted distribution of {var_name}")
+    if res_dir is not None and var_name is not None:
+        fig.savefig(res_dir + f'/2d_pred_dist_{var_name}.svg')
+    return fig, ax
+    
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=None):
     if bands_name is None:
         bands_name = BANDS

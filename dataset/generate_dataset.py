@@ -358,11 +358,11 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
     
     torch.save(torch.from_numpy(prosail_s2_sim), 
                data_dir + data_file_prefix + "prosail_s2_sim_refl.pt") 
-    torch.save(norm_mean, parser.data_dir + data_file_prefix+ "norm_mean.pt") 
+    torch.save(norm_mean, parser.data_dir + data_file_prefix + "norm_mean.pt") 
     torch.save(norm_std, parser.data_dir + data_file_prefix + "norm_std.pt") 
 
 
-def save_weiss_dataset(data_dir):
+def save_weiss_dataset(data_dir, rsr_dir, noise):
 
     PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
     prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
@@ -371,20 +371,19 @@ def save_weiss_dataset(data_dir):
     test_prosail_vars = prosail_vars[:nb_test_samples,:]
     train_prosail_s2_sim = prosail_s2_sim[nb_test_samples:,:]
     train_prosail_vars = prosail_vars[nb_test_samples:,:]
-    torch.save(torch.from_numpy(test_prosail_vars), 
-               data_dir + "weiss_test_prosail_sim_vars.pt") 
+    weiss_data_dir = os.path.join(data_dir, os.pardir) + "/weiss/"
+    if not os.path.isdir(weiss_data_dir):
+        os.makedirs(weiss_data_dir)
+    torch.save(torch.from_numpy(test_prosail_vars), weiss_data_dir + "/weiss_test_prosail_sim_vars.pt") 
+    torch.save(torch.from_numpy(test_prosail_s2_sim), weiss_data_dir + "weiss_test_prosail_s2_sim_refl.pt") 
+    torch.save(torch.from_numpy(train_prosail_vars), data_dir + "weiss_prosail_sim_vars.pt") 
+    torch.save(torch.from_numpy(train_prosail_s2_sim), data_dir + "weiss_prosail_s2_sim_refl.pt") 
     
-    torch.save(torch.from_numpy(test_prosail_s2_sim), 
-               data_dir + "weiss_test_prosail_s2_sim_refl.pt") 
-    
-    torch.save(torch.from_numpy(train_prosail_vars), 
-               data_dir + "weiss_prosail_sim_vars.pt") 
-    
-    torch.save(torch.from_numpy(train_prosail_s2_sim), 
-               data_dir + "weiss_prosail_s2_sim_refl.pt") 
     norm_mean, norm_std = get_refl_normalization(train_prosail_s2_sim)
     torch.save(norm_mean, parser.data_dir + "weiss_norm_mean.pt") 
     torch.save(norm_std, parser.data_dir + "weiss_norm_std.pt") 
+
+    save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True)
 
 def get_data_generation_parser():
     """
@@ -429,9 +428,9 @@ if  __name__ == "__main__":
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     if parser.weiss_dataset:
-        save_weiss_dataset(data_dir)
+        save_weiss_dataset(data_dir, parser.rsr_dir, parser.noise)
     else:
-        save_dataset(data_dir, parser.file_prefix,parser. rsr_dir,
+        save_dataset(data_dir, parser.file_prefix, parser.rsr_dir,
                         parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode)
 
 

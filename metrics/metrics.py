@@ -152,32 +152,37 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
 
     return list_lai_nlls, list_lai_preds, dt_list
 
+def load_weiss_data_from_txt(weiss_data_dir_path, device='cpu'):
+    s2_r, prosail_vars = load_weiss_dataset(weiss_data_dir_path)
+    s2_a = prosail_vars[:,-3:]
+    prosail_ref_params = torch.as_tensor(prosail_vars[:,:11]).float().to(device)
+    s2_r = torch.as_tensor(s2_r).float().to(device)
+    s2_a = torch.as_tensor(s2_a).float().to(device) 
+    return s2_r, s2_a, prosail_ref_params
 
-def get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path):
+
+def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_pdf_sample_points=5001):
     with torch.no_grad():
-        s2_r, prosail_vars = load_weiss_dataset(weiss_data_dir_path)
-        s2_a = prosail_vars[:,-3:]
-        prosail_ref_params = prosail_vars[:,:11]
-        lais = torch.as_tensor(prosail_vars[:,6]).float().cpu().view(-1,1)
-        s2_r = torch.as_tensor(s2_r).float().to(PROSAIL_VAE.device)
-        s2_a = torch.as_tensor(s2_a).float().to(PROSAIL_VAE.device) 
-        prosail_ref_params = torch.as_tensor(prosail_ref_params).float().to(PROSAIL_VAE.device)
+        lais = torch.as_tensor(prosail_ref_params[:,6]).float().cpu().view(-1,1)
         weiss_dataset = TensorDataset(s2_r, s2_a, prosail_ref_params)
-        weiss_loader = DataLoader(weiss_dataset,
-                                batch_size=512,
-                                num_workers=0)
+        weiss_loader = DataLoader(weiss_dataset, batch_size=512, num_workers=0)
         lai_nlls = PROSAIL_VAE.compute_lat_nlls(weiss_loader).mean(0).squeeze()[6].cpu()
         lai_pred = []
+        sim_pdfs = torch.tensor([]).to(PROSAIL_VAE.device)
+        sim_supports = torch.tensor([]).to(PROSAIL_VAE.device)
         for i, b in enumerate(weiss_loader):
             s2_r = b[0]
             s2_a = b[1]
             y = PROSAIL_VAE.encode(s2_r, s2_a)
             dist_params = PROSAIL_VAE.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = PROSAIL_VAE.lat_space.latent_pdf(dist_params)
-            prosail_params_mode = PROSAIL_VAE.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
+            prosail_params_mode = PROSAIL_VAE.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            sim_pdfs_i, sim_supports_i = PROSAIL_VAE.sim_space.sim_pdf(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)
+            sim_pdfs = torch.concat([sim_pdfs, sim_pdfs_i], axis=0)
+            sim_supports = torch.concat([sim_supports, sim_supports_i], axis=0)
             lai = prosail_params_mode[:,6,:].cpu()
             lai_pred.append(lai)
         lai_pred = torch.cat(lai_pred, axis=0)
         lai_pred = torch.cat((lai_pred, lais), axis=1)
 
-    return lai_nlls, lai_pred
+    return lai_nlls, lai_pred, sim_pdfs, sim_supports

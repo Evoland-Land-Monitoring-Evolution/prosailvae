@@ -4,12 +4,12 @@ if __name__ == "__main__":
     from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                              plot_metric_boxplot, plot_patch_pairs, plot_lai_preds)
+                              plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D)
 else:
     from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                                       plot_metric_boxplot, plot_patch_pairs, plot_lai_preds)
+                                       plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D)
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -137,7 +137,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     
     # Computing metrics
     logger.info("Loading test loader...")
-    loader = get_simloader(file_prefix="weiss_test_" if weiss_mode else "test_", data_dir=data_dir)
+    loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     logger.info("Test loader, loaded.")
     
     alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
@@ -152,16 +152,23 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     
     
     if weiss_mode:
-        weiss_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
         weiss_validation_dir = res_dir + "/weiss_validation/"
         if not os.path.isdir(weiss_validation_dir):
             os.makedirs(weiss_validation_dir)
-        lai_nlls, lai_preds = get_weiss_validation_metrics(PROSAIL_VAE, weiss_data_dir_path)
+        weiss_data_dir_path = os.path.join(data_dir, os.pardir) + "/weiss/"
+        prosail_ref_params = torch.load(weiss_data_dir_path+ "weiss_test_prosail_sim_vars.pt").to(PROSAIL_VAE.device)
+        s2_r = torch.load(weiss_data_dir_path + "weiss_test_s2_sim_refl.pt").to(PROSAIL_VAE.device)
+        s2_a = prosail_ref_params[:,-3:]
+        prosail_ref_params = prosail_ref_params[:,:-3]
+        lai_nlls, lai_preds, sim_pdfs, sim_supports = get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params)
         torch.save(lai_nlls.cpu(), weiss_validation_dir + f"/weiss_lai_nll.pt")
         torch.save(lai_preds.cpu(), weiss_validation_dir + f"/weiss_lai_ref_pred.pt")
         if plot_results:
             fig, ax = plot_lai_preds(lai_preds[:,1].cpu(), lai_preds[:,0].cpu(), site="weiss")
             fig.savefig(weiss_validation_dir + f"/weiss_lai_pred_vs_true.png")
+            plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=lai_preds[:,1].cpu(), 
+                                    sim_pdf=sim_pdfs[:,6,:].cpu(), sim_support=sim_supports[:,6,:].cpu(),
+                                    res_dir=weiss_validation_dir, fig=None, ax=None, var_name="LAI", nbin=100)
 
     if juan_validation:
         juan_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"

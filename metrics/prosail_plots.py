@@ -274,12 +274,14 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
     
 def loss_curve(loss_df, save_file, log_scale=False):
     loss_names = loss_df.columns.values.tolist()
-    loss_sum_min = loss_df['loss_sum'].values.min()
-    loss_sum_min_epoch = loss_df['loss_sum'].values.argmin()
     loss_names.remove("epoch")
     epochs = loss_df["epoch"]
     fig, ax = plt.subplots(dpi=150)
     ax.set_yscale('symlog', linthresh=1e-5)
+    if "loss_sum" in loss_names
+        loss_sum_min = loss_df['loss_sum'].values.min()
+        loss_sum_min_epoch = loss_df['loss_sum'].values.argmin()
+        ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min")
     for i in range(len(loss_names)):
         loss = loss_df[loss_names[i]].values
         # if log_scale: # (loss<=0).any() or 
@@ -287,7 +289,7 @@ def loss_curve(loss_df, save_file, log_scale=False):
         #         loss += loss.min() + 1
         #     ax.set_yscale('log')
         ax.plot(epochs,loss, label=loss_names[i])
-    ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min")
+    
     ax.legend()
     ax.set_xlabel('epoch')
     ax.set_ylabel('loss')

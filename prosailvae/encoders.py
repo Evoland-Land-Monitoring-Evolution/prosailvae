@@ -490,3 +490,101 @@ class ProsailCNNEncoder(nn.Module):
         self.logvar_conv = self.logvar_conv.to(device)
         self = self.to(device)
 
+class ProsailRCNNEncoder(nn.Module):
+    """
+    Implements an encoder with alternate
+    convolutional and Relu layers
+    """
+
+    def __init__(self, encoder_sizes: list[int]=[20,20], enc_kernel_sizes: list[int]=[3,3],
+                 device='cpu', norm_mean=None, norm_std=None, lat_space_size=10):
+        """
+        Constructor
+
+        :param encoder_sizes: Number of features for each layer
+        :param enc_kernel_sizes: List of kernel sizes for each layer
+        """
+
+        super().__init__()
+        self.device=device
+        enc_blocks: list[nn.Module] = sum(
+            [
+                [
+                    nn.Conv2d(
+                        in_layer,
+                        out_layer,
+                        kernel_size=kernel_size,
+                        padding="same",
+                    ),
+                    nn.ReLU(),
+                ]
+                for in_layer, out_layer, kernel_size in zip(
+                    encoder_sizes, encoder_sizes[1:], enc_kernel_sizes
+                )
+            ],
+            [],
+        )
+        self.cnet = nn.Sequential(*enc_blocks).to(device)
+        self.nb_enc_cropped_hw = sum(
+            [(kernel_size - 1) // 2 for kernel_size in enc_kernel_sizes]
+        )
+        self.mu_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1).to(device)
+        self.logvar_conv = nn.Conv2d(
+            encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1
+        ).to(device)
+        if norm_mean is None:
+            norm_mean = torch.zeros((lat_space_size,1,1,))
+        if norm_std is None:
+            norm_std = torch.ones((lat_space_size,1,1))
+        self.norm_mean = norm_mean.float().to(device)
+        self.norm_std = norm_std.float().to(device)
+
+    # def forward(self, x: torch.Tensor):
+    #     """
+    #     Forward pass of the convolutionnal encoder
+
+    #     :param x: Input tensor of shape [N,C_in,H,W]
+
+    #     :return: Output Dataclass that holds mu and var
+    #              tensors of shape [N,C_out,H,W]
+    #     """
+    #     normed_x = (x - self.norm_mean) / self.norm_std
+    #     y = cnet(normed_x)
+    #     y_mu = self.mu_conv(y)
+    #     y_logvar = self.logvar_conv(y)
+
+    #     return torch.concat([y_mu, y_logvar], axis=1)
+
+    def encode(self, s2_refl, angles):
+        """
+        Forward pass of the convolutionnal encoder
+
+        :param x: Input tensor of shape [N,C_in,H,W]
+
+        :return: Output Dataclass that holds mu and var
+                 tensors of shape [N,C_out,H,W]
+        """
+        normed_refl = (s2_refl - self.norm_mean) / self.norm_std
+        if len(normed_refl.size())==3:
+            normed_refl = normed_refl.unsqueeze(0)
+        if len(angles.size())==3:
+            angles = angles.unsqueeze(0)
+        y=self.cnet(torch.concat((normed_refl, 
+                                 torch.cos(torch.deg2rad(angles)),
+                                 torch.sin(torch.deg2rad(angles))
+                                 ), axis=1))
+        y_mu = self.mu_conv(y)
+        y_logvar = self.logvar_conv(y)
+        y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
+        return batchify_batch_latent(y_mu_logvar)
+
+    def change_device(self, device):
+        self.device=device
+        self.norm_mean = self.norm_mean.to(device)
+        self.norm_std = self.norm_std.to(device)
+        self.cnet = self.dnet.to(device)
+        self.mu_conv = self.mu_conv.to(device)
+        self.logvar_conv = self.logvar_conv.to(device)
+        self = self.to(device)
+
+

@@ -3,10 +3,6 @@ import numpy as np
 import torch
 import prosailvae
 import matplotlib.pyplot as plt
-if __name__ == "__main__":
-    from loaders import convert_angles
-else:
-    from dataset.loaders import convert_angles
 import os 
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 from tqdm import trange

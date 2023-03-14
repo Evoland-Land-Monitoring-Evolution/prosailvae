@@ -512,7 +512,7 @@ class EncoderCResNetBlock(Encoder):
                  kernel_size=3,
                  last_activation=None, 
                  device='cpu', 
-                 input_size,
+                 input_size=10,
                  stride=1): 
         super().__init__()
 

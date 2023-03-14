@@ -296,30 +296,30 @@ def loss_curve(loss_df, save_file, log_scale=False):
     fig.savefig(save_file)
 
 def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=False):
-    loss_names = loss_df.columns.values.tolist()
+    loss_names = train_loss_df.columns.values.tolist()
     loss_names.remove("epoch")
-    epochs = loss_df["epoch"]
-    fig, axs = plt.subplots(3,1, dpi=150)
+    epochs = train_loss_df["epoch"]
+    fig, axs = plt.subplots(3,1, dpi=150, sharex=True)
 
     for i in range(len(loss_names)):
         train_loss = train_loss_df[loss_names[i]].values
         valid_loss = valid_loss_df[loss_names[i]].values
-        axs[0,:].plot(epochs,train_loss, label=loss_names[i])
-        axs[1,:].plot(epochs,valid_loss, label=loss_names[i])
-    axs[2,:].plot(epochs, info_df['lr'], label="lr")
+        axs[0].plot(epochs,train_loss, label=loss_names[i])
+        axs[1].plot(epochs,valid_loss, label=loss_names[i])
+    axs[2].plot(epochs, info_df['lr'], label="lr")
     train_loss_sum_min = train_loss_df['loss_sum'].values.min()
     train_loss_sum_min_epoch = train_loss_df['loss_sum'].values.argmin()
-    axs[0,:].scatter([train_loss_sum_min_epoch], [train_loss_sum_min], label="loss_sum min")
+    axs[0].scatter([train_loss_sum_min_epoch], [train_loss_sum_min], label="loss_sum min")
     valid_loss_sum_min = valid_loss_df['loss_sum'].values.min()
     valid_loss_sum_min_epoch = valid_loss_df['loss_sum'].values.argmin()
-    axs[1,:].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
+    axs[1].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
     for i in range(3):
-        axs[i,:].set_yscale('symlog', linthresh=1e-5)
-        axs[i,:].legend()
-        axs[i,:].set_xlabel('epoch')
-    axs[0,:].set_ylabel('Train loss')
-    axs[1,:].set_ylabel('Valid loss')
-    axs[2,:].set_ylabel('LR')
+        axs[i].set_yscale('symlog', linthresh=1e-5)
+        axs[i].legend(s=8)
+    axs[2].set_xlabel('epoch')
+    axs[0].set_ylabel('Train loss')
+    axs[1].set_ylabel('Valid loss')
+    axs[2].set_ylabel('LR')
     fig.savefig(save_file)
     
 def plot_param_dist(res_dir, sim_dist, tgt_dist):

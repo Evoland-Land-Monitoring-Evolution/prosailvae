@@ -100,7 +100,7 @@ def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, l
         if epoch % lr_recompute == 0:
             try:
                 new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir, old_lr=old_lr, old_lr_max_ratio=10, 
-                                    file_prefix="weiss_test_" if weiss_mode else "test_",
+                                    file_prefix="test_",
                                             tensors_dir=tensors_dir, )
                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                 if exp_lr_decay>0:

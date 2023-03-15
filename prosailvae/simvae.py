@@ -256,6 +256,8 @@ class SimVAE(nn.Module):
             patch_size = s2_r.size(2)
             s2_r = s2_r.permute(0,2,3,1).reshape(patch_size * patch_size, n_bands, 1)
             rec = rec.permute(0,2,3,1,4).reshape(patch_size * patch_size, n_bands, n_samples) # warning, assumes batch size is always 1
+        elif len(s2_r.size())==2:
+            s2_r = s2_r.unsqueeze(2)
         rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}

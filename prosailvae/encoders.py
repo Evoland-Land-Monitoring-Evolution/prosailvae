@@ -253,9 +253,9 @@ class ProsailRNNEncoder(Encoder):
         self.device=device
         self.net = nn.Sequential(*resnet).to(device)
         if norm_mean is None:
-            norm_mean = torch.zeros((1,s2refl_size))
+            norm_mean = torch.zeros((1, s2refl_size))
         if norm_std is None:
-            norm_std = torch.ones((1,s2refl_size))
+            norm_std = torch.ones((1, s2refl_size))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
     

@@ -215,7 +215,7 @@ def setupTraining():
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/",
               "-a", "False",
               "-p", "False",
-              "-w", "True"]
+              "-w", ""]
         
         parser = get_prosailvae_train_parser().parse_args(args)    
     else:

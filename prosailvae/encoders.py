@@ -549,14 +549,14 @@ class ProsailRCNNEncoder(nn.Module):
     """
 
     def __init__(self, 
-                 n_bands=8,
+                 s2refl_size=8,
                  first_layer_kernel=7,
                  first_layer_size=64,
                  crnn_group_sizes: list[int]=[64,64], 
                  crnn_group_depth: list[int]=[2,2], 
                  crnn_group_kernel_sizes: list[int]=[3,3],
                  crnn_group_n = [1,1],
-                 device='cpu', norm_mean=None, norm_std=None, lat_space_size=11):
+                 device='cpu', norm_mean=None, norm_std=None, output_size=11):
         """
         Constructor
 
@@ -567,7 +567,7 @@ class ProsailRCNNEncoder(nn.Module):
         super().__init__()
         self.device=device
         network = []
-        network.append(nn.Conv2d(n_bands + 2*3, first_layer_size, first_layer_kernel))
+        network.append(nn.Conv2d(s2refl_size + 2*3, first_layer_size, first_layer_kernel))
         input_sizes = [first_layer_size] + crnn_group_sizes
         assert len(crnn_group_sizes) == len(crnn_group_depth) and len(crnn_group_depth) == len(crnn_group_kernel_sizes) and len(crnn_group_kernel_sizes) == len(crnn_group_n)
         for i in range(len(crnn_group_n)):
@@ -578,12 +578,12 @@ class ProsailRCNNEncoder(nn.Module):
                                                    input_size=input_sizes[i]))
                 network.append(nn.ReLU())
         self.cnet = nn.Sequential(*network).to(device)
-        self.mu_conv = nn.Conv2d(input_sizes[-1], lat_space_size, kernel_size=1).to(device)
-        self.logvar_conv = nn.Conv2d(input_sizes[-1], lat_space_size, kernel_size=1).to(device)
+        self.mu_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1).to(device)
+        self.logvar_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1).to(device)
         if norm_mean is None:
-            norm_mean = torch.zeros((n_bands,1,1,))
+            norm_mean = torch.zeros((s2refl_size,1,1,))
         if norm_std is None:
-            norm_std = torch.ones((n_bands,1,1))
+            norm_std = torch.ones((s2refl_size,1,1))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
 

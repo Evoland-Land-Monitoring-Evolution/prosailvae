@@ -3,7 +3,7 @@
     "epochs": 50,
     "lr": 0.001,
     "hidden_layers_size": [
-        2048
+        1024
     ],
     "test_size": 0.01,
     "valid_ratio": 0.01,
@@ -21,6 +21,6 @@
     "exp_lr_decay": 0.98,
     "supervised_kl": false,
     "encoder_type": "rnn",
-    "rnn_depth": 6,
-    "rnn_number": 7
+    "rnn_depth": 2,
+    "rnn_number": 12
 }

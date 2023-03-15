@@ -44,8 +44,8 @@ def lat_nll_vs_test_nll(test_loss, lat_nll, save_dir=None):
         ax.set_ylabel(f"{PROSAILVARS[i]} loss (NLL)")
         ax.set_xscale("symlog",linthresh=1e-3)
         ax.set_yscale("symlog",linthresh=1e-2)
-        ax.set_xlim(right=-.01)
-        ax.set_ylim(top=-0.10)
+        # ax.set_xlim(right=-.01)
+        # ax.set_ylim(top=-0.10)
         if save_dir is not None:
             fig.savefig(save_dir+f'/test_loss_vs_{PROSAILVARS[i]}_NLL.svg')
     pass
@@ -58,7 +58,7 @@ def test_loss_vs_N(test_loss, configs, save_dir=None):
     ax.set_xlabel("RNN Length - Number of RNN blocks (N)")
     ax.set_ylabel("Test loss (NLL)")
     # ax.set_yscale("symlog",linthresh=1e-3)
-    ax.set_ylim(top=-.01)
+    # ax.set_ylim(top=-.01)
     if save_dir is not None:
         fig.savefig(save_dir+'/test_loss_vs_N.svg')
     return
@@ -70,7 +70,7 @@ def test_loss_vs_L(test_loss, configs, save_dir=None):
     ax.set_xlabel("RNN Width - Size of layers (L)")
     ax.set_ylabel("Test loss (NLL)")
     # ax.set_yscale("symlog",linthresh=1e-3)
-    ax.set_ylim(top=-.01)
+    # ax.set_ylim(top=-.01)
     if save_dir is not None:
         fig.savefig(save_dir+'/test_loss_vs_L.svg')
     return
@@ -82,7 +82,7 @@ def test_loss_vs_D(test_loss, configs, save_dir=None):
     ax.set_xlabel("RNN Depth - Depth of RNN blocks (D)")
     ax.set_ylabel("Test loss (NLL)")
     # ax.set_yscale("symlog",linthresh=1e-3)
-    ax.set_ylim(top=-.01)
+    # ax.set_ylim(top=-.01)
     if save_dir is not None:
         fig.savefig(save_dir+'/test_loss_vs_D.svg')
     return
@@ -112,7 +112,7 @@ def get_available_folds_number(test_loss):
     return available_folds_number - np.isnan(test_loss).astype(int).sum(1).reshape(-1,1)
 
 def main():
-    res_root_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rnn_hyper_3/"
+    res_root_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rnn_hyper_4/"
     configs, test_loss, lat_nll = preprocess_data(res_root_dir)
     plot_dir = res_root_dir + "/plots/"
     if not os.path.isdir(plot_dir):

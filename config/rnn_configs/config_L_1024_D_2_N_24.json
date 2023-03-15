@@ -22,5 +22,5 @@
     "supervised_kl": false,
     "encoder_type": "rnn",
     "rnn_depth": 2,
-    "rnn_number": 4
+    "rnn_number": 24
 }

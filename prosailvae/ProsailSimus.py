@@ -43,6 +43,7 @@ RSR of the sensor.
                  lossfn=gaussian_nll_loss):
           
         super().__init__()
+        self.bands=bands
         self.device=device
         self.prospect_range = prospect_range
         self.rsr = torch.from_numpy(np.loadtxt(rsr_file, unpack=True)).to(device)

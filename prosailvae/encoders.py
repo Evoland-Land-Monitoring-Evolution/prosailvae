@@ -567,7 +567,7 @@ class ProsailRCNNEncoder(nn.Module):
         super().__init__()
         self.device=device
         network = []
-        network.append(nn.Conv2d(s2refl_size + 2*3, first_layer_size, first_layer_kernel))
+        network.append(nn.Conv2d(s2refl_size + 2*3, first_layer_size, first_layer_kernel, padding='same'))
         input_sizes = [first_layer_size] + crnn_group_sizes
         assert len(crnn_group_sizes) == len(crnn_group_depth) and len(crnn_group_depth) == len(crnn_group_kernel_sizes) and len(crnn_group_kernel_sizes) == len(crnn_group_n)
         for i in range(len(crnn_group_n)):
@@ -578,8 +578,8 @@ class ProsailRCNNEncoder(nn.Module):
                                                    input_size=input_sizes[i]))
                 network.append(nn.ReLU())
         self.cnet = nn.Sequential(*network).to(device)
-        self.mu_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1).to(device)
-        self.logvar_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1).to(device)
+        self.mu_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding='same').to(device)
+        self.logvar_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding='same').to(device)
         if norm_mean is None:
             norm_mean = torch.zeros((s2refl_size,1,1,))
         if norm_std is None:

@@ -44,7 +44,7 @@ def select_encoder(encoder_type, vae_params, device, refl_norm_mean, refl_norm_s
                             norm_std=refl_norm_std)
     elif encoder_type=='rcnn':
         encoder = ProsailRCNNEncoder(s2refl_size=vae_params["input_size"], 
-                            output_size=output_size, 
+                            output_size=latent_dim, 
                             device=device,
                             norm_mean=refl_norm_mean,
                             norm_std=refl_norm_std)

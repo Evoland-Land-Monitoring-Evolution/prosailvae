@@ -252,7 +252,10 @@ class SimVAE(nn.Module):
         
         # TODO : remove Quickfix to reshape s2_r like rec:
         if len(s2_r.size())==4:
-            s2_r = s2_r.permute(0,2,3,1).reshape(rec.size(0), rec.size(1),1)
+            n_bands = s2_r.size(1)
+            patch_size = s2_r.size(2)
+            s2_r = s2_r.permute(0,2,3,1).reshape(patch_size * patch_size, n_bands.size(1), 1)
+            rec = rec.permute(0,2,3,1,4).reshape(patch_size * patch_size, n_bands.size(1), n_samples) # warning, assumes batch size is always 1
         rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}

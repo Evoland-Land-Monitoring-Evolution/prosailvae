@@ -108,7 +108,7 @@ RSR of the sensor.
             return s2_r * self.norm_std + self.norm_mean
         elif len(s2_r.size())==3:
             try:
-                return s2_r * self.norm_stdunsqueeze(2) + self.norm_meanunsqueeze(2)
+                return s2_r * self.norm_std.unsqueeze(2) + self.norm_mean.unsqueeze(2)
             except:
                 print(s2_r.size())
                 print(self.norm_std.unsqueeze(2).size())

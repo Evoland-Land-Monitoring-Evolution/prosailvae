@@ -141,9 +141,9 @@ class SimVAE(nn.Module):
         
         # decoding
         # Quickfix for angle dimension:
-        if len(angles.size())==4:
-            angles = angles.permute(0,2,3,1)
-            angles = angles.reshape(-1, 3)
+        # if len(angles.size())==4:
+        #     angles = angles.permute(0,2,3,1)
+        #     angles = angles.reshape(-1, 3)
         rec = self.decode(sim, angles)
         return dist_params, z, sim, rec
     
@@ -252,7 +252,7 @@ class SimVAE(nn.Module):
         
         # TODO : remove Quickfix to reshape s2_r like rec:
         if len(s2_r.size())==4:
-            s2_r = s2_r.permute(0,2,3,1).reshape(rec.size(0), rec.size(1),1)
+            s2_r = s2_r.permute(0,2,3,1).reshape(rec.size(0), rec.size(1), 1)
         rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}

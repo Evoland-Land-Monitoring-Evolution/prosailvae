@@ -22,12 +22,16 @@ class Decoder(nn.Module):
 
 class ProsailSimulatorDecoder(Decoder):
     
-    def __init__(self, prosailsimulator, ssimulator, device='cpu', loss_type='diag_nll'):
+    def __init__(self, prosailsimulator, ssimulator, device='cpu', 
+                 loss_type='diag_nll', patch_mode=False, patch_size=32):
         super().__init__()
         self.device = device
         self.prosailsimulator = prosailsimulator
         self.ssimulator = ssimulator
         self.loss_type = loss_type
+        self.patch_mode = patch_mode
+        self.patch_size = patch_size
+        self.nbands = len(ssimulator.bands)
     
     def change_device(self, device):
         self.device=device
@@ -45,6 +49,9 @@ class ProsailSimulatorDecoder(Decoder):
         rec = self.ssimulator(self.prosailsimulator(sim_input)).reshape(batch_size, 
                                                                         n_samples, 
                                                                         -1).transpose(1,2)
+        if self.patch_mode:
+            rec = rec.reshape(-1, self.patch_size, self.patch_size, self.nbands, n_samples)
+            rec = rec.permute(0,3,1,2,4)
         return rec
     
     # def loss(self, tgt, rec):        

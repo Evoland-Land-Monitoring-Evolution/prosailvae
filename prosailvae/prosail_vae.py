@@ -113,7 +113,8 @@ def get_prosail_VAE(rsr_dir,
                                  bands=bands)
     sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
                                             ssimulator=ssimulator,
-                                            loss_type=loss_type)
+                                            loss_type=loss_type, 
+                                            patch_mode=encoder_type=="rcnn")
     
     prosailVAE = SimVAE(encoder=encoder, decoder=sigmo_decoder, 
                       lat_space=lat_space, sim_space=pheno_var_space, 

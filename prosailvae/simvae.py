@@ -448,6 +448,8 @@ class lr_finder_elbo(nn.Module):
         if self.ssimulator.apply_norm:
             label = self.ssimulator.normalize(label)
         rec_loss_fn = select_rec_loss_fn(self.loss_type)
+        if len(label.size()) == 2:
+            label = label.unsqueeze(2)
         rec_loss = rec_loss_fn(label, rec)
         loss_sum = rec_loss.mean()
         sigma = dist_params[:, :, 1].squeeze()

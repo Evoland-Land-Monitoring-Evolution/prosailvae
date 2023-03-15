@@ -107,7 +107,12 @@ RSR of the sensor.
         if len(s2_r.size())==2:
             return s2_r * self.norm_std + self.norm_mean
         elif len(s2_r.size())==3:
-            return s2_r * self.norm_std.unsqueeze(0).unsqueeze(2) + self.norm_mean.unsqueeze(0).unsqueeze(2)
+            try:
+                return s2_r * self.norm_std.unsqueeze(0).unsqueeze(2) + self.norm_mean.unsqueeze(0).unsqueeze(2)
+            except:
+                print(s2_r.size())
+                print(self.norm_std.unsqueeze(0).unsqueeze(2).size())
+                raise ValueError
         else:
             raise NotImplementedError
 

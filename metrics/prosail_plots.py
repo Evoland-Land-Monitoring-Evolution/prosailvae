@@ -462,7 +462,7 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
 
 def plot_param_compare_dist(rec_dist, refl_dist, res_dir, normalized=False, params_name=None):
     if params_name is None:
-        params_name = PROSAILVARS
+        params_name = PROSAILVARS + ['phi_s', "phi_o", "psi"]
 
     filename='/sim_refl_dist.svg'
     xmax=1

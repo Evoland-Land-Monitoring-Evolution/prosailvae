@@ -76,9 +76,15 @@ def load_weiss_dataset(path_to_data_dir):
     return s2_r, prosail_vars
 
 def compare_weiss_w_simulations(prosail_var_weiss, prosail_var_simu):
-    fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_weiss, params_name=PROSAILVARS, res_dir = None,)
+    fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_weiss, params_name=PROSAILVARS+["phi_s", "phi_o", "psi"], res_dir = None,)
     fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/sim_vs_weiss_vers.png")
     return 
+
+def lognormal_pdf(x, mu, sigma):
+    return np.exp(-0.5*(np.log(x) - mu)**2/sigma**2 )/(x * sigma * np.sqrt(2*np.pi))
+
+def normal_pdf(x, mu, sigma):
+    return np.exp(-0.5*(x - mu)**2/sigma**2 )/(sigma * np.sqrt(2*np.pi))
 
 
 def main():

@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
+import pandas as pd
 
 import torch
 import os 
@@ -104,6 +105,19 @@ def sample_prosail_vars(var_dists, static_angles=False):
 
     return N, cab, car, cbrown, caw, cm, lai, lidfa, hspot, psoil, rsoil, tts, tto, psi
 
+def sample_angles(n_samples=100):
+    PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
+    path_to_file = PATH_TO_DATA_DIR + "/InputNoNoise_2.csv"
+    assert os.path.isfile(path_to_file)
+    df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
+    tts_w = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
+    tto_w = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
+    psi_w = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
+    n_data = len(psi_w)
+    sample_idx = np.random.randint(low=0,high=n_data,size=(n_samples))
+    return tts_w[sample_idx], tto_w[sample_idx], psi_w[sample_idx]
+
+
 def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=None, n_samples=1, 
                                 uniform_mode=True, lai_corr=False, lai_conv_override=None):
     prosail_vars = np.zeros((n_samples, 14))
@@ -121,12 +135,13 @@ def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=Non
     prosail_vars[:,9] = np_sample_param(var_dists.psoil, lai=lai if lai_corr else None, n_samples=n_samples, uniform_mode=uniform_mode, lai_conv_override=lai_conv_override)
     prosail_vars[:,10] = np_sample_param(var_dists.rsoil, lai=lai if lai_corr else None, n_samples=n_samples, uniform_mode=uniform_mode, lai_conv_override=lai_conv_override)
 
-    if tts is None:
-        tts = np_sample_param(var_dists.tts, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
-    if tto is None:
-        tto = np_sample_param(var_dists.tto, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
-    if psi is None:
-        psi = np_sample_param(var_dists.psi, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
+    # if tts is None:
+    #     tts = np_sample_param(var_dists.tts, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
+    # if tto is None:
+    #     tto = np_sample_param(var_dists.tto, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
+    # if psi is None:
+    #     psi = np_sample_param(var_dists.psi, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
+    tts, tto, psi = sample_angles(n_samples)
     prosail_vars[:,11] = tts
     prosail_vars[:,12] = tto
     prosail_vars[:,13] = psi
@@ -394,21 +409,27 @@ def get_data_generation_parser():
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
                         type=int, default=42000)
+    
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
                         type=str, default="test_dist_")
+    
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
+    
     parser.add_argument("-s", dest="noise",
                         help="gaussian noise level on simulated data",
                         type=float, default=0)
+    
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data')
+    
     parser.add_argument("-sa", dest="static_angles",
                         help="Set to True to generate prosail samples with a single angular configuration",
                         type=bool, default=False)
+    
     parser.add_argument("-w", dest="weiss_mode",
                         help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
                         type=bool, default=True)        

@@ -148,7 +148,7 @@ def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=
                 prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
-def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, n_samples_per_batch=1024):
+def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, n_samples_per_batch=1024, uniform_mode=False):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
     
@@ -164,7 +164,7 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
             sim_s2_r += add_noise
         prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
 
-    prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch)
+    prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch, uniform_mode=uniform_mode)
     sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
     if noise>0:
         sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
@@ -340,7 +340,7 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
-def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False):
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False):
 
     psimulator = ProsailSimulator()
     bands = [1,2,3,4,5,6,7,8,11,12]
@@ -351,7 +351,7 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
                                                             noise=noise,
                                                             psimulator=psimulator,
                                                             ssimulator=ssimulator,
-                                                            n_samples_per_batch=1024)
+                                                            n_samples_per_batch=1024, uniform_mode=uniform_mode)
     norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
     torch.save(torch.from_numpy(prosail_vars), 
                data_dir + data_file_prefix + "prosail_sim_vars.pt") 
@@ -393,10 +393,10 @@ def get_data_generation_parser():
 
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
-                        type=int, default=1000)
+                        type=int, default=42000)
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
-                        type=str, default="weiss_test_")
+                        type=str, default="test_dist_")
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
@@ -411,7 +411,7 @@ def get_data_generation_parser():
                         type=bool, default=False)
     parser.add_argument("-w", dest="weiss_mode",
                         help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
-                        type=bool, default=True)
+                        type=bool, default=True)        
     
     parser.add_argument("-wd", dest="weiss_dataset",
                         help="Set to True to generate a training dataset from weiss data",
@@ -431,7 +431,7 @@ if  __name__ == "__main__":
         save_weiss_dataset(data_dir, parser.rsr_dir, parser.noise)
     else:
         save_dataset(data_dir, parser.file_prefix, parser.rsr_dir,
-                        parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode)
+                        parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode, uniform_mode=False)
 
 
     

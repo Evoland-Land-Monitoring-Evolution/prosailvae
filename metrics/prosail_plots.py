@@ -456,8 +456,78 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
     # Save the figure and show
     plt.tight_layout()
     plt.show()
-    fig.savefig(res_dir + filename)
-    return 
+    if res_dir is not None:
+        fig.savefig(res_dir + filename)
+    return fig, ax2
+
+def plot_param_compare_dist(rec_dist, refl_dist, res_dir, normalized=False, params_name=None):
+    if params_name is None:
+        params_name = PROSAILVARS
+
+    filename='/sim_refl_dist.svg'
+    xmax=1
+    xmin=0
+    if normalized:
+        # bands_dist = (bands_dist - ssimulator.norm_mean) / ssimulator.norm_std
+        filename='/sim_normalized_refl_dist.svg'
+        xmax=6
+        xmin=-6
+    fig = plt.figure(figsize=(18,12), dpi=150,)
+    ax2=[]
+    gs = fig.add_gridspec(len(params_name),1)
+    for j in range(len(params_name)):
+        ax2.append(fig.add_subplot(gs[j, 0]))
+    
+    for j in range(len(params_name)):
+        v2 = ax2[j].violinplot(rec_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
+                showmeans=True, showextrema=True, showmedians=False, vert=False)
+
+        # ax2[j].set_xlim(xmin, xmax)
+
+        
+        for b in v2['bodies']:
+            # get the center
+            m = np.mean(b.get_paths()[0].vertices[:, 1])
+            b.get_paths()[0].vertices[:, 1] = np.clip(b.get_paths()[0].vertices[:, 1], m, np.inf)
+            b.set_color('r')
+            b.set_facecolor('blue')
+            b.set_edgecolor('blue')
+        for partname in ('cbars','cmins','cmaxes','cmeans'):
+            v = v2[partname]
+            v.set_edgecolor('blue')
+            v.set_linewidth(1)
+        
+        v2 = ax2[j].violinplot(refl_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
+                showmeans=True, showextrema=True, showmedians=False, vert=False)
+
+        # ax2[j].set_xlim(xmin, xmax)
+
+        
+        for b in v2['bodies']:
+            # get the center
+            m = np.mean(b.get_paths()[0].vertices[:, 1])
+            b.get_paths()[0].vertices[:, 1] = np.clip(b.get_paths()[0].vertices[:, 1], -np.inf, m)
+            b.set_color('r')
+            b.set_facecolor('red')
+            b.set_edgecolor('red')
+        for partname in ('cbars','cmins','cmaxes','cmeans'):
+            v = v2[partname]
+            v.set_edgecolor('red')
+            v.set_linewidth(1)
+            
+            
+        ax2[j].set_yticks([0])
+        ax2[j].set_yticklabels([])
+        ax2[j].set_ylabel(params_name[j])
+        ax2[j].xaxis.grid(True)
+        
+        
+    # Save the figure and show
+    plt.tight_layout()
+    plt.show()
+    if res_dir is not None:
+        fig.savefig(res_dir + filename)
+    return fig, ax2
 
 def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='', 
               filename='pair_plot.png'):

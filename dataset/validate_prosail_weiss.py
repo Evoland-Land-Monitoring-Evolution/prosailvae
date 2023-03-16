@@ -4,8 +4,9 @@ import torch
 import prosailvae
 import matplotlib.pyplot as plt
 import os 
-from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
+from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, PROSAILVARS
 from tqdm import trange
+from metrics.prosail_plots import plot_param_compare_dist
 
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
 
@@ -74,10 +75,21 @@ def load_weiss_dataset(path_to_data_dir):
     prosail_vars[:,13] = psi.reshape(-1)
     return s2_r, prosail_vars
 
+def compare_weiss_w_simulations(prosail_var_weiss, prosail_var_simu):
+    fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_weiss, params_name=PROSAILVARS, res_dir = None,)
+
+    return 
+
+
 def main():
     s2_r, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
     lai = prosail_vars[:,6]
     s2_r = torch.as_tensor(s2_r)
+    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/"
+    t_prosail_vars = torch.load(data_dir + "test_dist_prosail_sim_vars.pt")
+    # t_s2_r = torch.load(data_dir + "test_dist_prosail_s2_sim_refl.pt")
+    compare_weiss_w_simulations(torch.as_tensor(prosail_vars), t_prosail_vars)
+
     rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
     results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
     psimulator = ProsailSimulator()
@@ -98,5 +110,4 @@ def main():
     return
 
 if __name__=="__main__":
-    load_prosail_params()
     main()

@@ -77,7 +77,7 @@ def load_weiss_dataset(path_to_data_dir):
 
 def compare_weiss_w_simulations(prosail_var_weiss, prosail_var_simu):
     fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_weiss, params_name=PROSAILVARS, res_dir = None,)
-
+    fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/sim_vs_weiss_vers.png")
     return 
 
 

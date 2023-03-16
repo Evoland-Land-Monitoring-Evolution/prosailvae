@@ -156,7 +156,7 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
     for i in range(n_full_batch):
-        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=n_samples_per_batch)
+        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=n_samples_per_batch, uniform_mode=uniform_mode)
         sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())).numpy()
         if noise>0:
             sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)

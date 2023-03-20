@@ -112,7 +112,7 @@ def get_available_folds_number(test_loss):
     return available_folds_number - np.isnan(test_loss).astype(int).sum(1).reshape(-1,1)
 
 def main():
-    res_root_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rnn_hyper_5/"
+    res_root_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rnn_hyper_6/"
     configs, test_loss, lat_nll = preprocess_data(res_root_dir)
     plot_dir = res_root_dir + "/plots/"
     if not os.path.isdir(plot_dir):

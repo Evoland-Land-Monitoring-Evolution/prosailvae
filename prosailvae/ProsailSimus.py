@@ -276,7 +276,10 @@ class ProsailVarsDist:
     #          'psi' : {'min': 0.0, 'max': 360, 'mean': None, 'std': None, 'lai_conv': None,
     #           'law': 'uniform'}
     #          }
-    Dists = {'N': {'min': 1.2, 'max': 2.2, 'mean': 1.5, 'std': 0.3, 'lai_conv': 10,
+    Dists = {
+            # 'N': {'min': 1.2, 'max': 2.2, 'mean': 1.5, 'std': 0.3, 'lai_conv': 10,
+            #     'law': 'gaussian'},
+            'N': {'min': 1.2, 'max': 1.8, 'mean': 1.5, 'std': 0.3, 'lai_conv': 10,
                 'law': 'gaussian'},
             'cab': {'min': 20.0, 'max': 90.0, 'mean': 45.0, 'std': 30.0, 'lai_conv': 10,
                     'law': 'gaussian'},

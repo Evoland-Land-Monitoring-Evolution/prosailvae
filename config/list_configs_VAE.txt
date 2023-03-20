@@ -1,7 +1,0 @@
-regression_configs_VAE/config_0.json
-regression_configs_VAE/config_1.json
-regression_configs_VAE/config_2.json
-regression_configs_VAE/config_3.json
-regression_configs_VAE/config_4.json
-regression_configs_VAE/config_5.json
-regression_configs_VAE/config_6.json

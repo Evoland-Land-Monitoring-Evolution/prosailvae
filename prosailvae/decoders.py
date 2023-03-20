@@ -23,15 +23,14 @@ class Decoder(nn.Module):
 class ProsailSimulatorDecoder(Decoder):
     
     def __init__(self, prosailsimulator, ssimulator, device='cpu', 
-                 loss_type='diag_nll', patch_mode=False, patch_size=32):
+                 loss_type='diag_nll'):
         super().__init__()
         self.device = device
         self.prosailsimulator = prosailsimulator
         self.ssimulator = ssimulator
         self.loss_type = loss_type
-        self.patch_mode = patch_mode
-        self.patch_size = patch_size
         self.nbands = len(ssimulator.bands)
+        self.rec_loss_fn = select_rec_loss_fn(self.loss_type)
     
     def change_device(self, device):
         self.device=device
@@ -49,20 +48,11 @@ class ProsailSimulatorDecoder(Decoder):
         rec = self.ssimulator(self.prosailsimulator(sim_input)).reshape(batch_size, 
                                                                         n_samples, 
                                                                         -1).transpose(1,2)
-        if self.patch_mode:
-            rec = rec.reshape(-1, self.patch_size, self.patch_size, self.nbands, n_samples)
-            rec = rec.permute(0,3,1,2,4)
         return rec
-    
-    # def loss(self, tgt, rec):        
-    #     rec_err_var = torch.var(rec-tgt.unsqueeze(1), 1).unsqueeze(1)
-    #     rec_loss = gaussian_nll(tgt.unsqueeze(1), rec, rec_err_var, device=self.device).mean() 
-    #     return rec_loss
     
     def loss(self, tgt, rec):        
         if self.ssimulator.apply_norm:
             tgt = self.ssimulator.normalize(tgt)
-        rec_loss_fn = select_rec_loss_fn(self.loss_type)
-        rec_loss = rec_loss_fn(tgt, rec)
+        rec_loss = self.rec_loss_fn(tgt, rec)
         return rec_loss
 

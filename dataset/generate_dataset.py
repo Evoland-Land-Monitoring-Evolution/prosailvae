@@ -25,7 +25,12 @@ PROSAIL_VARS = [
     "lai", "lidfa", "hspot", "psoil", "rsoil"
 ]
 def correlate_with_lai(lai, V, V_mean, lai_conv):
-    return V_mean + (V - V_mean) * (lai_conv - lai) / lai_conv
+    # V_corr = np.zeros_like(V)
+    # V_corr[V >= V_mean] = V[V >= V_mean]
+    # V_corr[V < V_mean] = V_mean + (V[V < V_mean] - V_mean) * np.maximum((lai_conv - lai[V < V_mean]), 0) / lai_conv
+    # V_corr[lai > 10] = V_mean
+    V_corr = V_mean + (V - V_mean) * np.maximum((lai_conv - lai), 0) / lai_conv
+    return V_corr
 
 def sample_param(param_dist, lai=None):
     if param_dist[5] == "uniform":
@@ -163,7 +168,8 @@ def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=
                 prosail_s2_sim[i,:] = mean
     return prosail_vars, prosail_s2_sim
 
-def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, n_samples_per_batch=1024, uniform_mode=False):
+def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
+                                n_samples_per_batch=1024, uniform_mode=False, lai_corr=True):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
     
@@ -171,7 +177,7 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
     for i in range(n_full_batch):
-        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=n_samples_per_batch, uniform_mode=uniform_mode)
+        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=n_samples_per_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
         sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())).numpy()
         if noise>0:
             sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)
@@ -179,7 +185,7 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
             sim_s2_r += add_noise
         prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
 
-    prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch, uniform_mode=uniform_mode)
+    prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
     sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
     if noise>0:
         sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
@@ -355,7 +361,7 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
-def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False):
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False, lai_corr=True):
 
     psimulator = ProsailSimulator()
     bands = [1,2,3,4,5,6,7,8,11,12]
@@ -366,7 +372,9 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
                                                             noise=noise,
                                                             psimulator=psimulator,
                                                             ssimulator=ssimulator,
-                                                            n_samples_per_batch=1024, uniform_mode=uniform_mode)
+                                                            n_samples_per_batch=1024, 
+                                                            uniform_mode=uniform_mode,
+                                                            lai_corr=lai_corr)
     norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
     torch.save(torch.from_numpy(prosail_vars), 
                data_dir + data_file_prefix + "prosail_sim_vars.pt") 
@@ -377,7 +385,7 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
     torch.save(norm_std, parser.data_dir + data_file_prefix + "norm_std.pt") 
 
 
-def save_weiss_dataset(data_dir, rsr_dir, noise):
+def save_weiss_dataset(data_dir, rsr_dir, noise, lai_corr=True):
 
     PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
     prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
@@ -398,7 +406,7 @@ def save_weiss_dataset(data_dir, rsr_dir, noise):
     torch.save(norm_mean, parser.data_dir + "weiss_norm_mean.pt") 
     torch.save(norm_std, parser.data_dir + "weiss_norm_std.pt") 
 
-    save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True)
+    save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True, lai_corr=lai_corr)
 
 def get_data_generation_parser():
     """
@@ -449,10 +457,10 @@ if  __name__ == "__main__":
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     if parser.weiss_dataset:
-        save_weiss_dataset(data_dir, parser.rsr_dir, parser.noise)
+        save_weiss_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True)
     else:
         save_dataset(data_dir, parser.file_prefix, parser.rsr_dir,
-                        parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode, uniform_mode=False)
+                        parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode, uniform_mode=False, lai_corr=True)
 
 
     

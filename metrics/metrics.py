@@ -173,7 +173,7 @@ def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_
         for i, b in enumerate(weiss_loader):
             s2_r = b[0]
             s2_a = b[1]
-            y = PROSAIL_VAE.encode(s2_r, s2_a)
+            y, angles = PROSAIL_VAE.encode(s2_r, s2_a)
             dist_params = PROSAIL_VAE.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = PROSAIL_VAE.lat_space.latent_pdf(dist_params)
             prosail_params_mode = PROSAIL_VAE.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=n_pdf_sample_points)

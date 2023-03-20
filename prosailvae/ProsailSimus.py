@@ -11,8 +11,8 @@ import numpy as np
 import torch
 import prosail
 from prosail import spectral_lib
-from prosailvae.utils import gaussian_nll_loss
-from prosailvae.spectral_indices import NDVI, mNDVI750, ND_lma, NDII, LAI_savi, CRI2
+from prosailvae.utils import gaussian_nll_loss, torch_select_unsqueeze
+from prosailvae.spectral_indices import INDEX_DICT
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -39,8 +39,7 @@ RSR of the sensor.
                  device='cpu',
                  norm_mean=None,
                  norm_std=None,
-                 apply_norm=True,
-                 lossfn=gaussian_nll_loss):
+                 apply_norm=True):
           
         super().__init__()
         self.bands=bands
@@ -100,21 +99,14 @@ RSR of the sensor.
             axis=2) / self.s2norm_factor_d  
         return simu
     
-    def normalize(self, s2_r):
-        return (s2_r - self.norm_mean) / self.norm_std
+    def normalize(self, s2_r, bands_dim=1):
+        dim_s2_r = len(s2_r.size())
+        return (s2_r - torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)) / torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r)
     
-    def unnormalize(self, s2_r):
-        if len(s2_r.size())==2:
-            return s2_r * self.norm_std + self.norm_mean
-        elif len(s2_r.size())==3:
-            try:
-                return s2_r * self.norm_std.unsqueeze(2) + self.norm_mean.unsqueeze(2)
-            except:
-                print(s2_r.size())
-                print(self.norm_std.unsqueeze(2).size())
-                raise ValueError
-        else:
-            raise NotImplementedError
+    def unnormalize(self, s2_r, bands_dim=1):
+        dim_s2_r = len(s2_r.size())
+        return s2_r * torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r) + torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)
+
 
     def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)
@@ -123,13 +115,9 @@ RSR of the sensor.
         return simu  # type: ignore
     
     def index_loss(self, s2_r, s2_rec, lossfn=gaussian_nll_loss,
-                    index_terms=["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"]):
-                    
-        if len(s2_rec.size())>2:
-            n_samples = s2_rec.size(2)
-        else:
-            n_samples = 1
-            
+                    index_terms=["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"],
+                    bands_dim=1):
+
         u_s2_r = self.unnormalize(s2_r)
         if self.apply_norm:
             u_s2_rec = self.unnormalize(s2_rec)
@@ -137,30 +125,10 @@ RSR of the sensor.
             u_s2_rec = s2_rec
 
         loss = torch.tensor(0.0).to(s2_r.device)
-        if "NDVI" in index_terms:
-            ndvi = NDVI(u_s2_r).view(-1,1)
-            ndvi_rec = NDVI(u_s2_rec).view(-1,1,n_samples)
-            loss += lossfn(ndvi, ndvi_rec)
-        if "mNDVI750" in index_terms:
-            mndvi750 = mNDVI750(u_s2_r).view(-1,1)
-            mndvi750_rec = mNDVI750(u_s2_rec).view(-1,1,n_samples)
-            loss += lossfn(mndvi750, mndvi750_rec)
-        if "CRI2" in index_terms:
-            cri2 = CRI2(u_s2_r).view(-1,1)
-            cri2_rec = CRI2(u_s2_rec).view(-1,1,n_samples)
-            loss += lossfn(cri2, cri2_rec)
-        if "NDII" in index_terms:
-            ndii = NDII(u_s2_r).view(-1,1)
-            ndii_rec = NDII(u_s2_rec).view(-1,1,n_samples)
-            loss += lossfn(ndii, ndii_rec)
-        if "ND_lma" in index_terms:
-            nd_lma = ND_lma(u_s2_r).view(-1,1)
-            nd_lma_rec = ND_lma(u_s2_rec).view(-1,1,n_samples)
-            loss += lossfn(nd_lma, nd_lma_rec)  
-        if "LAI_savi" in index_terms:
-            lai_savi = LAI_savi(u_s2_r).view(-1,1)
-            lai_savi_rec = LAI_savi(u_s2_rec).view(-1,1,n_samples)
-            loss += lossfn(lai_savi, lai_savi_rec)      
+        for idx in index_terms:
+            spectral_idx_tgt = INDEX_DICT[idx](u_s2_r, bands_dim=bands_dim)
+            spectral_idx_rec = INDEX_DICT[idx](u_s2_rec, bands_dim=bands_dim)
+            loss += lossfn(spectral_idx_tgt, spectral_idx_rec) 
         return loss
 
 class ProsailSimulator():

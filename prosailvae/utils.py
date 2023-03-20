@@ -15,8 +15,11 @@ import numpy as np
 from  matplotlib.lines import Line2D
 
 def select_rec_loss_fn(loss_type):
-    if loss_type == "diag_nll" or loss_type == "hybrid_nll":
-            rec_loss_fn = gaussian_nll_loss
+    simple_losses_1d = ["diag_nll", "hybrid_nll", "lai_nll"]
+    if loss_type in simple_losses_1d:
+        rec_loss_fn = NLLLoss(2,1)
+    elif loss_type == "spatial_nll":
+        rec_loss_fn = NLLLoss(0,1)
     elif loss_type == "full_nll":
         rec_loss_fn = full_gaussian_nll_loss
     elif loss_type =='mse':
@@ -71,19 +74,19 @@ def full_gaussian_nll(x, mu, sigma_mat, eps=1e-6, device='cpu', regularization=1
     return ((x - mu).unsqueeze(1) @ inverse_sigma_mat @ (x - mu).unsqueeze(2)).squeeze() +  \
             2 * torch.log(torch.max(torch.diagonal(L,0,1,2), eps)).sum(1)
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu'):
+def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1):
     eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(1) +  \
-            torch.log(torch.max(sigma, eps)).sum(1)
+    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(sum_dim) +  \
+            torch.log(torch.max(sigma, eps)).sum(sum_dim)
 
-def gaussian_nll_loss(tgt, recs):
-    # rec_err_var = torch.var(recs-tgt.unsqueeze(2), 2)
+def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1):
     if len(recs.size()) < 3:
+        raise ValueError("recs needs a batch, a feature and a sample dimension")
+    elif recs.size(sample_dim)==1:
         raise ValueError("NLL needs more than 1 samples of distribution.")
-    elif recs.size(2)==1:
-        raise ValueError("NLL needs more than 1 samples of distribution.")
-    rec_err_var = torch.var(recs, 2).unsqueeze(2)
-    return gaussian_nll(tgt, recs.mean(2).unsqueeze(2), rec_err_var, device=tgt.device).mean() 
+    rec_err_var = torch.var(recs, sample_dim).unsqueeze(sample_dim)
+    rec_mu = recs.mean(sample_dim).unsqueeze(sample_dim)
+    return gaussian_nll(tgt, rec_mu, rec_err_var, sum_dim=feature_dim).mean() 
 
 def full_gaussian_nll_loss(tgt, recs):
     err = recs # - tgt.unsqueeze(2)
@@ -98,6 +101,14 @@ def mse_loss(tgt, recs):
     rec_lossfn = nn.MSELoss()
     return rec_lossfn(rec, tgt)
 
+class NLLLoss(nn.Module):
+    def __init__(self, sample_dim=2, feature_dim=1) -> None:
+        super().__init__()
+        self.sample_dim = sample_dim
+        self.feature_dim = feature_dim 
+    def forward(self, targets, inputs):
+        return gaussian_nll_loss(targets, inputs, sample_dim=self.sample_dim, feature_dim=self.feature_dim)
+    
 def cuda_cholesky(A):
     n = A.size(0)
     assert A.size(1) == n
@@ -112,16 +123,6 @@ def cuda_cholesky(A):
     L[n-1,n-1,:] = torch.sqrt(A[n-1,n-1,:] - L[n-1,:,:].pow(2).sum(0))
     return L
 
-# A = torch.rand(5,5,1).abs()
-# A = A+A.transpose(0,1)+torch.eye(5).reshape(5,5,1)
-# import time
-# t0=time.time()
-# L = cuda_cholesky(A)
-# t1=time.time()
-# L2 = torch.linalg.cholesky_ex(A.squeeze())
-# t2=time.time()
-# print(str(t1-t0))
-# print(str(t2-t1))
 
 def plot_grad_flow(model, savefile=None):
     '''Plots the gradients flowing through different layers in the net during training.
@@ -160,3 +161,16 @@ def plot_grad_flow(model, savefile=None):
                 Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
     if savefile is not None:
         fig.savefig(savefile)
+
+
+def torch_select_unsqueeze(tensor, select_dim, nb_dim):
+    # assumes tensor is 1-dimensional
+    
+    if nb_dim < 0:
+        raise ValueError 
+    elif nb_dim == 1:
+        return tensor
+    else:
+        view_dims = [1 for _ in range(nb_dim)]
+        view_dims[select_dim] = -1
+        return tensor.squeeze().view(view_dims)

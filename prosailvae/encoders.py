@@ -401,7 +401,7 @@ class ProsailCNNEncoder(nn.Module):
     """
 
     def __init__(self, encoder_sizes: list[int]=[20,20], enc_kernel_sizes: list[int]=[3,3],
-                 device='cpu', norm_mean=None, norm_std=None, lat_space_size=10):
+                 device='cpu', norm_mean=None, norm_std=None, lat_space_size=10, padding="valid"):
         """
         Constructor
 
@@ -418,7 +418,7 @@ class ProsailCNNEncoder(nn.Module):
                         in_layer,
                         out_layer,
                         kernel_size=kernel_size,
-                        padding="same",
+                        padding=padding,
                     ),
                     nn.ReLU(),
                 ]
@@ -513,7 +513,8 @@ class EncoderCResNetBlock(Encoder):
                  last_activation=None, 
                  device='cpu', 
                  input_size=10,
-                 stride=1): 
+                 stride=1,
+                 padding="valid"): 
         super().__init__()
 
         layers = []        
@@ -522,7 +523,7 @@ class EncoderCResNetBlock(Encoder):
                         input_size,
                         output_size,
                         kernel_size=kernel_size,
-                        padding="same",
+                        padding=padding,
                         stride=stride
                     ))
             if i < depth-1:
@@ -556,7 +557,8 @@ class ProsailRCNNEncoder(nn.Module):
                  crnn_group_depth: list[int]=[2,2], 
                  crnn_group_kernel_sizes: list[int]=[3,3],
                  crnn_group_n = [1,1],
-                 device='cpu', norm_mean=None, norm_std=None, output_size=11):
+                 device='cpu', norm_mean=None, norm_std=None, output_size=11,
+                 padding='valid'):
         """
         Constructor
 
@@ -567,7 +569,7 @@ class ProsailRCNNEncoder(nn.Module):
         super().__init__()
         self.device=device
         network = []
-        network.append(nn.Conv2d(s2refl_size + 2*3, first_layer_size, first_layer_kernel, padding='same'))
+        network.append(nn.Conv2d(s2refl_size + 2*3, first_layer_size, first_layer_kernel, padding=padding))
         input_sizes = [first_layer_size] + crnn_group_sizes
         assert len(crnn_group_sizes) == len(crnn_group_depth) and len(crnn_group_depth) == len(crnn_group_kernel_sizes) and len(crnn_group_kernel_sizes) == len(crnn_group_n)
         for i in range(len(crnn_group_n)):
@@ -575,11 +577,12 @@ class ProsailRCNNEncoder(nn.Module):
                 network.append(EncoderCResNetBlock(output_size=crnn_group_sizes[i],
                                                    depth=crnn_group_depth[i],
                                                    kernel_size=crnn_group_kernel_sizes[i],
-                                                   input_size=input_sizes[i]))
+                                                   input_size=input_sizes[i],
+                                                   padding=padding))
                 network.append(nn.ReLU())
         self.cnet = nn.Sequential(*network).to(device)
-        self.mu_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding='same').to(device)
-        self.logvar_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding='same').to(device)
+        self.mu_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding=padding).to(device)
+        self.logvar_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding=padding).to(device)
         if norm_mean is None:
             norm_mean = torch.zeros((s2refl_size,1,1,))
         if norm_std is None:

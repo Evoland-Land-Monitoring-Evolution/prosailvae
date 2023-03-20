@@ -204,7 +204,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
 def setupTraining():
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "best_config.json",
+              "-c", "config_dev.json",
               "-cs", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_kl_model_config.json",
               "-ws", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/sup_kl_model_weights.tar",
               "-x", "1",

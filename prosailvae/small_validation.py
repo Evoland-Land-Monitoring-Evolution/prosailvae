@@ -37,19 +37,19 @@ def get_model(model_dir):
                                 logger_name=LOGGER_NAME, vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model)
     return PROSAIL_VAE
 
-def compare_reflectances(s2_r, s2_r_sim, site):
+def compare_reflectances(s2_r, s2_r_sim, site, bands=[0]):
     fig, ax = plt.subplots(dpi=200)
     dis = 0.3
-    bp_real = ax.boxplot(s2_r.transpose(0,1),positions=torch.arange(0,20,2)-dis, widths=0.2,patch_artist=True, showfliers=False)
-    bp_sim = ax.boxplot(s2_r_sim.transpose(0,1), positions=torch.arange(0,20,2)+dis, widths=0.2,patch_artist=True, showfliers=False)
+    bp_real = ax.boxplot(s2_r.transpose(0,1),positions=torch.arange(0,2*s2_r.shape[1],2)-dis, widths=0.2,patch_artist=True, showfliers=False)
+    bp_sim = ax.boxplot(s2_r_sim.transpose(0,1), positions=torch.arange(0,2*s2_r.shape[1],2)+dis, widths=0.2,patch_artist=True, showfliers=False)
    
     for patch in bp_real['boxes']:
         patch.set_facecolor("green")
 
     for patch in bp_sim['boxes']:
         patch.set_facecolor("red")
-    ax.set_xticks(torch.arange(0,20,2))
-    ax.set_xticklabels(BANDS)
+    ax.set_xticks(torch.arange(0,2*s2_r.shape[1],2))
+    ax.set_xticklabels(np.array(BANDS)[bands])
     ax.set_ylabel("Reflectance")
     ax.legend([bp_real["boxes"][0], bp_sim["boxes"][0]], ['Validation', 'Simulated'], loc='upper left')
     ax.set_title(f'Reflectance boxplots for {site} site')
@@ -103,37 +103,38 @@ def compare_datasets():
     results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    loader = get_simloader(file_prefix="full_", data_dir=data_dir)
-    PROSAIL_VAE = get_model(model_dir)
+    loader = get_simloader(file_prefix="test_dist_", data_dir=data_dir)
+    # PROSAIL_VAE = get_model(model_dir)
     for site in [ "spain1", "spain2", "italy1", "italy2", "france", "spain1"]:
         print(site)
         relative_s2_time="both"
         s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
-        dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode')
-        print(s2_r.size())
-        sim_lai = sim[:,6,:]
-        # for i in range(lais.size(1)):
-        s2_r_sim = loader.dataset[:][0]
-        s2_a_sim = loader.dataset[:][1]
-        prosail_var_sim = loader.dataset[:][2]
-        lai_sim = prosail_var_sim[:,6].unsqueeze(1)
-        idx_valid_data = 0
-        valid_angles = s2_a[idx_valid_data,:]
-        valid_refl = s2_r[idx_valid_data,:]
-
-        fig, ax = compare_reflectances(s2_r, s2_r_sim, site)
-        fig.savefig(results_dir+f'/{site}_refl_distribution.svg')
-        if site != "franc":
-            fig, ax = compare_lai(lais, lai_sim, site)
-            fig.savefig(results_dir+f'/{site}_LAI_distribution.svg')
-            lut_lai = lut_pred(s2_r, s2_r_sim, lai_sim)
-            lut_lai_advanced = lut_advanced_pred(s2_r, s2_r_sim, lai_sim, s2_a, s2_a_sim)  
-            fig, ax = plot_lai_preds(lais, lut_lai_advanced, time_delta, site)
-            fig.savefig(results_dir+f'/{site}_LUT_w_angles_LAI_pred.svg')
-            fig, ax = plot_lai_preds(lais, lut_lai, time_delta, site)
-            fig.savefig(results_dir+f'/{site}_LUT_LAI_pred.svg')
-            fig, ax = plot_lai_preds(lais, sim_lai, time_delta, site)
-            fig.savefig(results_dir+f'/{site}_prosail_vae_LAI_pred.svg')
+        # dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode')
+        if len(s2_r) > 0:
+            print(s2_r.size())
+            # sim_lai = sim[:,6,:]
+            # for i in range(lais.size(1)):
+            s2_r_sim = loader.dataset[:][0]
+            s2_a_sim = loader.dataset[:][1]
+            prosail_var_sim = loader.dataset[:][2]
+            lai_sim = prosail_var_sim[:,6].unsqueeze(1)
+            idx_valid_data = 0
+            valid_angles = s2_a[idx_valid_data,:]
+            valid_refl = s2_r[idx_valid_data,:]
+            bands = [1,2,3,4,5,6,8,9]
+            fig, ax = compare_reflectances(s2_r[:,bands], s2_r_sim, site, bands=bands)
+            fig.savefig(results_dir+f'/{site}_refl_distribution.svg')
+            # if site != "franc":
+            #     fig, ax = compare_lai(lais, lai_sim, site)
+            #     fig.savefig(results_dir+f'/{site}_LAI_distribution.svg')
+            #     lut_lai = lut_pred(s2_r, s2_r_sim, lai_sim)
+            #     lut_lai_advanced = lut_advanced_pred(s2_r, s2_r_sim, lai_sim, s2_a, s2_a_sim)  
+            #     fig, ax = plot_lai_preds(lais, lut_lai_advanced, time_delta, site)
+            #     fig.savefig(results_dir+f'/{site}_LUT_w_angles_LAI_pred.svg')
+            #     fig, ax = plot_lai_preds(lais, lut_lai, time_delta, site)
+            #     fig.savefig(results_dir+f'/{site}_LUT_LAI_pred.svg')
+            #     fig, ax = plot_lai_preds(lais, sim_lai, time_delta, site)
+            #     fig.savefig(results_dir+f'/{site}_prosail_vae_LAI_pred.svg')
         plt.close('all')
     return
 

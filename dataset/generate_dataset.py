@@ -25,11 +25,11 @@ PROSAIL_VARS = [
     "lai", "lidfa", "hspot", "psoil", "rsoil"
 ]
 def correlate_with_lai(lai, V, V_mean, lai_conv):
-    V_corr = np.zeros_like(V)
-    V_corr[V >= V_mean] = V[V >= V_mean]
-    V_corr[V < V_mean] = V_mean + (V[V < V_mean] - V_mean) * np.maximum((lai_conv - lai[V < V_mean]), 0) / lai_conv
-    V_corr[lai > 10] = V_mean
-    # V_corr = V_mean + (V - V_mean) * np.maximum((lai_conv - lai), 0) / lai_conv
+    # V_corr = np.zeros_like(V)
+    # V_corr[V >= V_mean] = V[V >= V_mean]
+    # V_corr[V < V_mean] = V_mean + (V[V < V_mean] - V_mean) * np.maximum((lai_conv - lai[V < V_mean]), 0) / lai_conv
+    # V_corr[lai > 10] = V_mean
+    V_corr = V_mean + (V - V_mean) * np.maximum((lai_conv - lai), 0) / lai_conv
     return V_corr
 
 def sample_param(param_dist, lai=None):

@@ -75,6 +75,11 @@ def load_weiss_dataset(path_to_data_dir):
     prosail_vars[:,13] = psi.reshape(-1)
     return s2_r, prosail_vars
 
+def plot_lai_correlations(prosail_var_weiss,i):
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.scatter(prosail_var_weiss[:,i], prosail_var_weiss[:,6], s=1)
+
 def compare_weiss_w_simulations(prosail_var_weiss, prosail_var_simu):
     fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_weiss, params_name=PROSAILVARS+["phi_s", "phi_o", "psi"], res_dir = None,)
     fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/sim_vs_weiss_vers.png")

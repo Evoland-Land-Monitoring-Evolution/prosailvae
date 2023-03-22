@@ -193,18 +193,19 @@ class SimVAE(nn.Module):
         else:
             raise NotImplementedError()
             
-        return dist_params, z, sim, rec
+        if self.spatial_mode:
+            return dist_params, z, unbatchify(sim), unbatchify(rec)
+        else:
+            return dist_params, z, sim, rec
     
     def compute_unsupervised_loss_over_batch(self, batch, normalized_loss_dict, 
                                              len_loader=1, n_samples=1, mmdc_dataset=True):
 
         if mmdc_dataset==True:
-            (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+            (s2_r, s2_a) = batch
+            # (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
             s2_r = s2_r.to(self.device)
             s2_a = s2_a.to(self.device)
-            # if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
-            #     s2_r = s2_r[:,:,:16,:16]
-            #     s2_a = s2_a[:,:,:16,:16]
         else:
             s2_r = batch[0].to(self.device) 
             s2_a = batch[1].to(self.device)  

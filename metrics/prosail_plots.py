@@ -17,7 +17,20 @@ import numpy as np
 import pandas as pd
 import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
+from sensorsio.utils import rgb_render
 
+def plot_patches(patch_list):
+    fig, axs = plt.subplots(1,len(patch_list))
+    for i in range(len(patch_list)):
+        if patch_list[i].size(0)==1:
+            tensor_visu = patch_list[i].squeeze()
+            axs[i].imshow(tensor_visu, cmap='YlGn')
+        else:
+            tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i])
+            axs[i].imshow(tensor_visu)
+        axs[i].set_xticks([])
+        axs[i].set_yticks([])
+    return fig, axs
 
 
 def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):

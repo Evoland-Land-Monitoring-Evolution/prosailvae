@@ -108,7 +108,7 @@ def compare_datasets():
     for site in [ "spain1", "spain2", "italy1", "italy2", "france", "spain1"]:
         print(site)
         relative_s2_time="both"
-        s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True)
+        s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=0)
         # dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode')
         if len(s2_r) > 0:
             print(s2_r.size())
@@ -356,7 +356,7 @@ def plot_lai_vs_mc_error_2d_hist(heatmap, extent, aggregate_lai_hist, min_lai=0,
 
 def mc_simulation_error(relative_s2_time, site, rsr_dir, results_dir, samples_per_iter=1024, max_iter=100, n=3, lai_min=1.5, max_delta=3, 
                         uniform_mode=True, lai_corr=False, lai_conv_override=None):
-    s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=lai_min)
+    s2_r, s2_a, lais, time_delta = get_small_validation_data(relative_s2_time=relative_s2_time, site=site, filter_if_available_positions=True, lai_min=0)
     if len(time_delta)==0:
         print("No data with specified requirement was available.")
         return 

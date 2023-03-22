@@ -291,7 +291,7 @@ class ProsailCNNEncoder(nn.Module):
     convolutional and Relu layers
     """
 
-    def __init__(self, encoder_sizes: list[int]=[20,20], enc_kernel_sizes: list[int]=[3,3],
+    def __init__(self, encoder_sizes: list[int]=[20], enc_kernel_sizes: list[int]=[3],
                  device='cpu', norm_mean=None, norm_std=None, lat_space_size=10, padding="valid"):
         """
         Constructor

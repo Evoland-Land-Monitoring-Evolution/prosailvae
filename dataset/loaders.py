@@ -14,6 +14,7 @@ import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 import argparse      
+import socket
 
 from mmdc_singledate.datamodules.mmdc_datamodule import (IterableMMDCDataset,
                                                          worker_init_fn,
@@ -24,6 +25,7 @@ from mmdc_singledate.datamodules.components.datamodule_utils import (MMDCDataSta
                                                                     compute_stats,
                                                                     create_tensors_path)                                          
 
+from torchutils.patches import patchify, unpatchify
 
 def split_train_valid_by_fid(labels, ts_ids,
                              valid_size=0.1,
@@ -192,12 +194,16 @@ def lr_finder_loader(sample_ids=None,
                             num_workers=num_workers)
         
     else:
-        _,loader,_, = get_mmdc_loaders(tensors_dir=tensors_dir,
-                                        batch_size=1,
-                                        batch_par_epoch=100,
-                                        max_open_files=4,
-                                        num_workers=1,
-                                        pin_memory=False)
+        # _,loader,_, = get_mmdc_loaders(tensors_dir=tensors_dir,
+        #                                 batch_size=1,
+        #                                 batch_par_epoch=100,
+        #                                 max_open_files=4,
+        #                                 num_workers=1,
+        #                                 pin_memory=False)
+        path_to_image = tensors_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+        _, loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+                                               bands = torch.tensor([0,1,2,3,4,5,6,7,8,9]), n_patches_max = 100, 
+                                                batch_size=1, num_workers=0, concat=True)
         # raise NotImplementedError
     return loader
     
@@ -392,7 +398,36 @@ def get_mmdc_loaders(tensors_dir="",
     return train_dataloader, val_dataloader, test_dataloader
 
 
-
+def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+                          bands = torch.tensor([0,1,2,3,4,5,6,7,8,9]), n_patches_max = 100, 
+                          batch_size=1, num_workers=0, concat=False):
+    if socket.gethostname()=='CELL200973':
+        patch_size = 16
+    assert train_ratio + valid_ratio <=1
+    image_tensor = torch.load(path_to_image)
+    angles = torch.zeros(3, image_tensor.size(1),image_tensor.size(2))
+    angles[0,...] = image_tensor[11,...]
+    angles[1,...] = image_tensor[13,...]
+    angles[2,...] = image_tensor[12,...] - image_tensor[14, ...]
+    s2_r = image_tensor[bands,...]
+    s2_r_patches = patchify(s2_r, patch_size=patch_size, margin=0).reshape(-1,len(bands), patch_size, patch_size)
+    s2_a_patches = patchify(angles, patch_size=patch_size, margin=0).reshape(-1, 3,patch_size, patch_size)
+    n_patches = min(s2_a_patches.size(0), n_patches_max)
+    train_idx = torch.arange(int(train_ratio*n_patches))
+    valid_idx = torch.arange(int(train_ratio*n_patches),int((valid_ratio+train_ratio)*n_patches))
+    test_idx = torch.arange(int((valid_ratio+train_ratio)*n_patches),n_patches)
+    if concat:
+        train_dataset = TensorDataset(torch.cat((s2_r_patches[train_idx,...], s2_a_patches[train_idx,...]), axis=1))
+        valid_dataset = TensorDataset(torch.cat((s2_r_patches[valid_idx,...], s2_a_patches[valid_idx,...]), axis=1))
+        test_dataset = TensorDataset(torch.cat((s2_r_patches[test_idx,...], s2_a_patches[test_idx,...]), axis=1))
+    else:
+        train_dataset = TensorDataset(s2_r_patches[train_idx,...], s2_a_patches[train_idx,...])
+        valid_dataset = TensorDataset(s2_r_patches[valid_idx,...], s2_a_patches[valid_idx,...])
+        test_dataset = TensorDataset(s2_r_patches[test_idx,...], s2_a_patches[test_idx,...])
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers)
+    valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, num_workers=num_workers)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers)
+    return train_loader, valid_loader, test_loader
 
 if __name__ == "__main__":
     parser = get_S2_id_split_parser().parse_args()

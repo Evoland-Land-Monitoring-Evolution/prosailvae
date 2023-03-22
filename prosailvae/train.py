@@ -7,7 +7,7 @@ Created on Mon Nov 14 14:20:44 2022
 """
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
-from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders
+from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders, get_loaders_from_image, lr_finder_loader
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.results import save_results, save_results_2d, get_res_dir_path
 
@@ -93,21 +93,15 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)             
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, data_dir, optimizer, old_lr=1.0, 
-                 tensors_dir=None, weiss_mode=False):
+def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, optimizer, lrtrainloader, 
+                 old_lr=1.0, weiss_mode=False):
     new_lr=old_lr
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
-                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir, old_lr=old_lr, old_lr_max_ratio=10, 
-                                    file_prefix="test_",
-                                            tensors_dir=tensors_dir, )
+                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, old_lr=old_lr, old_lr_max_ratio=10)
                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                 if exp_lr_decay>0:
-                    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
-                    #                                         patience=exp_lr_decay, threshold=0.0001, 
-                    #                                         threshold_mode='rel', cooldown=0, min_lr=1e-8, 
-                    #                                         eps=1e-08, verbose=False)
                     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
             except Exception as e:
                 traceback.print_exc()
@@ -123,9 +117,9 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
             PROSAIL_VAE.decoder.loss_type = "full_nll"
     pass
 
-def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, 
-                  res_dir, n_samples=20, lr_recompute=None, data_dir="", exp_lr_decay=0, 
-                  plot_gradient=False, mmdc_dataset=False, tensors_dir=None, weiss_mode=False):
+def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
+                  res_dir, n_samples=20, lr_recompute=None, exp_lr_decay=0, 
+                  plot_gradient=False, mmdc_dataset=False, weiss_mode=False):
 
 
     logger = logging.getLogger(LOGGER_NAME)
@@ -139,18 +133,13 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader,
     total_ram = get_total_RAM()
     old_lr = optimizer.param_groups[0]['lr']
     if exp_lr_decay > 0:
-        # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=0.2, 
-        #                                                             patience=exp_lr_decay, threshold=0.0001, 
-        #                                                             threshold_mode='rel', cooldown=0, min_lr=1e-8, 
-        #                                                             eps=1e-08, verbose=False)
         lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
             lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, 
-                                                           data_dir, optimizer, old_lr=old_lr, 
-                                                           tensors_dir=tensors_dir if mmdc_dataset else None, weiss_mode=weiss_mode)
+                                                           optimizer, old_lr=old_lr, lrtrainloader=lrtrainloader, weiss_mode=weiss_mode)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
@@ -212,7 +201,7 @@ def setupTraining():
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
-              "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/",
+              "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
               "-a", "False",
               "-p", "False",
               "-w", ""]
@@ -281,11 +270,19 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                             batch_size=params["batch_size"],
                             data_dir=data_dir)
     else:
-        train_loader, valid_loader, _ = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
-                                                         batch_size=1,
-                                                         max_open_files=4,
-                                                         num_workers=1,
-                                                         pin_memory=False)
+
+        # train_loader, valid_loader, _ = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
+        #                                                  batch_size=1,
+        #                                                  max_open_files=4,
+        #                                                  num_workers=1,
+        #                                                  pin_memory=False)
+        path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+        n_patches_max = 100
+        if socket.gethostname()=='CELL200973':
+            n_patches_max = 10
+        train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+                          bands = torch.tensor([0,1,2,3,4,5,6,7,8,9]), n_patches_max = n_patches_max, 
+                          batch_size=1, num_workers=0)
     
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
@@ -296,12 +293,18 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                         vae_file_path=None, params_sup_kl_model=params_sup_kl_model, 
                                                         weiss_mode=parser.weiss_mode)
     lr = params['lr']
+    lrtrainloader = None
     if lr is None:
         try:
-            # raise NotImplementedError
-            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, data_dir=data_dir,n_samples=params["n_samples"], 
-                                    file_prefix="test_",
-                                    tensors_dir=parser.tensor_dir if not params["simulated_dataset"] else None, 
+            raise NotImplementedError
+            lrtrainloader = lr_finder_loader(
+                                    file_prefix=params["dataset_file_prefix"], 
+                                    sample_ids=None,
+                                    batch_size=64,
+                                    data_dir=data_dir,
+                                    supervised=PROSAIL_VAE.supervised,
+                                    tensors_dir=parser.tensor_dir)
+            lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, n_samples=params["n_samples"], 
                                     disable_tqdm=not socket.gethostname()=='CELL200973')
         except Exception as e:
             traceback.print_exc()
@@ -325,14 +328,13 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                          params['epochs'],
                                                          train_loader, 
                                                          valid_loader,
+                                                         lrtrainloader,
                                                          res_dir=res_dir,
                                                          n_samples=params["n_samples"],
                                                          lr_recompute=params['lr_recompute'],
-                                                         data_dir=data_dir, 
                                                          exp_lr_decay=params["exp_lr_decay"],
                                                          plot_gradient=parser.plot_results,
                                                          mmdc_dataset = not params["simulated_dataset"],
-                                                         tensors_dir=parser.tensor_dir,
                                                          weiss_mode=parser.weiss_mode) 
     logger.info("Training Completed !")
 
@@ -365,12 +367,16 @@ def main():
     try:
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
         if params['encoder_type']=="cnn":
-            _,_, test_loader = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
-                                                         batch_size=1,
-                                                         max_open_files=4,
-                                                         num_workers=1,
-                                                         pin_memory=False)
-            save_results_2d(PROSAIL_VAE, test_loader, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
+            # _,_, test_loader = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
+            #                                              batch_size=1,
+            #                                              max_open_files=4,
+            #                                              num_workers=1,
+            #                                              pin_memory=False)
+            path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+            _, _, test_loader = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+                            bands = torch.tensor([0,1,2,3,4,5,6,7,8,9]), n_patches_max = 100, 
+                            batch_size=1, num_workers=0)
+            save_results_2d(PROSAIL_VAE, test_loader, res_dir, parser.tensor_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
         else:
             save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, weiss_mode=parser.weiss_mode)
         save_array_xp_path(job_array_dir, res_dir)

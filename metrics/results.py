@@ -5,13 +5,13 @@ if __name__ == "__main__":
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                               plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                              all_loss_curve)
+                              all_loss_curve, plot_patches)
 else:
     from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                                       all_loss_curve)
+                                       all_loss_curve, plot_patches)
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -28,6 +28,7 @@ import shutil
 from time import sleep
 import warnings
 from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
+from torchutils.patches import patchify, unpatchify 
 
 def get_prosailvae_results_parser():
     """
@@ -61,7 +62,11 @@ def get_prosailvae_results_parser():
     return parser
 
 
-def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False):
+def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=None, 
+                    all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
+                    plot_results=False):
+    image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
+    image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
     device = PROSAIL_VAE.device
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -95,19 +100,31 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, data_dir, all_train_loss_df=No
         n_rec_plots = 10
         # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
         with torch.no_grad():
-            for i, batch in zip(range(min(len(loader),1)),loader):
-                (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
-                s2_r = s2_r.to(PROSAIL_VAE.device)
-                s2_a = s2_a.to(PROSAIL_VAE.device)
-                if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
-                    s2_r = s2_r[:,:,:16,:16]
-                    s2_a = s2_a[:,:,:16,:16]
-                params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode') 
-                s2_r_pred =  rec[:,:,0].reshape(1,s2_r.size(2),s2_r.size(2),10).permute(0,3,1,2)
-                fig, ax = plot_patch_pairs(s2_r_pred, s2_r, idx=0)
-                fig.savefig(f"{plot_dir}/patch_rec_rgb_{i}.svg")
-                if i > n_rec_plots:
-                    break
+            for n, filename in enumerate(image_tensor_file_names):
+                image_tensor = torch.load(image_dir + "/" + filename)
+                patch_size=128
+                patches = patchify(image_tensor, patch_size=patch_size, margin=0).reshape(-1,image_tensor.size(0), patch_size, patch_size)
+                for i in range(n_rec_plots):
+                    rec_image, sim_image, cropped_image = get_encoded_image(patches, PROSAIL_VAE, 
+                                                                        patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]))
+                
+                    fig, axs = plot_patches((cropped_image, rec_image, cropped_image - rec_image))
+                    fig.savefig(f"{plot_dir}/patch_rec_{image_tensor_aliases[n]}_{i}.svg")
+                    fig, axs = plot_patches((cropped_image, sim_image[6,:,:].unsqueeze(0)))
+                    fig.savefig(f"{plot_dir}/patch_lai_{image_tensor_aliases[n]}_{i}.svg")
+            # for i, batch in zip(range(min(len(loader),1)),loader):
+            #     (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+            #     s2_r = s2_r.to(PROSAIL_VAE.device)
+            #     s2_a = s2_a.to(PROSAIL_VAE.device)
+            #     if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
+            #         s2_r = s2_r[:,:,:16,:16]
+            #         s2_a = s2_a[:,:,:16,:16]
+            #     params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode') 
+            #     s2_r_pred =  rec[:,:,0].reshape(1,s2_r.size(2),s2_r.size(2),10).permute(0,3,1,2)
+            #     fig, ax = plot_patch_pairs(s2_r_pred, s2_r, idx=0)
+            #     fig.savefig(f"{plot_dir}/patch_rec_rgb_{i}.svg")
+            #     if i > n_rec_plots:
+            #         break
     logger.info("Metrics computed.")
     
     return 
@@ -356,6 +373,29 @@ def configureEmissionTracker(parser):
         useEmissionTracker = False
         tracker = None
     return tracker, useEmissionTracker
+
+
+def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9])):
+    hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
+    patched_tensor = patchify(image_tensor, patch_size=patch_size, margin=hw)
+    patched_sim_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), 11, patch_size, patch_size))
+    patched_rec_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), len(bands), patch_size, patch_size))
+    for i in range(patched_tensor.size(0)):
+        for j in range(patched_tensor.size(1)):
+            print(i,j)
+            x = patched_tensor[i,j, bands, :, :]
+            angles = torch.zeros(3, patch_size + 2 * hw, patch_size + 2 * hw)
+            angles[0,:,:] = patched_tensor[i, j, 11,:,:]
+            angles[1,:,:] = patched_tensor[i, j, 13, :,:]
+            angles[2,:,:] = patched_tensor[i, j, 12, :,:] - patched_tensor[i,j,14, :,:]
+            with torch.no_grad():
+                dist_params, z, sim, rec = PROSAIL_VAE.forward(x, angles, n_samples=1)
+            patched_rec_image[i,j,:,:,:] = rec
+            patched_sim_image[i,j,:,:,:] = sim
+    sim_image = unpatchify(patched_sim_image)[:,:image_tensor.size(1),:image_tensor.size(2)][:,hw:-hw,hw:-hw]
+    rec_image = unpatchify(patched_rec_image)[:,:image_tensor.size(1),:image_tensor.size(2)][:,hw:-hw,hw:-hw]
+    cropped_image = image_tensor[:,hw:-hw,hw:-hw]
+    return rec_image, sim_image, cropped_image
 
 def main():
     params, parser, res_dir, data_dir, params_sup_kl_model = setupResults()

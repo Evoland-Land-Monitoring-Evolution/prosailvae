@@ -296,7 +296,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     lrtrainloader = None
     if lr is None:
         try:
-            raise NotImplementedError
+            # raise NotImplementedError
             lrtrainloader = lr_finder_loader(
                                     file_prefix=params["dataset_file_prefix"], 
                                     sample_ids=None,

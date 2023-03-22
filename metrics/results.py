@@ -105,10 +105,10 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
                 patch_size=128
                 patches = patchify(image_tensor, patch_size=patch_size, margin=0).reshape(-1,image_tensor.size(0), patch_size, patch_size)
                 for i in range(n_rec_plots):
-                    rec_image, sim_image, cropped_image = get_encoded_image(patches, PROSAIL_VAE, 
+                    rec_image, sim_image, cropped_image = get_encoded_image(patches[i,...], PROSAIL_VAE, 
                                                                         patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]))
                 
-                    fig, axs = plot_patches((cropped_image, rec_image, cropped_image - rec_image))
+                    fig, axs = plot_patches((cropped_image, rec_image, cropped_image[:10,...] - rec_image))
                     fig.savefig(f"{plot_dir}/patch_rec_{image_tensor_aliases[n]}_{i}.svg")
                     fig, axs = plot_patches((cropped_image, sim_image[6,:,:].unsqueeze(0)))
                     fig.savefig(f"{plot_dir}/patch_lai_{image_tensor_aliases[n]}_{i}.svg")

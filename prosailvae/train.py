@@ -94,12 +94,12 @@ def get_prosailvae_train_parser():
     return parser
 
 def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, optimizer, lrtrainloader, 
-                 old_lr=1.0, weiss_mode=False):
+                 old_lr=1.0, weiss_mode=False, n_samples=1):
     new_lr=old_lr
     if epoch > 0 and lr_recompute is not None:
         if epoch % lr_recompute == 0:
             try:
-                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, old_lr=old_lr, old_lr_max_ratio=10)
+                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, old_lr=old_lr, old_lr_max_ratio=10, n_samples=n_samples)
                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
                 if exp_lr_decay>0:
                     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
@@ -139,7 +139,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
             lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, 
-                                                           optimizer, old_lr=old_lr, lrtrainloader=lrtrainloader, weiss_mode=weiss_mode)
+                                                           optimizer, old_lr=old_lr, lrtrainloader=lrtrainloader, weiss_mode=weiss_mode,
+                                                           n_samples=n_samples)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)

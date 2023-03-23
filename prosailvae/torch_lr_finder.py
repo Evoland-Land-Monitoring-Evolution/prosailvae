@@ -713,7 +713,7 @@ def get_prosailvae_train_parser():
     return parser       
 
 def get_PROSAIL_VAE_lr(model, lrtrainloader, plot_lr=False,
-                       disable_tqdm=True,n_samples=20, old_lr=1, old_lr_max_ratio=10,
+                       disable_tqdm=True, n_samples=20, old_lr=1, old_lr_max_ratio=10,
                        ):
     model.lr_find_mode = True
     optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)

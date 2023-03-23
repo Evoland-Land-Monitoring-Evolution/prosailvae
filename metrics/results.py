@@ -378,13 +378,13 @@ def configureEmissionTracker(parser):
 def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9])):
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_tensor = patchify(image_tensor, patch_size=patch_size, margin=hw)
-    patched_sim_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), 11, patch_size, patch_size))
-    patched_rec_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), len(bands), patch_size, patch_size))
+    patched_sim_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), 11, patch_size, patch_size)).to(PROSAIL_VAE.device)
+    patched_rec_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), len(bands), patch_size, patch_size)).to(PROSAIL_VAE.device)
     for i in range(patched_tensor.size(0)):
         for j in range(patched_tensor.size(1)):
             print(i,j)
             x = patched_tensor[i,j, bands, :, :]
-            angles = torch.zeros(3, patch_size + 2 * hw, patch_size + 2 * hw)
+            angles = torch.zeros(3, patch_size + 2 * hw, patch_size + 2 * hw).to(PROSAIL_VAE.device)
             angles[0,:,:] = patched_tensor[i, j, 11,:,:]
             angles[1,:,:] = patched_tensor[i, j, 13, :,:]
             angles[2,:,:] = patched_tensor[i, j, 12, :,:] - patched_tensor[i,j,14, :,:]

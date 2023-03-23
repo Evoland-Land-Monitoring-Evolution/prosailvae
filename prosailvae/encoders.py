@@ -474,9 +474,10 @@ class ProsailRCNNEncoder(nn.Module):
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
         self.hw = first_layer_kernel//2
-        for i in range(len(crnn_group_depth)):
-            for j in range(crnn_group_depth[i]):
-                self.hw += crnn_group_kernel_sizes[i]//2
+        for i in range(len(crnn_group_n)):
+            for j in range(crnn_group_n[i]):
+                for k in range(crnn_group_depth[i]):
+                    self.hw += crnn_group_kernel_sizes[i]//2
 
     def encode(self, s2_refl, angles):
         """

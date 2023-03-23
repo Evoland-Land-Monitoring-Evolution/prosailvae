@@ -292,8 +292,11 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
                           bands=bands_image, n_patches_max = n_patches_max, 
                           batch_size=1, num_workers=0)
-        
-    norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=10000, n_bands=len(bands))
+    if params["apply_norm_rec"]:
+        norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=10000, n_bands=len(bands))
+    else:
+        norm_mean = torch.zeros(1, len(bands))
+        norm_std = torch.ones(1, len(bands))
     torch.save(norm_mean, res_dir + "/norm_mean.pt")
     torch.save(norm_std, res_dir + "/norm_std.pt")
     if params_sup_kl_model is not None:

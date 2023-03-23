@@ -7,7 +7,7 @@ Created on Mon Nov 14 14:20:44 2022
 """
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
-from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders, get_loaders_from_image, lr_finder_loader
+from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders, get_loaders_from_image, lr_finder_loader, get_bands_norm_factors_from_loaders
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.results import save_results, save_results_2d, get_res_dir_path
 
@@ -265,12 +265,16 @@ def setupTraining():
 def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None):
     logger = logging.getLogger(LOGGER_NAME)
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
+    bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+    if parser.weiss_mode:
+        bands = [2, 3, 4, 5, 6, 8, 11, 12]
     if params["simulated_dataset"]:
         train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
                             file_prefix=params["dataset_file_prefix"], 
                             sample_ids=None,
                             batch_size=params["batch_size"],
                             data_dir=data_dir)
+        
     else:
 
         # train_loader, valid_loader, _ = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
@@ -282,18 +286,26 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         n_patches_max = 100
         if socket.gethostname()=='CELL200973':
             n_patches_max = 10
+        bands_image = torch.tensor([0,1,2,3,4,5,6,7,8,9])
+        if parser.weiss_mode:
+            bands_image = torch.tensor([1,2,3,4,5,7,8,9])
         train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
-                          bands = torch.tensor([0,1,2,3,4,5,6,7,8,9]), n_patches_max = n_patches_max, 
+                          bands=bands_image, n_patches_max = n_patches_max, 
                           batch_size=1, num_workers=0)
-    
+        
+    norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=10000, n_bands=len(bands))
+    torch.save(norm_mean, res_dir + "/norm_mean.pt")
+    torch.save(norm_std, res_dir + "/norm_std.pt")
+    if params_sup_kl_model is not None:
+        raise NotImplementedError
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     
     
     print(f"Weiss mode : {parser.weiss_mode}")
-    PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, logger_name=LOGGER_NAME,
+    PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, logger_name=LOGGER_NAME,
                                                         vae_file_path=None, params_sup_kl_model=params_sup_kl_model, 
-                                                        weiss_mode=parser.weiss_mode)
+                                                        bands=bands, norm_mean=norm_mean, norm_std=norm_std)
     lr = params['lr']
     lrtrainloader = None
     if lr is None:

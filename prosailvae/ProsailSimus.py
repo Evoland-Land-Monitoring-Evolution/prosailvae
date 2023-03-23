@@ -67,14 +67,17 @@ RSR of the sensor.
             norm_mean = torch.zeros((1, len(bands)))
         else:
             if len(norm_mean.squeeze()) != len(bands):
-                norm_mean = torch.zeros((1, len(bands)))
+                print(norm_mean.size())
+                print(norm_mean)
+                raise ValueError
         if norm_std is None:
             norm_std = torch.ones((1, len(bands)))
         else:
             if len(norm_std.squeeze()) != len(bands):
-                norm_std = torch.ones((1, len(bands)))
-        print(norm_std.size(), norm_mean.size())
-        print(norm_std, norm_mean)
+                print(norm_std.size())
+                print(norm_std)
+                raise ValueError
+                
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
         self.apply_norm = apply_norm

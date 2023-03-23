@@ -364,7 +364,7 @@ def get_refl_normalization(prosail_refl):
 def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False, lai_corr=True):
 
     psimulator = ProsailSimulator()
-    bands = [1,2,3,4,5,6,7,8,11,12]
+    bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
     if weiss_mode:
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)

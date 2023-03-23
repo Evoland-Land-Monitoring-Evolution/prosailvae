@@ -429,9 +429,29 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers)
     return train_loader, valid_loader, test_loader
 
+def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, n_bands=10):
+    s2_r_samples = torch.tensor([])
+    n_samples = 0
+    with torch.no_grad():
+        for i, batch in enumerate(loader):
+            s2_r, _ = batch
+            assert s2_r.size(bands_dim) == n_bands
+            s2_r = s2_r.transpose(0, bands_dim).reshape(n_bands, -1)
+            n_samples += s2_r.size(1)
+            s2_r_samples = torch.cat((s2_r_samples, s2_r), axis=1)
+            if n_samples >= max_samples:
+                break
+        if s2_r_samples.size(1) > max_samples:
+            s2_r_samples = s2_r_samples[:,:max_samples]
+        norm_mean = s2_r_samples.mean(1)
+        norm_std = s2_r_samples.std(1)
+    return norm_mean, norm_std
+
 if __name__ == "__main__":
     parser = get_S2_id_split_parser().parse_args()
     if len(parser.data_dir)==0:
         data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                              os.pardir),"data/")
     save_ids_for_k_fold(k=parser.k, test_ratio=parser.test_ratio)
+
+

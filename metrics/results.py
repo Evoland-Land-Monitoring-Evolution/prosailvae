@@ -5,13 +5,13 @@ if __name__ == "__main__":
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                               plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                              all_loss_curve, plot_patches)
+                              all_loss_curve, plot_patches, plot_lai_vs_ndvi)
 else:
     from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                                       all_loss_curve, plot_patches)
+                                       all_loss_curve, plot_patches, plot_lai_vs_ndvi)
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -197,10 +197,11 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         if not os.path.isdir(juan_validation_dir):
             os.makedirs(juan_validation_dir)
         sites = ["france", "spain1", "italy1", "italy2"]
-        j_list_lai_nlls, list_lai_preds, j_dt_list = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
+        j_list_lai_nlls, list_lai_preds, j_dt_list, j_ndvi_list = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
                                                                                  sites=sites, weiss_mode=weiss_mode)
         all_lai_preds = torch.cat(list_lai_preds)
         all_dt_list  = torch.cat(j_dt_list)
+        all_ndvi = torch.cat(j_ndvi_list)
         for i, site in enumerate(sites):
             torch.save(j_list_lai_nlls[i].cpu(), juan_validation_dir + f"/{site}_lai_nll.pt")
             torch.save(list_lai_preds[i].cpu(), juan_validation_dir + f"/{site}_lai_ref_pred.pt")
@@ -211,6 +212,9 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         if plot_results:
             fig, ax = plot_lai_preds(all_lai_preds[:,1].cpu(), all_lai_preds[:,0].cpu(), all_dt_list, "all")
             fig.savefig(juan_validation_dir + f"/all_lai_pred_vs_true.png")
+            lai_err = all_lai_preds[:,1].cpu() - all_lai_preds[:,0].cpu()
+            fig, ax = plot_lai_vs_ndvi(all_lai_preds[lai_err > 1,1].cpu(), all_ndvi[lai_err > 1].cpu(), all_dt_list[lai_err > 1], "all")
+            fig.savefig(juan_validation_dir + f"/all_lai_true_vs_ndvi.png")
     if plot_results:
         plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50, bands_name=bands_name)
     (mae, mpiw, picp, mare, 

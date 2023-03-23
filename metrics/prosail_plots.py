@@ -32,7 +32,6 @@ def plot_patches(patch_list):
         axs[i].set_yticks([])
     return fig, axs
 
-
 def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):
     fig = plt.figure(dpi=200)
     
@@ -852,17 +851,35 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     fig, ax = plt.subplots()
     lai_i = lais.squeeze()
     if time_delta is not None:
-        sc = ax.scatter(lai_pred, lai_i, c=time_delta.abs(), s=5)
+        sc = ax.scatter(lai_i, lai_pred, c=time_delta.abs(), s=5)
         cbar = plt.colorbar(sc)
         cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
         cbar.ax.yaxis.set_label_coords(0.0,0.5)
     else:
-        sc = ax.scatter(lai_pred, lai_i, s=1)
+        sc = ax.scatter(lai_i, lai_pred, s=1)
     ax.plot([min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],
             [min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],'k--')
-    ax.set_xlabel('Predicted LAI')
-    ax.set_ylabel(f"{site} LAI")# {LAI_columns(site)[i]}")
+    ax.set_ylabel('Predicted LAI')
+    ax.set_xlabel(f"{site} LAI")# {LAI_columns(site)[i]}")
     ax.set_aspect('equal', 'box')
+    # plt.gray()
+
+    plt.show()
+    return fig, ax
+
+def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
+    fig, ax = plt.subplots()
+    lai_i = lais.squeeze()
+    if time_delta is not None:
+        sc = ax.scatter(lai_i, ndvi, c=time_delta.abs(), s=5)
+        cbar = plt.colorbar(sc)
+        cbar.ax.set_ylabel('Delta between reflectance and in situ measure (days)', rotation=270)
+        cbar.ax.yaxis.set_label_coords(0.0, 0.5)
+    else:
+        sc = ax.scatter(lai_i, ndvi, s=1)
+    ax.set_ylabel('NDVI')
+    ax.set_ylim(0,1)
+    ax.set_xlabel(f"{site} LAI")# {LAI_columns(site)[i]}")
     # plt.gray()
 
     plt.show()

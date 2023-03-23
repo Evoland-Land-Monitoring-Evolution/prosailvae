@@ -130,9 +130,14 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
     list_lai_nlls = []
     list_lai_preds = []
     dt_list = []
+    ndvi_list = []
     for site in sites:
         s2_r, s2_a, lais, dt = get_interpolated_validation_data(site, juan_data_dir_path, lai_min=lai_min, 
                                                                 dt_max=dt_max, method="closest")
+        b4 = s2_r[:,2]
+        b8 = s2_r[:,6]
+        ndvi = (b8-b4)/(b8+b4+1e-6)
+
         if weiss_mode:
             s2_r = s2_r[:, torch.tensor([1,2,3,4,5,7,8,9])]
         prosail_ref_params = torch.zeros((s2_r.size(0), 11))
@@ -149,8 +154,8 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
         lai_pred = prosail_params_mode[:,6,:].cpu()
         list_lai_preds.append(torch.cat((lai_pred, lais), axis=1))
         dt_list.append(dt)
-
-    return list_lai_nlls, list_lai_preds, dt_list
+        ndvi_list.append(ndvi)
+    return list_lai_nlls, list_lai_preds, dt_list, ndvi_list
 
 def load_weiss_data_from_txt(weiss_data_dir_path, device='cpu'):
     s2_r, prosail_vars = load_weiss_dataset(weiss_data_dir_path)

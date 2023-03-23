@@ -311,6 +311,9 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                         bands=bands, norm_mean=norm_mean, norm_std=norm_std)
     lr = params['lr']
     lrtrainloader = None
+    tensor_dir=None
+    if not params["simulated_dataset"]:
+        tensor_dir = parser.tensor_dir
     if lr is None:
         try:
             # raise NotImplementedError
@@ -320,7 +323,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                     batch_size=64,
                                     data_dir=data_dir,
                                     supervised=PROSAIL_VAE.supervised,
-                                    tensors_dir=parser.tensor_dir)
+                                    tensors_dir=tensor_dir)
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, n_samples=params["n_samples"], 
                                     disable_tqdm=not socket.gethostname()=='CELL200973')
         except Exception as e:
@@ -382,9 +385,10 @@ def save_array_xp_path(job_array_dir, res_dir):
 def main():
     params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
+    spatial_encoder_types = ['cnn', 'rcnn']
     try:
         PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
-        if params['encoder_type']=="cnn":
+        if params['encoder_type'] in spatial_encoder_types:
             # _,_, test_loader = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
             #                                              batch_size=1,
             #                                              max_open_files=4,

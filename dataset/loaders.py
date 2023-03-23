@@ -434,7 +434,7 @@ def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, 
     n_samples = 0
     with torch.no_grad():
         for i, batch in enumerate(loader):
-            s2_r, _ = batch
+            s2_r = batch[0]
             assert s2_r.size(bands_dim) == n_bands
             s2_r = s2_r.transpose(0, bands_dim).reshape(n_bands, -1)
             n_samples += s2_r.size(1)

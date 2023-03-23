@@ -107,6 +107,7 @@ def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, l
                 traceback.print_exc()
                 print(e)
                 logger.error(f"Couldn't recompute lr at epoch {epoch} !")
+                logger.error(f"{e}")
                 print(f"Couldn't recompute lr at epoch {epoch} !")
     return lr_scheduler, optimizer, new_lr
 
@@ -312,6 +313,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
             print(e)
             lr = 1e-3
             logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
+            logger.error(f"{e}")
             print(f"Couldn't recompute lr at initialization ! Using lr={lr}")
 
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)

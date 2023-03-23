@@ -105,8 +105,9 @@ RSR of the sensor.
     
     def unnormalize(self, s2_r, bands_dim=1):
         dim_s2_r = len(s2_r.size())
-        return s2_r * torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r) + torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)
-
+        u_s2_r = s2_r * torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r) 
+        u_s2_r = u_s2_r + torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)
+        return u_s2_r
 
     def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)

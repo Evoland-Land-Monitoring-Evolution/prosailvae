@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:19:21 2022
 """
 import torch.nn as nn
 import torch
-
+from prosailvae.utils import torch_select_unsqueeze
 class Encoder(nn.Module):
     """ 
     A class used to represent an encoder of an auto encoder. This class is to be inherited by all encoders
@@ -410,6 +410,9 @@ class EncoderCResNetBlock(Encoder):
             layers.append(last_activation)
         self.device=device
         self.net = nn.Sequential(*layers).to(device)
+        self.hw=0
+        for j in range(depth):
+            self.hw += kernel_size//2
         
     def change_device(self, device):
         self.device=device
@@ -418,7 +421,11 @@ class EncoderCResNetBlock(Encoder):
 
     def forward(self, x):
         y=self.net(x)
-        return y + x
+        x_cropped = x
+        patch_size = x.size(-1)
+        if self.hw > 0:
+            x_cropped = x[...,self.hw:patch_size-self.hw, self.hw:patch_size-self.hw]
+        return y + x_cropped
 
 class ProsailRCNNEncoder(nn.Module):
     """
@@ -466,7 +473,7 @@ class ProsailRCNNEncoder(nn.Module):
             norm_std = torch.ones((s2refl_size,1,1))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self.hw = 0
+        self.hw = first_layer_kernel//2
         for i in range(len(crnn_group_depth)):
             for j in range(crnn_group_depth[i]):
                 self.hw += crnn_group_kernel_sizes[i]//2
@@ -480,7 +487,7 @@ class ProsailRCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
-        normed_refl = (s2_refl - self.norm_mean) / self.norm_std
+        normed_refl = (s2_refl - torch_select_unsqueeze(self.norm_mean,1,4)) / torch_select_unsqueeze(self.norm_std,1,4)
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0)
         if len(angles.size())==3:

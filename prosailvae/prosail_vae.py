@@ -43,11 +43,23 @@ def select_encoder(encoder_type, vae_params, device, refl_norm_mean, refl_norm_s
                             norm_mean=refl_norm_mean,
                             norm_std=refl_norm_std)
     elif encoder_type=='rcnn':
+        first_layer_kernel = 3
+        first_layer_size = 512
+        crnn_group_sizes = [512,512]
+        crnn_group_depth = [1,2]
+        crnn_group_kernel_sizes = [3,1]
+        crnn_group_n = [1,3]
         encoder = ProsailRCNNEncoder(s2refl_size=vae_params["input_size"], 
-                            output_size=latent_dim, 
-                            device=device,
-                            norm_mean=refl_norm_mean,
-                            norm_std=refl_norm_std)
+                                    output_size=latent_dim, 
+                                    device=device,
+                                    norm_mean=refl_norm_mean,
+                                    norm_std=refl_norm_std,
+                                    first_layer_kernel = first_layer_kernel,
+                                    first_layer_size = first_layer_size,
+                                    crnn_group_sizes = crnn_group_sizes,
+                                    crnn_group_depth = crnn_group_depth,
+                                    crnn_group_kernel_sizes = crnn_group_kernel_sizes,
+                                    crnn_group_n = crnn_group_n)
     elif encoder_type=='cnn':
         encoder_sizes = [vae_params["input_size"] + 2 * 3] + vae_params["hidden_layers_size"] + [output_size]
         enc_kernel_sizes = [3] * (len(encoder_sizes) - 1) 

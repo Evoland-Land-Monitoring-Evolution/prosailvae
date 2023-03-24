@@ -410,9 +410,9 @@ class EncoderCResNetBlock(Encoder):
             layers.append(last_activation)
         self.device=device
         self.net = nn.Sequential(*layers).to(device)
-        self.hw=0
+        self.nb_enc_cropped_hw=0
         for j in range(depth):
-            self.hw += kernel_size//2
+            self.nb_enc_cropped_hw += kernel_size//2
         
     def change_device(self, device):
         self.device=device
@@ -423,8 +423,9 @@ class EncoderCResNetBlock(Encoder):
         y=self.net(x)
         x_cropped = x
         patch_size = x.size(-1)
-        if self.hw > 0:
-            x_cropped = x[...,self.hw:patch_size-self.hw, self.hw:patch_size-self.hw]
+        if self.nb_enc_cropped_hw > 0:
+            x_cropped = x[...,self.nb_enc_cropped_hw:patch_size-self.nb_enc_cropped_hw, 
+                                self.nb_enc_cropped_hw:patch_size-self.nb_enc_cropped_hw]
         return y + x_cropped
 
 class ProsailRCNNEncoder(nn.Module):
@@ -473,11 +474,11 @@ class ProsailRCNNEncoder(nn.Module):
             norm_std = torch.ones((s2refl_size,1,1))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self.hw = first_layer_kernel//2
+        self.nb_enc_cropped_hw = first_layer_kernel//2
         for i in range(len(crnn_group_n)):
             for j in range(crnn_group_n[i]):
                 for k in range(crnn_group_depth[i]):
-                    self.hw += crnn_group_kernel_sizes[i]//2
+                    self.nb_enc_cropped_hw += crnn_group_kernel_sizes[i]//2
 
     def encode(self, s2_refl, angles):
         """
@@ -500,7 +501,8 @@ class ProsailRCNNEncoder(nn.Module):
         y_mu = self.mu_conv(y)
         y_logvar = self.logvar_conv(y)
         y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
-        angles = angles[:,:,self.hw:-self.hw,self.hw:-self.hw]
+        angles = angles[:,:,self.nb_enc_cropped_hw:-self.nb_enc_cropped_hw,
+                            self.nb_enc_cropped_hw:-self.nb_enc_cropped_hw]
         return batchify_batch_latent(y_mu_logvar), batchify_batch_latent(angles)
 
     def change_device(self, device):

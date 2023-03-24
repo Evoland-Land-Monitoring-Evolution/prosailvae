@@ -7,6 +7,7 @@ Created on Thu Nov 17 11:46:20 2022
 """
 
 import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
 
 # plt.rcParams.update({
 #   "text.usetex": True,
@@ -850,6 +851,8 @@ def plot_patch_pairs(s2_r_pred, s2_r_ref, idx=0):
 def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     fig, ax = plt.subplots()
     lai_i = lais.squeeze()
+    m, b = np.polyfit(lai_i.numpy(), lai_pred.numpy(), 1)
+    r2 = r2_score(lai_i.numpy(), lai_pred.numpy())
     if time_delta is not None:
         sc = ax.scatter(lai_i, lai_pred, c=time_delta.abs(), s=5)
         cbar = plt.colorbar(sc)
@@ -857,8 +860,14 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
         cbar.ax.yaxis.set_label_coords(0.0,0.5)
     else:
         sc = ax.scatter(lai_i, lai_pred, s=1)
-    ax.plot([min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],
-            [min(lai_i.min(), lai_pred.min()),max(lai_i.max(), lai_pred.max())],'k--')
+
+    minlim = min(lai_i.min(), lai_pred.min())
+    maxlim = max(lai_i.max(), lai_pred.max())
+    ax.plot([minlim, maxlim],
+            [minlim, maxlim],'k--')
+    ax.plot([minlim, maxlim],
+            [m * minlim + b, m * maxlim + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}".format(m,b,r2))
+    ax.legend()
     ax.set_ylabel('Predicted LAI')
     ax.set_xlabel(f"{site} LAI")# {LAI_columns(site)[i]}")
     ax.set_aspect('equal', 'box')

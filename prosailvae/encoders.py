@@ -324,9 +324,8 @@ class ProsailCNNEncoder(nn.Module):
             [(kernel_size - 1) // 2 for kernel_size in enc_kernel_sizes]
         )
         self.mu_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1).to(device)
-        self.logvar_conv = nn.Conv2d(
-            encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1
-        ).to(device)
+        self.logvar_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1]//2, kernel_size=1).to(device)
+        self.mu_logvar_conv = nn.Conv2d(encoder_sizes[-1], encoder_sizes[-1], kernel_size=1).to(device)
         if norm_mean is None:
             norm_mean = torch.zeros((lat_space_size,1,1,))
         if norm_std is None:
@@ -352,9 +351,10 @@ class ProsailCNNEncoder(nn.Module):
                                  torch.cos(torch.deg2rad(angles)),
                                  torch.sin(torch.deg2rad(angles))
                                  ), axis=1))
-        y_mu = self.mu_conv(y)
-        y_logvar = self.logvar_conv(y)
-        y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
+        # y_mu = self.mu_conv(y)
+        # y_logvar = self.logvar_conv(y)
+        # y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
+        y_mu_logvar = self.mu_logvar_conv(y)
         if self.nb_enc_cropped_hw > 0:
             angles = angles[:,:,self.nb_enc_cropped_hw:-self.nb_enc_cropped_hw,self.nb_enc_cropped_hw:-self.nb_enc_cropped_hw]
         return batchify_batch_latent(y_mu_logvar), batchify_batch_latent(angles)
@@ -468,6 +468,7 @@ class ProsailRCNNEncoder(nn.Module):
         self.cnet = nn.Sequential(*network).to(device)
         self.mu_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding=padding).to(device)
         self.logvar_conv = nn.Conv2d(input_sizes[-1], output_size, kernel_size=1, padding=padding).to(device)
+        self.mu_logvar_conv = nn.Conv2d(input_sizes[-1], 2*output_size, kernel_size=1, padding=padding).to(device)
         if norm_mean is None:
             norm_mean = torch.zeros((s2refl_size,1,1,))
         if norm_std is None:
@@ -498,9 +499,10 @@ class ProsailRCNNEncoder(nn.Module):
                                  torch.cos(torch.deg2rad(angles)),
                                  torch.sin(torch.deg2rad(angles))
                                  ), axis=1))
-        y_mu = self.mu_conv(y)
-        y_logvar = self.logvar_conv(y)
-        y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
+        # y_mu = self.mu_conv(y)
+        # y_logvar = self.logvar_conv(y)
+        # y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
+        y_mu_logvar = self.mu_logvar_conv(y)
         angles = angles[:,:,self.nb_enc_cropped_hw:-self.nb_enc_cropped_hw,
                             self.nb_enc_cropped_hw:-self.nb_enc_cropped_hw]
         return batchify_batch_latent(y_mu_logvar), batchify_batch_latent(angles)
@@ -512,6 +514,7 @@ class ProsailRCNNEncoder(nn.Module):
         self.cnet = self.dnet.to(device)
         self.mu_conv = self.mu_conv.to(device)
         self.logvar_conv = self.logvar_conv.to(device)
+        self.mu_logvar_conv = self.mu_logvar_conv.to(device)
         self = self.to(device)
 
 

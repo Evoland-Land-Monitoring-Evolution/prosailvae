@@ -215,6 +215,9 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
             lai_err = all_lai_preds[:,1].cpu() - all_lai_preds[:,0].cpu()
             fig, ax = plot_lai_vs_ndvi(all_lai_preds[lai_err.abs() > 1,1].cpu(), all_ndvi[lai_err.abs() > 1].cpu(), all_dt_list[lai_err.abs() > 1], "all")
             fig.savefig(juan_validation_dir + f"/all_lai_true_vs_ndvi.png")
+            lai_filter = torch.logical_not(torch.logical_and(all_lai_preds[:,1] < 0.5, all_ndvi > 0.4)).cpu()
+            fig, ax = plot_lai_preds(all_lai_preds[lai_filter,1].cpu(), all_lai_preds[lai_filter,0].cpu(), all_dt_list, "all")
+            fig.savefig(juan_validation_dir + f"/filtered_all_lai_pred_vs_true.png")
     if plot_results:
         plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50, bands_name=bands_name)
     (mae, mpiw, picp, mare, 

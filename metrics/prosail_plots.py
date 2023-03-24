@@ -853,6 +853,7 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     lai_i = lais.squeeze()
     m, b = np.polyfit(lai_i.numpy(), lai_pred.numpy(), 1)
     r2 = r2_score(lai_i.numpy(), lai_pred.numpy())
+    mse = (lais - lai_pred).pow(2).mean().numpy()
     if time_delta is not None:
         sc = ax.scatter(lai_i, lai_pred, c=time_delta.abs(), s=5)
         cbar = plt.colorbar(sc)
@@ -866,7 +867,7 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     ax.plot([minlim, maxlim],
             [minlim, maxlim],'k--')
     ax.plot([minlim, maxlim],
-            [m * minlim + b, m * maxlim + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}".format(m,b,r2))
+            [m * minlim + b, m * maxlim + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
     ax.legend()
     ax.set_ylabel('Predicted LAI')
     ax.set_xlabel(f"{site} LAI")# {LAI_columns(site)[i]}")

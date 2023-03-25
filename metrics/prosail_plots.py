@@ -20,17 +20,24 @@ import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from sensorsio.utils import rgb_render
 
-def plot_patches(patch_list):
+def plot_patches(patch_list, title_list=[], use_same_visu=True):
     fig, axs = plt.subplots(1,len(patch_list))
+    minvisu = None 
+    maxvisu = None
     for i in range(len(patch_list)):
         if patch_list[i].size(0)==1:
             tensor_visu = patch_list[i].squeeze()
             axs[i].imshow(tensor_visu, cmap='YlGn')
         else:
-            tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i])
+            if use_same_visu:
+                tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)
+            else:
+                tensor_visu, _, _ = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)
             axs[i].imshow(tensor_visu)
         axs[i].set_xticks([])
         axs[i].set_yticks([])
+        if len(title_list) == len(patch_list):
+            axs[i].set_title(title_list[i])
     return fig, axs
 
 def plot_metrics(save_dir, alpha_pi, maer, mpiwr, picp, mare):

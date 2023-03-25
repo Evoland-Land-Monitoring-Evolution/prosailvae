@@ -1,0 +1,28 @@
+{
+    "batch_size": 128,
+    "epochs": 2,
+    "lr": null,
+    "hidden_layers_size": [
+        256,256,256
+    ],
+    "test_size": 0.01,
+    "valid_ratio": 0.01,
+    "workers": 0,
+    "encoder_last_activation": null,
+    "n_samples": 1,
+    "supervised": false,
+    "beta_kl": 1,
+    "beta_index": 1,
+    "k_fold": 0,
+    "dataset_file_prefix": "small_test_",
+    "n_fold": null,
+    "simulated_dataset": false,
+    "lr_recompute": 1,
+    "loss_type": "lai_nll",
+    "apply_norm_rec": true,
+    "exp_lr_decay": 0.98,
+    "supervised_kl": false,
+    "encoder_type": "rcnn",
+    "rnn_depth": 2,
+    "rnn_number": 5
+}

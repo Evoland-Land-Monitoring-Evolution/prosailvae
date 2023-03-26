@@ -44,7 +44,7 @@ def select_encoder(encoder_type, vae_params, device, refl_norm_mean, refl_norm_s
                             norm_std=refl_norm_std)
     elif encoder_type=='rcnn':
         first_layer_kernel = 3
-        first_layer_size = 128
+        first_layer_size = 64
         crnn_group_sizes = [64,64]
         crnn_group_depth = [2,2]
         crnn_group_kernel_sizes = [3,1]

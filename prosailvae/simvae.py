@@ -120,11 +120,11 @@ class SimVAE(nn.Module):
         sim = self.sim_space.z2sim(z)
         return sim
     
-    def decode(self, sim, dec_args):
-        rec = self.decoder.decode(sim, dec_args)
+    def decode(self, sim, angles, apply_norm=None):
+        rec = self.decoder.decode(sim, angles, apply_norm=apply_norm)
         return rec
         
-    def forward(self, x, angles=None, n_samples=1):
+    def forward(self, x, angles=None, n_samples=1, apply_norm=None):
         
         # encoding
         if angles is None:
@@ -142,15 +142,15 @@ class SimVAE(nn.Module):
         sim = self.transfer_latent(z)
         
         # decoding
-        rec = self.decode(sim, angles)
+        rec = self.decode(sim, angles, apply_norm=apply_norm)
         if self.spatial_mode:
             return dist_params, z, unbatchify(sim), unbatchify(rec)
         else:
             return dist_params, z, sim, rec
     
-    def point_estimate_rec(self, x, angles, mode='random'):
+    def point_estimate_rec(self, x, angles, mode='random', apply_norm=False):
         if mode == 'random':
-            dist_params, z, sim, rec = self.forward(x, angles, n_samples=1)
+            dist_params, z, sim, rec = self.forward(x, angles, n_samples=1, apply_norm=apply_norm)
             
         elif mode == 'lat_mode':
             y, angles = self.encode(x, angles)
@@ -160,7 +160,7 @@ class SimVAE(nn.Module):
             # transfer to simulator variable
             sim = self.transfer_latent(z)
             # decoding
-            rec = self.decode(sim, angles)
+            rec = self.decode(sim, angles, apply_norm=apply_norm)
             
         elif mode == "sim_mode":
             y, angles = self.encode(x, angles)
@@ -172,7 +172,7 @@ class SimVAE(nn.Module):
             if len(angles.size())==4:
                 angles = angles.permute(0,2,3,1)
                 angles = angles.reshape(-1, 3)
-            rec = self.decode(sim, angles)
+            rec = self.decode(sim, angles, apply_norm=apply_norm)
             
         elif mode == "sim_median":
             y = self.encode(x, angles)
@@ -180,7 +180,7 @@ class SimVAE(nn.Module):
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
-            rec = self.decode(sim, angles)
+            rec = self.decode(sim, angles, apply_norm=apply_norm)
             
         elif mode == "sim_expectation":
             y, angles = self.encode(x, angles)
@@ -188,12 +188,12 @@ class SimVAE(nn.Module):
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
-            rec = self.decode(sim, angles)           
+            rec = self.decode(sim, angles, apply_norm=apply_norm)           
             
         else:
             raise NotImplementedError()
             
-        if self.spatial_mode:
+        if self.spatial_mode and mode != 'random':
             return dist_params, z, unbatchify(sim), unbatchify(rec)
         else:
             return dist_params, z, sim, rec

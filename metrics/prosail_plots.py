@@ -21,7 +21,7 @@ from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from sensorsio.utils import rgb_render
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True):
-    fig, axs = plt.subplots(1,len(patch_list))
+    fig, axs = plt.subplots(1, len(patch_list), figsize=(3, 3*len(patch_list)))
     minvisu = None 
     maxvisu = None
     for i in range(len(patch_list)):
@@ -292,24 +292,25 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
         plt.close('all')
     prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
     
-def loss_curve(loss_df, save_file, log_scale=False):
+def loss_curve(loss_df, save_file):
     loss_names = loss_df.columns.values.tolist()
     loss_names.remove("epoch")
     epochs = loss_df["epoch"]
     fig, ax = plt.subplots(dpi=150)
-    ax.set_yscale('symlog', linthresh=1e-5)
+    min_loss=1000000
     if "loss_sum" in loss_names:
         loss_sum_min = loss_df['loss_sum'].values.min()
         loss_sum_min_epoch = loss_df['loss_sum'].values.argmin()
         ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min")
     for i in range(len(loss_names)):
         loss = loss_df[loss_names[i]].values
-        # if log_scale: # (loss<=0).any() or 
-        #     if (loss<=0).any():
-        #         loss += loss.min() + 1
-        #     ax.set_yscale('log')
+        min_loss = min(loss.min(), min_loss)
         ax.plot(epochs,loss, label=loss_names[i])
-    
+    if min_loss>0:
+        ax.set_yscale('log')
+    else:
+        ax.set_yscale('symlog', linthresh=1e-5)
+        ax.set_ylim(bottom=min(0, min_loss))
     ax.legend()
     ax.set_xlabel('epoch')
     ax.set_ylabel('loss')

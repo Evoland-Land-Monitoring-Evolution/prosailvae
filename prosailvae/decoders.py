@@ -38,14 +38,14 @@ class ProsailSimulatorDecoder(Decoder):
         self.prosailsimulator.change_device(device)
         pass
 
-    def decode(self, z, angles):
+    def decode(self, z, angles, apply_norm=None):
         n_samples = z.size(2)
         batch_size = z.size(0)
         
         sim_input = torch.concat((z, 
             angles.unsqueeze(2).repeat(1,1,n_samples)), 
              axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
-        rec = self.ssimulator(self.prosailsimulator(sim_input)).reshape(batch_size, 
+        rec = self.ssimulator(self.prosailsimulator(sim_input),apply_norm=apply_norm).reshape(batch_size, 
                                                                         n_samples, 
                                                                         -1).transpose(1,2)
         return rec

@@ -78,14 +78,14 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
     if all_train_loss_df is not None:
         all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
         if plot_results:
-            loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg", log_scale=True)
+            loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg")
     if all_valid_loss_df is not None:
         all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
         if plot_results:
-            loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg", log_scale=True)
+            loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg")
     if info_df is not None:
         if plot_results:
-            loss_curve(info_df, save_file=loss_dir+"lr.svg", log_scale=True)
+            loss_curve(info_df, save_file=loss_dir+"lr.svg")
             all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, save_file=loss_dir+"all_loss.svg")
     
     # Computing metrics
@@ -105,11 +105,13 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
                 patch_size=128
                 patches = patchify(image_tensor, patch_size=patch_size, margin=0).reshape(-1,image_tensor.size(0), patch_size, patch_size)
                 for i in range(n_rec_plots):
+                    rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
                     rec_image, sim_image, cropped_image = get_encoded_image(patches[i,...].to(PROSAIL_VAE.device), PROSAIL_VAE, 
-                                                                        patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]))
+                                                                        patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]),
+                                                                        mode=rec_mode)
                 
                     fig, axs = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
-                                             (cropped_image[:10,...].cpu() - rec_image.cpu()).abs()),
+                                             (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0)),
                                              title_list=['original patch', 'reconstruction', 'absolute reconstruction error'])
                     fig.savefig(f"{plot_dir}/patch_rec_{image_tensor_aliases[n]}_{i}.svg")
                     fig, axs = plot_patches((cropped_image.cpu(), sim_image[6,:,:].unsqueeze(0).cpu()),
@@ -385,7 +387,7 @@ def configureEmissionTracker(parser):
     return tracker, useEmissionTracker
 
 
-def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9])):
+def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='sim_mode'):
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_tensor = patchify(image_tensor, patch_size=patch_size, margin=hw)
     patched_sim_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), 11, patch_size, patch_size)).to(PROSAIL_VAE.device)
@@ -398,7 +400,7 @@ def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tens
             angles[1,:,:] = patched_tensor[i, j, 13, :,:]
             angles[2,:,:] = patched_tensor[i, j, 12, :,:] - patched_tensor[i,j,14, :,:]
             with torch.no_grad():
-                dist_params, z, sim, rec = PROSAIL_VAE.forward(x, angles, n_samples=1)
+                dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
             patched_rec_image[i,j,:,:,:] = rec
             patched_sim_image[i,j,:,:,:] = sim
     sim_image = unpatchify(patched_sim_image)[:,:image_tensor.size(1),:image_tensor.size(2)][:,hw:-hw,hw:-hw]

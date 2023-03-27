@@ -95,8 +95,8 @@ RSR of the sensor.
 
         pass
 
-    def __call__(self, prosail_output: torch.Tensor):
-        return self.forward(prosail_output)
+    def __call__(self, prosail_output: torch.Tensor, apply_norm=None):
+        return self.forward(prosail_output, apply_norm=apply_norm)
     
     def apply_s2_sensor(self, prosail_output: torch.Tensor) -> torch.Tensor:
         # The input should have shape = batch, wavelengths, otherwise,
@@ -120,9 +120,11 @@ RSR of the sensor.
         u_s2_r = u_s2_r + torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)
         return u_s2_r
 
-    def forward(self, prosail_output: torch.Tensor) -> torch.Tensor:
+    def forward(self, prosail_output: torch.Tensor, apply_norm=None) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)
-        if self.apply_norm:
+        if apply_norm is None:
+            apply_norm = self.apply_norm
+        if apply_norm:
             simu = self.normalize(simu)
         return simu  # type: ignore
     

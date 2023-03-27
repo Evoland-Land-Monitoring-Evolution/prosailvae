@@ -111,7 +111,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
                                                                         mode=rec_mode)
                 
                     fig, axs = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
-                                             (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0)),
+                                             (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
                                              title_list=['original patch', 'reconstruction', 'absolute reconstruction error'])
                     fig.savefig(f"{plot_dir}/patch_rec_{image_tensor_aliases[n]}_{i}.svg")
                     fig, axs = plot_patches((cropped_image.cpu(), sim_image[6,:,:].unsqueeze(0).cpu()),

@@ -394,10 +394,11 @@ class EncoderCResNetBlock(Encoder):
                  padding="valid"): 
         super().__init__()
 
-        layers = []        
+        layers = []     
+        input_sizes = [input_size] + [output_size for i in range(depth-1)]   
         for i in range(depth):
             layers.append(nn.Conv2d(
-                        input_size,
+                        input_sizes[i],
                         output_size,
                         kernel_size=kernel_size,
                         padding=padding,

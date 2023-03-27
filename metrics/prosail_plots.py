@@ -21,7 +21,7 @@ from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from sensorsio.utils import rgb_render
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True):
-    fig, axs = plt.subplots(1, len(patch_list), figsize=(3, 3*len(patch_list)))
+    fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3))
     minvisu = None 
     maxvisu = None
     for i in range(len(patch_list)):

@@ -286,12 +286,14 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         n_patches_max = 100
         if socket.gethostname()=='CELL200973':
             n_patches_max = 10
-        bands_image = torch.tensor([0,1,2,3,4,5,6,7,8,9])
+        # bands_image = torch.tensor([0,1,2,3,4,5,6,7,8,9])
+        bands_image = torch.tensor([0,1,2,4,5,6,3,7,8,9])
         if parser.weiss_mode:
             bands_image = torch.tensor([1,2,3,4,5,7,8,9])
+            raise NotImplementedError
         train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
-                          bands=bands_image, n_patches_max = n_patches_max, 
-                          batch_size=1, num_workers=0)
+                                                                bands=bands_image, n_patches_max = n_patches_max, 
+                                                                batch_size=1, num_workers=0)
     if params["apply_norm_rec"]:
         norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=10000, n_bands=len(bands))
     else:

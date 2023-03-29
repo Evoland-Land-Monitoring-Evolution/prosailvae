@@ -107,7 +107,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
                 for i in range(n_rec_plots):
                     rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
                     rec_image, sim_image, cropped_image = get_encoded_image(patches[i,...].to(PROSAIL_VAE.device), PROSAIL_VAE, 
-                                                                        patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]),
+                                                                        patch_size=32, bands=torch.tensor([0,1,2,4,5,6,3,7,8,9]),
                                                                         mode=rec_mode)
                 
                     fig, axs = plot_patches((cropped_image.cpu(), rec_image.cpu(), 

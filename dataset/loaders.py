@@ -400,11 +400,13 @@ def get_mmdc_loaders(tensors_dir="",
 
 def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
                           bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 
-                          batch_size=1, num_workers=0, concat=False):
+                          batch_size=1, num_workers=0, concat=False, max_im_size=1024, seed=2147483647):
     if socket.gethostname()=='CELL200973':
         patch_size = 16
     assert train_ratio + valid_ratio <=1
     image_tensor = torch.load(path_to_image)
+    max_im_size = min(max_im_size, image_tensor.size(1), image_tensor.size(2))
+    image_tensor = image_tensor[:,:max_im_size,:max_im_size]
     angles = torch.zeros(3, image_tensor.size(1),image_tensor.size(2))
     angles[0,...] = image_tensor[11,...]
     angles[1,...] = image_tensor[13,...]
@@ -413,9 +415,12 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
     s2_r_patches = patchify(s2_r, patch_size=patch_size, margin=0).reshape(-1,len(bands), patch_size, patch_size)
     s2_a_patches = patchify(angles, patch_size=patch_size, margin=0).reshape(-1, 3,patch_size, patch_size)
     n_patches = min(s2_a_patches.size(0), n_patches_max)
-    train_idx = torch.arange(int(train_ratio*n_patches))
-    valid_idx = torch.arange(int(train_ratio*n_patches),int((valid_ratio+train_ratio)*n_patches))
-    test_idx = torch.arange(int((valid_ratio+train_ratio)*n_patches),n_patches)
+    g_cpu = torch.Generator()
+    g_cpu.manual_seed(seed)
+    perms = torch.randperm(s2_r_patches.size(0), generator=g_cpu)
+    train_idx = perms[torch.arange(int(train_ratio*n_patches))]
+    valid_idx = perms[torch.arange(int(train_ratio*n_patches),int((valid_ratio + train_ratio)*n_patches))]
+    test_idx = perms[torch.arange(int((valid_ratio+train_ratio)*n_patches),n_patches)]
     if concat:
         train_dataset = TensorDataset(torch.cat((s2_r_patches[train_idx,...], s2_a_patches[train_idx,...]), axis=1))
         valid_dataset = TensorDataset(torch.cat((s2_r_patches[valid_idx,...], s2_a_patches[valid_idx,...]), axis=1))
@@ -424,8 +429,8 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
         train_dataset = TensorDataset(s2_r_patches[train_idx,...], s2_a_patches[train_idx,...])
         valid_dataset = TensorDataset(s2_r_patches[valid_idx,...], s2_a_patches[valid_idx,...])
         test_dataset = TensorDataset(s2_r_patches[test_idx,...], s2_a_patches[test_idx,...])
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers)
-    valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, num_workers=num_workers)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers)
     return train_loader, valid_loader, test_loader
 

@@ -20,14 +20,19 @@ import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from sensorsio.utils import rgb_render
 
-def plot_patches(patch_list, title_list=[], use_same_visu=True):
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True):
     fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3))
     minvisu = None 
     maxvisu = None
     for i in range(len(patch_list)):
         if patch_list[i].size(0)==1:
             tensor_visu = patch_list[i].squeeze()
-            axs[i].imshow(tensor_visu, cmap='YlGn')
+            im = axs[i].imshow(tensor_visu, cmap='YlGn')
+            divider = make_axes_locatable(axs[i])
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            fig.colorbar(im, cax=cax, orientation='vertical')
         else:
             if use_same_visu:
                 tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)

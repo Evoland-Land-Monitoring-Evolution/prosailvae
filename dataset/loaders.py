@@ -434,6 +434,31 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers)
     return train_loader, valid_loader, test_loader
 
+def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
+                             batch_size=1, num_workers=0):
+    path_to_train_patches = os.path.join(path_to_patches_dir, "train_patches.pth")
+    path_to_valid_patches = os.path.join(path_to_patches_dir, "valid_patches.pth")
+    path_to_test_patches = os.path.join(path_to_patches_dir, "test_patches.pth")
+    train_loader = get_loader_from_patches(path_to_train_patches, bands = bands, 
+                             batch_size=batch_size, num_workers=num_workers)
+    valid_loader = get_loader_from_patches(path_to_valid_patches, bands = bands, 
+                             batch_size=batch_size, num_workers=num_workers)
+    test_loader = get_loader_from_patches(path_to_test_patches, bands = bands, 
+                             batch_size=batch_size, num_workers=num_workers)
+    return train_loader, valid_loader, test_loader
+
+def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
+                             batch_size=1, num_workers=0):
+    patches = torch.load(path_to_patches)
+    s2_a_patches = torch.zeros(patches.size(0), 3, patches.size(2),patches.size(3))
+    s2_a_patches[:,0,...] = patches[:,11,...]
+    s2_a_patches[:,1,...] = patches[:,13,...]
+    s2_a_patches[:,2,...] = patches[:,12,...] - patches[:,14, ...]
+    s2_r_patches = patches[:,bands,...]
+    dataset = TensorDataset(torch.cat((s2_r_patches, s2_a_patches), axis=1))
+    loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    return loader
+
 def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, n_bands=10):
     s2_r_samples = torch.tensor([])
     n_samples = 0

@@ -42,16 +42,18 @@ def get_patches(image_tensor, patch_size):
     return patches
 
 def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
-    list_clean_patches = []
+    clean_patches = []
     for i in range(patches.size(0)):
         patch = patches[i,...]
         validity = patch[cloud_mask_idx,...]
         if reject_mode == 'all':
             if not validity.any():
-                list_clean_patches.append(patch.unsqueeze(0))
+                clean_patches.append(patch.unsqueeze(0))
         else:
             raise NotImplementedError
-    return torch.cat(list_clean_patches, dim=0)
+    if len(clean_patches)>0:
+        clean_patches = torch.cat(clean_patches, dim=0)
+    return clean_patches
 
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
                                        valid_size = 0.05, test_size = 0.05):
@@ -70,12 +72,15 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         g_cpu = torch.Generator()
         g_cpu.manual_seed(seed)
         perms = torch.randperm(patches.size(0), generator=g_cpu) # For image tensor with identical sizes (i.e. the same sites) permutation will always be the same
-        train_patches = patches[perms[:n_train],...]
-        valid_patches = patches[perms[n_train:n_train] + n_valid,...]
-        test_patches = patches[perms[n_train + n_valid:],...]
-        train_clean_patches.append(get_clean_patch_tensor(train_patches, cloud_mask_idx=10, reject_mode='all'))
-        valid_clean_patches.append(get_clean_patch_tensor(valid_patches, cloud_mask_idx=10, reject_mode='all'))
-        test_clean_patches.append(get_clean_patch_tensor(test_patches, cloud_mask_idx=10, reject_mode='all'))
+        train_patches = get_clean_patch_tensor(patches[perms[:n_train],...], cloud_mask_idx=10, reject_mode='all')
+        valid_patches = get_clean_patch_tensor(patches[perms[n_train:n_train] + n_valid,...], cloud_mask_idx=10, reject_mode='all')
+        test_patches = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...], cloud_mask_idx=10, reject_mode='all')
+        if len(train_patches) > 0:
+            train_clean_patches.append(train_patches)
+        if len(valid_patches) > 0:
+            valid_clean_patches.append(valid_patches)
+        if len(test_patches) > 0:
+            test_clean_patches.append(test_patches)
 
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
@@ -106,7 +111,7 @@ def main():
                                                         train_patch_size = train_patch_size, 
                                                         valid_size = valid_size, test_size = test_size)
     torch.save(train_patches, os.path.join(parser.output_dir, "train_patches.pth"))
-    torch.save(valid_patches, os.path.join(parser.output_dir, "train_patches.pth"))
+    torch.save(valid_patches, os.path.join(parser.output_dir, "valid_patches.pth"))
     torch.save(test_patches, os.path.join(parser.output_dir, "test_patches.pth"))
     return 
 

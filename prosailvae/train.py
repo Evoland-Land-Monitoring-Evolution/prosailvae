@@ -7,7 +7,7 @@ Created on Mon Nov 14 14:20:44 2022
 """
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
-from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders, get_loaders_from_image, lr_finder_loader, get_bands_norm_factors_from_loaders
+from dataset.loaders import  get_simloader, get_norm_coefs, get_mmdc_loaders, get_loaders_from_image, lr_finder_loader, get_bands_norm_factors_from_loaders, get_train_valid_test_loader_from_patches
 # from prosailvae.ProsailSimus import get_ProsailVarsIntervalLen
 from metrics.results import save_results, save_results_2d, get_res_dir_path
 
@@ -282,8 +282,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         #                                                  max_open_files=4,
         #                                                  num_workers=1,
         #                                                  pin_memory=False)
-        path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
-        n_patches_max = 100
+        # path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+        # n_patches_max = 100
         if socket.gethostname()=='CELL200973':
             n_patches_max = 10
         # bands_image = torch.tensor([0,1,2,3,4,5,6,7,8,9])
@@ -291,11 +291,13 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         if parser.weiss_mode:
             bands_image = torch.tensor([1,2,3,4,5,7,8,9])
             raise NotImplementedError
-        train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
-                                                                bands=bands_image, n_patches_max = n_patches_max, 
-                                                                batch_size=1, num_workers=0)
+        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, bands = bands_image, 
+                                                                                 batch_size=1, num_workers=0)
+        # train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+        #                                                         bands=bands_image, n_patches_max = n_patches_max, 
+        #                                                         batch_size=1, num_workers=0)
     if params["apply_norm_rec"]:
-        norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=10000, n_bands=len(bands))
+        norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=1000000, n_bands=len(bands))
     else:
         norm_mean = torch.zeros(1, len(bands))
         norm_std = torch.ones(1, len(bands))
@@ -396,10 +398,13 @@ def main():
             #                                              max_open_files=4,
             #                                              num_workers=1,
             #                                              pin_memory=False)
-            path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
-            _, _, test_loader = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
-                            bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 
-                            batch_size=1, num_workers=0)
+            # path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+
+            _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]),
+                                                                            batch_size=1, num_workers=0)
+            # _, _, test_loader = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+            #                 bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 
+            #                 batch_size=1, num_workers=0)
             save_results_2d(PROSAIL_VAE, test_loader, res_dir, parser.tensor_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
         else:
             save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, weiss_mode=parser.weiss_mode)

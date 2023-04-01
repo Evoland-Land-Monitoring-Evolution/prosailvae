@@ -146,8 +146,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
             try:
                 train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
                 if plot_gradient:
-                    if not os.path.isdir(res_dir+"/gradient_flows"):
-                        os.makedirs(res_dir+"/gradient_flows")
+                    if not os.path.isdir(res_dir + "/gradient_flows"):
+                        os.makedirs(res_dir + "/gradient_flows")
                     plot_grad_flow(PROSAIL_VAE, savefile=res_dir+f"/gradient_flows/grad_flow_{epoch}.svg")
             except Exception as e:
                 logger.error(f"Error during Training at epoch {epoch} !")
@@ -328,6 +328,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                     data_dir=data_dir,
                                     supervised=PROSAIL_VAE.supervised,
                                     tensors_dir=tensor_dir)
+            
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, n_samples=params["n_samples"], 
                                     disable_tqdm=not socket.gethostname()=='CELL200973')
         except Exception as e:

@@ -80,7 +80,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         g_cpu.manual_seed(seed)
         perms = torch.randperm(patches.size(0), generator=g_cpu) # For image tensor with identical sizes (i.e. the same sites) permutation will always be the same
         train_patches = get_clean_patch_tensor(patches[perms[:n_train],...], cloud_mask_idx=10, reject_mode='all')
-        valid_patches = get_clean_patch_tensor(patches[perms[n_train:n_train] + n_valid,...], cloud_mask_idx=10, reject_mode='all')
+        valid_patches = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid] ,...], cloud_mask_idx=10, reject_mode='all')
         test_patches = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...], cloud_mask_idx=10, reject_mode='all')
         if len(train_patches) > 0:
             train_clean_patches.append(train_patches)

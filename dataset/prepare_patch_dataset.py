@@ -19,16 +19,23 @@ def get_parser():
                         type=str, default="")       
     return parser
 
-def get_images_path(data_dir):
+def get_images_path(data_dir, valid_tiles=None, valid_files=None):
     list_files = []
     tile_dirs = os.listdir(data_dir)
     for tile_dir in tile_dirs:
+        if valid_tiles is not None:
+            if tile_dir not in valid_tiles:
+                continue
         tile_dir = os.path.join(data_dir, tile_dir)
         if os.path.isdir(tile_dir):
             tile_files = os.listdir(tile_dir)
             for tile_file in tile_files:
+                if valid_files is not None:
+                    if tile_file not in valid_files:
+                        continue
                 tile_file = os.path.join(tile_dir, tile_file)
                 if tile_file[-4:] == ".pth":
+                    print(tile_file)
                     list_files.append(tile_file)
     return list_files
 
@@ -56,9 +63,9 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
     return clean_patches
 
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
-                                       valid_size = 0.05, test_size = 0.05):
+                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None):
     assert large_patch_size % train_patch_size == 0
-    tensor_files = get_images_path(data_dir)
+    tensor_files = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files)
     train_clean_patches = []
     valid_clean_patches = []
     test_clean_patches = []
@@ -105,11 +112,14 @@ def main():
     train_patch_size = 32
     valid_size = 0.05
     test_size = 0.05
+    valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]
+
     (train_patches, 
      valid_patches, 
      test_patches) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 
                                                         train_patch_size = train_patch_size, 
-                                                        valid_size = valid_size, test_size = test_size)
+                                                        valid_size = valid_size, test_size = test_size,
+                                                        valid_tiles=valid_tiles)
     torch.save(train_patches, os.path.join(parser.output_dir, "train_patches.pth"))
     torch.save(valid_patches, os.path.join(parser.output_dir, "valid_patches.pth"))
     torch.save(test_patches, os.path.join(parser.output_dir, "test_patches.pth"))

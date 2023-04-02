@@ -99,7 +99,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
 def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/",
-              "-o", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patch_files/"]
+              "-o", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/"]
         
         parser = get_parser().parse_args(args)    
     else:

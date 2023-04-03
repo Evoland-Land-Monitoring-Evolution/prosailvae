@@ -91,9 +91,18 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
 
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
+    train_perms = torch.randperm(train_clean_patches.size(0), generator=g_cpu) 
+    train_clean_patches = train_clean_patches[train_perms,...]
     valid_clean_patches = torch.cat(valid_clean_patches, dim=0)
     valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
+    valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu) 
+    valid_clean_patches = valid_clean_patches[valid_perms,...]
     test_clean_patches = torch.cat(test_clean_patches, dim=0)
+    test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu) 
+    test_clean_patches = test_clean_patches[test_perms,...]
+    print(f"Train patches : {train_clean_patches.size()}")
+    print(f"Validation patches : {valid_clean_patches.size()}")
+    print(f"Test patches : {test_clean_patches.size()}")
     return train_clean_patches, valid_clean_patches, test_clean_patches
 
 def main():

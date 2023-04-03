@@ -33,7 +33,7 @@ def weiss_lai(s2_r, s2_a, band_dim = 1):
     n4 = neuron4(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
     n5 = neuron5(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
 
-    l2 = layer2(n1, n2, n3, n4, n5)
+    l2 = layer2(n1, n2, n3, n4, n5, sum_dim=band_dim)
 
     lai = denormalize(l2, 0.000319182538301, 14.4675094548151)
     return lai / 3

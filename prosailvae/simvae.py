@@ -351,7 +351,7 @@ class SimVAE(nn.Module):
         with torch.no_grad():
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
-            for i, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
+            for i, batch in zip(range(min(len(dataloader),batch_per_epoch)), dataloader):
                 if max_samples is not None:
                     if i == max_samples:
                         break

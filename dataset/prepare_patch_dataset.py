@@ -122,13 +122,15 @@ def main():
     valid_size = 0.05
     test_size = 0.05
     valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]
-    valid_files = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
-                #    "before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth",
+    valid_files = [
+                    # "after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth",
+                   "before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth",
                 #    "after_SENTINEL2A_20170711-111223-375_L2A_T30TUM_D_V1-7_roi_0.pth",
                 #    "after_SENTINEL2A_20180417-110822-655_L2A_T30TUM_C_V2-2_roi_0.pth",
                 #    "before_SENTINEL2A_20170518-095716-529_L2A_T33TWF_D_V1-4_roi_0.pth",
                 #    "before_SENTINEL2A_20170408-095711-526_L2A_T33TWF_D_V1-4_roi_0.pth",
-                #    "before_SENTINEL2A_20170518-095716-529_L2A_T33TWG_D_V1-4_roi_0.pth"]
+                #    "before_SENTINEL2A_20170518-095716-529_L2A_T33TWG_D_V1-4_roi_0.pth"
+                ]
 
     (train_patches, 
      valid_patches, 

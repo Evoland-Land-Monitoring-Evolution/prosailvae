@@ -315,7 +315,7 @@ class SimVAE(nn.Module):
         loss = checkpoint['loss']
         return epoch, loss
     
-    def fit(self, dataloader, optimizer, n_samples=1, batch_per_epoch=None, mmdc_dataset=False):
+    def fit(self, dataloader, optimizer, n_samples=1, batch_per_epoch=None, mmdc_dataset=False, max_samples=None):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
@@ -323,7 +323,9 @@ class SimVAE(nn.Module):
             batch_per_epoch = len(dataloader)
         for i, batch in zip(range(min(len(dataloader), batch_per_epoch)), dataloader):
             optimizer.zero_grad()
-            
+            if max_samples is not None:
+                if i == max_samples:
+                    break
             if not self.supervised:
                 loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                     train_loss_dict, n_samples=n_samples, len_loader=len_loader, mmdc_dataset=mmdc_dataset)
@@ -338,17 +340,21 @@ class SimVAE(nn.Module):
             optimizer.step()
             if NaN_model_params(self):
                 self.logger.debug(f"NaN model parameters after batch {i}!")
+
         self.eval()
         return train_loss_dict
 
-    def validate(self, dataloader, n_samples=1, batch_per_epoch=None, mmdc_dataset=False):
+    def validate(self, dataloader, n_samples=1, batch_per_epoch=None, mmdc_dataset=False, max_samples=None):
         self.eval()
         valid_loss_dict = {}
         len_loader = len(dataloader.dataset)
         with torch.no_grad():
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
-            for _, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
+            for i, batch in zip(range(min(len(dataloader),batch_per_epoch)),dataloader):
+                if max_samples is not None:
+                    if i == max_samples:
+                        break
                 if not self.supervised:
                     loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
                         valid_loss_dict, n_samples=n_samples, len_loader=len_loader, mmdc_dataset=mmdc_dataset)

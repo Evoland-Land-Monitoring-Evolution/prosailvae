@@ -212,6 +212,7 @@ class SimVAE(nn.Module):
         params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)     
         if self.decoder.loss_type=='spatial_nll':
             s2_r = crop_s2_input(s2_r, self.encoder.nb_enc_cropped_hw)
+            s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
             rec_loss = self.decoder.loss(s2_r, rec)
         else:
             rec_loss = self.decoder.loss(s2_r, rec)

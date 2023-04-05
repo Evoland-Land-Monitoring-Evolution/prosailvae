@@ -22,24 +22,27 @@ from sensorsio.utils import rgb_render
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True):
-    fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3))
+    fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
     minvisu = None 
     maxvisu = None
     for i in range(len(patch_list)):
         if patch_list[i].size(0)==1:
             tensor_visu = patch_list[i].squeeze()
-            im = axs[i].imshow(tensor_visu, cmap='YlGn')
+            im = axs[i].imshow(tensor_visu)#, cmap='YlGn')
             divider = make_axes_locatable(axs[i])
             cax = divider.append_axes('right', size='5%', pad=0.05)
-            if colorbar:
-                fig.colorbar(im, cax=cax, orientation='vertical')
+            fig.colorbar(im, cax=cax, orientation='vertical')
         else:
             if use_same_visu:
                 tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)
             else:
                 tensor_visu, _, _ = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)
             axs[i].imshow(tensor_visu)
+            divider = make_axes_locatable(axs[i])
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            plt.delaxes(ax = cax)
         axs[i].set_xticks([])
         axs[i].set_yticks([])
         if len(title_list) == len(patch_list):
@@ -340,8 +343,19 @@ def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=F
     valid_loss_sum_min = valid_loss_df['loss_sum'].values.min()
     valid_loss_sum_min_epoch = valid_loss_df['loss_sum'].values.argmin()
     axs[1].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
+    if train_loss_sum_min>0:
+        axs[0].set_yscale('log')
+    else:
+        axs[0].set_yscale('symlog', linthresh=1e-5)
+        axs[0].set_ylim(bottom=min(0, min_loss))
+    if valid_loss_sum_min>0:
+        axs[1].set_yscale('log')
+    else:
+        axs[1].set_yscale('symlog', linthresh=1e-5)
+        axs[1].set_ylim(bottom=min(0, min_loss))
+    axs[2].set_yscale('log')
     for i in range(3):
-        axs[i].set_yscale('symlog', linthresh=1e-5)
+        
         axs[i].legend(fontsize=8)
     axs[2].set_xlabel('epoch')
     axs[0].set_ylabel('Train loss')

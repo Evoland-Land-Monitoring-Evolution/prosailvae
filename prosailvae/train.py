@@ -137,6 +137,11 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
         lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute)
         # lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     
+    max_train_samples_per_epoch = 100
+    max_valid_samples_per_epoch = None
+    if socket.gethostname()=='CELL200973':
+        max_train_samples_per_epoch = 5
+        max_valid_samples_per_epoch = 2
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
@@ -146,7 +151,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
             #                                                n_samples=n_samples)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
-                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
+                
+                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset, max_samples=max_train_samples_per_epoch)
                 if plot_gradient:
                     if not os.path.isdir(res_dir + "/gradient_flows"):
                         os.makedirs(res_dir + "/gradient_flows")
@@ -161,12 +167,12 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
                 traceback.print_exc()
                 break
             try:
-                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples, mmdc_dataset=mmdc_dataset)
+                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples, mmdc_dataset=mmdc_dataset, max_samples=max_valid_samples_per_epoch)
                 if exp_lr_decay>0:
                     # lr_scheduler.step(valid_loss_dict['loss_sum'])
-                    lr_scheduler.step()
+                    lr_scheduler.step(valid_loss_dict['loss_sum'])
             except Exception as e:
-                logger.error(f"Error during Training at epoch {epoch} !")
+                logger.error(f"Error during Validation at epoch {epoch} !")
                 logger.error('Original error :')
                 logger.error(str(e))
                 print(f"Error during Validation at epoch {epoch} !")
@@ -293,13 +299,16 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         if parser.weiss_mode:
             bands_image = torch.tensor([1,2,3,4,5,7,8,9])
             raise NotImplementedError
-        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, bands = bands_image, 
+        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10), 
                                                                                  batch_size=1, num_workers=0)
         # train_loader, valid_loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
         #                                                         bands=bands_image, n_patches_max = n_patches_max, 
         #                                                         batch_size=1, num_workers=0)
     if params["apply_norm_rec"]:
-        norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=1000000, n_bands=len(bands))
+        # norm_mean, norm_std = get_bands_norm_factors_from_loaders(train_loader, bands_dim=1, max_samples=1000000, n_bands=len(bands))
+        norm_mean = torch.load(os.path.join(data_dir, "norm_mean.pt"))
+        norm_std = torch.load(os.path.join(data_dir, "norm_std.pt"))
+    
     else:
         norm_mean = torch.zeros(1, len(bands))
         norm_std = torch.ones(1, len(bands))

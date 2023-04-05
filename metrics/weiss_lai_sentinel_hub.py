@@ -2,16 +2,25 @@ from math import pi
 import torch
 from prosailvae.utils import torch_select_unsqueeze
     
-def weiss_lai(s2_r, s2_a, band_dim = 1):
-    B03 = s2_r.select(band_dim, 1).unsqueeze(band_dim)
-    B04 = s2_r.select(band_dim, 2).unsqueeze(band_dim)
-    B05 = s2_r.select(band_dim, 3).unsqueeze(band_dim)
-    B06 = s2_r.select(band_dim, 4).unsqueeze(band_dim)
-    B07 = s2_r.select(band_dim, 5).unsqueeze(band_dim)
-    B8A = s2_r.select(band_dim, 7).unsqueeze(band_dim)
-    B11 = s2_r.select(band_dim, 8).unsqueeze(band_dim)
-    B12 = s2_r.select(band_dim, 9).unsqueeze(band_dim)
-
+def weiss_lai(s2_r, s2_a, band_dim = 1, bands_idx = None):
+    if bands_idx is None:
+        B03 = s2_r.select(band_dim, 1).unsqueeze(band_dim)
+        B04 = s2_r.select(band_dim, 2).unsqueeze(band_dim)
+        B05 = s2_r.select(band_dim, 3).unsqueeze(band_dim)
+        B06 = s2_r.select(band_dim, 4).unsqueeze(band_dim)
+        B07 = s2_r.select(band_dim, 5).unsqueeze(band_dim)
+        B8A = s2_r.select(band_dim, 7).unsqueeze(band_dim)
+        B11 = s2_r.select(band_dim, 8).unsqueeze(band_dim)
+        B12 = s2_r.select(band_dim, 9).unsqueeze(band_dim)
+    else:
+        B03 = s2_r.select(band_dim, bands_idx['B03']).unsqueeze(band_dim)
+        B04 = s2_r.select(band_dim, bands_idx['B04']).unsqueeze(band_dim)
+        B05 = s2_r.select(band_dim, bands_idx['B05']).unsqueeze(band_dim)
+        B06 = s2_r.select(band_dim, bands_idx['B06']).unsqueeze(band_dim)
+        B07 = s2_r.select(band_dim, bands_idx['B07']).unsqueeze(band_dim)
+        B8A = s2_r.select(band_dim, bands_idx['B8A']).unsqueeze(band_dim)
+        B11 = s2_r.select(band_dim, bands_idx['B11']).unsqueeze(band_dim)
+        B12 = s2_r.select(band_dim, bands_idx['B12']).unsqueeze(band_dim)
     viewZenithMean = s2_a.select(band_dim, 1).unsqueeze(band_dim)
     sunZenithAngles = s2_a.select(band_dim, 0).unsqueeze(band_dim)
     relAzim = s2_a.select(band_dim, 2).unsqueeze(band_dim)
@@ -151,10 +160,8 @@ def layer2(neuron1, neuron2, neuron3, neuron4, neuron5, sum_dim=1):
                             - 0.194935930577094,
                             - 0.352305895755591,
                             + 0.075107415847473,])
-    x = torch.cat((neuron1,neuron2,neuron3,neuron4,neuron5))
+    x = torch.cat((neuron1,neuron2,neuron3,neuron4,neuron5), axis=sum_dim)
     weights = torch_select_unsqueeze(weights, sum_dim, len(neuron1.size()))
-    print(weights.size())
-    print(x.size())
     sum = bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
     return sum
 
@@ -168,3 +175,59 @@ def denormalize(normalized, min_sample, max_sample):
 def tansig(input): 
     return 2 / (1 + torch.exp(-2 * input)) - 1 
 
+def main():
+    import prosailvae
+    import os
+    import matplotlib.pyplot as plt
+    from dataset.juan_datapoints import get_interpolated_validation_data
+    juan_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
+    lai_min=0
+    dt_max=10
+    sites = ["france", "spain1", "italy1", "italy2"]
+    device='cpu'
+
+    weiss_mode=True
+    list_lai_preds = []
+    dt_list = []
+    ndvi_list = []
+    for site in sites:
+        s2_r, s2_a, lais, dt = get_interpolated_validation_data(site, juan_data_dir_path, lai_min=lai_min, 
+                                                                dt_max=dt_max, method="closest")
+        b4 = s2_r[:,2]
+        b8 = s2_r[:,6]
+        ndvi = (b8-b4)/(b8+b4+1e-6)
+        bands_idx = {'B02':0,
+                     'B03':1,
+                     'B04':2,
+                     'B05':3,
+                     'B06':4,
+                     'B07':5,
+                     'B08':6,
+                     'B8A':7,
+                     'B11':8,
+                     'B12':9}
+        if weiss_mode:
+            s2_r = s2_r[:, torch.tensor([1,2,3,4,5,7,8,9])]
+            bands_idx = {'B03':0,
+                        'B04':1,
+                        'B05':2,
+                        'B06':3,
+                        'B07':4,
+                        'B8A':5,
+                        'B11':6,
+                        'B12':7}
+        lai_pred = weiss_lai(s2_r, s2_a, bands_idx=bands_idx)
+        list_lai_preds.append(torch.cat((lai_pred, lais), axis=1))
+        dt_list.append(dt)
+        ndvi_list.append(ndvi)
+    list_lai_preds = torch.cat(list_lai_preds,axis=0)
+    fig, ax = plt.subplots()
+    ax.scatter(list_lai_preds[:,1], 3*list_lai_preds[:,0],s=1)
+    ax.set_xlabel("LAI")
+    ax.set_ylabel("LAI Predicted Sentinel-Hub")
+    ax.plot([0,8],[0,8],'k--')
+    return
+
+if __name__ == "__main__":
+    
+    main()

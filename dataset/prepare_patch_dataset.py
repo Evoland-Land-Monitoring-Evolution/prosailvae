@@ -4,6 +4,8 @@ from torchutils.patches import patchify, unpatchify
 import argparse
 import socket
 
+BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
+
 def get_parser():
     """
     Creates a new argument parser.
@@ -18,6 +20,8 @@ def get_parser():
                         help="path to directory to save data into",
                         type=str, default="")       
     return parser
+
+
 
 def get_images_path(data_dir, valid_tiles=None, valid_files=None):
     list_files = []
@@ -103,7 +107,26 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     print(f"Train patches : {train_clean_patches.size()}")
     print(f"Validation patches : {valid_clean_patches.size()}")
     print(f"Test patches : {test_clean_patches.size()}")
+    swap_bands(train_clean_patches)
+    swap_bands(valid_clean_patches)
+    swap_bands(test_clean_patches)
     return train_clean_patches, valid_clean_patches, test_clean_patches
+
+def swap_bands(patches):
+    idx = torch.LongTensor([ v for _, (_,v) in enumerate(BANDS_IDX.items()) ])
+    patches[:,torch.arange(10),...] = patches[:,idx,...]
+    return 
+
+def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
+    with torch.no_grad():
+        s2_r_samples = patches.permute(1,0,2,3)[:n_bands,...].reshape(n_bands, -1)
+        if mode=='mean':
+            norm_mean = s2_r_samples.mean(1)
+            norm_std = s2_r_samples.std(1)
+        elif mode=='quantile':
+            norm_mean = torch.quantile(s2_r_samples, q=torch.tensor(0.5), dim=1)
+            norm_std = torch.quantile(s2_r_samples, q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples, q=torch.tensor(0.05), dim=1)
+    return norm_mean, norm_std
 
 def main():
     if socket.gethostname()=='CELL200973':
@@ -138,6 +161,9 @@ def main():
                                                         train_patch_size = train_patch_size, 
                                                         valid_size = valid_size, test_size = test_size,
                                                         valid_tiles=valid_tiles, valid_files=valid_files)
+    norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='quantile')
+    torch.save(norm_mean, os.path.join(parser.output_dir, "norm_mean.pt"))
+    torch.save(norm_std, os.path.join(parser.output_dir, "norm_std.pt"))
     torch.save(train_patches, os.path.join(parser.output_dir, "train_patches.pth"))
     torch.save(valid_patches, os.path.join(parser.output_dir, "valid_patches.pth"))
     torch.save(test_patches, os.path.join(parser.output_dir, "test_patches.pth"))

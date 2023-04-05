@@ -435,26 +435,30 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
     return train_loader, valid_loader, test_loader
 
 def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
-                             batch_size=1, num_workers=0):
+                                             batch_size=1, num_workers=0, max_valid_samples=50):
     path_to_train_patches = os.path.join(path_to_patches_dir, "train_patches.pth")
     path_to_valid_patches = os.path.join(path_to_patches_dir, "valid_patches.pth")
     path_to_test_patches = os.path.join(path_to_patches_dir, "test_patches.pth")
     train_loader = get_loader_from_patches(path_to_train_patches, bands = bands, 
                              batch_size=batch_size, num_workers=num_workers)
     valid_loader = get_loader_from_patches(path_to_valid_patches, bands = bands, 
-                             batch_size=batch_size, num_workers=num_workers)
+                             batch_size=batch_size, num_workers=num_workers, max_samples=max_valid_samples)
     test_loader = get_loader_from_patches(path_to_test_patches, bands = bands, 
                              batch_size=batch_size, num_workers=num_workers)
     return train_loader, valid_loader, test_loader
 
 def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
-                             batch_size=1, num_workers=0, concat=False):
+                             batch_size=1, num_workers=0, concat=False, max_samples=None):
     patches = torch.load(path_to_patches)
     s2_a_patches = torch.zeros(patches.size(0), 3, patches.size(2),patches.size(3))
     s2_a_patches[:,0,...] = patches[:,11,...]
     s2_a_patches[:,1,...] = patches[:,13,...]
     s2_a_patches[:,2,...] = patches[:,12,...] - patches[:,14, ...]
     s2_r_patches = patches[:,bands,...]
+    if max_samples is not None:
+        max_samples = max(max_samples, s2_r_patches.size(0))
+        s2_r_patches = s2_r_patches[:max_samples,...]
+        s2_a_patches = s2_a_patches[:max_samples,...]
     if concat:
         dataset = TensorDataset(torch.cat((s2_r_patches, s2_a_patches), axis=1))
         loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
@@ -463,7 +467,7 @@ def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3
         loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
     return loader
 
-def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, n_bands=10):
+def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, n_bands=10, mode='mean'):
     s2_r_samples = torch.tensor([])
     n_samples = 0
     with torch.no_grad():
@@ -477,9 +481,15 @@ def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, 
                 break
         if s2_r_samples.size(1) > max_samples:
             s2_r_samples = s2_r_samples[:,:max_samples]
-        norm_mean = s2_r_samples.mean(1)
-        norm_std = s2_r_samples.std(1)
+        if mode=='mean':
+            norm_mean = s2_r_samples.mean(1)
+            norm_std = s2_r_samples.std(1)
+        elif mode=='quantile':
+            norm_mean = torch.quantile(s2_r_samples, q=torch.tensor(0.5), dim=1)
+            norm_std = torch.quantile(s2_r_samples, q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples, q=torch.tensor(0.05), dim=1)
     return norm_mean, norm_std
+
+
 
 if __name__ == "__main__":
     parser = get_S2_id_split_parser().parse_args()

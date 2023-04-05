@@ -124,7 +124,7 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
             norm_mean = s2_r_samples.mean(1)
             norm_std = s2_r_samples.std(1)
         elif mode=='quantile':
-            max_samples=int(1e6)
+            max_samples=int(1e5)
             norm_mean = torch.quantile(s2_r_samples[:max_samples,...], q=torch.tensor(0.5), dim=1)
             norm_std = torch.quantile(s2_r_samples[:max_samples,...], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples[:max_samples,...], q=torch.tensor(0.05), dim=1)
     return norm_mean, norm_std

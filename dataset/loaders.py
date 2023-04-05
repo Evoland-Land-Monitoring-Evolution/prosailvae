@@ -456,7 +456,7 @@ def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3
     s2_a_patches[:,2,...] = patches[:,12,...] - patches[:,14, ...]
     s2_r_patches = patches[:,bands,...]
     if max_samples is not None:
-        max_samples = max(max_samples, s2_r_patches.size(0))
+        max_samples = min(max_samples, s2_r_patches.size(0))
         s2_r_patches = s2_r_patches[:max_samples,...]
         s2_a_patches = s2_a_patches[:max_samples,...]
     if concat:

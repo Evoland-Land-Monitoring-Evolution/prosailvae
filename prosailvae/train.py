@@ -152,7 +152,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 
-                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset, max_samples=max_train_samples_per_epoch)
+                train_loss_dict = PROSAIL_VAE.fit(train_loader, optimizer, n_samples=n_samples, mmdc_dataset=mmdc_dataset, 
+                                                  max_samples=max_train_samples_per_epoch)
                 if plot_gradient:
                     if not os.path.isdir(res_dir + "/gradient_flows"):
                         os.makedirs(res_dir + "/gradient_flows")
@@ -167,7 +168,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
                 traceback.print_exc()
                 break
             try:
-                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples, mmdc_dataset=mmdc_dataset, max_samples=max_valid_samples_per_epoch)
+                valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples, mmdc_dataset=mmdc_dataset, 
+                                                       max_samples=max_valid_samples_per_epoch)
                 if exp_lr_decay>0:
                     # lr_scheduler.step(valid_loss_dict['loss_sum'])
                     lr_scheduler.step(valid_loss_dict['loss_sum'])

@@ -134,6 +134,8 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
     total_ram = get_total_RAM()
     old_lr = optimizer.param_groups[0]['lr']
     if exp_lr_decay > 0:
+        if lr_recompute is None:
+            lr_recompute = 20
         lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute)
         # lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     

@@ -120,7 +120,7 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
                   res_dir, n_samples=20, lr_recompute=None, exp_lr_decay=0, 
-                  plot_gradient=False, mmdc_dataset=False, weiss_mode=False):
+                  plot_gradient=False, mmdc_dataset=False, weiss_mode=False, lr_recompute_mode=True):
 
 
     logger = logging.getLogger(LOGGER_NAME)
@@ -134,10 +134,13 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
     total_ram = get_total_RAM()
     old_lr = optimizer.param_groups[0]['lr']
     if exp_lr_decay > 0:
-        # if lr_recompute is None:
-        #     lr_recompute = 20
-        # lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute)
-        lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+
+        if lr_recompute_mode :
+            lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
+        else:
+            if lr_recompute is None:
+                lr_recompute = 20
+            lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute)
     
     
     max_train_samples_per_epoch = 100
@@ -149,9 +152,10 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio=0.75)
-            lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, 
-                                                           optimizer, old_lr=old_lr, lrtrainloader=lrtrainloader, weiss_mode=weiss_mode,
-                                                           n_samples=n_samples)
+            if lr_recompute_mode:
+                lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, 
+                                                            optimizer, old_lr=old_lr, lrtrainloader=lrtrainloader, weiss_mode=weiss_mode,
+                                                            n_samples=n_samples)
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch, "lr": optimizer.param_groups[0]['lr']}, index=[0])],ignore_index=True)
             try:
                 
@@ -342,10 +346,9 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                     data_dir=data_dir,
                     supervised=PROSAIL_VAE.supervised,
                     tensors_dir=tensor_dir)
+    lr_recompute_mode=False
     if lr is None:
         try:
-            
-
             # raise NotImplementedError
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, n_samples=params["n_samples"], 
                                     disable_tqdm=not socket.gethostname()=='CELL200973')
@@ -361,7 +364,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     if not socket.gethostname()=='CELL200973':
-        vae_path = "/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
+        vae_path = r"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
         PROSAIL_VAE.load_ae("vae path", optimizer=optimizer)
         print(f"loading VAE {vae_path}") 
         logger.info(f"loading VAE {vae_path}")
@@ -385,7 +388,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                          exp_lr_decay=params["exp_lr_decay"],
                                                          plot_gradient=parser.plot_results,
                                                          mmdc_dataset = not params["simulated_dataset"],
-                                                         weiss_mode=parser.weiss_mode) 
+                                                         weiss_mode=parser.weiss_mode, 
+                                                         lr_recompute_mode=lr_recompute_mode) 
     logger.info("Training Completed !")
 
     return PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df

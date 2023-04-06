@@ -33,7 +33,10 @@ def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True):
             im = axs[i].imshow(tensor_visu)#, cmap='YlGn')
             divider = make_axes_locatable(axs[i])
             cax = divider.append_axes('right', size='5%', pad=0.05)
-            fig.colorbar(im, cax=cax, orientation='vertical')
+            if colorbar:
+                fig.colorbar(im, cax=cax, orientation='vertical')
+            else:
+                plt.delaxes(ax = cax)
         else:
             if use_same_visu:
                 tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)

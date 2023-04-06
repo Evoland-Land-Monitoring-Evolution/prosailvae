@@ -105,7 +105,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
             for i, batch in enumerate(loader):
                 rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
                 rec_image, sim_image, cropped_image = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
-                                                                                   bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), 
+                                                                                   bands=torch.arange(10), 
                                                                                    mode=rec_mode)
                 weiss_lai = get_weiss_lai_from_batch(batch, patch_size=32)
 

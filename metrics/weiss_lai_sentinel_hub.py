@@ -175,6 +175,36 @@ def denormalize(normalized, min_sample, max_sample):
 def tansig(input): 
     return 2 / (1 + torch.exp(-2 * input)) - 1 
 
+from torchutils.patches import patchify, unpatchify
+def get_weiss_lai(image_tensor, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9])):
+    patched_tensor = patchify(image_tensor, patch_size=patch_size, margin=0)
+    patched_lai_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), 1, patch_size, patch_size)).to('cpu')
+    for i in range(patched_tensor.size(0)):
+        for j in range(patched_tensor.size(1)):
+            x = patched_tensor[i,j, bands, :, :]
+            angles = torch.zeros(3, patch_size, patch_size)
+            angles[0,...] = patched_tensor[i, j, 11,...]
+            angles[1,...] = patched_tensor[i, j, 13,...]
+            angles[2,...] = patched_tensor[i, j, 12,...] - patched_tensor[i,j,14,...]
+            with torch.no_grad():
+                lai = weiss_lai(x, angles, band_dim=0)
+            patched_lai_image[i,j,...] = lai
+    lai_image = unpatchify(patched_lai_image)[:,:image_tensor.size(1),:image_tensor.size(2)]
+    return lai_image
+
+def compare_images():
+    import matplotlib.pyplot as plt
+    path_to_image = r"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+    cropped_image = torch.load(path_to_image)[:,3:256-3,3:256-3]
+    lai_image = get_weiss_lai(cropped_image, bands=torch.tensor([0,1,2,4,5,6,3,7,8,9]))
+
+    import rasterio
+    with rasterio.open('/home/yoel/Téléchargements/2017-11-27-00 00_2017-11-27-23 59_Sentinel-2_L2A_Custom_script.tiff', 'r') as ds:
+        np_arr = ds.read()
+        arr = torch.from_numpy(np_arr.astype(float))
+    fig, ax = plot_patches((lai_image,arr),title_list=['NN lai', "Sentinel-Hub lai"], colorbar=True)
+    fig.savefig('validation_weiss_nn_shub.png')
+
 def main():
     import prosailvae
     import os
@@ -222,12 +252,38 @@ def main():
         ndvi_list.append(ndvi)
     list_lai_preds = torch.cat(list_lai_preds,axis=0)
     fig, ax = plt.subplots()
+    from sklearn.metrics import r2_score
+    import numpy as np
+    fig, ax = plt.subplots()
     ax.scatter(list_lai_preds[:,1], 3*list_lai_preds[:,0],s=1)
+    m, b = np.polyfit(list_lai_preds[:,1].numpy(), 3*list_lai_preds[:,0].numpy(), 1)
+    r2 = r2_score(list_lai_preds[:,1].numpy(), 3*list_lai_preds[:,0].numpy())
+    mse = (list_lai_preds[:,1] - 3*list_lai_preds[:,0]).pow(2).mean().numpy()
     ax.set_xlabel("LAI")
     ax.set_ylabel("LAI Predicted Sentinel-Hub")
-    ax.plot([0,8],[0,8],'k--')
+    ax.plot([0,8],[0,8],'k--',)
+    ax.plot([0,8],
+            [m * 0 + b, m * 8 + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    ax.legend()
+    ax.set_aspect('equal')
+    fig.savefig('juan_shub_validation_altered.png')
+    fig, ax = plt.subplots()
+    ax.scatter(list_lai_preds[:,1], list_lai_preds[:,0],s=1)
+    m, b = np.polyfit(list_lai_preds[:,1].numpy(), list_lai_preds[:,0].numpy(), 1)
+    r2 = r2_score(list_lai_preds[:,1].numpy(), list_lai_preds[:,0].numpy())
+    mse = (list_lai_preds[:,1] - list_lai_preds[:,0]).pow(2).mean().numpy()
+    ax.set_xlabel("LAI")
+    ax.set_ylabel("LAI Predicted Sentinel-Hub")
+    ax.plot([0,8],[0,8],'k--',)
+    ax.plot([0,8],
+            [m * 0 + b, m * 8 + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    ax.legend()
+    ax.set_aspect('equal')
+    fig.savefig('juan_shub_validation.png')
+    
     return
 
 if __name__ == "__main__":
-    
+    from prosail_plots import plot_patches
+    compare_images()
     main()

@@ -334,8 +334,15 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     
     
     print(f"Weiss mode : {parser.weiss_mode}")
+    if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
+        #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
+        vae_file_path = params["load_model"] + "/prosailvae_weights.tar"
+        norm_mean = torch.load(os.path.join(params["load_model"], "norm_mean.pt"))
+        norm_std = torch.load(os.path.join(params["load_model"], "norm_std.pt"))
+    else:
+        vae_file_path = None
     PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, logger_name=LOGGER_NAME,
-                                                        vae_file_path=None, params_sup_kl_model=params_sup_kl_model, 
+                                                        vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model, 
                                                         bands=bands, norm_mean=norm_mean, norm_std=norm_std)
     lr = params['lr']
     lrtrainloader = None
@@ -367,15 +374,15 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
 
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
-    if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
-        #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
-        vae_path = params["load_model"]
-        original_device = PROSAIL_VAE.device
-        PROSAIL_VAE.change_device('cpu')
-        PROSAIL_VAE.load_ae(vae_path, optimizer=None)
-        PROSAIL_VAE.change_device(original_device)
-        print(f"loading VAE {vae_path}") 
-        logger.info(f"loading VAE {vae_path}")
+    # if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
+    #     #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
+    #     vae_path = params["load_model"]
+    #     original_device = PROSAIL_VAE.device
+    #     PROSAIL_VAE.change_device('cpu')
+    #     PROSAIL_VAE.load_ae(vae_path, optimizer=None)
+    #     PROSAIL_VAE.change_device(original_device)
+    #     print(f"loading VAE {vae_path}") 
+    #     logger.info(f"loading VAE {vae_path}")
     # all_train_loss_df = pd.DataFrame([])
     # all_valid_loss_df = pd.DataFrame([])
     # info_df = pd.DataFrame([])

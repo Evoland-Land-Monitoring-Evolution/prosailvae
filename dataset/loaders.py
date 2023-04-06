@@ -201,9 +201,11 @@ def lr_finder_loader(sample_ids=None,
         #                                 num_workers=1,
         #                                 pin_memory=False)
         path_to_image = tensors_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
-        _, loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
-                                               bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 
-                                                batch_size=1, num_workers=0, concat=True)
+        # _, loader, _ = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
+        #                                        bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 
+        #                                         batch_size=1, num_workers=0, concat=True)
+        loader, _, _ = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10), 
+                                                                batch_size=1, num_workers=0, concat=True)
         # raise NotImplementedError
     return loader
     
@@ -435,16 +437,16 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
     return train_loader, valid_loader, test_loader
 
 def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
-                                             batch_size=1, num_workers=0, max_valid_samples=50):
+                                             batch_size=1, num_workers=0, max_valid_samples=50, concat=False):
     path_to_train_patches = os.path.join(path_to_patches_dir, "train_patches.pth")
     path_to_valid_patches = os.path.join(path_to_patches_dir, "valid_patches.pth")
     path_to_test_patches = os.path.join(path_to_patches_dir, "test_patches.pth")
     train_loader = get_loader_from_patches(path_to_train_patches, bands = bands, 
-                             batch_size=batch_size, num_workers=num_workers)
+                             batch_size=batch_size, num_workers=num_workers, concat=concat)
     valid_loader = get_loader_from_patches(path_to_valid_patches, bands = bands, 
-                             batch_size=batch_size, num_workers=num_workers, max_samples=max_valid_samples)
+                             batch_size=batch_size, num_workers=num_workers, max_samples=max_valid_samples, concat=concat)
     test_loader = get_loader_from_patches(path_to_test_patches, bands = bands, 
-                             batch_size=batch_size, num_workers=num_workers)
+                             batch_size=batch_size, num_workers=num_workers, concat=concat)
     return train_loader, valid_loader, test_loader
 
 def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 

@@ -139,6 +139,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
         # lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute)
         lr_scheduler =  torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=exp_lr_decay)
     
+    
     max_train_samples_per_epoch = 100
     max_valid_samples_per_epoch = None
     if socket.gethostname()=='CELL200973':
@@ -174,7 +175,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
                                                        max_samples=max_valid_samples_per_epoch)
                 if exp_lr_decay>0:
                     # lr_scheduler.step(valid_loss_dict['loss_sum'])
-                    lr_scheduler.step(valid_loss_dict['loss_sum'])
+                    lr_scheduler.step()
             except Exception as e:
                 logger.error(f"Error during Validation at epoch {epoch} !")
                 logger.error('Original error :')
@@ -330,27 +331,29 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                                         bands=bands, norm_mean=norm_mean, norm_std=norm_std)
     lr = params['lr']
     lrtrainloader = None
+
     tensor_dir=None
     if not params["simulated_dataset"]:
         tensor_dir = parser.tensor_dir
+    lrtrainloader = lr_finder_loader(
+                    file_prefix=params["dataset_file_prefix"], 
+                    sample_ids=None,
+                    batch_size=64,
+                    data_dir=data_dir,
+                    supervised=PROSAIL_VAE.supervised,
+                    tensors_dir=tensor_dir)
     if lr is None:
         try:
-            # raise NotImplementedError
-            lrtrainloader = lr_finder_loader(
-                                    file_prefix=params["dataset_file_prefix"], 
-                                    sample_ids=None,
-                                    batch_size=64,
-                                    data_dir=data_dir,
-                                    supervised=PROSAIL_VAE.supervised,
-                                    tensors_dir=tensor_dir)
             
+
+            # raise NotImplementedError
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, n_samples=params["n_samples"], 
                                     disable_tqdm=not socket.gethostname()=='CELL200973')
             logger.info('LR computed ! using lr = {:.2E}'.format(lr))
         except Exception as e:
             traceback.print_exc()
             print(e)
-            lr = 1e-3
+            lr = 1e-4
             logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
             logger.error(f"{e}")
             print(f"Couldn't recompute lr at initialization ! Using lr={lr}")
@@ -362,7 +365,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     # info_df = pd.DataFrame([])
     logger.info('PROSAIL-VAE and optimizer initialized.')
     
-    # Trainingget_PROSAIL_VAE_lr
+    # Training
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
     all_train_loss_df, all_valid_loss_df, info_df = training_loop(PROSAIL_VAE, 

@@ -339,6 +339,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         vae_file_path = params["load_model"] + "/prosailvae_weights.tar"
         norm_mean = torch.load(os.path.join(params["load_model"], "norm_mean.pt"))
         norm_std = torch.load(os.path.join(params["load_model"], "norm_std.pt"))
+        torch.save(norm_mean, res_dir + "/norm_mean.pt")
+        torch.save(norm_std, res_dir + "/norm_std.pt")
     else:
         vae_file_path = None
     PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, logger_name=LOGGER_NAME,

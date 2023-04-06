@@ -170,10 +170,11 @@ def main():
                                                         valid_size = valid_size, test_size = test_size,
                                                         valid_tiles=valid_tiles, valid_files=valid_files)
 
-    norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='quantile')
-    print(f"median {norm_mean}, quantiles difference {norm_std}")
     norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='mean')
     print(f"mean {norm_std}, std {norm_std}")
+    norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='quantile')
+    print(f"median {norm_mean}, quantiles difference {norm_std}")
+
     
     torch.save(norm_mean, os.path.join(parser.output_dir, "norm_mean.pt"))
     torch.save(norm_std, os.path.join(parser.output_dir, "norm_std.pt"))

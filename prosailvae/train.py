@@ -448,7 +448,7 @@ def main():
             #                                              pin_memory=False)
             # path_to_image = parser.tensor_dir + "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
 
-            _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]),
+            _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                             batch_size=1, num_workers=0)
             # _, _, test_loader = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
             #                 bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 

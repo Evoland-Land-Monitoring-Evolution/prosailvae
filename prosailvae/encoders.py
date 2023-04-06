@@ -512,7 +512,7 @@ class ProsailRCNNEncoder(nn.Module):
         self.device=device
         self.norm_mean = self.norm_mean.to(device)
         self.norm_std = self.norm_std.to(device)
-        self.cnet = self.dnet.to(device)
+        self.cnet = self.cnet.to(device)
         self.mu_conv = self.mu_conv.to(device)
         self.logvar_conv = self.logvar_conv.to(device)
         self.mu_logvar_conv = self.mu_logvar_conv.to(device)

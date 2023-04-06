@@ -140,7 +140,7 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
         else:
             if lr_recompute is None:
                 lr_recompute = 20
-            lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute)
+            lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=lr_recompute,threshold=0.01)
     
     
     max_train_samples_per_epoch = 100
@@ -368,6 +368,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
     if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
+        #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
         vae_path = params["load_model"]
         original_device = PROSAIL_VAE.device
         PROSAIL_VAE.change_device('cpu')

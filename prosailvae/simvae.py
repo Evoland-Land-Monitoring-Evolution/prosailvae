@@ -323,17 +323,21 @@ class SimVAE(nn.Module):
         if batch_per_epoch is None:
             batch_per_epoch = len(dataloader)
         for i, batch in zip(range(min(len(dataloader), batch_per_epoch)), dataloader):
-            
+            if NaN_model_params(self):
+                self.logger.debug(f"NaN model parameters at batch {i}!")
             if max_samples is not None:
                 if i == max_samples:
                     break
             optimizer.zero_grad()
-            if not self.supervised:
-                loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
-                    train_loss_dict, n_samples=n_samples, len_loader=len_loader, mmdc_dataset=mmdc_dataset)
-            else:
-                loss_sum, _ = self.compute_supervised_loss_over_batch(batch, train_loss_dict, 
-                                                        len_loader=len_loader)
+            try:
+                if not self.supervised:
+                    loss_sum, _ = self.compute_unsupervised_loss_over_batch(batch, 
+                        train_loss_dict, n_samples=n_samples, len_loader=len_loader, mmdc_dataset=mmdc_dataset)
+                else:
+                    loss_sum, _ = self.compute_supervised_loss_over_batch(batch, train_loss_dict, 
+                                                            len_loader=len_loader)
+            except:
+                raise ValueError(f"Couldn't compute loss at batch {i}!")
                 
             if torch.isnan(loss_sum).any():
                 self.logger.error(f"NaN Loss encountered during training at batch {i}!")

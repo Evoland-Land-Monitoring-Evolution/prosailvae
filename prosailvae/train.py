@@ -247,7 +247,8 @@ def setupTraining():
     params = load_dict(config_dir + parser.config_file)
     if params["supervised"]:
         params["simulated_dataset"]=True
-
+    if not "load_model" in params.keys():
+        params["load_model"]=None
     params["k_fold"] = parser.n_xp
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     if len(parser.root_results_dir)==0:
@@ -366,8 +367,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
 
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
-    if not socket.gethostname()=='CELL200973':
-        vae_path = r"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
+    if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
+        vae_path = params["load_model"]
         original_device = PROSAIL_VAE.device
         PROSAIL_VAE.change_device('cpu')
         PROSAIL_VAE.load_ae(vae_path, optimizer=None)

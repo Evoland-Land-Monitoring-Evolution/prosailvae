@@ -337,6 +337,9 @@ class SimVAE(nn.Module):
                     loss_sum, _ = self.compute_supervised_loss_over_batch(batch, train_loss_dict, 
                                                             len_loader=len_loader)
             except:
+                self.logger.error(f"Couldn't compute loss at batch {i}!")
+                self.logger.error(f"s2_r : {torch.isnan(batch[0]).sum()} NaN")
+                self.logger.error(f"s2_a : {torch.isnan(batch[1]).sum()} NaN")
                 raise ValueError(f"Couldn't compute loss at batch {i}!")
                 
             if torch.isnan(loss_sum).any():

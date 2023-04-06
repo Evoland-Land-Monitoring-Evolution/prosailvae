@@ -60,7 +60,7 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
         validity = patch[cloud_mask_idx,...]
         if reject_mode == 'all':
             if not validity.any():
-                if not torch.isnan(clean_patches).any():
+                if not torch.isnan(patch).any():
                     clean_patches.append(patch.unsqueeze(0))
                 else:
                     nan_flag=True

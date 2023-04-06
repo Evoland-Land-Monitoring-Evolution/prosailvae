@@ -249,6 +249,8 @@ def setupTraining():
         params["simulated_dataset"]=True
     if not "load_model" in params.keys():
         params["load_model"]=None
+    if not "lr_recompute_mode" in params.keys():
+        params["lr_recompute_mode"]=False
     params["k_fold"] = parser.n_xp
     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
     if len(parser.root_results_dir)==0:
@@ -359,7 +361,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                     data_dir=data_dir,
                     supervised=PROSAIL_VAE.supervised,
                     tensors_dir=tensor_dir)
-    lr_recompute_mode=False
+    lr_recompute_mode = params["lr_recompute_mode"]
     if lr is None:
         try:
             # raise NotImplementedError

@@ -178,8 +178,11 @@ def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, l
                 valid_loss_dict = PROSAIL_VAE.validate(valid_loader, n_samples=n_samples, mmdc_dataset=mmdc_dataset, 
                                                        max_samples=max_valid_samples_per_epoch)
                 if exp_lr_decay>0:
-                    # lr_scheduler.step(valid_loss_dict['loss_sum'])
-                    lr_scheduler.step()
+                    
+                    if lr_recompute_mode:
+                        lr_scheduler.step()
+                    else:
+                        lr_scheduler.step(valid_loss_dict['loss_sum'])
             except Exception as e:
                 logger.error(f"Error during Validation at epoch {epoch} !")
                 logger.error('Original error :')

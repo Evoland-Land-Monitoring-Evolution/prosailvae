@@ -346,6 +346,7 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
             
             lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, n_samples=params["n_samples"], 
                                     disable_tqdm=not socket.gethostname()=='CELL200973')
+            logger.info('LR computed ! using lr = {:.2f}'.format(lr))
         except Exception as e:
             traceback.print_exc()
             print(e)

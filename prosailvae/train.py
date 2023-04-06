@@ -360,6 +360,11 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
 
     optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
     # PROSAIL_VAE.load_ae("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/" + "/prosailvae_weigths.tar", optimizer=optimizer)
+    if not socket.gethostname()=='CELL200973':
+        vae_path = "/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
+        PROSAIL_VAE.load_ae("vae path", optimizer=optimizer)
+        print(f"loading VAE {vae_path}") 
+        logger.info(f"loading VAE {vae_path}")
     # all_train_loss_df = pd.DataFrame([])
     # all_valid_loss_df = pd.DataFrame([])
     # info_df = pd.DataFrame([])

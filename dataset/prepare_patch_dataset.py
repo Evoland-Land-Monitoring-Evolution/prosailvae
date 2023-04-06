@@ -54,16 +54,22 @@ def get_patches(image_tensor, patch_size):
 
 def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
     clean_patches = []
+    nan_flag = False
     for i in range(patches.size(0)):
         patch = patches[i,...]
         validity = patch[cloud_mask_idx,...]
         if reject_mode == 'all':
             if not validity.any():
-                clean_patches.append(patch.unsqueeze(0))
+                if not torch.isnan(clean_patches).any():
+                    clean_patches.append(patch.unsqueeze(0))
+                else:
+                    nan_flag=True
         else:
             raise NotImplementedError
     if len(clean_patches)>0:
         clean_patches = torch.cat(clean_patches, dim=0)
+    if nan_flag:
+        print("WARNING: patches with nan values were detected in this data !")
     return clean_patches
 
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 

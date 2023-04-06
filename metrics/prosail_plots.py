@@ -347,12 +347,12 @@ def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=F
         axs[0].set_yscale('log')
     else:
         axs[0].set_yscale('symlog', linthresh=1e-5)
-        axs[0].set_ylim(bottom=min(0, min_loss))
+        axs[0].set_ylim(bottom=min(0, train_loss_sum_min))
     if valid_loss_sum_min>0:
         axs[1].set_yscale('log')
     else:
         axs[1].set_yscale('symlog', linthresh=1e-5)
-        axs[1].set_ylim(bottom=min(0, min_loss))
+        axs[1].set_ylim(bottom=min(0, valid_loss_sum_min))
     axs[2].set_yscale('log')
     for i in range(3):
         

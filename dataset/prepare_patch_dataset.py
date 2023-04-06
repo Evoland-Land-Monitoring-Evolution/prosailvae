@@ -81,6 +81,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     test_clean_patches = []
     seed = 4235910
     for tensor_file in tensor_files:
+        print(tensor_file)
         image_tensor = torch.load(tensor_file)
         patches = get_patches(image_tensor, large_patch_size)
         n_valid = int(patches.size(0) * valid_size)

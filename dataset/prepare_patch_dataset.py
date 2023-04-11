@@ -3,6 +3,7 @@ import os
 from torchutils.patches import patchify, unpatchify 
 import argparse
 import socket
+import numpy as np
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -25,23 +26,52 @@ def get_parser():
 
 def get_images_path(data_dir, valid_tiles=None, valid_files=None):
     list_files = []
+    id_list = []
+    file_info = []
     tile_dirs = os.listdir(data_dir)
-    for tile_dir in tile_dirs:
+    
+    for tile in tile_dirs:
         if valid_tiles is not None:
-            if tile_dir not in valid_tiles:
+            if tile not in valid_tiles:
                 continue
-        tile_dir = os.path.join(data_dir, tile_dir)
+        tile_dir = os.path.join(data_dir, tile)
         if os.path.isdir(tile_dir):
             tile_files = os.listdir(tile_dir)
             for tile_file in tile_files:
                 if valid_files is not None:
                     if tile_file not in valid_files:
                         continue
-                tile_file = os.path.join(tile_dir, tile_file)
+                tile_file_path = os.path.join(tile_dir, tile_file)
                 if tile_file[-4:] == ".pth":
-                    print(tile_file)
-                    list_files.append(tile_file)
-    return list_files
+                    sensor, date, tile, id = get_info_from_filename(tile_file)
+                    if id in id_list:
+                        print(f"Already an image with : {sensor}, {date}, {tile}")
+                    else:
+                        id_list.append(id)
+                        file_info.append([sensor, date, tile])
+                        print(f"Adding : {tile_file}")
+                        list_files.append(tile_file_path)
+    return list_files, file_info
+
+def get_valid_area_in_image(tile):
+    if tile=="T31TCJ":
+        return 0, 512, 0, 512
+    elif tile=="T30TUM":
+        return 0, 512, 0, 512
+    elif tile=="T33TWF":
+        return 1700, 2212, 0, 512
+    elif tile=="T33TWG":
+        return 0, 512, 1533, 2045
+    # if tile=="T31TCJ":
+    #     return 0, 1024, 0, 1024
+    # elif tile=="T30TUM":
+    #     return 0, 1024, 0, 1024
+    # elif tile=="T33TWF":
+    #     return 0, 1024, 0, 1024
+    # elif tile=="T33TWF":
+    #     return 0, 1024, 1020, 2044
+    else:
+        raise NotImplementedError
 
 def get_patches(image_tensor, patch_size):
     patches = patchify(image_tensor, patch_size=patch_size, margin=0)
@@ -75,14 +105,20 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
                                        valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None):
     assert large_patch_size % train_patch_size == 0
-    tensor_files = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files)
+    tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files)
     train_clean_patches = []
     valid_clean_patches = []
     test_clean_patches = []
     seed = 4235910
-    for tensor_file in tensor_files:
+    train_patch_info = []
+    valid_patch_info = []
+    test_patch_info = []
+    for i, tensor_file in enumerate(tensor_files):
+        info = file_info[i]
         print(tensor_file)
         image_tensor = torch.load(tensor_file)
+        min_x, max_x, min_y, max_y = get_valid_area_in_image(info[2])
+        image_tensor = image_tensor[:,min_x: max_x, min_y: max_y]
         patches = get_patches(image_tensor, large_patch_size)
         n_valid = int(patches.size(0) * valid_size)
         n_test = int(patches.size(0) * test_size)
@@ -95,29 +131,35 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         test_patches = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...], cloud_mask_idx=10, reject_mode='all')
         if len(train_patches) > 0:
             train_clean_patches.append(train_patches)
+            train_patch_info += [info] * n_train * (large_patch_size // train_patch_size)**2
         if len(valid_patches) > 0:
             valid_clean_patches.append(valid_patches)
+            valid_patch_info += [info] * n_valid * (large_patch_size // train_patch_size)**2
         if len(test_patches) > 0:
             test_clean_patches.append(test_patches)
+            test_patch_info += [info] * n_test
 
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
     train_perms = torch.randperm(train_clean_patches.size(0), generator=g_cpu) 
     train_clean_patches = train_clean_patches[train_perms,...]
+    train_patch_info = np.array(train_patch_info)[train_perms,:]
     valid_clean_patches = torch.cat(valid_clean_patches, dim=0)
     valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
     valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu) 
     valid_clean_patches = valid_clean_patches[valid_perms,...]
+    valid_patch_info = np.array(valid_patch_info)[valid_perms,:]
     test_clean_patches = torch.cat(test_clean_patches, dim=0)
     test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu) 
     test_clean_patches = test_clean_patches[test_perms,...]
+    test_patch_info = np.array(test_patch_info)[test_perms,:]
     print(f"Train patches : {train_clean_patches.size()}")
     print(f"Validation patches : {valid_clean_patches.size()}")
     print(f"Test patches : {test_clean_patches.size()}")
     swap_bands(train_clean_patches)
     swap_bands(valid_clean_patches)
     swap_bands(test_clean_patches)
-    return train_clean_patches, valid_clean_patches, test_clean_patches
+    return train_clean_patches, valid_clean_patches, test_clean_patches, train_patch_info, valid_patch_info, test_patch_info
 
 def swap_bands(patches):
     idx = torch.LongTensor([ v for _, (_,v) in enumerate(BANDS_IDX.items()) ])
@@ -135,6 +177,18 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
             norm_mean = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
             norm_std = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
     return norm_mean, norm_std
+
+def get_info_from_filename(filename):
+    filename_comp = filename.split("_")
+    if filename_comp[1] == "SENTINEL2A":
+        sensor = "2A"
+    elif filename_comp[1] == "SENTINEL2B":
+        sensor = "2B"
+    else:
+        raise ValueError("Sensor name not found!")
+    date = filename_comp[2].split("-")[0]
+    tile = filename_comp[4]
+    return sensor, date, tile, sensor + date + tile
 
 def main():
     if socket.gethostname()=='CELL200973':
@@ -162,10 +216,10 @@ def main():
                    "before_SENTINEL2A_20170408-095711-526_L2A_T33TWF_D_V1-4_roi_0.pth",
                    "before_SENTINEL2A_20170518-095716-529_L2A_T33TWG_D_V1-4_roi_0.pth"
                 ]
-
-    (train_patches, 
-     valid_patches, 
-     test_patches) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 
+    valid_files = None
+    (train_patches, valid_patches, test_patches,
+     train_patch_info, valid_patch_info, 
+     test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 
                                                         train_patch_size = train_patch_size, 
                                                         valid_size = valid_size, test_size = test_size,
                                                         valid_tiles=valid_tiles, valid_files=valid_files)
@@ -181,6 +235,9 @@ def main():
     torch.save(train_patches, os.path.join(parser.output_dir, "train_patches.pth"))
     torch.save(valid_patches, os.path.join(parser.output_dir, "valid_patches.pth"))
     torch.save(test_patches, os.path.join(parser.output_dir, "test_patches.pth"))
+    np.save(os.path.join(parser.output_dir, "train_info.npy"), train_patch_info)
+    np.save(os.path.join(parser.output_dir, "valid_info.npy"), valid_patch_info)
+    np.save(os.path.join(parser.output_dir, "test_info.npy"), test_patch_info)
     return 
 
 if __name__=='__main__':

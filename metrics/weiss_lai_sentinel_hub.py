@@ -1,8 +1,134 @@
 from math import pi 
 import torch
 from prosailvae.utils import torch_select_unsqueeze
-    
-def weiss_lai(s2_r, s2_a, band_dim = 1, bands_idx = None):
+
+def get_layer_1_neuron_weights(ver="2.1"):
+    if ver =="2.1":
+        w1 = torch.tensor([- 0.023406878966470, + 0.921655164636366, + 0.135576544080099, - 1.938331472397950, - 3.342495816122680, + 0.902277648009576,
+                                + 0.205363538258614, + 0.040607844721716, + 0.083196409727092, + 0.260029270773809, + 0.284761567218845])
+        w2 = torch.tensor([- 0.132555480856684, - 0.139574837333540, - 1.014606016898920, - 1.330890038649270, + 0.031730624503341, - 1.433583541317050,
+                                - 0.959637898574699, + 1.133115706551000, + 0.216603876541632, + 0.410652303762839, + 0.064760155543506])
+        w3 = torch.tensor([  0.086015977724868, + 0.616648776881434, + 0.678003876446556, + 0.141102398644968, - 0.096682206883546, - 1.128832638862200,
+                                + 0.302189102741375, + 0.434494937299725, - 0.021903699490589, - 0.228492476802263, - 0.039460537589826,]) 
+        w4 = torch.tensor([- 0.109366593670404, - 0.071046262972729, + 0.064582411478320, + 2.906325236823160, - 0.673873108979163, - 3.838051868280840,
+                                + 1.695979344531530, + 0.046950296081713, - 0.049709652688365, + 0.021829545430994, + 0.057483827104091])
+        w5 = torch.tensor([- 0.089939416159969, + 0.175395483106147, - 0.081847329172620, + 2.219895367487790, + 1.713873975136850, + 0.713069186099534,
+                                + 0.138970813499201, - 0.060771761518025, + 0.124263341255473, + 0.210086140404351, - 0.183878138700341,])
+    elif ver =="3A":    
+        w1 = torch.tensor([-1.4710156196971582,-0.2563532709468933,-2.2180860576490495,-1.085898980193225,1.476503732633888,-0.203130406532602,
+                           1.9247696053465146,1.836433120470074,-0.4178313281505014,0.11120379207368114,0.2710853575035239])
+        w2 = torch.tensor([1.8061903884637975,1.1335141059415899,0.7529844590307209,-1.849059724727423,-2.3218651443747502,-0.14636054606555837,
+                           -0.55740658813474,0.6841136954400282,0.8247349654342588,-0.6080497708934546,0.32421327324338656])
+        w3 = torch.tensor([0.7970672934944534,0.4460131825143041,0.408586425658519,-1.485087188758423,1.1623034379249386,-1.4153189332758485,
+                           1.4595324130059253,0.3335744055337625,-1.6186285460736094,-0.14549546441013367,-2.8578688750531547]) 
+        w4 = torch.tensor([0.09421670372484336,-0.22700197694341617,-0.15056963844888643,-1.2842480628443311,0.6965044295491283,1.9782367938424654,
+                           -0.8916551406435398,-0.1039817992235624,0.013484692816631437,0.007841478637455265,-0.02581868621411949])
+        w5 = torch.tensor([-0.9667116308950019,-0.4183310913759375,-1.890580979987651,0.0066940023538766685,1.9755057593307033,4.045480239195276,
+                           -1.3979478080853602,-0.7644964732510922,0.010792479104631214,1.1088706990036719,0.04211359644818833])
+    elif ver =="3B":    
+        w1 = torch.tensor([0.0830079594419,-0.288281933525,-0.111764138832,-2.25405934742,0.268135370597,3.14923063777,
+                           -1.06996677449,-0.1837991652,0.0149841814287,0.0314033988537,0.00514853694825])
+        w2 = torch.tensor([1.00387064453,-0.813625826848,0.740886365416,1.00938214456,-0.926530517091,-0.476882469139,
+                           -0.0798642487375,-1.01674056491,-0.959418129249,0.749986744207,-1.2989372502])
+        w3 = torch.tensor([-0.914903852701,0.418794470829,0.156396260112,0.320562039933,2.0695705545,1.6938367995,
+                           -0.307752980774,0.092487209186,-2.07129204917,-1.00442058831,-0.531933380552]) 
+        w4 = torch.tensor([-0.000281553791956,0.250188709989,-0.151786460873,-0.8446482236,-1.02084725541,0.00997687410719,
+                           -0.151504370026,0.179437000847,0.000172690172325,0.155271104219,0.0536610109272])
+        w5 = torch.tensor([-0.369471756141,-0.124139165315,-1.63008285889,2.06268182076,1.05971997378,-0.404036285657,
+                           0.35003581063,-0.269461692429,0.00170530533046,0.261731671162,0.108905459203])
+    else:
+        raise NotImplementedError
+    return w1, w2, w3, w4, w5
+
+def get_layer_1_neuron_biases(ver="2.1"):
+    if ver =="2.1":
+        b1 = torch.tensor(4.96238030555279)
+        b2 = torch.tensor(1.416008443981500)
+        b3 = torch.tensor(1.075897047213310)
+        b4 = torch.tensor(1.533988264655420)
+        b5 = torch.tensor(3.024115930757230)
+    elif ver =="3A":
+        b1 = torch.tensor(2.1161258270627883)
+        b2 = torch.tensor(-1.2697541230231073)
+        b3 = torch.tensor(-0.05084328062062615)
+        b4 = torch.tensor(-1.3405631105862423)
+        b5 = torch.tensor(0.00555729948301853)    
+    elif ver =="3B":
+        b1 = torch.tensor(-1.39740933966)
+        b2 = torch.tensor(-0.728796420696)
+        b3 = torch.tensor(-0.952390932098)
+        b4 = torch.tensor(2.4023575151)
+        b5 = torch.tensor(-0.0140976313556) 
+    else:
+        raise NotImplementedError
+    return b1, b2, b3, b4, b5
+
+def get_layer_2_bias(ver="2.1")
+    if ver =="2.1":
+        bl2 = torch.tensor(1.096963107077220)
+    elif ver =="3A":
+        bl2 = torch.tensor(-0.2889370017570876)
+    elif ver =="3B":
+        bl2 = torch.tensor(0.497630893637)
+    else:
+        raise NotImplementedError
+    return bl2
+
+def get_layer_2_weights(ver="2.1")
+    if ver =="2.1":
+        wl2 = torch.tensor([- 1.500135489728730, - 0.096283269121503, - 0.194935930577094, - 0.352305895755591, + 0.075107415847473,])
+    elif ver =="3A":
+        wl2 = torch.tensor([0.03766013804422397, -0.0006743151224540634, -0.000537335098594741, 0.6734767487882749, 0.06266448073894361])
+    elif ver =="3B":
+        wl2 = torch.tensor([0.495515257513,0.011460391566,-0.00615498084548,-0.923361561577,0.0904255753897])
+    else:
+        raise NotImplementedError
+    return wl2
+
+def get_norm_factors(ver="2.1"):
+    if ver =="2.1":
+        norm_factors = {"min_sample_B03" : 0, "max_sample_B03" : 0.253061520471542,
+                        "min_sample_B04" : 0, "max_sample_B04" : 0.290393577911328,
+                        "min_sample_B05" : 0, "max_sample_B05" : 0.305398915248555,
+                        "min_sample_B06" : 0.006637972542253, "max_sample_B06" : 0.608900395797889,
+                        "min_sample_B07" : 0.013972727018939, "max_sample_B07" : 0.753827384322927,
+                        "min_sample_B8A" : 0.026690138082061, "max_sample_B8A" : 0.782011770669178,
+                        "min_sample_B11" : 0.016388074192258, "max_sample_B11" : 0.493761397883092,
+                        "min_sample_B12" : 0, "max_sample_B12" : 0.493025984460231,
+                        "min_sample_viewZen" : 0.918595400582046, "max_sample_viewZen" : 1,
+                        "min_sample_sunZen" : 0.342022871159208, "max_sample_sunZen" : 0.936206429175402,
+                        "min_sample_lai" : 0.000319182538301, "max_sample_lai" : 14.4675094548151,}    
+    elif ver =="3A":
+        norm_factors = {"min_sample_B03" : 0, "max_sample_B03" : 0.23901527463861838,
+                        "min_sample_B04" : 0, "max_sample_B04" : 0.29172736471507876,
+                        "min_sample_B05" : 0, "max_sample_B05" : 0.32652671459255694,
+                        "min_sample_B06" : 0.008717364330310326, "max_sample_B06" : 0.5938903910368211,
+                        "min_sample_B07" : 0.019693160430621366, "max_sample_B07" : 0.7466909927207045,
+                        "min_sample_B8A" : 0.026217828282102625, "max_sample_B8A" : 0.7582393779705984,
+                        "min_sample_B11" : 0.018931934894415213, "max_sample_B11" : 0.4929337190581187,
+                        "min_sample_B12" : 0, "max_sample_B12" : 0.4877499217101771,
+                        "min_sample_viewZen" : 0.979624800125421, "max_sample_viewZen" : 1,
+                        "min_sample_sunZen" : 0.342108564072183, "max_sample_sunZen" : 0.9274847491748729,
+                        "min_sample_lai" : 0.00023377390882650673, "max_sample_lai" : 13.834592547008839,}
+    elif ver =="3B":
+        norm_factors = {"min_sample_B03" : 0, "max_sample_B03" : 0.247742161604,
+                        "min_sample_B04" : 0, "max_sample_B04" : 0.305951681647,
+                        "min_sample_B05" : 0, "max_sample_B05" : 0.327098829671,
+                        "min_sample_B06" : 0.0119814116908, "max_sample_B06" : 0.599329840352,
+                        "min_sample_B07" : 0.0169060342706, "max_sample_B07" : 0.741682769861,
+                        "min_sample_B8A" : 0.0176448354545, "max_sample_B8A" : 0.780987637826,
+                        "min_sample_B11" : 0.0147283842139, "max_sample_B11" : 0.507673379171,
+                        "min_sample_B12" : 0, "max_sample_B12" : 0.502205128583,
+                        "min_sample_viewZen" : 0.979624800125, "max_sample_viewZen" : 1,
+                        "min_sample_sunZen" : 0.342108564072183, "max_sample_sunZen" : 0.9274847491748729,
+                        "min_sample_lai" : 0.00023377390882650673, "max_sample_lai" : 13.834592547008839,}    
+    else:
+        raise NotImplementedError
+    return norm_factors
+
+
+
+def weiss_lai(s2_r, s2_a, band_dim = 1, bands_idx = None, ver="2.1", lai_disp_norm=False):
     if bands_idx is None:
         B03 = s2_r.select(band_dim, 1).unsqueeze(band_dim)
         B04 = s2_r.select(band_dim, 2).unsqueeze(band_dim)
@@ -24,147 +150,50 @@ def weiss_lai(s2_r, s2_a, band_dim = 1, bands_idx = None):
     viewZenithMean = s2_a.select(band_dim, 1).unsqueeze(band_dim)
     sunZenithAngles = s2_a.select(band_dim, 0).unsqueeze(band_dim)
     relAzim = s2_a.select(band_dim, 2).unsqueeze(band_dim)
-    b03_norm = normalize(B03, 0, 0.253061520471542)
-    b04_norm = normalize(B04, 0, 0.290393577911328)
-    b05_norm = normalize(B05, 0, 0.305398915248555)
-    b06_norm = normalize(B06, 0.006637972542253, 0.608900395797889)
-    b07_norm = normalize(B07, 0.013972727018939, 0.753827384322927)
-    b8a_norm = normalize(B8A, 0.026690138082061, 0.782011770669178)
-    b11_norm = normalize(B11, 0.016388074192258, 0.493761397883092)
-    b12_norm = normalize(B12, 0, 0.493025984460231)
-    viewZen_norm = normalize(torch.cos(torch.deg2rad(viewZenithMean)), 0.918595400582046, 1)
-    sunZen_norm  = normalize(torch.cos(torch.deg2rad(sunZenithAngles)), 0.342022871159208, 0.936206429175402)
+    
+    norm_factors = get_norm_factors(ver=ver)
+    w1, w2, w3, w4, w5 = get_layer_1_neuron_weights(ver=ver)
+    b1, b2, b3, b4, b5 = get_layer_1_neuron_biases(ver=ver)
+    wl2 = get_layer_2_weights(ver=ver)
+    bl2 = get_layer_2_bias(ver=ver)
+    
+    b03_norm = normalize(B03, norm_factors["min_sample_B03"], norm_factors["max_sample_B03"])
+    b04_norm = normalize(B04, norm_factors["min_sample_B04"], norm_factors["max_sample_B04"])
+    b05_norm = normalize(B05, norm_factors["min_sample_B05"], norm_factors["max_sample_B05"])
+    b06_norm = normalize(B06, norm_factors["min_sample_B06"], norm_factors["max_sample_B06"])
+    b07_norm = normalize(B07, norm_factors["min_sample_B07"], norm_factors["max_sample_B07"])
+    b8a_norm = normalize(B8A, norm_factors["min_sample_B8A"], norm_factors["max_sample_B8A"])
+    b11_norm = normalize(B11, norm_factors["min_sample_B11"], norm_factors["max_sample_B11"])
+    b12_norm = normalize(B12, norm_factors["min_sample_B12"], norm_factors["max_sample_B12"])
+    viewZen_norm = normalize(torch.cos(torch.deg2rad(viewZenithMean)), norm_factors["min_sample_viewZen"], norm_factors["max_sample_viewZen"])
+    sunZen_norm  = normalize(torch.cos(torch.deg2rad(sunZenithAngles)), norm_factors["min_sample_sunZen"], norm_factors["max_sample_sunZen"])
     relAzim_norm = torch.cos(relAzim)
 
-    n1 = neuron1(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
-    n2 = neuron2(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
-    n3 = neuron3(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
-    n4 = neuron4(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
-    n5 = neuron5(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=band_dim)
+    x1 = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm,b07_norm, b8a_norm, b11_norm, b12_norm,
+                   viewZen_norm,sunZen_norm,relAzim_norm), axis=band_dim)
+    nb_dim = len(b03_norm.size())
+    n1 = neuron(x1, w1, b1, nb_dim, sum_dim=band_dim)
+    n2 = neuron(x1, w2, b2, nb_dim, sum_dim=band_dim)
+    n3 = neuron(x1, w3, b3, nb_dim, sum_dim=band_dim)
+    n4 = neuron(x1, w4, b4, nb_dim, sum_dim=band_dim)
+    n5 = neuron(x1, w5, b5, nb_dim, sum_dim=band_dim)
 
-    l2 = layer2(n1, n2, n3, n4, n5, sum_dim=band_dim)
+    l2 = layer2(n1, n2, n3, n4, n5, wl2, bl2, sum_dim=band_dim)
+    lai = denormalize(l2, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
+    if lai_disp_norm:
+        lai = lai / 3
+    return lai 
 
-    lai = denormalize(l2, 0.000319182538301, 14.4675094548151)
-    return lai / 3
-
-
-def neuron1(b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm, 
-            viewZen_norm, sunZen_norm, relAzim_norm, sum_dim=1):
-    weights = torch.tensor([- 0.023406878966470, 
-                            + 0.921655164636366,
-                            + 0.135576544080099, 
-                            - 1.938331472397950, 
-                            - 3.342495816122680,
-                            + 0.902277648009576,
-                            + 0.205363538258614,
-                            + 0.040607844721716,
-                            + 0.083196409727092,
-                            + 0.260029270773809,
-                            + 0.284761567218845])
-    weights = torch_select_unsqueeze(weights, sum_dim, len(b03_norm.size()))
-    bias = torch.tensor(4.96238030555279)
-    x = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm,b07_norm, b8a_norm, b11_norm, b12_norm,
-                   viewZen_norm,sunZen_norm,relAzim_norm), axis=sum_dim)
+def neuron(x, weights, bias, nb_dim, sum_dim=1):
+    weights = torch_select_unsqueeze(weights, sum_dim, nb_dim)
     sum =   bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
-
     return tansig(sum)
 
-
-def neuron2(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=1):
-    bias = torch.tensor(1.416008443981500)
-    weights = torch.tensor([- 0.132555480856684,
-                            - 0.139574837333540,
-                            - 1.014606016898920,
-                            - 1.330890038649270,
-                            + 0.031730624503341,
-                            - 1.433583541317050,
-                            - 0.959637898574699,
-                            + 1.133115706551000,
-                            + 0.216603876541632,
-                            + 0.410652303762839,
-                            + 0.064760155543506])
-    
-    x = torch.cat((b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,
-                   b11_norm,b12_norm,viewZen_norm,sunZen_norm,relAzim_norm), axis=sum_dim)
-    weights = torch_select_unsqueeze(weights, sum_dim, len(b03_norm.size()))
-    sum = bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
-    
-
-    return tansig(sum)
-
-
-def neuron3(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=1): 
-    bias = torch.tensor(1.075897047213310)
-    weights = torch.tensor([  0.086015977724868,
-                            + 0.616648776881434,
-                            + 0.678003876446556,
-                            + 0.141102398644968,
-                            - 0.096682206883546,
-                            - 1.128832638862200,
-                            + 0.302189102741375,
-                            + 0.434494937299725,
-                            - 0.021903699490589,
-                            - 0.228492476802263,
-                            - 0.039460537589826,]) 
-    x = torch.cat((b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,
-                   b11_norm,b12_norm,viewZen_norm,sunZen_norm,relAzim_norm), axis=sum_dim)
-    weights = torch_select_unsqueeze(weights, sum_dim, len(b03_norm.size()))
-    sum = bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
-    return tansig(sum)
-
-
-def neuron4(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=1):
-    bias = torch.tensor(1.533988264655420)
-    weights = torch.tensor([- 0.109366593670404,
-                            - 0.071046262972729,
-                            + 0.064582411478320,
-                            + 2.906325236823160,
-                            - 0.673873108979163,
-                            - 3.838051868280840,
-                            + 1.695979344531530,
-                            + 0.046950296081713,
-                            - 0.049709652688365,
-                            + 0.021829545430994,
-                            + 0.057483827104091])
-    x = torch.cat((b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,
-                   b11_norm,b12_norm,viewZen_norm,sunZen_norm,relAzim_norm), axis=sum_dim)
-    weights = torch_select_unsqueeze(weights, sum_dim, len(b03_norm.size()))
-    sum = bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
-    return tansig(sum)
-
-
-def neuron5(b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,b12_norm, viewZen_norm,sunZen_norm,relAzim_norm, sum_dim=1): 
-    bias = torch.tensor(3.024115930757230)
-    weights = torch.tensor([- 0.089939416159969,
-                            + 0.175395483106147,
-                            - 0.081847329172620,
-                            + 2.219895367487790,
-                            + 1.713873975136850,
-                            + 0.713069186099534,
-                            + 0.138970813499201,
-                            - 0.060771761518025,
-                            + 0.124263341255473,
-                            + 0.210086140404351,
-                            - 0.183878138700341,])
-    x = torch.cat((b03_norm,b04_norm,b05_norm,b06_norm,b07_norm,b8a_norm,b11_norm,
-                   b12_norm,viewZen_norm,sunZen_norm,relAzim_norm), axis=sum_dim)
-    weights = torch_select_unsqueeze(weights, sum_dim, len(b03_norm.size()))
-    sum = bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
-    return tansig(sum)
-
-
-def layer2(neuron1, neuron2, neuron3, neuron4, neuron5, sum_dim=1):
-    bias = torch.tensor(1.096963107077220)
-    weights = torch.tensor([- 1.500135489728730,
-                            - 0.096283269121503,
-                            - 0.194935930577094,
-                            - 0.352305895755591,
-                            + 0.075107415847473,])
+def layer2(neuron1, neuron2, neuron3, neuron4, neuron5, weights, bias, sum_dim=1):
     x = torch.cat((neuron1,neuron2,neuron3,neuron4,neuron5), axis=sum_dim)
     weights = torch_select_unsqueeze(weights, sum_dim, len(neuron1.size()))
     sum = bias + (weights * x).sum(sum_dim).unsqueeze(sum_dim)
     return sum
-
 
 def normalize(unnormalized, min_sample, max_sample): 
     return 2 * (unnormalized - min_sample) / (max_sample - min_sample) - 1

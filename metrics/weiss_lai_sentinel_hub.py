@@ -63,7 +63,7 @@ def get_layer_1_neuron_biases(ver="2.1"):
         raise NotImplementedError
     return b1, b2, b3, b4, b5
 
-def get_layer_2_bias(ver="2.1")
+def get_layer_2_bias(ver="2.1"):
     if ver =="2.1":
         bl2 = torch.tensor(1.096963107077220)
     elif ver =="3A":
@@ -74,7 +74,7 @@ def get_layer_2_bias(ver="2.1")
         raise NotImplementedError
     return bl2
 
-def get_layer_2_weights(ver="2.1")
+def get_layer_2_weights(ver="2.1"):
     if ver =="2.1":
         wl2 = torch.tensor([- 1.500135489728730, - 0.096283269121503, - 0.194935930577094, - 0.352305895755591, + 0.075107415847473,])
     elif ver =="3A":
@@ -156,7 +156,7 @@ def weiss_lai(s2_r, s2_a, band_dim = 1, bands_idx = None, ver="2.1", lai_disp_no
     b1, b2, b3, b4, b5 = get_layer_1_neuron_biases(ver=ver)
     wl2 = get_layer_2_weights(ver=ver)
     bl2 = get_layer_2_bias(ver=ver)
-    
+
     b03_norm = normalize(B03, norm_factors["min_sample_B03"], norm_factors["max_sample_B03"])
     b04_norm = normalize(B04, norm_factors["min_sample_B04"], norm_factors["max_sample_B04"])
     b05_norm = normalize(B05, norm_factors["min_sample_B05"], norm_factors["max_sample_B05"])

@@ -925,3 +925,132 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
 
     plt.show()
     return fig, ax
+
+def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_weiss_lai):
+    n_cols = 5
+    n_rows = 2
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
+    for idx in range(len(BANDS)):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax[row, col].scatter(all_s2_r[idx,:].reshape(-1).cpu(),
+                            all_rec[idx,:].reshape(-1).cpu(), s=0.5)
+        xlim = ax[row, col].get_xlim()
+        ylim = ax[row, col].get_ylim()
+        ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+        ax[row, col].set_yticks([])
+        ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
+        ax[row, col].set_xlabel(f"True {BANDS[idx]}")
+        ax[row, col].set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_bands_scatter_true_vs_pred.png")
+    n_cols = 5
+    n_rows = 2
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
+    for idx in range(len(BANDS)):
+        row = idx // n_cols
+        col = idx % n_cols
+        xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
+        xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
+        ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
+                            all_rec[idx,:].reshape(-1).cpu().numpy(),range = [[xmin,xmax],[xmin,xmax]], bins=100)
+        xlim = ax[row, col].get_xlim()
+        ylim = ax[row, col].get_ylim()
+        ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+        ax[row, col].set_yticks([])
+        ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
+        ax[row, col].set_xlabel(f"True {BANDS[idx]}")
+        ax[row, col].set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_bands_2dhist_true_vs_pred.png")
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
+    xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
+    ax.hist2d(all_weiss_lai.cpu().numpy(),
+                        all_lai.cpu().numpy(),range = [[xmin,xmax],[xmin,xmax]], bins=100)
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.set_ylabel(f"Predicted LAI")
+    ax.set_xlabel(f"Sentinel-hub LAI")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_lai_2dhist_true_vs_pred.png")
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
+    xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
+    ax.scatter(all_weiss_lai.cpu().numpy(),
+                        all_lai.cpu().numpy(),s=0.5)
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.set_ylabel(f"Predicted LAI")
+    ax.set_xlabel(f"Sentinel-hub LAI")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_lai_scatter_true_vs_pred.png")
+    return
+
+def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, i, info=None):
+    if info is None:
+        info = ["SENSOR","DATE","TILE"]
+    n_cols = 4
+    n_rows = 3
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
+    for idx in range(len(PROSAILVARS)):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax[row, col].hist(sim_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
+        ax[row, col].set_yticks([])
+        ax[row, col].set_ylabel(PROSAILVARS[idx])
+    fig.delaxes(ax[-1, -1])
+    fig.suptitle(f"PROSAIL variables distributions {info[1]} {info[2]}")
+    fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_prosail_var_pred_dist.png")
+
+    n_cols = 5
+    n_rows = 2
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
+    for idx in range(len(BANDS)):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax[row, col].scatter(cropped_image[idx,:,:].reshape(-1).cpu(),
+                            rec_image[idx,:,:].reshape(-1).cpu(), s=1)
+        xlim = ax[row, col].get_xlim()
+        ylim = ax[row, col].get_ylim()
+        ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+        ax[row, col].set_yticks([])
+        ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
+        ax[row, col].set_xlabel(f"True {BANDS[idx]}")
+        ax[row, col].set_aspect('equal')
+        fig.suptitle(f"Scatter plot S2 bands{info[1]} {info[2]}")
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_bands_scatter_true_vs_pred.png')
+
+    n_cols = 5
+    n_rows = 2
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True)
+
+    for idx in range(len(BANDS)):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax[row, col].hist(cropped_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
+        ax[row, col].hist(rec_image[idx,:,:].reshape(-1).cpu(), bins=50, alpha=0.5, density=True)
+        ax[row, col].set_yticks([])
+        ax[row, col].set_ylabel(BANDS[idx])
+    fig.suptitle(f"Histogram S2 bands{info[1]} {info[2]}")
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_bands_hist_true_vs_pred.png')
+
+    fig, _ = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
+            (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
+            title_list=[f'original patch \n {info[1]} {info[2]}', 'reconstruction', 'mean absolute\n reconstruction error'])
+    fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_rgb.png")
+
+    fig, _ = plot_patches((cropped_image[torch.tensor([8,3,6]),...].cpu(), 
+                            rec_image[torch.tensor([8,3,6]),...].cpu()), 
+                            title_list=[f'original patch RGB:B8-B5-B11 \n {info[1]} {info[2]}', 'reconstruction'])
+    fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png")
+
+    fig, _ = plot_patches((cropped_image.cpu(), sim_image[6,...].unsqueeze(0).cpu(), weiss_lai.cpu()),
+                            title_list=[f'original patch \n {info[1]} {info[2]}', 'PROSAIL-VAE lai', 'Sentinel-hub lai'])
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_LAI_prediction_vs_weiss.png')
+    return

@@ -128,7 +128,7 @@ def get_norm_factors(ver="2.1"):
 
 
 
-def weiss_lai(s2_r, s2_a, band_dim = 1, bands_idx = None, ver="2.1", lai_disp_norm=False):
+def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=False):
     if bands_idx is None:
         B03 = s2_r.select(band_dim, 1).unsqueeze(band_dim)
         B04 = s2_r.select(band_dim, 2).unsqueeze(band_dim)

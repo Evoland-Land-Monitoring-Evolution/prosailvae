@@ -16,7 +16,7 @@ import torch
 import pandas as pd
 import argparse
 import os 
-
+import numpy as np
 import prosailvae
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -450,10 +450,13 @@ def main():
 
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                             batch_size=1, num_workers=0)
+            info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
             # _, _, test_loader = get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_ratio=0.1, 
             #                 bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), n_patches_max = 100, 
             #                 batch_size=1, num_workers=0)
-            save_results_2d(PROSAIL_VAE, test_loader, res_dir, parser.tensor_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
+            save_results_2d(PROSAIL_VAE, test_loader, res_dir, parser.tensor_dir, 
+                            all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, 
+                            plot_results=parser.plot_results, info_test_data=info_test_data)
         else:
             save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, weiss_mode=parser.weiss_mode)
         save_array_xp_path(job_array_dir, res_dir)

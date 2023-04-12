@@ -5,14 +5,14 @@ if __name__ == "__main__":
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                               plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                              all_loss_curve, plot_patches, plot_lai_vs_ndvi)
+                              all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
     from weiss_lai_sentinel_hub import weiss_lai
 else:
     from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                                       all_loss_curve, plot_patches, plot_lai_vs_ndvi)
+                                       all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
     from metrics.weiss_lai_sentinel_hub import weiss_lai
 from dataset.loaders import  get_simloader
 import pandas as pd
@@ -66,7 +66,7 @@ def get_prosailvae_results_parser():
 
 def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
-                    plot_results=False):
+                    plot_results=False, info_test_data=None):
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
     image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
     device = PROSAIL_VAE.device
@@ -99,74 +99,30 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
         plot_dir = res_dir + "/plots/"
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir)
-        n_rec_plots = 10
         # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
+        all_rec = []
+        all_lai = []
+        all_weiss_lai = []
+        all_s2_r = []
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
-                rec_image, sim_image, cropped_image = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
+                rec_image, sim_image, cropped_s2_r, cropped_s2_a = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
                                                                                    bands=torch.arange(10), 
                                                                                    mode=rec_mode)
-                weiss_lai = get_weiss_lai_from_batch(batch, patch_size=32)
+                info = info_test_data[i,:] 
+                weiss_lai = get_weiss_lai_from_batch((cropped_s2_r.unsqueeze(0), cropped_s2_a.unsqueeze(0)), patch_size=32, sensor=info[0])
+                PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r, rec_image, weiss_lai, i, info=info)
+                all_rec.append(rec_image.reshape(10,-1))
+                all_lai.append(sim_image[6,...].reshape(-1))
+                all_weiss_lai.append(weiss_lai.reshape(-1))
+                all_s2_r.append(cropped_s2_r.reshape(10,-1))
+            all_rec = torch.cat(all_rec, axis=1)
+            all_lai = torch.cat(all_lai)
+            all_weiss_lai = torch.cat(all_weiss_lai)
+            all_s2_r = torch.cat(all_s2_r, axis=1)    
 
-                import matplotlib.pyplot as plt
-                n_cols = 4
-                n_rows = 3
-                fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
-                for idx in range(len(PROSAILVARS)):
-                    row = idx // n_cols
-                    col = idx % n_cols
-                    ax[row, col].hist(sim_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
-                    ax[row, col].set_yticks([])
-                    ax[row, col].set_ylabel(PROSAILVARS[idx])
-                fig.delaxes(ax[-1, -1])
-                fig.savefig(f"{plot_dir}/{i}_prosail_var_pred_dist.png")
-
-                n_cols = 5
-                n_rows = 2
-                fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
-                for idx in range(len(BANDS)):
-                    row = idx // n_cols
-                    col = idx % n_cols
-                    ax[row, col].scatter(cropped_image[idx,:,:].reshape(-1).cpu(),
-                                        rec_image[idx,:,:].reshape(-1).cpu(), s=1)
-                    xlim = ax[row, col].get_xlim()
-                    ylim = ax[row, col].get_ylim()
-                    ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-                    ax[row, col].set_yticks([])
-                    ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
-                    ax[row, col].set_xlabel(f"True {BANDS[idx]}")
-                    ax[row, col].set_aspect('equal')
-                fig.savefig(f'{plot_dir}/{i}_bands_scatter_true_vs_pred.png')
-
-                n_cols = 5
-                n_rows = 2
-                fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True)
-
-                for idx in range(len(BANDS)):
-                    row = idx // n_cols
-                    col = idx % n_cols
-                    ax[row, col].hist(cropped_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
-                    ax[row, col].hist(rec_image[idx,:,:].reshape(-1).cpu(), bins=50, alpha=0.5, density=True)
-                    ax[row, col].set_yticks([])
-                    ax[row, col].set_ylabel(BANDS[idx])
-                fig.savefig(f'{plot_dir}/{i}_bands_hist_true_vs_pred.png')
-
-                fig, _ = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
-                        (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
-                        title_list=['original patch', 'reconstruction', 'mean absolute\n reconstruction error'])
-                fig.savefig(f"{plot_dir}/{i}_patch_rec_rgb.png")
-
-                fig, _ = plot_patches((cropped_image[torch.tensor([8,3,6]),...].cpu(), 
-                                        rec_image[torch.tensor([8,3,6]),...].cpu()), 
-                                        title_list=['original patch RGB:B8-B5-B11', 'reconstruction'])
-                fig.savefig(f"{plot_dir}/{i}_patch_rec_B8B5B11.png")
-
-                fig, _ = plot_patches((cropped_image.cpu(), sim_image[6,...].unsqueeze(0).cpu(), weiss_lai.cpu()),
-                                        title_list=['original patch', 'PROSAIL-VAE lai', 'Sentinel-hub lai'])
-                fig.savefig(f'{plot_dir}/{i}_LAI_prediction_vs_weiss.png')
-                
+            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_weiss_lai)
             # for n, filename in enumerate(image_tensor_file_names):
             #     image_tensor = torch.load(image_dir + "/" + filename)
             #     patch_size=128
@@ -492,11 +448,20 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.
             patched_sim_image[i,j,:,:,:] = sim
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
     rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
-    cropped_image = s2_r.squeeze()[:,hw:-hw,hw:-hw]
-    return rec_image, sim_image, cropped_image
+    cropped_s2_a = s2_a.squeeze()[:,hw:-hw,hw:-hw]
+    cropped_s2_r = s2_r.squeeze()[:,hw:-hw,hw:-hw]
+    return rec_image, sim_image, cropped_s2_r, cropped_s2_a
 
 
-def get_weiss_lai_from_batch(batch, patch_size=32):
+def get_weiss_lai_from_batch(batch, patch_size=32, sensor=None):
+    if sensor is None:
+        ver = "2.1"
+    elif sensor =="2A":
+        ver = "3A"
+    elif sensor == "2B":
+        ver = "3B"
+    else:
+        raise ValueError
     s2_r, s2_a = batch
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=0)
     patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=0)
@@ -506,7 +471,7 @@ def get_weiss_lai_from_batch(batch, patch_size=32):
             x = patched_s2_r[i, j,...]
             angles = patched_s2_a[i, j, ...]
             with torch.no_grad():
-                lai = weiss_lai(x, angles, band_dim=0)
+                lai = weiss_lai(x, angles, band_dim=0, ver=ver)
             patched_lai_image[i,j,...] = lai
     lai_image = unpatchify(patched_lai_image)[:,:s2_r.size(2),:s2_r.size(3)]
     return lai_image

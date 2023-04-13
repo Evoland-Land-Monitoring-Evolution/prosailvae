@@ -1,2 +1,3 @@
 /home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/prosailvae/../results//1_d2023_03_23_09_00_17_supervised_False_small_test_
 /home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/prosailvae/../results//1_d2023_04_12_09_56_46_supervised_False_small_test_
+/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/prosailvae/../results//1_d2023_04_13_17_01_21_supervised_False_small_test_

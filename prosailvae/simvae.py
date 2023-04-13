@@ -193,8 +193,11 @@ class SimVAE(nn.Module):
         else:
             raise NotImplementedError()
             
-        if self.spatial_mode and mode != 'random':
-            return dist_params, z, unbatchify(sim), unbatchify(rec)
+        if self.spatial_mode:# and mode != 'random':
+            if mode == 'random':
+                return unbatchify(dist_params.squeeze(3)), z, sim, rec
+            else:
+                return unbatchify(dist_params.squeeze(3)), z, unbatchify(sim), unbatchify(rec)
         else:
             return dist_params, z, sim, rec
     

@@ -102,12 +102,14 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
         # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
         all_rec = []
         all_lai = []
+        all_vars = []
         all_weiss_lai = []
         all_s2_r = []
+        all_sigma = []
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
-                rec_image, sim_image, cropped_s2_r, cropped_s2_a = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
+                rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
                                                                                    bands=torch.arange(10), 
                                                                                    mode=rec_mode)
                 info = info_test_data[i,:] 
@@ -115,14 +117,18 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=N
                 PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r, rec_image, weiss_lai, i, info=info)
                 all_rec.append(rec_image.reshape(10,-1))
                 all_lai.append(sim_image[6,...].reshape(-1))
+                all_vars.append(sim_image.reshape(11,-1))
                 all_weiss_lai.append(weiss_lai.reshape(-1))
                 all_s2_r.append(cropped_s2_r.reshape(10,-1))
+                all_sigma.append(sigma_image.reshape(11,-1))
             all_rec = torch.cat(all_rec, axis=1)
             all_lai = torch.cat(all_lai)
+            all_vars = torch.cat(all_vars, axis=1)
             all_weiss_lai = torch.cat(all_weiss_lai)
-            all_s2_r = torch.cat(all_s2_r, axis=1)    
+            all_s2_r = torch.cat(all_s2_r, axis=1)  
+            all_sigma = torch.cat(all_sigma, axis=1)
 
-            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_weiss_lai)
+            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars, all_weiss_lai, all_sigma)
             # for n, filename in enumerate(image_tensor_file_names):
             #     image_tensor = torch.load(image_dir + "/" + filename)
             #     patch_size=128
@@ -438,6 +444,7 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.
     patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
     patched_sim_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11, patch_size, patch_size)).to(PROSAIL_VAE.device)
     patched_rec_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), len(bands), patch_size, patch_size)).to(PROSAIL_VAE.device)
+    patched_sigma_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11, patch_size, patch_size)).to(PROSAIL_VAE.device)
     for i in range(patched_s2_r.size(0)):
         for j in range(patched_s2_r.size(1)):
             x = patched_s2_r[i, j, ...]
@@ -446,11 +453,13 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.
                 dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
             patched_rec_image[i,j,:,:,:] = rec
             patched_sim_image[i,j,:,:,:] = sim
+            patched_sigma_image[i,j,:,:,:] = dist_params[1,...]
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
     rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
+    sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
     cropped_s2_a = s2_a.squeeze()[:,hw:-hw,hw:-hw]
     cropped_s2_r = s2_r.squeeze()[:,hw:-hw,hw:-hw]
-    return rec_image, sim_image, cropped_s2_r, cropped_s2_a
+    return rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image
 
 
 def get_weiss_lai_from_batch(batch, patch_size=32, sensor=None):

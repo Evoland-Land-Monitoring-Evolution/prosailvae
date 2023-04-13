@@ -941,7 +941,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars
     fig.savefig(f"{plot_dir}/all_prosail_var_pred_dist.png")
     n_cols = 4
     n_rows = 3
-    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150, sharex=True)
     for idx in range(len(PROSAILVARS)):
         row = idx // n_cols
         col = idx % n_cols

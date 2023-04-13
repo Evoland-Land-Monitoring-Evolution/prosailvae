@@ -926,7 +926,7 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
     plt.show()
     return fig, ax
 
-def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars, all_weiss_lai, all_sigma):
+def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars, all_weiss_lai, all_sigma, max_sigma=1.4):
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
@@ -945,8 +945,9 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars
     for idx in range(len(PROSAILVARS)):
         row = idx // n_cols
         col = idx % n_cols
-        ax[row, col].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=50, density=True)
+        ax[row, col].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, range=[0, max_sigma])
         ax[row, col].set_yticks([])
+        ax[row, col].set_xlim(0, max_sigma)
         ax[row, col].set_ylabel(PROSAILVARS[idx])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables sigma")

@@ -953,7 +953,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_weis
         xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
-                            all_rec[idx,:].reshape(-1).cpu().numpy(),range = [[xmin,xmax],[xmin,xmax]], bins=100)
+                            all_rec[idx,:].reshape(-1).cpu().numpy(),range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -967,7 +967,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_weis
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.hist2d(all_weiss_lai.cpu().numpy(),
-                        all_lai.cpu().numpy(),range = [[xmin,xmax],[xmin,xmax]], bins=100)
+                        all_lai.cpu().numpy(),range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='BrBG')
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],

@@ -461,7 +461,7 @@ def main():
             save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results, weiss_mode=parser.weiss_mode)
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
-            save_array_xp_path(os.path.join(res_dir,os.path.pardir), res_dir)
+            save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)
     except Exception as e:
         traceback.print_exc()
         print(e)

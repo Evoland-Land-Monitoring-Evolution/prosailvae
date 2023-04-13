@@ -5,10 +5,10 @@ from prosailvae.utils import torch_select_unsqueeze
 def get_layer_1_neuron_weights(ver="2.1"):
     if ver =="2.1":
         w1 = torch.tensor([- 0.023406878966470, + 0.921655164636366, + 0.135576544080099, - 1.938331472397950, - 3.342495816122680, + 0.902277648009576,
-                                + 0.205363538258614, + 0.040607844721716, + 0.083196409727092, + 0.260029270773809, + 0.284761567218845])
+                                + 0.205363538258614, - 0.040607844721716, - 0.083196409727092, + 0.260029270773809, + 0.284761567218845])
         w2 = torch.tensor([- 0.132555480856684, - 0.139574837333540, - 1.014606016898920, - 1.330890038649270, + 0.031730624503341, - 1.433583541317050,
                                 - 0.959637898574699, + 1.133115706551000, + 0.216603876541632, + 0.410652303762839, + 0.064760155543506])
-        w3 = torch.tensor([  0.086015977724868, + 0.616648776881434, + 0.678003876446556, + 0.141102398644968, - 0.096682206883546, - 1.128832638862200,
+        w3 = torch.tensor([+ 0.086015977724868, + 0.616648776881434, + 0.678003876446556, + 0.141102398644968, - 0.096682206883546, - 1.128832638862200,
                                 + 0.302189102741375, + 0.434494937299725, - 0.021903699490589, - 0.228492476802263, - 0.039460537589826,]) 
         w4 = torch.tensor([- 0.109366593670404, - 0.071046262972729, + 0.064582411478320, + 2.906325236823160, - 0.673873108979163, - 3.838051868280840,
                                 + 1.695979344531530, + 0.046950296081713, - 0.049709652688365, + 0.021829545430994, + 0.057483827104091])
@@ -126,6 +126,15 @@ def get_norm_factors(ver="2.1"):
         raise NotImplementedError
     return norm_factors
 
+def manage_extreme_values(lai, ver=2.1):
+    if ver =="2.1":
+        return lai
+    elif ver =="3A" or ver == "3B":
+        lai[torch.logical_and(lai < 0, lai >-0.2)] = 0
+        lai[torch.logical_and(lai < 8.2, lai > 8)] = 8
+        return lai
+    else:
+        raise NotImplementedError
 
 
 def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=False):
@@ -167,7 +176,7 @@ def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=F
     b12_norm = normalize(B12, norm_factors["min_sample_B12"], norm_factors["max_sample_B12"])
     viewZen_norm = normalize(torch.cos(torch.deg2rad(viewZenithMean)), norm_factors["min_sample_viewZen"], norm_factors["max_sample_viewZen"])
     sunZen_norm  = normalize(torch.cos(torch.deg2rad(sunZenithAngles)), norm_factors["min_sample_sunZen"], norm_factors["max_sample_sunZen"])
-    relAzim_norm = torch.cos(relAzim)
+    relAzim_norm = torch.cos(torch.deg2rad(relAzim))
 
     x1 = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm,b07_norm, b8a_norm, b11_norm, b12_norm,
                    viewZen_norm,sunZen_norm,relAzim_norm), axis=band_dim)
@@ -182,6 +191,7 @@ def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=F
     lai = denormalize(l2, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
     if lai_disp_norm:
         lai = lai / 3
+    lai = manage_extreme_values(lai, ver=ver)
     return lai 
 
 def neuron(x, weights, bias, nb_dim, sum_dim=1):
@@ -312,7 +322,137 @@ def main():
     
     return
 
+def weiss_regression():
+    
+    import os
+    import prosailvae
+    import numpy as np
+    import pandas as pd
+    def load_refl_angles(path_to_data_dir):
+        path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
+        assert os.path.isfile(path_to_file)
+        df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
+        n_obs = len(df_validation_data)
+        s2_r = df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values
+    
+        tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
+        tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
+        psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
+        lai = df_validation_data['lai_true'].values
+        # lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
+        # lai_bv_net = torch.as_tensor(df_validation_data['lai_bvnet'].values.reshape(-1,1))
+        # time_delta = torch.zeros((n_obs,1))
+        return s2_r, tts, tto, psi, lai
+    def load_weiss_dataset(path_to_data_dir):
+        s2_r, tts, tto, psi, lai = load_refl_angles(path_to_data_dir)
+        s2_a = np.stack((tts,tto,psi),1)
+        return s2_r, s2_a, lai
+    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    bands_idx = {'B03':0,
+                        'B04':1,
+                        'B05':2,
+                        'B06':3,
+                        'B07':4,
+                        'B8A':5,
+                        'B11':6,
+                        'B12':7}
+    lai_pred = weiss_lai(torch.from_numpy(s2_r), torch.from_numpy(s2_a), band_dim=1, bands_idx=bands_idx, ver="2.1", lai_disp_norm=False)
+    import matplotlib.pyplot as plt 
+    fig, ax = plt.subplots()
+    ax.scatter(lai, lai_pred, s=0.5)
+    ax.set_aspect('equal')
+    ax.plot([0,14],[0,14],'k--')
+    ax.set_xlabel('LAI Weiss Dataset')
+    ax.set_ylabel('LAI Predicted by Sentinel Toolbox ver 2.1')
+    fig.savefig(r"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/shub_network_reg_weiss_dataset.png")
+    return
+
+def validate_sentinel_hub_lai():
+    import rasterio
+    import os
+    import numpy as np
+    raster_dir = r'/home/yoel/Téléchargements/'
+    raster_files = ["b2_4.tiff", "b5_7.tiff","b8_11.tiff","b12_v.tiff","bs_lai.tiff"]
+    arrs = []
+    for filename in raster_files:
+        path_to_raster = os.path.join(raster_dir, filename)
+        with rasterio.open(path_to_raster, 'r') as ds:
+            arr = ds.read()  # read all raster values
+        arrs.append(arr)
+    data = torch.from_numpy(np.concatenate(arrs,0))
+    s2_r = data[:10,...]
+    lai = data[-1,...]
+    s2_a = torch.zeros((3, s2_r.shape[1], s2_r.shape[2]))
+    s2_a[0,...] = data[12,...]
+    s2_a[1,...] = data[10,...]
+    s2_a[2,...] = (data[13,...] - data[11,...])
+    lai_pred = weiss_lai(s2_r, s2_a, band_dim=0, bands_idx=None, ver="2.1", lai_disp_norm=True)
+    
+    import matplotlib.pyplot as plt
+    from prosail_plots import plot_patches
+    fig, ax = plot_patches((lai.unsqueeze(0), lai_pred.unsqueeze(0), lai.unsqueeze(0) - lai_pred.unsqueeze(0)))
+    fig.savefig(r"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/shub_lai_map.png")
+    plt.figure()
+    plt.imshow(s2_a[2,...])
+    fig, ax = plt.subplots(10, figsize=(4,8), dpi = 150, sharex=True)
+    for i in range(10):
+        ax[i].scatter(s2_r[i,...].reshape(-1).cpu(), (lai - lai_pred).reshape(-1).cpu(), s=0.5)
+    fig, ax = plt.subplots(10, figsize=(4,8), dpi = 150, sharex=True)
+    for i in range(10):
+        ax[i].hist(s2_r[i,...].reshape(-1).cpu(), bins=100)
+    fig, ax = plt.subplots(3, figsize=(4,8), dpi = 150)
+    for i in range(3):
+        ax[i].scatter(s2_a[i,...].reshape(-1).cpu(), (lai - lai_pred).reshape(-1).cpu(), s=0.5)
+    fig, ax = plt.subplots()
+    ax.scatter(lai.reshape(-1)[(lai - lai_pred > 1e-3).reshape(-1)].cpu(), lai_pred.reshape(-1)[(lai - lai_pred > 1e-3).reshape(-1)].cpu(),s=0.5)
+    ax.set_aspect('equal')
+    fig, ax = plt.subplots()
+    ax.scatter(lai, lai - lai_pred,s=0.5)
+    fig, ax = plt.subplots()
+    ax.scatter(lai_pred, lai - lai_pred,s=0.5)
+    fig, ax = plt.subplots()
+    ax.hist((lai - lai_pred).reshape(-1).cpu(),bins=100)
+    return
+
+def validate_snap_lai():
+    import rasterio
+    import os
+    import numpy as np
+    path_to_bands = r"/home/yoel/Documents/SNAP/results/subset_0_of_S2B_MSIL1C_20171127T105359_N0206_R051_T31TCJ_20171127T143619_resampled_6.tif"
+    with rasterio.open(path_to_bands, 'r') as ds1:
+        arr_bands = ds1.read()  # read all raster values
+    s2_r = torch.from_numpy(arr_bands[:10,...])/10000
+    s2_a = np.zeros((3, s2_r.shape[1], s2_r.shape[2]))
+    s2_a[0,...] = arr_bands[12,...]
+    s2_a[1,...] = arr_bands[10,...]
+    s2_a[2,...] = (arr_bands[13,...] - arr_bands[11,...])
+    s2_a = torch.from_numpy(s2_a)
+    path_to_lai = r"/home/yoel/Documents/SNAP/results/subset_0_of_S2B_MSIL1C_20171127T105359_N0206_R051_T31TCJ_20171127T143619_resampled_biophysical.tif"
+    with rasterio.open(path_to_lai, 'r') as ds:
+        lai_arr = ds.read()  # read all raster values
+    lai = torch.from_numpy(lai_arr[0,...]).unsqueeze(0)
+    import matplotlib.pyplot as plt
+    lai_pred = weiss_lai(s2_r, s2_a, band_dim=0, bands_idx=None, ver="3A", lai_disp_norm=False)
+    from prosail_plots import plot_patches
+    fig, ax = plot_patches((lai, lai_pred, lai - lai_pred), ["SNAP LAI", "S2tlbx python Prediction LAI (S2A)", "difference"])
+    fig.savefig(r"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_lai_map.png")
+    fig, ax = plt.subplots()
+    ax.scatter(lai.reshape(-1)[(lai - lai_pred > 1e-3).reshape(-1)].cpu(), lai_pred.reshape(-1)[(lai - lai_pred > 1e-3).reshape(-1)].cpu(),s=0.5)
+    ax.set_aspect('equal')
+    ax.set_xlabel("SNAP LAI")
+    ax.plot([-1,10],[-1,10],'k--')
+    ax.set_ylabel("S2tlbx python Prediction LAI (S2A)")
+
+    fig, ax = plt.subplots()
+    ax.scatter(lai, lai - lai_pred,s=0.5)
+    ax.set_xlabel("SNAP LAI")
+    ax.set_ylabel("Difference")
+    return
+
 if __name__ == "__main__":
+    # validate_snap_lai()
+    # weiss_regression()
+    validate_sentinel_hub_lai()
     from prosail_plots import plot_patches
     compare_images()
     main()

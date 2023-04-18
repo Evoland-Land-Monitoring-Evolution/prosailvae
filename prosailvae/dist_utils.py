@@ -93,13 +93,13 @@ def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum', lower=torch.te
     if nll.isinf().any() or nll.isnan().any():
         raise ValueError()
     return nll
-def get_u_bounds(mu, sigma, n_sigma=4):
-    u_ubound = truncated_gaussian_cdf(mu + n_sigma * sigma, mu, sigma)
-    u_lbound = truncated_gaussian_cdf(mu - n_sigma * sigma, mu, sigma)
+def get_u_bounds(mu, sigma, n_sigma=4, lower=torch.tensor(0), upper=torch.tensor(1)):
+    u_ubound = truncated_gaussian_cdf(mu + n_sigma * sigma, mu, sigma, lower=lower, upper=upper)
+    u_lbound = truncated_gaussian_cdf(mu - n_sigma * sigma, mu, sigma, lower=lower, upper=upper)
     return u_ubound, u_lbound
     
 def sample_truncated_gaussian(mu, sigma, n_samples=1, n_sigma=4, lower=torch.tensor(0), upper=torch.tensor(1)):
-    u_ubound, u_lbound = get_u_bounds(mu, sigma, n_sigma=n_sigma)
+    u_ubound, u_lbound = get_u_bounds(mu, sigma, n_sigma=n_sigma, lower=lower, upper=upper)
     u_dist = torch.distributions.uniform.Uniform(u_lbound, u_ubound)
     mu = mu.repeat(1, 1, n_samples) 
     sigma = sigma.repeat(1, 1, n_samples) 

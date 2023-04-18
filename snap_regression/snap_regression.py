@@ -281,7 +281,7 @@ def main():
             os.makedirs(save_dir)
         data_eval, fold_data_list, tg_data_list, list_kl, list_params = prepare_datasets(n_eval=5000, n_samples_sub=5000, 
                                                                                          save_dir=save_dir, 
-                                                                                         tg_mu = torch.arange([0,1,2,3,4,5]),
+                                                                                         tg_mu = torch.tensor([0,1,2,3,4,5]),
                                                                                          tg_sigma = torch.tensor([0.5,1,2,3,4]))
     epochs = 1000
     n = 20

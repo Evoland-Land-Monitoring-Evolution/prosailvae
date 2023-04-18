@@ -238,18 +238,19 @@ class SnapNN(nn.Module):
         lai_pred = self.forward(input_data.to(self.device))
         return (lai_pred - lai.to(self.device)).pow(2).sum()
 
-def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001):
+def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001,disable_tqdm=False):
     metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
     metrics = torch.zeros((n, len(test_loader_list), len(metrics_names)))
     for i in range(n):
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
         lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=10, threshold=0.001)
-        _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer, epochs=epochs, lr_scheduler=lr_scheduler)
+        _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer, epochs=epochs, 
+                                                     lr_scheduler=lr_scheduler, disable_tqdm=disable_tqdm)
         for j in range(len(test_loader_list)):
             with torch.no_grad():
                 test_data = test_loader_list[j].dataset[:]
-                lai_pred = snap_nn.forward(test_data[0])
+                lai_pred = snap_nn.forward(test_data[0].to(snap_nn.device))
                 lai_true = test_data[1]
                 rmse = (lai_pred - lai_true).pow(2).mean().sqrt().cpu().item()
                 r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
@@ -267,10 +268,11 @@ def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",]
-        
+        disable_tqdm=False
         parser = get_prosailvae_results_parser().parse_args(args)    
     else:
         parser = get_prosailvae_results_parser().parse_args()
+        disable_tqdm=True
     prepare_data = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
@@ -297,7 +299,7 @@ def main():
         kl[i] = list_kl[i]
         train_loader, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
         list_metrics_df, metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=[test_loader], 
-                                              n=n, epochs=epochs, lr=lr)
+                                              n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm)
         mean_metrics.append(metrics.mean(0).unsqueeze(0))
         all_metrics.append(metrics.unsqueeze(0))
     metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]

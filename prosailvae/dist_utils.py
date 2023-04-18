@@ -23,35 +23,35 @@ def normal_pdf(x, mu, sig, eps=1e-9):
 def normal_cdf(x, mu, sigma):
     return 0.5 * (1 + torch.erf((x-mu)/(sigma*2**0.5))) 
 
-def get_normal_pdf(mu, sigma, support_sampling=0.01, interval_bound=1):
+def get_normal_pdf(mu, sigma, support_sampling=0.01, interval_bound=1, eps=1e-9):
     support = torch.arange(mu - interval_bound, mu + interval_bound, support_sampling)
-    pdf = normal_pdf(support, mu, sigma)
+    pdf = normal_pdf(support, mu, sigma, eps=eps)
     if pdf.sum()==0:
         pdf = torch.tensor(singular_pdf(support.detach().numpy(), 
                                                       mu.squeeze()))
     return pdf, support
 
-def kl_tn_uniform(mu, sigma, a=torch.tensor(0.0), b=torch.tensor(1.0)):
-    alpha = (a - mu) / sigma
-    beta = (b - mu) / sigma
+def kl_tn_uniform(mu, sigma, lower=torch.tensor(0.0), upper=torch.tensor(1.0)):
+    alpha = (lower - mu) / sigma
+    beta = (upper - mu) / sigma
     phi_alpha = torch.exp(-alpha**2/2) / torch.sqrt(torch.tensor(2*pi))
     phi_beta = torch.exp(-beta**2/2) / torch.sqrt(torch.tensor(2*pi))
     Phi_alpha = 0.5 * (1 + torch.erf(alpha/(2**0.5))) 
     Phi_beta = 0.5 * (1 + torch.erf(beta/(2**0.5))) 
     Z = Phi_beta - Phi_alpha
-    kl = - torch.log(sigma.float() * Z.float()) - torch.log(torch.tensor(2*pi))/2 - 1/2 - (alpha * phi_alpha - beta* phi_beta)/(2*Z) + torch.log(b-a) # + mu * (phi_alpha - phi_beta)/(2 * sigma * Z)
+    kl = - torch.log(sigma.float() * Z.float()) - torch.log(torch.tensor(2*pi))/2 - 1/2 - (alpha * phi_alpha - beta* phi_beta)/(2*Z) + torch.log(upper - lower) 
     return kl
 
-def kl_tntn(mu1, sigma1, mu2, sigma2, a=torch.tensor(0.0), b=torch.tensor(1.0)):
-    alpha1 = (a - mu1) / sigma1
-    beta1 = (b - mu1) / sigma1
+def kl_tntn(mu1, sigma1, mu2, sigma2, lower=torch.tensor(0.0), upper=torch.tensor(1.0)):
+    alpha1 = (lower - mu1) / sigma1
+    beta1 = (upper - mu1) / sigma1
     phi_alpha1 = torch.exp(-alpha1**2/2) / torch.sqrt(torch.tensor(2*pi))
     phi_beta1 = torch.exp(-beta1**2/2) / torch.sqrt(torch.tensor(2*pi))
     Phi_alpha1 = 0.5 * (1 + torch.erf(alpha1/(2**0.5))) 
     Phi_beta1 = 0.5 * (1 + torch.erf(beta1/(2**0.5))) 
     eta1 = Phi_beta1 - Phi_alpha1
-    alpha2 = (a - mu2) / sigma2
-    beta2 = (b - mu2) / sigma2
+    alpha2 = (lower - mu2) / sigma2
+    beta2 = (upper - mu2) / sigma2
     Phi_alpha2 = 0.5 * (1 + torch.erf(alpha2/(2**0.5))) 
     Phi_beta2 = 0.5 * (1 + torch.erf(beta2/(2**0.5))) 
     eta2 = Phi_beta2 - Phi_alpha2
@@ -68,21 +68,23 @@ def kl_tntn(mu1, sigma1, mu2, sigma2, a=torch.tensor(0.0), b=torch.tensor(1.0)):
     return kl
 
 
-def numerical_kl_tn_uniform(mu, sigma, support=torch.arange(0,1, 0.001)):
-    p = truncated_gaussian_pdf(support, mu, sigma)
+def numerical_kl_tn_uniform(mu, sigma, support=torch.arange(0,1, 0.001), eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(1)):
+    p = truncated_gaussian_pdf(support, mu, sigma, eps=eps, lower=lower, upper=upper)
     log_p = torch.log(p)
     kl = (p * log_p).sum()/len(support)
     return kl
 
-def truncated_gaussian_pdf(x, mu, sig, eps=1e-9, a =torch.tensor(0), b=torch.tensor(1)):
-    return normal_pdf(x, mu, sig)  / (normal_cdf(b*torch.ones_like(mu), mu, sig) 
-                                      - normal_cdf(a*torch.ones_like(mu), mu, sig)) * (x>=a) * (x<=b)
+def truncated_gaussian_pdf(x, mu, sigma, eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(1)):
+    return normal_pdf(x, mu, sigma)  / (normal_cdf(upper*torch.ones_like(mu), mu, sigma) 
+                                      - normal_cdf(lower*torch.ones_like(mu), mu, sigma) + torch.tensor(eps)) * (x>=lower) * (x<=upper)
 
-def truncated_gaussian_cdf(x, mu, sig, eps=1e-9):
-    return  (x>1) + (x>=0) * (x<=1) * (normal_cdf(x, mu, sig) - normal_cdf(torch.tensor(0), mu, sig))/ (normal_cdf(torch.tensor(1), mu, sig) - normal_cdf(torch.tensor(0), mu, sig))
+def truncated_gaussian_cdf(x, mu, sigma, eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(1)):
+    return  (x>upper) + (x>=lower) * (x<=upper) * (normal_cdf(x, mu, sigma) - 
+                                                   normal_cdf(lower, mu, sigma)) / (normal_cdf(upper, mu, sigma) - 
+                                                                                    normal_cdf(lower, mu, sigma) + torch.tensor(eps))
 
-def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum'):
-    likelihood = truncated_gaussian_pdf(x, mu, sig)
+def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum', lower=torch.tensor(0), upper=torch.tensor(1)):
+    likelihood = truncated_gaussian_pdf(x, mu, sig, eps=eps, lower=lower, upper=upper)
     nll = -torch.log(likelihood + torch.tensor(eps))
     if reduction =="sum":
         nll = nll.sum(axis=1)
@@ -91,34 +93,51 @@ def truncated_gaussian_nll(x, mu, sig, eps=1e-9, reduction='sum'):
     if nll.isinf().any() or nll.isnan().any():
         raise ValueError()
     return nll
+def get_u_bounds(mu, sigma, n_sigma=4):
+    u_ubound = truncated_gaussian_cdf(mu + n_sigma * sigma, mu, sigma)
+    u_lbound = truncated_gaussian_cdf(mu - n_sigma * sigma, mu, sigma)
+    return u_ubound, u_lbound
+    
+def sample_truncated_gaussian(mu, sigma, n_samples=1, n_sigma=4, lower=torch.tensor(0), upper=torch.tensor(1)):
+    u_ubound, u_lbound = get_u_bounds(mu, sigma, n_sigma=n_sigma)
+    u_dist = torch.distributions.uniform.Uniform(u_lbound, u_ubound)
+    mu = mu.repeat(1, 1, n_samples) 
+    sigma = sigma.repeat(1, 1, n_samples) 
+    n_dist = torch.distributions.normal.Normal(torch.zeros_like(mu), 
+                                                torch.ones_like(sigma))
+    u = u_dist.rsample(torch.tensor([n_samples])).permute(1,2,0)
+    z = mu + sigma * n_dist.icdf(n_dist.cdf((lower * torch.ones_like(mu) - mu)/sigma) + 
+                                u * (n_dist.cdf((upper * torch.ones_like(mu) - mu)/sigma) 
+                                    - n_dist.cdf((lower * torch.ones_like(mu) - mu)/sigma)))
+    return z
 
-def get_truncated_gaussian_pdf(mu, sigma, support_sampling=0.001):
+def get_truncated_gaussian_pdf(mu, sigma, support_sampling=0.001, eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(1)):
     support = torch.arange(support_sampling, 1, support_sampling)
-    return truncated_gaussian_pdf(support, mu, sigma), support
+    return truncated_gaussian_pdf(support, mu, sigma, eps=eps, lower=lower, upper=upper), support
 
 
-def truncated_gaussians_max(x, mu, sigma, eps=1e-9):
+def truncated_gaussians_max(x, mu, sigma, eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(1)):
     assert len(mu)==len(sigma)
     tot_pdf = 0
     cdf_prod = 1
     for i in range(len(mu)):
-        max_cdf = truncated_gaussian_cdf(x, mu[i], sigma[i])
+        max_cdf = truncated_gaussian_cdf(x, mu[i], sigma[i], eps=eps, lower=lower, upper=upper)
         cdf_prod = cdf_prod * max_cdf
-        max_pdf = truncated_gaussian_pdf(x, mu[i], sigma[i])
+        max_pdf = truncated_gaussian_pdf(x, mu[i], sigma[i], eps=eps, lower=lower, upper=upper)
         tot_pdf = max_pdf / (max_cdf + eps) + tot_pdf
     tot_pdf = tot_pdf * cdf_prod
     return tot_pdf
 
 
-def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampling, max_matrix, latent_dim=6, eps=1e-12):
+def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampling, max_matrix, latent_dim=6, eps=1e-12, lower=torch.tensor(0), upper=torch.tensor(1)):
     interval_bound = max(n_sigma_interval * sigma.max().item(), 1)
     lat_pdf_support = torch.arange(-interval_bound, interval_bound, support_sampling).to(mu.device)
     len_pdf = len(lat_pdf_support)
     batch_size=mu.size(0)
     supports = lat_pdf_support.view(1, 1, -1).repeat(batch_size, latent_dim, 1).to(mu.device)
     pdfs = torch.zeros((batch_size, latent_dim, len_pdf)).to(mu.device)
-    pdfs_at_z = truncated_gaussian_pdf(supports, mu, sigma)
-    cdfs_at_z = truncated_gaussian_cdf(supports, mu, sigma)
+    pdfs_at_z = truncated_gaussian_pdf(supports, mu, sigma, eps=eps, lower=lower, upper=upper)
+    cdfs_at_z = truncated_gaussian_cdf(supports, mu, sigma, eps=eps, lower=lower, upper=upper)
     for i in range(latent_dim):
         max_mat_col = max_matrix[:,i]
         max_mat_mask = max_mat_col.view(1,-1).repeat(pdfs.size(2), 1)
@@ -128,13 +147,13 @@ def get_latent_ordered_truncated_pdfs(mu, sigma, n_sigma_interval, support_sampl
         pdfs[:, i, :] = (prod_cdfs.view(batch_size, -1) * prod_pdfs_invcdfs.sum(axis=1))
     return pdfs, supports
 
-def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device='cpu'):
+def ordered_truncated_gaussian_nll(z, mu, sigma, max_matrix, eps = 1e-12, device='cpu', lower=torch.tensor(0), upper=torch.tensor(1)):
     
     n_lat = max_matrix.size(1)
     max_pdf_lat = torch.zeros(z.size(0), n_lat).to(device)
     for i in range(n_lat):
-        pdfs_at_zi = truncated_gaussian_pdf(z[:,i].view(-1,1), mu, sigma).to(device)  
-        cdfs_at_zi = truncated_gaussian_cdf(z[:,i].view(-1,1), mu, sigma).to(device)
+        pdfs_at_zi = truncated_gaussian_pdf(z[:,i].view(-1,1), mu, sigma, eps=eps, lower=lower, upper=upper).to(device)  
+        cdfs_at_zi = truncated_gaussian_cdf(z[:,i].view(-1,1), mu, sigma, eps=eps, lower=lower, upper=upper).to(device)
         max_mat_col = max_matrix[:,i]
         max_mat_mask = max_mat_col.repeat(z.size(0),1)
         # masked select is probably triggering some errors, see : https://discuss.pytorch.org/t/logbackward-returned-nan-values-in-its-0th-output/92820/7

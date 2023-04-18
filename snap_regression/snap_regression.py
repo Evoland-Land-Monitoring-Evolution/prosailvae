@@ -250,12 +250,12 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, e
         for j in range(len(test_loader_list)):
             with torch.no_grad():
                 test_data = test_loader_list[j].dataset[:]
-                lai_pred = snap_nn.forward(test_data[0].to(snap_nn.device))
-                lai_true = test_data[1]
-                rmse = (lai_pred - lai_true).pow(2).mean().sqrt().cpu().item()
+                lai_pred = snap_nn.forward(test_data[0].to(snap_nn.device)).cpu()
+                lai_true = test_data[1].cpu()
+                rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
                 r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
-                mae = (lai_pred - lai_true).abs().mean().cpu().item()
-                reg_m, reg_b = np.polyfit(lai_true.squeeze().cpu().numpy(), lai_pred.squeeze().cpu().numpy(), 1)
+                mae = (lai_pred - lai_true).abs().mean().item()
+                reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
                 best_valid_loss = min(all_valid_losses)
                 metrics[i,j,:] = torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss])
     list_metrics_df = []

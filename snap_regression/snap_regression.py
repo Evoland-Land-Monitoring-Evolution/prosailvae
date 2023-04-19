@@ -269,9 +269,19 @@ def main():
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",]
         disable_tqdm=False
+        epochs = 3
+        n = 5
+        lr = 0.001
+        tg_mu = torch.tensor([0,1])
+        tg_sigma = torch.tensor([0.5,1])
         parser = get_prosailvae_results_parser().parse_args(args)    
     else:
         parser = get_prosailvae_results_parser().parse_args()
+        epochs = 1000
+        tg_mu = torch.tensor([0,1,2,3,4,5])
+        tg_sigma = torch.tensor([0.5,1,2,3,4])
+        n = 20
+        lr = 0.001
         disable_tqdm=True
     prepare_data = True
     save_dir = parser.data_dir
@@ -282,12 +292,10 @@ def main():
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
         data_eval, fold_data_list, tg_data_list, list_kl, list_params = prepare_datasets(n_eval=5000, n_samples_sub=5000, 
-                                                                                         save_dir=save_dir, 
-                                                                                         tg_mu = torch.tensor([0,1,2,3,4,5]),
-                                                                                         tg_sigma = torch.tensor([0.5,1,2,3,4]))
-    epochs = 1000
-    n = 20
-    lr = 0.001
+                                                                                         save_dir=save_dir,
+                                                                                         tg_mu = tg_mu,
+                                                                                         tg_sigma = tg_sigma)
+
     # eval_filepath = save_dir + "/eval_data.pth"
     # filepath = save_dir + "/fold_0_data.pth"
     # filepath = save_dir + "/tg_lai_mu_0_sigma_4_data.pth"
@@ -324,7 +332,7 @@ def main():
             fig.savefig(res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
 
             fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-            ax.scatter(kl.repeat(6,1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+            ax.scatter(kl.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
             ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
             ax.set_ylabel(metrics_names[k])
             fig.savefig(res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")

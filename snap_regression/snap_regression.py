@@ -32,7 +32,7 @@ def get_prosailvae_results_parser():
     parser.add_argument("-e", dest="epochs",
                         help="number of epochs",
                         type=int, default=1000)
-    parser.add_argument("-n", dest="n_model_training", 
+    parser.add_argument("-n", dest="n_model_train", 
                         type=int, default=20)
     return parser
 

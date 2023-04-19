@@ -29,11 +29,16 @@ def get_prosailvae_results_parser():
     parser.add_argument("-r", dest="results_dir",
                         help="path to results directory",
                         type=str, default="")
+    
     parser.add_argument("-e", dest="epochs",
                         help="number of epochs",
                         type=int, default=1000)
+    
     parser.add_argument("-n", dest="n_model_train", 
                         type=int, default=20)
+    
+    parser.add_argument("-i", dest="init_models", 
+                        type=bool, default=False)
     return parser
 
 def load_refl_angles(path_to_data_dir):
@@ -294,11 +299,14 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
     
     return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss])
 
-def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001, disable_tqdm=False, patience=10):
+def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001, disable_tqdm=False, 
+                        patience=10, init_models=False):
     metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
     metrics = torch.zeros((n, len(test_loader_list), len(metrics_names)))
     for i in range(n):
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        if init_models:
+            snap_nn.set_weiss_weights()
         optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
         lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=patience, threshold=0.001)
         _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer, epochs=epochs, 
@@ -378,7 +386,8 @@ def main():
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",
               "-e", "3",
-              "-n", "5"]
+              "-n", "5"
+              "-i", 'True']
         disable_tqdm=False
         lr = 0.001
         # tg_mu = torch.tensor([0,1])
@@ -394,6 +403,7 @@ def main():
 
         lr = 0.001
         disable_tqdm=True
+    init_models = parser.init_models
     prepare_data = True
     epochs = parser.epochs
     n = parser.n_model_train
@@ -433,7 +443,8 @@ def main():
             kl[i] = list_kl[i]
             train_loader, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
             list_metrics_df, metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=[test_loader], 
-                                                            n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20)
+                                                            n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20, 
+                                                            init_models=init_models)
             mean_metrics.append(metrics.mean(0).unsqueeze(0))
             all_metrics.append(metrics.unsqueeze(0))
         

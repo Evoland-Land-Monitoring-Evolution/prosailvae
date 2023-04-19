@@ -156,6 +156,7 @@ def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=F
         B8A = s2_r.select(band_dim, bands_idx['B8A']).unsqueeze(band_dim)
         B11 = s2_r.select(band_dim, bands_idx['B11']).unsqueeze(band_dim)
         B12 = s2_r.select(band_dim, bands_idx['B12']).unsqueeze(band_dim)
+    
     viewZenithMean = s2_a.select(band_dim, 1).unsqueeze(band_dim)
     sunZenithAngles = s2_a.select(band_dim, 0).unsqueeze(band_dim)
     relAzim = s2_a.select(band_dim, 2).unsqueeze(band_dim)
@@ -179,7 +180,7 @@ def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=F
     relAzim_norm = torch.cos(torch.deg2rad(relAzim))
 
     x1 = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm,b07_norm, b8a_norm, b11_norm, b12_norm,
-                   viewZen_norm,sunZen_norm,relAzim_norm), axis=band_dim)
+                   viewZen_norm, sunZen_norm, relAzim_norm), axis=band_dim)
     nb_dim = len(b03_norm.size())
     n1 = neuron(x1, w1, b1, nb_dim, sum_dim=band_dim)
     n2 = neuron(x1, w2, b2, nb_dim, sum_dim=band_dim)
@@ -343,19 +344,13 @@ def weiss_regression():
         # lai_bv_net = torch.as_tensor(df_validation_data['lai_bvnet'].values.reshape(-1,1))
         # time_delta = torch.zeros((n_obs,1))
         return s2_r, tts, tto, psi, lai
+    
     def load_weiss_dataset(path_to_data_dir):
         s2_r, tts, tto, psi, lai = load_refl_angles(path_to_data_dir)
-        s2_a = np.stack((tts,tto,psi),1)
+        s2_a = np.stack((tts, tto, psi),1)
         return s2_r, s2_a, lai
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
-    bands_idx = {'B03':0,
-                        'B04':1,
-                        'B05':2,
-                        'B06':3,
-                        'B07':4,
-                        'B8A':5,
-                        'B11':6,
-                        'B12':7}
+    bands_idx = {'B03':0, 'B04':1, 'B05':2, 'B06':3, 'B07':4, 'B8A':5, 'B11':6, 'B12':7}
     lai_pred = weiss_lai(torch.from_numpy(s2_r), torch.from_numpy(s2_a), band_dim=1, bands_idx=bands_idx, ver="2.1", lai_disp_norm=False)
     import matplotlib.pyplot as plt 
     fig, ax = plt.subplots()
@@ -451,7 +446,7 @@ def validate_snap_lai():
 
 if __name__ == "__main__":
     # validate_snap_lai()
-    # weiss_regression()
+    weiss_regression()
     validate_sentinel_hub_lai()
     from prosail_plots import plot_patches
     compare_images()

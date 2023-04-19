@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import torch
 from math import pi
-from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn
+from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.optim as optim
@@ -40,11 +40,11 @@ def load_refl_angles(path_to_data_dir):
     tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
     psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
     lai = df_validation_data['lai_true'].values
-    return s2_r, tts, tto, psi, lai
+    return s2_r, tto, tts, psi, lai # Warning, inverted tto and tts w.r.t my prosil version
 
 def load_weiss_dataset(path_to_data_dir):
-    s2_r, tts, tto, psi, lai = load_refl_angles(path_to_data_dir)
-    s2_a = np.stack((tts,tto,psi),1)
+    s2_r, tto, tts, psi, lai = load_refl_angles(path_to_data_dir)
+    s2_a = np.stack((tto, tts, psi), 1)
     return s2_r, s2_a, lai
 
 def sample_from_dist(lai, n=100, kernel_p=None, kernel_q=None):
@@ -88,15 +88,22 @@ def normalize(unnormalized, min_sample, max_sample):
 def denormalize(normalized, min_sample, max_sample): 
     return 0.5 * (normalized + 1) * (max_sample - min_sample) + min_sample
 
-def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_common_samples_nb=True, tg_mu = torch.tensor([0,4]),
-                    tg_sigma = torch.tensor([1,4])):
+def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_common_samples_nb=True, 
+                     tg_mu = torch.tensor([0,4]), tg_sigma = torch.tensor([1,4]), plot_dist=False):
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
-    data = torch.from_numpy(np.concatenate((s2_r,np.cos(np.deg2rad(s2_a)),lai.reshape(-1,1)), 1))
+    data = torch.from_numpy(np.concatenate((s2_r, np.cos(np.deg2rad(s2_a)), lai.reshape(-1,1)), 1))
     seed = 4567895683301
     g_cpu = torch.Generator()
     g_cpu.manual_seed(seed)
     idx = torch.randperm(len(lai), generator=g_cpu)
     data_eval = data[idx[:n_eval],:]
+    if plot_dist:
+        fig, ax = plt.subplots()
+        ax.hist(data_eval[:,-1], bins=200, range=[0,14], density=True, label="evaluation samples")
+        ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), torch.tensor(2), torch.tensor(3), lower=torch.tensor(0), upper=torch.tensor(14)), 'r', label='Original distribution')
+        ax.set_xlabel("Eval data LAI distribution")
+        ax.legend()
+        fig.savefig(save_dir + f"/eval_data_lai.png")
     torch.save(data_eval, save_dir + f"/eval_data.pth")
     data_train = data[idx[n_eval:],:]
     n_folds = len(data_train) // 5000
@@ -125,7 +132,13 @@ def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_com
             print(f"number of samples for mu = {tg_mu[i].item()} sigma = {tg_sigma[j].item()} (kl = {kl}) : {len(idx_samples)}")
             list_idx_samples_i.append(idx_samples)
             min_sample_nb = min(min_sample_nb, len(idx_samples))
-        
+            if plot_dist:
+                fig, ax = plt.subplots(1, dpi=150)
+                ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), mu_ref, sigma_ref, lower=torch.tensor(0), upper=torch.tensor(14)), 'k', label='original distribution')
+                ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, range=[0,14], alpha=0.5, density=True, label='samples')
+                ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), tg_mu[i], tg_sigma[j], lower=torch.tensor(0), upper=torch.tensor(14)), 'r', label='sampling distribution (kl={:.2f})'.format(kl))
+                ax.legend()
+                fig.savefig( save_dir + f"/samples_lai_mu_{tg_mu[i].item()}_sigma_{tg_sigma[j].item()}.png")
         list_idx_samples.append(list_idx_samples_i)
     tg_data_list = []
     for i in range(len(tg_mu)):
@@ -189,7 +202,31 @@ class SnapNN(nn.Module):
         self.lai_max = lai_max.to(device)
         self.net = nn.Sequential(*layers).to(device)
         self.device = device
-        
+    
+    def set_weiss_weights(self, ver=2.1):
+        if ver==2.1:
+            self.net[0].bias =  nn.Parameter(torch.tensor([4.96238030555,1.41600844398,1.07589704721,1.53398826466,3.02411593076])).to(self.device)
+            self.net[0].weight =  nn.Parameter(torch.tensor([[-0.0234068789665,0.921655164636,0.13557654408,-1.9383314724,
+                                                              -3.34249581612,0.90227764801,0.205363538259,-0.0406078447217,
+                                                              -0.0831964097271,0.260029270774,0.284761567219],
+                                                            [-0.132555480857,-0.139574837334,-1.0146060169,-1.33089003865,
+                                                             0.0317306245033,-1.43358354132,-0.959637898575,1.13311570655,
+                                                             0.216603876542,0.410652303763,0.0647601555435],
+                                                            [0.0860159777249,0.616648776881,0.678003876447,0.141102398645,
+                                                             -0.0966822068835,-1.12883263886,0.302189102741,0.4344949373,
+                                                             -0.0219036994906,-0.228492476802,-0.0394605375898],
+                                                            [-0.10936659367,-0.0710462629727,0.0645824114783,2.90632523682,
+                                                             -0.673873108979,-3.83805186828,1.69597934453,0.0469502960817,
+                                                             -0.0497096526884,0.021829545431,0.0574838271041],
+                                                            [-0.08993941616,0.175395483106,-0.0818473291726,2.21989536749,
+                                                             1.71387397514,0.7130691861,0.138970813499,-0.060771761518,
+                                                             0.124263341255,0.210086140404,-0.1838781387]])).to(self.device)
+            self.net[2].bias =  nn.Parameter(torch.tensor([1.09696310708])).to(self.device)
+            self.net[2].weight =  nn.Parameter(torch.tensor([[-1.50013548973,-0.0962832691215,-0.194935930577,-0.352305895756,0.0751074158475]])).to(self.device)
+        else:
+            raise NotImplementedError
+        return
+    
     def forward(self, x):
         x_norm = normalize(x, self.input_min, self.input_max)
         lai_norm = self.net(x_norm)
@@ -236,35 +273,102 @@ class SnapNN(nn.Module):
     def get_batch_loss(self, batch):
         input_data, lai = batch
         lai_pred = self.forward(input_data.to(self.device))
-        return (lai_pred - lai.to(self.device)).pow(2).sum()
+        return (lai_pred - lai.to(self.device)).pow(2).mean()
+    
+def get_model_metrics(test_data, model, all_valid_losses=[]):
+    with torch.no_grad():
+        if len(all_valid_losses) == 0 :
+            all_valid_losses = [100000]
+        lai_pred = model.forward(test_data[0].to(model.device)).cpu()
+        lai_true = test_data[1].cpu()
+        rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
+        r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
+        mae = (lai_pred - lai_true).abs().mean().item()
+        reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
+        best_valid_loss = min(all_valid_losses)
+    
+    return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss])
 
-def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001,disable_tqdm=False):
+def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001, disable_tqdm=False, patience=10):
     metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
     metrics = torch.zeros((n, len(test_loader_list), len(metrics_names)))
     for i in range(n):
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
-        lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=10, threshold=0.001)
+        lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=patience, threshold=0.001)
         _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer, epochs=epochs, 
                                                      lr_scheduler=lr_scheduler, disable_tqdm=disable_tqdm)
         for j in range(len(test_loader_list)):
             with torch.no_grad():
                 test_data = test_loader_list[j].dataset[:]
-                lai_pred = snap_nn.forward(test_data[0].to(snap_nn.device)).cpu()
-                lai_true = test_data[1].cpu()
-                rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
-                r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
-                mae = (lai_pred - lai_true).abs().mean().item()
-                reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
-                best_valid_loss = min(all_valid_losses)
-                metrics[i,j,:] = torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss])
+                metrics[i,j,:] = get_model_metrics(test_data, snap_nn, all_valid_losses=all_valid_losses)
     list_metrics_df = []
     for j in range(len(test_loader_list)):
         metrics_df = pd.DataFrame(data=metrics[:,j,:].numpy(), columns=metrics_names)
         list_metrics_df.append(metrics_df)
     return list_metrics_df, metrics
 
+def test_snap_nn():
+    from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases, 
+                                        get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
+    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")   
+    snap_nn = SnapNN()
+    snap_nn.set_weiss_weights()
+    sample = torch.cat((torch.from_numpy(s2_r), torch.cos(torch.from_numpy(s2_a))), 1).float()
+    ver="2.1"
+    norm_factors = get_norm_factors(ver=ver)
+    w1, w2, w3, w4, w5 = get_layer_1_neuron_weights(ver=ver)
+    b1, b2, b3, b4, b5 = get_layer_1_neuron_biases(ver=ver)
+    wl2 = get_layer_2_weights(ver=ver)
+    bl2 = get_layer_2_bias(ver=ver)
+
+    b03_norm = normalize(sample[:,0].unsqueeze(1), norm_factors["min_sample_B03"], norm_factors["max_sample_B03"])
+    b04_norm = normalize(sample[:,1].unsqueeze(1), norm_factors["min_sample_B04"], norm_factors["max_sample_B04"])
+    b05_norm = normalize(sample[:,2].unsqueeze(1), norm_factors["min_sample_B05"], norm_factors["max_sample_B05"])
+    b06_norm = normalize(sample[:,3].unsqueeze(1), norm_factors["min_sample_B06"], norm_factors["max_sample_B06"])
+    b07_norm = normalize(sample[:,4].unsqueeze(1), norm_factors["min_sample_B07"], norm_factors["max_sample_B07"])
+    b8a_norm = normalize(sample[:,5].unsqueeze(1), norm_factors["min_sample_B8A"], norm_factors["max_sample_B8A"])
+    b11_norm = normalize(sample[:,6].unsqueeze(1), norm_factors["min_sample_B11"], norm_factors["max_sample_B11"])
+    b12_norm = normalize(sample[:,7].unsqueeze(1), norm_factors["min_sample_B12"], norm_factors["max_sample_B12"])
+    viewZen_norm = normalize(sample[:,8].unsqueeze(1), norm_factors["min_sample_viewZen"], norm_factors["max_sample_viewZen"])
+    sunZen_norm  = normalize(sample[:,9].unsqueeze(1), norm_factors["min_sample_sunZen"], norm_factors["max_sample_sunZen"])
+    relAzim_norm = sample[:,10].unsqueeze(1)
+    band_dim = 1
+    with torch.no_grad():
+        x_norm = normalize(sample, snap_nn.input_min, snap_nn.input_max)
+        x1 = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm,
+                    viewZen_norm, sunZen_norm, relAzim_norm), axis=band_dim)
+        assert torch.isclose(x1, x_norm, atol=1e-6).all()
+        nb_dim = len(b03_norm.size())
+        n1 = neuron(x1, w1, b1, nb_dim, sum_dim=band_dim)
+        n2 = neuron(x1, w2, b2, nb_dim, sum_dim=band_dim)
+        n3 = neuron(x1, w3, b3, nb_dim, sum_dim=band_dim)
+        n4 = neuron(x1, w4, b4, nb_dim, sum_dim=band_dim)
+        n5 = neuron(x1, w5, b5, nb_dim, sum_dim=band_dim)
+        linear_1_snap = nn.Linear(11,5)
+        linear_1_snap.weight = snap_nn.net[0].weight
+        linear_1_snap.bias = snap_nn.net[0].bias
+        assert torch.isclose(linear_1_snap(x_norm), snap_nn.net[0].bias + x_norm @ snap_nn.net[0].weight.transpose(1,0), atol=1e-4).all()
+
+        n_snap_nn = torch.tanh(snap_nn.net[0].bias + x_norm @ snap_nn.net[0].weight.transpose(1,0))
+        assert torch.isclose(n_snap_nn, torch.cat((n1,n2,n3,n4,n5), axis=1), atol=1e-4).all()
+
+        linear_2_snap = snap_nn.net[2]
+        # linear_2_snap.weight = snap_nn.net[2].weight
+        # linear_2_snap.bias = snap_nn.net[2].bias
+        assert torch.isclose(linear_2_snap(n_snap_nn), snap_nn.net[2].bias + n_snap_nn @ snap_nn.net[2].weight.transpose(1,0), atol=1e-4).all()
+        l2 = layer2(n1, n2, n3, n4, n5, wl2, bl2, sum_dim=band_dim)
+        l_snap_nn = snap_nn.net[2].bias + n_snap_nn @ snap_nn.net[2].weight.transpose(1,0)
+        lai_prenorm_snap = snap_nn.net(x_norm)
+        assert torch.isclose(l_snap_nn.squeeze(), l2.squeeze(), atol=1e-4).all()
+        assert torch.isclose(lai_prenorm_snap.squeeze(), l2.squeeze(), atol=1e-4).all()
+        lai = denormalize(l2, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
+        snap_lai = denormalize(l_snap_nn, snap_nn.lai_min, snap_nn.lai_max)
+        assert torch.isclose(snap_lai.squeeze(), lai.squeeze(), atol=1e-4).all()
+        assert torch.isclose(snap_nn.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
+
 def main():
+    test_snap_nn()
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",]
@@ -272,8 +376,10 @@ def main():
         epochs = 3
         n = 5
         lr = 0.001
-        tg_mu = torch.tensor([0,1])
-        tg_sigma = torch.tensor([0.5,1])
+        # tg_mu = torch.tensor([0,1])
+        # tg_sigma = torch.tensor([0.5,1])
+        tg_mu = torch.tensor([0,1,2,3,4,5])
+        tg_sigma = torch.tensor([0.5,1,2,3,4])
         parser = get_prosailvae_results_parser().parse_args(args)    
     else:
         parser = get_prosailvae_results_parser().parse_args()
@@ -284,6 +390,7 @@ def main():
         lr = 0.001
         disable_tqdm=True
     prepare_data = True
+    compute_metrics = False
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     if not os.path.isdir(res_dir):
@@ -294,48 +401,211 @@ def main():
         data_eval, fold_data_list, tg_data_list, list_kl, list_params = prepare_datasets(n_eval=5000, n_samples_sub=5000, 
                                                                                          save_dir=save_dir,
                                                                                          tg_mu = tg_mu,
-                                                                                         tg_sigma = tg_sigma)
+                                                                                         tg_sigma = tg_sigma, 
+                                                                                         plot_dist=False)
 
     # eval_filepath = save_dir + "/eval_data.pth"
     # filepath = save_dir + "/fold_0_data.pth"
     # filepath = save_dir + "/tg_lai_mu_0_sigma_4_data.pth"
-    test_loader, _ = get_loaders(data_eval, seed=86294692001, valid_ratio=0, batch_size=256)
-    kl = torch.zeros(len(tg_data_list))
-    mean_metrics = []
-    all_metrics = []
-    for i in range(len(tg_data_list)):
-        kl[i] = list_kl[i]
-        train_loader, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
-        list_metrics_df, metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=[test_loader], 
-                                              n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm)
-        mean_metrics.append(metrics.mean(0).unsqueeze(0))
-        all_metrics.append(metrics.unsqueeze(0))
     metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
     eval_data_name = ["simulated_data"]
-    mean_metrics = torch.cat(mean_metrics, 0)
-    all_metrics = torch.cat(all_metrics, 0)
-    torch.save(all_metrics, res_dir + "/all_metrics.pth")
-    torch.save(kl, res_dir + "/kl.pth")
+    test_loader, _ = get_loaders(data_eval, seed=86294692001, valid_ratio=0, batch_size=256)
+    snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+    snap_ref.set_weiss_weights()
+    metrics_ref = []
+    for i in range(len(tg_data_list)):
+        _, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
+        snap_valid_loss = snap_ref.validate(valid_loader)
+        metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref, all_valid_losses=[snap_valid_loss]))
+    metrics_ref = torch.stack(metrics_ref, dim=0)
+    if compute_metrics:
+        kl = torch.zeros(len(tg_data_list))
+        mean_metrics = []
+        all_metrics = []
+        for i in range(len(tg_data_list)):
+            kl[i] = list_kl[i]
+            train_loader, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
+            list_metrics_df, metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=[test_loader], 
+                                                            n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20)
+            mean_metrics.append(metrics.mean(0).unsqueeze(0))
+            all_metrics.append(metrics.unsqueeze(0))
+        
+        
+        mean_metrics = torch.cat(mean_metrics, 0)
+        all_metrics = torch.cat(all_metrics, 0)
+        torch.save(all_metrics, res_dir + "/all_metrics.pth")
+        torch.save(kl, res_dir + "/kl.pth")
+    else:
+        all_metrics = torch.load(res_dir + "/all_metrics.pth")
+        mean_metrics = all_metrics.mean(1)
+        median_metrics = torch.quantile(all_metrics,0.5,dim=1)
+        kl = torch.load(res_dir + "/kl.pth")
+    kl_res_dir = res_dir + "/kl/"
+    if not os.path.isdir(kl_res_dir):
+        os.makedirs(kl_res_dir)
     for j in range(mean_metrics.size(1)):
         for k in range(mean_metrics.size(2)):
             fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.hist(all_metrics[:,:,j,k].reshape(-1), bins=100, density=True, label='trained models')
+            ax.set_xlabel(f"{metrics_names[k]} histogram")
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axvline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.hist(metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', bins=50, c='k')
+            ax.legend()
+            fig.savefig(res_dir + f"/{eval_data_name[j]}_{metrics_names[k]}_histogram.png")
+
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
             ax.scatter(kl, mean_metrics[:,j,k])
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(kl, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
             ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
             ax.set_ylabel(metrics_names[k])
-            fig.savefig(res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
+            ax.set_xscale('symlog')
+            fig.savefig(kl_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
+                    
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(kl, median_metrics[:,j,k])
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(kl, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(kl_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
             
             fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
             ax.boxplot(all_metrics[:,:,j,k], positions=kl, widths=0.1)
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(kl, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
             ax.set_xticks(np.arange(0,11), np.arange(0,11))
             ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
             ax.set_ylabel(metrics_names[k])
-            fig.savefig(res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
+            ax.set_xscale('symlog')
+            fig.savefig(kl_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
 
             fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
             ax.scatter(kl.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(kl, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
             ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
             ax.set_ylabel(metrics_names[k])
-            fig.savefig(res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
+            ax.set_xscale('symlog')
+            fig.savefig(kl_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
+            plt.close('all')
+
+    size_mu = len(tg_mu)
+    size_sigma = len(tg_sigma)  
+    tg_mu_rep = tg_mu.repeat(size_sigma,1).transpose(0,1).reshape(-1)     
+    tg_sigma_rep = tg_sigma.repeat(size_mu,1).reshape(-1)     
+    mu_res_dir = res_dir + "/mu/"
+    if not os.path.isdir(mu_res_dir):
+        os.makedirs(mu_res_dir)
+    for j in range(mean_metrics.size(1)):
+        for k in range(mean_metrics.size(2)):
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(tg_mu_rep, mean_metrics[:,j,k])
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_mu_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("sampling distribution mu")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(mu_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
+                    
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(tg_mu_rep, median_metrics[:,j,k])
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_mu_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("sampling distribution mu")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(mu_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
+            
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.boxplot(all_metrics[:,:,j,k], positions=tg_mu_rep, widths=0.1)
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_mu_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xticks(np.arange(0,11), np.arange(0,11))
+            ax.set_xlabel("sampling distribution mu")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(mu_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
+
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(tg_mu_rep.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_mu_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("sampling distribution mu")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(mu_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
+            plt.close('all')
+
+    sigma_res_dir = res_dir + "/sigma/"
+    if not os.path.isdir(sigma_res_dir):
+        os.makedirs(sigma_res_dir)
+    for j in range(mean_metrics.size(1)):
+        for k in range(mean_metrics.size(2)):
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(tg_sigma_rep, mean_metrics[:,j,k])
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_sigma_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("sampling distribution sigma")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(sigma_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
+                    
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(tg_sigma_rep, median_metrics[:,j,k])
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_sigma_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("sampling distribution sigma")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(sigma_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
+            
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.boxplot(all_metrics[:,:,j,k], positions=tg_sigma_rep, widths=0.1)
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_sigma_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xticks(np.arange(0,11), np.arange(0,11))
+            ax.set_xlabel("sampling distribution sigma")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(sigma_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
+
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            ax.scatter(tg_sigma_rep.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+            if metrics_ref[:,k].min() == metrics_ref[:,k].max():
+                ax.axhline(metrics_ref[:,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
+            else:
+                ax.plot(tg_sigma_rep, metrics_ref[:,k], label=f'SNAP {metrics_names[k]}', c='k')
+            ax.set_xlabel("sampling distribution sigma")
+            ax.set_ylabel(metrics_names[k])
+            ax.set_xscale('symlog')
+            fig.savefig(sigma_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
+            plt.close('all')
     # snap_nn = SnapNN()
     # lr=0.001
     # epochs = 500

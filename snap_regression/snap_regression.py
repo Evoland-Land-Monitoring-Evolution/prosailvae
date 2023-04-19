@@ -27,8 +27,13 @@ def get_prosailvae_results_parser():
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
     
     parser.add_argument("-r", dest="results_dir",
-                        help="path to root results direcotry",
+                        help="path to results directory",
                         type=str, default="")
+    parser.add_argument("-e", dest="epochs",
+                        help="number of epochs",
+                        type=int, default=1000)
+    parser.add_argument("-n", "n_model_training", 
+                        type=int, default=20)
     return parser
 
 def load_refl_angles(path_to_data_dir):
@@ -371,10 +376,10 @@ def main():
     test_snap_nn()
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
-              "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",]
+              "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",
+              "-e", "3",
+              "-n", "5"]
         disable_tqdm=False
-        epochs = 3
-        n = 5
         lr = 0.001
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
@@ -383,14 +388,16 @@ def main():
         parser = get_prosailvae_results_parser().parse_args(args)    
     else:
         parser = get_prosailvae_results_parser().parse_args()
-        epochs = 1000
+
         tg_mu = torch.tensor([0,1,2,3,4,5])
         tg_sigma = torch.tensor([0.5,1,2,3,4])
-        n = 20
+
         lr = 0.001
         disable_tqdm=True
     prepare_data = True
-    compute_metrics = False
+    epochs = parser.epochs
+    n = parser.n_model_train
+    compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     if not os.path.isdir(res_dir):

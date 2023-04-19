@@ -210,7 +210,7 @@ class SnapNN(nn.Module):
     
     def set_weiss_weights(self, ver=2.1):
         if ver==2.1:
-            self.net[0].bias =  nn.Parameter(torch.tensor([4.96238030555,1.41600844398,1.07589704721,1.53398826466,3.02411593076])).to(self.device)
+            self.net[0].bias =  nn.Parameter(torch.tensor([4.96238030555,1.41600844398,1.07589704721,1.53398826466,3.02411593076]).to(self.device))
             self.net[0].weight =  nn.Parameter(torch.tensor([[-0.0234068789665,0.921655164636,0.13557654408,-1.9383314724,
                                                               -3.34249581612,0.90227764801,0.205363538259,-0.0406078447217,
                                                               -0.0831964097271,0.260029270774,0.284761567219],
@@ -225,9 +225,9 @@ class SnapNN(nn.Module):
                                                              -0.0497096526884,0.021829545431,0.0574838271041],
                                                             [-0.08993941616,0.175395483106,-0.0818473291726,2.21989536749,
                                                              1.71387397514,0.7130691861,0.138970813499,-0.060771761518,
-                                                             0.124263341255,0.210086140404,-0.1838781387]])).to(self.device)
-            self.net[2].bias =  nn.Parameter(torch.tensor([1.09696310708])).to(self.device)
-            self.net[2].weight =  nn.Parameter(torch.tensor([[-1.50013548973,-0.0962832691215,-0.194935930577,-0.352305895756,0.0751074158475]])).to(self.device)
+                                                             0.124263341255,0.210086140404,-0.1838781387]]).to(self.device))
+            self.net[2].bias =  nn.Parameter(torch.tensor([1.09696310708]).to(self.device))
+            self.net[2].weight =  nn.Parameter(torch.tensor([[-1.50013548973,-0.0962832691215,-0.194935930577,-0.352305895756,0.0751074158475]]).to(self.device))
         else:
             raise NotImplementedError
         return

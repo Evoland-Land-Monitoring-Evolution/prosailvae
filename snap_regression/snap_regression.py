@@ -39,6 +39,9 @@ def get_prosailvae_results_parser():
     
     parser.add_argument("-i", dest="init_models", 
                         type=bool, default=False)
+    
+    parser.add_argument("-lr", dest="lr", 
+                        type=float, default=0.001)
     return parser
 
 def load_refl_angles(path_to_data_dir):
@@ -387,9 +390,10 @@ def main():
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",
               "-e", "3",
               "-n", "5"
-              "-i", 'True']
+              "-i", 't'
+              "-lr", "0.001"]
         disable_tqdm=False
-        lr = 0.001
+        
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
         tg_mu = torch.tensor([0,1,2,3,4,5])
@@ -401,7 +405,7 @@ def main():
         tg_mu = torch.tensor([0,1,2,3,4,5])
         tg_sigma = torch.tensor([0.5,1,2,3,4])
 
-        lr = 0.001
+        
         disable_tqdm=True
     init_models = parser.init_models
     prepare_data = True
@@ -410,6 +414,7 @@ def main():
     compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
+    lr = parser.lr
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
     if prepare_data:
@@ -456,8 +461,9 @@ def main():
     else:
         all_metrics = torch.load(res_dir + "/all_metrics.pth")
         mean_metrics = all_metrics.mean(1)
-        median_metrics = torch.quantile(all_metrics,0.5,dim=1)
+    
         kl = torch.load(res_dir + "/kl.pth")
+    median_metrics = torch.quantile(all_metrics,0.5,dim=1)
     kl_res_dir = res_dir + "/kl/"
     if not os.path.isdir(kl_res_dir):
         os.makedirs(kl_res_dir)

@@ -149,13 +149,14 @@ def load_prosailVAE(rsr_dir, vae_params, vae_file_path, optimizer=None, device='
 
 def load_PROSAIL_VAE_with_supervised_kl(params, rsr_dir, logger_name, vae_file_path=None, 
                                         params_sup_kl_model=None, weiss_mode=False, norm_mean=None, norm_std=None, 
-                                        sup_norm_mean=None, sup_norm_std=None, bands=[1, 2, 3, 4, 5, 6, 7, 8, 11, 12]):
+                                        sup_norm_mean=None, sup_norm_std=None, bands=[1, 2, 3, 4, 5, 6, 7, 8, 11, 12], 
+                                        bands_sup_model=[1, 2, 3, 4, 5, 6, 7, 8, 11, 12]):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     sup_prosail_vae=None
     if params_sup_kl_model is not None:
         patch_mode_sup_model = not params_sup_kl_model["simulated_dataset"]
-        vae_params={"input_size":len(bands),  
+        vae_params={"input_size":len(bands_sup_model),  
                 "hidden_layers_size":params_sup_kl_model["hidden_layers_size"], 
                 "encoder_last_activation":params_sup_kl_model["encoder_last_activation"],
                 "supervised":params_sup_kl_model["supervised"],  
@@ -173,7 +174,7 @@ def load_PROSAIL_VAE_with_supervised_kl(params, rsr_dir, logger_name, vae_file_p
                                                 encoder_type=params_sup_kl_model["encoder_type"],
                                                 rnn_depth=params_sup_kl_model["rnn_depth"],
                                                 rnn_number=params_sup_kl_model["rnn_number"],
-                                                bands=bands)
+                                                bands=bands_sup_model)
     
     vae_params={"input_size":len(bands),  
                 "hidden_layers_size":params["hidden_layers_size"], 

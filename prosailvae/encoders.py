@@ -241,7 +241,7 @@ class ProsailRNNEncoder(Encoder):
         for i in range(n_res_block):
             # resblock = nn.RNN(input_size=res_block_layer_sizes, hidden_size=res_block_layer_depth, 
             #                     num_layers=res_block_layer_depth,nonlinearity='relu',batch_first=True)
-            resblock = EncoderResBlock(hidden_layers_size=res_block_layer_sizes,depth=res_block_layer_depth,
+            resblock = EncoderResBlock(hidden_layers_size=res_block_layer_sizes, depth=res_block_layer_depth,
                                         last_activation=None, device=device)
             resnet.append(resblock)
             # layers.append(nn.BatchNorm1d(num_features=out_features))

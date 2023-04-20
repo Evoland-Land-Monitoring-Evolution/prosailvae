@@ -120,14 +120,15 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
 
 def initialize_by_training(n_models, n_epochs, train_loader, valid_loader, lr, params, 
                            rsr_dir, vae_file_path, norm_mean, norm_std, bands, params_sup_kl_model,
-                           logger, weiss_mode, res_dir):
+                           logger, weiss_mode, res_dir, sup_norm_mean=None, sup_norm_std=None):
     min_valid_loss = torch.inf
     logger.info("Intializing by training {n_models} models for {n_epochs} epochs:")
     best_PROSAIL_VAE = None
     for i in range(n_models):
         PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, rsr_dir, logger_name=LOGGER_NAME,
                                                         vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model, 
-                                                        bands=bands, norm_mean=norm_mean, norm_std=norm_std)
+                                                        bands=bands, norm_mean=norm_mean, norm_std=norm_std, 
+                                                        sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
         optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=lr, weight_decay=1e-2)
         _, all_valid_loss_df, _ = training_loop(PROSAIL_VAE, 
                                                         optimizer, 
@@ -150,7 +151,8 @@ def initialize_by_training(n_models, n_epochs, train_loader, valid_loader, lr, p
     best_PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, rsr_dir, logger_name=LOGGER_NAME,
                                                             vae_file_path=res_dir + "/prosailvae_weights.tar", 
                                                             params_sup_kl_model=params_sup_kl_model, 
-                                                            bands=bands, norm_mean=norm_mean, norm_std=norm_std)
+                                                            bands=bands, norm_mean=norm_mean, norm_std=norm_std,
+                                                            sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
     return best_PROSAIL_VAE
 
 def training_loop(PROSAIL_VAE, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
@@ -316,11 +318,15 @@ def setupTraining():
         shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
         params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
         params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.tar"
+        sup_norm_mean = torch.load(res_dir+"/norm_mean.pt")
+        sup_norm_std =torch.load(res_dir+"/norm_std.pt")
     else:
         params_sup_kl_model = None
-    return params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir
+        sup_norm_mean = None
+        sup_norm_std = None
+    return params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, sup_norm_std
 
-def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None):
+def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None, sup_norm_mean=None, sup_norm_std=None):
     logger = logging.getLogger(LOGGER_NAME)
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
@@ -392,12 +398,15 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
                                              lr=lr,params=params,rsr_dir=parser.rsr_dir, vae_file_path=vae_file_path, 
                                              norm_mean=norm_mean, norm_std=norm_std, bands=bands, 
                                              params_sup_kl_model=params_sup_kl_model, logger=logger, 
-                                             weiss_mode=parser.weiss_mode, res_dir=res_dir)
+                                             weiss_mode=parser.weiss_mode, res_dir=res_dir,
+                                             sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
     else:
 
         PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, logger_name=LOGGER_NAME,
-                                                            vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model, 
-                                                            bands=bands, norm_mean=norm_mean, norm_std=norm_std)
+                                                            vae_file_path=vae_file_path, 
+                                                            params_sup_kl_model=params_sup_kl_model, 
+                                                            bands=bands, norm_mean=norm_mean, norm_std=norm_std,
+                                                            sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
     lr = params['lr']
     lrtrainloader = None
 
@@ -485,11 +494,12 @@ def save_array_xp_path(job_array_dir, res_dir):
             with open(job_array_dir + "/results_directory_names.txt", 'a') as outfile:
                 outfile.write(f"{res_dir}\n")
 def main():
-    params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir = setupTraining()
+    params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, sup_norm_std = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
-        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model)
+        PROSAIL_VAE, all_train_loss_df, all_valid_loss_df, info_df = trainProsailVae(params, parser, res_dir, data_dir, 
+                                                                                     params_sup_kl_model, sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
         if params['encoder_type'] in spatial_encoder_types:
             # _,_, test_loader = get_mmdc_loaders(tensors_dir=parser.tensor_dir,
             #                                              batch_size=1,

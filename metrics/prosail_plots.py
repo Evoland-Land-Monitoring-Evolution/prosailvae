@@ -927,6 +927,13 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
     return fig, ax
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars, all_weiss_lai, all_sigma, max_sigma=1.4):
+
+    fig, ax = plt.subplots()
+    ax.scatter((all_lai - all_weiss_lai).abs(), all_sigma[6,:], s=0.5)
+    ax.set_xlabel('LAI absolute difference (SNAP LAI - predicted LAI)')
+    ax.set_ylabel('LAI latent sigma')
+    fig.savefig(f"{plot_dir}/lai_err_vs_sigma.png")
+
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
@@ -1001,15 +1008,22 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars
     ax.set_xlabel(f"Sentinel-hub LAI")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_lai_2dhist_true_vs_pred.png")
+
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy())
+    mse = (all_weiss_lai - all_lai).pow(2).mean().cpu().numpy()
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.scatter(all_weiss_lai.cpu().numpy(),
                         all_lai.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
     ax.set_ylabel(f"Predicted LAI")
     ax.set_xlabel(f"Sentinel-hub LAI")
     ax.set_aspect('equal')

@@ -117,7 +117,7 @@ def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_com
     with torch.no_grad():
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         snap_nn.set_weiss_weights()
-        snap_lai = snap_nn.forward(torch.cat((s2_r, s2_a), 1)).cpu()
+        snap_lai = snap_nn.forward(torch.cat((s2_r, s2_a), 1).to(snap_nn.device)).cpu()
 
     data_s2 = torch.cat((s2_r, s2_a, snap_lai), 1)
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")

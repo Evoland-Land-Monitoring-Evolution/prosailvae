@@ -174,6 +174,7 @@ def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_com
     tg_data_list = []
     for i in range(len(tg_mu)):
         for j in range(len(tg_sigma)):
+            idx_samples = list_idx_samples[i][j]
             if reduce_to_common_samples_nb:
                 idx_samples = idx_samples[:min_sample_nb]
             torch.save(data_train[idx_samples, :], save_dir + f"/tg_lai_mu_{tg_mu[i].item()}_sigma_{tg_sigma[j].item()}_data.pth")

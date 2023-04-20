@@ -105,7 +105,7 @@ def sample_truncated_gaussian(mu, sigma, n_samples=1, n_sigma=4, lower=torch.ten
     sigma = sigma.repeat(1, 1, n_samples) 
     n_dist = torch.distributions.normal.Normal(torch.zeros_like(mu), 
                                                 torch.ones_like(sigma))
-    u = u_dist.rsample(torch.tensor([n_samples])).permute(1,2,0)
+    u = u_dist.rsample()#.permute(1,2,0)
     z = mu + sigma * n_dist.icdf(n_dist.cdf((lower * torch.ones_like(mu) - mu)/sigma) + 
                                 u * (n_dist.cdf((upper * torch.ones_like(mu) - mu)/sigma) 
                                     - n_dist.cdf((lower * torch.ones_like(mu) - mu)/sigma)))

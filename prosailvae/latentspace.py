@@ -111,8 +111,8 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         return z
     
     def sample_latent_from_params(self, params, n_samples=1, n_sigma=4):
-        mu = params[:, :, 0].squeeze(2)
-        sigma = params[:, :, 1].squeeze(2)
+        mu = params[:, :, 0, ...]
+        sigma = params[:, :, 1, ...]
         z = sample_truncated_gaussian(mu, sigma, n_samples=n_samples, n_sigma=n_sigma, lower=self.lower, upper=self.upper)
         ordered_z = rectify(z, self.max_matrix)
         return ordered_z 

@@ -228,7 +228,19 @@ class SimVAE(nn.Module):
                 kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
 
             else:
-                params2 = self.supervised_model.encode2lat_params(s2_r, s2_a)
+                s2_r_sup = s2_r
+                s2_a_sup = s2_a
+                if self.spatial_mode:
+                    if self.encoder.nb_enc_cropped_hw > 0:
+                        s2_r_sup = s2_r_sup[:,:,self.encoder.nb_enc_cropped_hw:-self.encoder.nb_enc_cropped_hw,
+                        self.encoder.nb_enc_cropped_hw:-self.encoder.nb_enc_cropped_hw]
+                        s2_a_sup = s2_a_sup[:,:,self.encoder.nb_enc_cropped_hw:-self.encoder.nb_enc_cropped_hw,
+                                        self.encoder.nb_enc_cropped_hw:-self.encoder.nb_enc_cropped_hw]
+                    s2_r_sup = s2_r_sup.permute(0,2,3,1)
+                    s2_r_sup = s2_r_sup.reshape(-1, s2_r_sup.size(3))
+                    s2_a_sup = s2_a_sup.permute(0,2,3,1)
+                    s2_a_sup = s2_a_sup.reshape(-1, s2_a_sup.size(3))
+                params2 = self.supervised_model.encode2lat_params(s2_r_sup, s2_a_sup)
                 kl_loss = self.beta_kl * self.lat_space.kl(params, params2).sum(1).mean()
 
             loss_sum += kl_loss

@@ -364,8 +364,8 @@ def trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model=None)
         norm_std = torch.ones(1, len(bands))
     torch.save(norm_mean, res_dir + "/norm_mean.pt")
     torch.save(norm_std, res_dir + "/norm_std.pt")
-    if params_sup_kl_model is not None:
-        raise NotImplementedError
+    # if params_sup_kl_model is not None:
+    #     raise NotImplementedError
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     

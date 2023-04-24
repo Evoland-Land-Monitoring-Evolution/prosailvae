@@ -240,7 +240,9 @@ def resample_pdf(pdf, support, n_pdf_sample_points=1001):
     return resampled_pdf, resampled_support
 
 
-def scale_pdf(pdf, support, support_scale, support_min, support_max=None):
+def scale_pdf(pdf, support, support_scale, support_min, support_max:float|None=None):
+    if support_max is None:
+        support_max = support.max()
     assert support_scale != 0
     ext_support = support * abs(support_scale) + support_min
     if support_scale < 0: #ensuring ascending order

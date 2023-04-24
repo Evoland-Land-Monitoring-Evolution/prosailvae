@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export python_version="3.9"
+export python_version="3.10"
 export name="prosailvae"
 
 conda create -n $name python=$python_version
@@ -13,15 +13,17 @@ python --version
 
 export GITLAB_TOKEN=hssC4vRMTyMzbU6Gi86k 
 export GITLAB_TOKEN_USER=readonly
-export VERSION=tensorport
+export VERSION=cnn
 
-conda install -y pandas scikit-learn tqdm numpy pip 
-pip install psutil
-# Installing Pytorch. Please change option for GPU use.
-conda install -y pytorch torchvision cpuonly -c pytorch
-conda install -y -c conda-forge zenodo_get jax numpyro
-conda install -y  spyder
-pip install git+https://${GITLAB_TOKEN_USER}:${GITLAB_TOKEN}@src.koda.cnrs.fr/yoel.zerah.1/prosailpython.git@${VERSION}
+pip install -e /home/yoel/Documents/Dev/PROSAIL-VAE/prosailpython
+pip install -e /home/yoel/Documents/Dev/PROSAIL-VAEmmdc-singledate/
+pip install -e /home/yoel/Documents/Dev/PROSAIL-VAE/sensorsio/
+pip install -e /home/yoel/Documents/Dev/PROSAIL-VAE/torchutils/
+
+# Install requirements
+pip install -r requirements.txt
+
+# Install the current project in edit mode
 pip install -e .
 
 # End

@@ -1,22 +1,25 @@
 import os
-import prosailvae
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 import torch
-from math import pi
-from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
 import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import trange
 from sklearn.metrics import r2_score
 import argparse
 import socket
+import prosailvae
+from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf
+from typing import Callable, List
+from dataclasses import dataclass
+from collections import OrderedDict
 
 
-def get_prosailvae_results_parser():
+def get_parser():
     """
     Creates a new argument parser.
     """
@@ -47,7 +50,10 @@ def get_prosailvae_results_parser():
                         type=bool, default=False)
     return parser
 
-def load_refl_angles(path_to_data_dir):
+def load_refl_angles(path_to_data_dir: str):
+    """
+    Loads simulated s2 reflectance angles and LAI from weiss dataset.
+    """
     path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
     assert os.path.isfile(path_to_file)
     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
@@ -58,26 +64,33 @@ def load_refl_angles(path_to_data_dir):
     lai = df_validation_data['lai_true'].values
     return s2_r, tto, tts, psi, lai # Warning, inverted tto and tts w.r.t my prosil version
 
-def load_weiss_dataset(path_to_data_dir):
+def load_weiss_dataset(path_to_data_dir: str):
+    """
+    Loads simulated s2 reflectance angles and LAI from weiss dataset as aggregated numpy arrays.
+    """
     s2_r, tto, tts, psi, lai = load_refl_angles(path_to_data_dir)
     s2_a = np.stack((tto, tts, psi), 1)
     return s2_r, s2_a, lai
 
-def sample_from_dist(lai, n=100, kernel_p=None, kernel_q=None):
+def sample_from_dist(input_samples: np.ndarray, n: int = 100, 
+                     kernel_p: Callable | None = None, kernel_q: Callable | None = None):
+    """
+    Draw samples from a dataset with an original distribution, with a specified target distribution
+    """
     if kernel_p is None:
-        kernel_p = stats.gaussian_kde(lai)
+        kernel_p = stats.gaussian_kde(input_samples)
     if kernel_q is None:
-        lai_max = lai.max()
-        kernel_q = lambda _ : 1/lai_max
+        input_samples_max = input_samples.max()
+        kernel_q = lambda _ : 1 / input_samples_max
     sampled_idx = []
-    q_x = 1 / lai.max()
+    q_x = 1 / input_samples.max()
     for i in range(n):
         sample = None
         while sample is None:
-            i = np.random.randint(low=0,high=len(lai))
-            lai_i = lai[i]
-            q_x = kernel_q(lai_i)
-            p_x = kernel_p(lai_i)
+            i = np.random.randint(low=0,high=len(input_samples))
+            input_samples_i = input_samples[i]
+            q_x = kernel_q(input_samples_i)
+            p_x = kernel_p(input_samples_i)
             if q_x > p_x:
                 sample = i
             else:
@@ -87,25 +100,38 @@ def sample_from_dist(lai, n=100, kernel_p=None, kernel_q=None):
         sampled_idx.append(sample)
     return sampled_idx
 
-def swap_sampling(samples, tgt_dist_samples, allow_doubles=True):
+def swap_sampling(samples: torch.Tensor, tgt_dist_samples: torch.Tensor, allow_doubles:bool=True):
+    """
+    Draw samples of an input dataset with a specified distribution, by finding the closest match to 
+    target distribution.
+    """
     samples_idx = []
-    for i in range(len(tgt_dist_samples)):
-        tgt_sample_i = tgt_dist_samples[i]
-        idx = torch.argmin((samples - tgt_sample_i).abs()).item()
+    for tgt_sample in tgt_dist_samples:
+        idx = torch.argmin((samples - tgt_sample).abs()).item()
         samples_idx.append(idx)
     samples_idx = torch.tensor(samples_idx)
     if not allow_doubles:
         samples_idx = torch.unique(samples_idx)
     return samples_idx
 
-def normalize(unnormalized, min_sample, max_sample): 
+def normalize(unnormalized:torch.Tensor, min_sample:torch.Tensor, max_sample:torch.Tensor):
+    """
+    Normalize with sample min and max of distribution
+    """
     return 2 * (unnormalized - min_sample) / (max_sample - min_sample) - 1
 
-def denormalize(normalized, min_sample, max_sample): 
+def denormalize(normalized:torch.Tensor, min_sample:torch.Tensor, max_sample:torch.Tensor):
+    """
+    de-normalize with sample min and max of distribution
+    """
     return 0.5 * (normalized + 1) * (max_sample - min_sample) + min_sample
 
-def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_common_samples_nb=True, 
-                     tg_mu = torch.tensor([0,4]), tg_sigma = torch.tensor([1,4]), plot_dist=False, s2_tensor_image_path = ""):
+def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", reduce_to_common_samples_nb:bool=True,
+                     tg_mu: torch.Tensor=torch.tensor([0,4]), tg_sigma:torch.Tensor=torch.tensor([1,4]),
+                     plot_dist:bool=False, s2_tensor_image_path:str = ""):
+    """
+    Prepare dataset for nn regression from weiss reflectances / lai dataset.
+    """
     max_im_size = 256
     bands = torch.tensor([1,2,4,5,6,7,8,9])
     image_tensor = torch.load(s2_tensor_image_path)
@@ -137,8 +163,8 @@ def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_com
         ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), torch.tensor(2), torch.tensor(3), lower=torch.tensor(0), upper=torch.tensor(14)), 'r', label='Original distribution')
         ax.set_xlabel("Eval data LAI distribution")
         ax.legend()
-        fig.savefig(save_dir + f"/eval_data_lai.png")
-    torch.save(data_eval_weiss, save_dir + f"/eval_data_weiss.pth")
+        fig.savefig(save_dir + "/eval_data_lai.png")
+    torch.save(data_eval_weiss, save_dir + "/eval_data_weiss.pth")
     data_train = data_weiss[idx[n_eval:],:]
     n_folds = len(data_train) // 5000
     idx_train = torch.randperm(len(data_train), generator=g_cpu)
@@ -184,28 +210,62 @@ def prepare_datasets(n_eval=5000, n_samples_sub=5000, save_dir="", reduce_to_com
             tg_data_list.append(data_train[idx_samples, :])
     return data_eval_list, fold_data_list, tg_data_list, list_kl, list_params
 
-def get_norm_factors(ver='2.1'):
+
+@dataclass
+class ParametersSnapNN:
+    """
+    Weights and biases of Snap NN's two layers
+    """
+    layer_1_weight: torch.Tensor = torch.tensor([[-0.0234068789665, 0.921655164636, 0.13557654408, -1.9383314724,
+                                                  -3.34249581612, 0.90227764801, 0.205363538259, -0.0406078447217,
+                                                  -0.0831964097271, 0.260029270774, 0.284761567219],
+                                                 [-0.132555480857, -0.139574837334, -1.0146060169, -1.33089003865,
+                                                  0.0317306245033, -1.43358354132, -0.959637898575, 1.13311570655,
+                                                  0.216603876542, 0.410652303763, 0.0647601555435],
+                                                 [0.0860159777249, 0.616648776881, 0.678003876447, 0.141102398645,
+                                                  -0.0966822068835, -1.12883263886, 0.302189102741, 0.4344949373,
+                                                  -0.0219036994906, -0.228492476802, -0.0394605375898],
+                                                 [-0.10936659367, -0.0710462629727, 0.0645824114783, 2.90632523682,
+                                                  -0.673873108979, -3.83805186828, 1.69597934453, 0.0469502960817,
+                                                  -0.0497096526884, 0.021829545431, 0.0574838271041],
+                                                 [-0.08993941616, 0.175395483106, -0.0818473291726, 2.21989536749,
+                                                  1.71387397514, 0.7130691861, 0.138970813499, -0.060771761518,
+                                                  0.124263341255, 0.210086140404, -0.1838781387]])
+    
+    layer_1_bias: torch.Tensor = torch.tensor([4.96238030555, 1.41600844398, 1.07589704721, 
+                                               1.53398826466, 3.02411593076])
+    layer_2_weight: torch.Tensor = torch.tensor([[-1.50013548973,-0.0962832691215,-0.194935930577,-0.352305895756,0.0751074158475]])
+    layer_2_bias: torch.Tensor = torch.tensor([1.09696310708])
+
+@dataclass
+class NormSnapNN:
+    """
+    Min and max snap nn input and output for normalization
+    """
+    input_min: torch.Tensor = torch.tensor([0.0000,  0.0000,  0.0000,  0.0066,
+                                            0.0140,  0.0267,  0.0164,  0.0000,
+                                            0.9186,  0.3420, -1.0000])
+    
+    input_max: torch.Tensor = torch.tensor([0.2531,  0.2904,  0.3054,  0.6089,
+                                            0.7538,  0.7820,  0.4938,  0.4930,
+                                            1.0000,  0.9362,  1.0000])
+    lai_min: torch.Tensor = torch.tensor(0.000319182538301)
+    lai_max: torch.Tensor = torch.tensor(14.4675094548)
+
+def get_norm_factors(ver:str='2.1'):
+    """
+    Get normalization factor for SNAP NN
+    """
     if ver == "2.1":
-        input_norm = torch.tensor([ [0,                   0.253061520472],
-                                    [0,                   0.290393577911],
-                                    [0,                   0.305398915249],
-                                    [0.00663797254225,    0.608900395798],
-                                    [0.0139727270189,     0.753827384323],
-                                    [0.0266901380821,     0.782011770669],
-                                    [0.0163880741923,     0.493761397883],
-                                    [0,                   0.49302598446 ],
-                                    [0.918595400582,      0.999999999991],
-                                    [0.342022871159,      0.936206429175],
-                                    [-0.999999982118,     0.99999999891 ]])
-        input_min = input_norm[:,0]
-        input_max = input_norm[:,1]
-        lai_min = torch.tensor(0.000319182538301)
-        lai_max = torch.tensor(14.4675094548)
+        snap_norm = NormSnapNN()
     else:
         raise NotImplementedError
-    return input_min, input_max, lai_min, lai_max
+    return snap_norm.input_min, snap_norm.input_max, snap_norm.lai_min, snap_norm.lai_max
 
-def get_loaders(data, seed=86294692001, valid_ratio=0.1, batch_size=256):
+def get_loaders(data:torch.Tensor, seed:int=86294692001, valid_ratio:float=0.1, batch_size:int=256):
+    """
+    Get train and valid loader from input data
+    """
     # data = torch.load(filepath)
     g_cpu = torch.Generator()
     g_cpu.manual_seed(seed)
@@ -224,59 +284,60 @@ def get_loaders(data, seed=86294692001, valid_ratio=0.1, batch_size=256):
     return train_loader, valid_loader
 
 class SnapNN(nn.Module):
-    def __init__(self, device='cpu', ver="2.1"): 
+    """
+    Neural Network with SNAP architecture to predict LAI from S2 reflectances and angles
+    """
+    def __init__(self, device:str='cpu', ver:str="2.1"): 
         super().__init__()
         input_min, input_max, lai_min, lai_max = get_norm_factors(ver=ver)
         input_size = len(input_max) # 8 bands + 3 angles
         hidden_layer_size = 5
-        layers = [nn.Linear(in_features=input_size, out_features=hidden_layer_size),   
-                  nn.Tanh(), nn.Linear(in_features=hidden_layer_size, out_features=1)]
+        layers = OrderedDict([
+                  ('layer_1', nn.Linear(in_features=input_size, out_features=hidden_layer_size)),
+                  ('tanh', nn.Tanh()),
+                  ('layer_2', nn.Linear(in_features=hidden_layer_size, out_features=1))])
         self.input_min = input_min.to(device)
         self.input_max = input_max.to(device)
         self.lai_min = lai_min.to(device)
         self.lai_max = lai_max.to(device)
-        self.net = nn.Sequential(*layers).to(device)
+        self.net:nn.Sequential = nn.Sequential(layers).to(device)
         self.device = device
-    
-    def set_weiss_weights(self, ver=2.1):
+
+    def set_weiss_weights(self, ver:str=2.1):
+        """
+        Set Neural Network weights and biases to SNAP's original values
+        """
         if ver==2.1:
-            self.net[0].bias =  nn.Parameter(torch.tensor([4.96238030555,1.41600844398,1.07589704721,1.53398826466,3.02411593076]).to(self.device))
-            self.net[0].weight =  nn.Parameter(torch.tensor([[-0.0234068789665,0.921655164636,0.13557654408,-1.9383314724,
-                                                              -3.34249581612,0.90227764801,0.205363538259,-0.0406078447217,
-                                                              -0.0831964097271,0.260029270774,0.284761567219],
-                                                            [-0.132555480857,-0.139574837334,-1.0146060169,-1.33089003865,
-                                                             0.0317306245033,-1.43358354132,-0.959637898575,1.13311570655,
-                                                             0.216603876542,0.410652303763,0.0647601555435],
-                                                            [0.0860159777249,0.616648776881,0.678003876447,0.141102398645,
-                                                             -0.0966822068835,-1.12883263886,0.302189102741,0.4344949373,
-                                                             -0.0219036994906,-0.228492476802,-0.0394605375898],
-                                                            [-0.10936659367,-0.0710462629727,0.0645824114783,2.90632523682,
-                                                             -0.673873108979,-3.83805186828,1.69597934453,0.0469502960817,
-                                                             -0.0497096526884,0.021829545431,0.0574838271041],
-                                                            [-0.08993941616,0.175395483106,-0.0818473291726,2.21989536749,
-                                                             1.71387397514,0.7130691861,0.138970813499,-0.060771761518,
-                                                             0.124263341255,0.210086140404,-0.1838781387]]).to(self.device))
-            self.net[2].bias =  nn.Parameter(torch.tensor([1.09696310708]).to(self.device))
-            self.net[2].weight =  nn.Parameter(torch.tensor([[-1.50013548973,-0.0962832691215,-0.194935930577,-0.352305895756,0.0751074158475]]).to(self.device))
+            nn_parameters = ParametersSnapNN()
+            self.net.layer_1.bias = nn.Parameter(nn_parameters.layer_1_bias.to(self.device))
+            self.net.layer_1.weight = nn.Parameter(nn_parameters.layer_1_weight.to(self.device))
+            self.net.layer_2.bias = nn.Parameter(nn_parameters.layer_2_bias.to(self.device))
+            self.net.layer_2.weight = nn.Parameter(nn_parameters.layer_2_weight.to(self.device))
         else:
             raise NotImplementedError
-        return
     
-    def forward(self, x):
-        x_norm = normalize(x, self.input_min, self.input_max)
-        lai_norm = self.net(x_norm)
+    def forward(self, s2_data: torch.Tensor):
+        """
+        Forward method of SNAP NN to predict LAI
+        """
+        s2_data_norm = normalize(s2_data, self.input_min, self.input_max)
+        lai_norm = self.net.forward(s2_data_norm)
         lai = denormalize(lai_norm, self.lai_min, self.lai_max)
         return lai
     
-    def train_model(self, train_loader, valid_loader, optimizer, epochs=100, lr_scheduler=None, disable_tqdm=False):
+    def train_model(self, train_loader, valid_loader, optimizer, 
+                    epochs:int=100, lr_scheduler=None, disable_tqdm:bool=False):
+        """
+        Fit and validate the model to data for a number of epochs
+        """
         all_train_losses = []
         all_valid_losses = []
         all_lr = []
-        for i in trange(epochs, disable=disable_tqdm):
-            train_loss = self.fit(train_loader, optimizer) 
+        for _ in trange(epochs, disable=disable_tqdm):
+            train_loss = self.fit(train_loader, optimizer)
             all_train_losses.append(train_loss.item())
-            valid_loss = self.validate(valid_loader)     
-            all_valid_losses.append(valid_loss.item())    
+            valid_loss = self.validate(valid_loader)
+            all_valid_losses.append(valid_loss.item())
             all_lr.append(optimizer.param_groups[0]['lr'])
             if lr_scheduler is not None:
                 lr_scheduler.step(valid_loss)
@@ -285,6 +346,9 @@ class SnapNN(nn.Module):
         return all_train_losses, all_valid_losses, all_lr
     
     def fit(self, loader, optimizer):
+        """
+        Apply mini-batch optimization from a train dataloader
+        """
         self.train()
         loss_mean = torch.tensor(0.0).to(self.device) 
         for _, batch in enumerate(loader):
@@ -297,6 +361,9 @@ class SnapNN(nn.Module):
         return loss_mean
     
     def validate(self, loader):
+        """
+        Compute loss on loader with mini-batches
+        """
         self.eval()
         with torch.no_grad():
             loss_mean = torch.tensor(0.0).to(self.device) 
@@ -304,12 +371,15 @@ class SnapNN(nn.Module):
                 loss = self.get_batch_loss(batch)
                 loss_mean += loss / batch[0].size(0)
         return loss_mean
-    
+
     def get_batch_loss(self, batch):
-        input_data, lai = batch
-        lai_pred = self.forward(input_data.to(self.device))
+        """
+        Computes loss on batch
+        """
+        s2_data, lai = batch
+        lai_pred = self.forward(s2_data.to(self.device))
         return (lai_pred - lai.to(self.device)).pow(2).mean()
-    
+
 def get_model_metrics(test_data, model, all_valid_losses=[]):
     with torch.no_grad():
         if len(all_valid_losses) == 0 :
@@ -321,32 +391,41 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
         mae = (lai_pred - lai_true).abs().mean().item()
         reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
         best_valid_loss = min(all_valid_losses)
-    
+
     return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss])
 
-def get_n_model_metrics(train_loader, valid_loader, test_loader_list=[], n=10, epochs=500, lr=0.001, disable_tqdm=False, 
-                        patience=10, init_models=False):
+def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=None,
+                        n_models:int=10, epochs:int=500, lr:float=0.001,
+                        disable_tqdm:bool=False,  patience:int=10, init_models:bool=False):
+    """
+    Trains several models on given train and validation dataloaders and assesses their regression metrics
+    on provided test dataloader
+    """
+    if test_loader_list is None:
+        raise ValueError("Please input a list of test loaders")
     metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
-    metrics = torch.zeros((n, len(test_loader_list), len(metrics_names)))
-    for i in range(n):
+    metrics = torch.zeros((n_models, len(test_loader_list), len(metrics_names)))
+    for i in range(n_models):
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         if init_models:
             snap_nn.set_weiss_weights()
         optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
-        lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=patience, threshold=0.001)
-        _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer, epochs=epochs, 
-                                                     lr_scheduler=lr_scheduler, disable_tqdm=disable_tqdm)
-        for j in range(len(test_loader_list)):
+        lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
+                                         threshold=0.001)
+        _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer,
+                                                     epochs=epochs, lr_scheduler=lr_scheduler,
+                                                     disable_tqdm=disable_tqdm)
+        for j, test_loader in enumerate(test_loader_list):
             with torch.no_grad():
-                test_data = test_loader_list[j].dataset[:]
+                test_data = test_loader.dataset[:]
                 metrics[i,j,:] = get_model_metrics(test_data, snap_nn, all_valid_losses=all_valid_losses)
-    list_metrics_df = []
-    for j in range(len(test_loader_list)):
-        metrics_df = pd.DataFrame(data=metrics[:,j,:].numpy(), columns=metrics_names)
-        list_metrics_df.append(metrics_df)
-    return list_metrics_df, metrics
+    return metrics
 
 def test_snap_nn():
+    """
+    Test if SNAP neural network's outputs are identical to that of the translated java
+    code of SNAP
+    """
     from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases, 
                                         get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")   
@@ -374,33 +453,35 @@ def test_snap_nn():
     band_dim = 1
     with torch.no_grad():
         x_norm = normalize(sample, snap_nn.input_min, snap_nn.input_max)
-        x1 = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm,
+        snap_input = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm,
                     viewZen_norm, sunZen_norm, relAzim_norm), axis=band_dim)
-        assert torch.isclose(x1, x_norm, atol=1e-6).all()
+        assert torch.isclose(snap_input, x_norm, atol=1e-6).all()
         nb_dim = len(b03_norm.size())
-        n1 = neuron(x1, w1, b1, nb_dim, sum_dim=band_dim)
-        n2 = neuron(x1, w2, b2, nb_dim, sum_dim=band_dim)
-        n3 = neuron(x1, w3, b3, nb_dim, sum_dim=band_dim)
-        n4 = neuron(x1, w4, b4, nb_dim, sum_dim=band_dim)
-        n5 = neuron(x1, w5, b5, nb_dim, sum_dim=band_dim)
+        neuron1 = neuron(snap_input, w1, b1, nb_dim, sum_dim=band_dim)
+        neuron2 = neuron(snap_input, w2, b2, nb_dim, sum_dim=band_dim)
+        neuron3 = neuron(snap_input, w3, b3, nb_dim, sum_dim=band_dim)
+        neuron4 = neuron(snap_input, w4, b4, nb_dim, sum_dim=band_dim)
+        neuron5 = neuron(snap_input, w5, b5, nb_dim, sum_dim=band_dim)
         linear_1_snap = nn.Linear(11,5)
-        linear_1_snap.weight = snap_nn.net[0].weight
-        linear_1_snap.bias = snap_nn.net[0].bias
-        assert torch.isclose(linear_1_snap(x_norm), snap_nn.net[0].bias + x_norm @ snap_nn.net[0].weight.transpose(1,0), atol=1e-4).all()
+        linear_1_snap.weight = snap_nn.net.layer_1.weight
+        linear_1_snap.bias = snap_nn.net.layer_1.bias
+        assert torch.isclose(linear_1_snap(x_norm), snap_nn.net.layer_1.bias
+                             + x_norm @ snap_nn.netlayer_1.weight.transpose(1,0), atol=1e-4).all()
 
-        n_snap_nn = torch.tanh(snap_nn.net[0].bias + x_norm @ snap_nn.net[0].weight.transpose(1,0))
-        assert torch.isclose(n_snap_nn, torch.cat((n1,n2,n3,n4,n5), axis=1), atol=1e-4).all()
+        n_snap_nn = torch.tanh(snap_nn.net.layer_1.bias + x_norm @ snap_nn.net.layer_1.weight.transpose(1,0))
+        assert torch.isclose(n_snap_nn, torch.cat((neuron1, neuron2, neuron3, neuron4, neuron5), axis=1), atol=1e-4).all()
 
-        linear_2_snap = snap_nn.net[2]
+        linear_2_snap = snap_nn.layer_2.net[2]
         # linear_2_snap.weight = snap_nn.net[2].weight
         # linear_2_snap.bias = snap_nn.net[2].bias
-        assert torch.isclose(linear_2_snap(n_snap_nn), snap_nn.net[2].bias + n_snap_nn @ snap_nn.net[2].weight.transpose(1,0), atol=1e-4).all()
-        l2 = layer2(n1, n2, n3, n4, n5, wl2, bl2, sum_dim=band_dim)
-        l_snap_nn = snap_nn.net[2].bias + n_snap_nn @ snap_nn.net[2].weight.transpose(1,0)
-        lai_prenorm_snap = snap_nn.net(x_norm)
-        assert torch.isclose(l_snap_nn.squeeze(), l2.squeeze(), atol=1e-4).all()
-        assert torch.isclose(lai_prenorm_snap.squeeze(), l2.squeeze(), atol=1e-4).all()
-        lai = denormalize(l2, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
+        assert torch.isclose(linear_2_snap(n_snap_nn), snap_nn.net.layer_2.bias
+                             + n_snap_nn @ snap_nn.net.layer_2.weight.transpose(1,0), atol=1e-4).all()
+        layer_2_output = layer2(neuron1, neuron2, neuron3, neuron4, neuron5, wl2, bl2, sum_dim=band_dim)
+        l_snap_nn = snap_nn.net.layer_2.bias + n_snap_nn @ snap_nn.net.layer_2.weight.transpose(1,0)
+        lai_prenorm_snap = snap_nn.net.forward(x_norm)
+        assert torch.isclose(l_snap_nn.squeeze(), layer_2_output.squeeze(), atol=1e-4).all()
+        assert torch.isclose(lai_prenorm_snap.squeeze(), layer_2_output.squeeze(), atol=1e-4).all()
+        lai = denormalize(layer_2_output, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
         snap_lai = denormalize(l_snap_nn, snap_nn.lai_min, snap_nn.lai_max)
         assert torch.isclose(snap_lai.squeeze(), lai.squeeze(), atol=1e-4).all()
         assert torch.isclose(snap_nn.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
@@ -413,18 +494,17 @@ def main():
               "-e", "3",
               "-n", "2",
               "-i", 't',
-              "-lr", "0.001",
-              "-f", "t"]
+              "-lr", "0.001"]
         disable_tqdm=False
         
-        tg_mu = torch.tensor([0,1])
-        tg_sigma = torch.tensor([0.5,1])
-        # tg_mu = torch.tensor([0,1,2,3,4,5])
-        # tg_sigma = torch.tensor([0.5,1,2,3,4])
-        parser = get_prosailvae_results_parser().parse_args(args) 
+        # tg_mu = torch.tensor([0,1])
+        # tg_sigma = torch.tensor([0.5,1])
+        tg_mu = torch.tensor([0,1,2,3,4,5])
+        tg_sigma = torch.tensor([0.5,1,2,3,4])
+        parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
     else:
-        parser = get_prosailvae_results_parser().parse_args()
+        parser = get_parser().parse_args()
 
         tg_mu = torch.tensor([0,1,2,3,4,5])
         tg_sigma = torch.tensor([0.5,1,2,3,4])
@@ -435,8 +515,8 @@ def main():
     init_models = parser.init_models
     prepare_data = True
     epochs = parser.epochs
-    n = parser.n_model_train
-    compute_metrics = True
+    n_models = parser.n_model_train
+    compute_metrics = False
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     lr = parser.lr
@@ -475,8 +555,8 @@ def main():
             all_metrics = []
             for i in range(len(fold_data_list)):
                 train_loader, valid_loader = get_loaders(fold_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
-                list_metrics_df, metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list, 
-                                                                n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20, 
+                metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list, 
+                                                n_models=n_models, epochs=epochs, lr=lr, disable_tqdm=disable_tqdm, patience=20, 
                                                                 init_models=init_models)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
@@ -556,8 +636,8 @@ def main():
             test_loader, _ = get_loaders(data_eval, seed=86294692001, valid_ratio=0, batch_size=256)
             test_loader_list.append(test_loader)
             metrics_ref = []
-            for i in range(len(tg_data_list)):
-                _, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
+            for i, tg_data in enumerate(tg_data_list):
+                _, valid_loader = get_loaders(tg_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
                 snap_valid_loss = snap_ref.validate(valid_loader)
                 metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref, all_valid_losses=[snap_valid_loss]))
             metrics_ref = torch.stack(metrics_ref, dim=0)
@@ -567,11 +647,11 @@ def main():
             kl = torch.zeros(len(tg_data_list))
             mean_metrics = []
             all_metrics = []
-            for i in range(len(tg_data_list)):
+            for i, tg_data in enumerate(tg_data_list):
                 kl[i] = list_kl[i]
-                train_loader, valid_loader = get_loaders(tg_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
-                list_metrics_df, metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list, 
-                                                                n=n, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20, 
+                train_loader, valid_loader = get_loaders(tg_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
+                metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list, 
+                                                                n_models=n_models, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20, 
                                                                 init_models=init_models)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
@@ -590,8 +670,18 @@ def main():
         kl_res_dir = res_dir + "/kl/"
         if not os.path.isdir(kl_res_dir):
             os.makedirs(kl_res_dir)
+        
+
         for j in range(mean_metrics.size(1)):
-            
+            fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
+            sc = ax.scatter(all_metrics[:,:,j,5], all_metrics[:,:,j,1], 
+                            c=kl.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), s=1)
+            plt.colorbar(sc, ax=ax, label='kl divergence between evaluation dataset and training dataset')
+            ax.set_xlabel("Validation loss")
+            ax.set_ylabel(f"r2 score on evaluation dataset {eval_data_name[j]}")
+            plt.legend()
+            fig.savefig(res_dir + f"/{eval_data_name[j]}_valid_loss_vs_r2.png")
+
             for k in range(mean_metrics.size(2)):
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
                 ax.hist(all_metrics[:,:,j,k].reshape(-1), bins=100, density=True, label='trained models')

@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:19:21 2022
 """
 import torch.nn as nn
 import torch
-from prosailvae.utils import torch_select_unsqueeze
+from utils.utils import torch_select_unsqueeze
 class Encoder(nn.Module):
     """ 
     A class used to represent an encoder of an auto encoder. This class is to be inherited by all encoders

@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:23:46 2022
 """
 import torch.nn as nn
 import torch
-from prosailvae.utils import select_rec_loss_fn, gaussian_nll_loss, full_gaussian_nll_loss, mse_loss
+from utils.utils import select_rec_loss_fn, gaussian_nll_loss, full_gaussian_nll_loss, mse_loss
 
 
 

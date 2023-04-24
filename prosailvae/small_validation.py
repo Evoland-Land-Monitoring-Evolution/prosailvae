@@ -1,7 +1,7 @@
 import os
 import prosailvae
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
-from prosailvae.utils import load_dict, save_dict
+from utils.utils import load_dict, save_dict
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 from dataset.preprocess_small_validation_file import get_small_validation_data, LAI_columns
 from metrics.prosail_plots import plot_lai_preds

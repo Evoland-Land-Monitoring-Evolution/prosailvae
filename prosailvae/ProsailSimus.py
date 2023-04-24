@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import prosail
 from prosail import spectral_lib
-from prosailvae.utils import gaussian_nll_loss, torch_select_unsqueeze
+from utils.utils import gaussian_nll_loss, torch_select_unsqueeze
 from prosailvae.spectral_indices import INDEX_DICT
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 

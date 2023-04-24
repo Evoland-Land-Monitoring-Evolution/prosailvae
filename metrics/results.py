@@ -21,7 +21,7 @@ import prosailvae
 import traceback
 import argparse
 import socket
-from prosailvae.utils import load_dict, save_dict
+from utils.utils import load_dict, save_dict
 from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
 LOGGER_NAME = "PROSAIL-VAE results logger"
 import torch

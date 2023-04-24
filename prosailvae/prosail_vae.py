@@ -11,7 +11,7 @@ import prosailvae
 from prosailvae.simvae import SimVAE
 from prosailvae.encoders import ProsailNNEncoder, ProsailRNNEncoder, ProsailCNNEncoder, ProsailRCNNEncoder
 # from prosailvae.decoders import TSSimulatorDecoder
-from prosailvae.latentspace import OrderedTruncatedGaussianLatent
+from prosailvae.latentspace import TruncatedNormalLatent
 from prosailvae.simspaces import LinearVarSpace
 from prosailvae.ProsailSimus import SensorSimulator, ProsailSimulator, get_z2prosailparams_offset, get_z2prosailparams_mat, get_prosailparams_pdf_span
 from prosailvae.decoders import ProsailSimulatorDecoder
@@ -19,7 +19,7 @@ import os
 from dataset.loaders import  get_norm_coefs
 import time
 import torch.optim as optim
-from prosailvae.utils import gaussian_nll_loss
+from utils.utils import gaussian_nll_loss
 
 def select_encoder(encoder_type, vae_params, device, refl_norm_mean, refl_norm_std, rnn_number, rnn_depth, latent_dim=11):
     output_size = latent_dim * 2
@@ -96,10 +96,7 @@ def get_prosail_VAE(rsr_dir,
         kl_type = "tntn"
     else:
         kl_type = "tnu"
-    lat_space = OrderedTruncatedGaussianLatent(device=device, 
-                                               latent_dim=latent_dim,
-                                               max_matrix=None,
-                                               kl_type=kl_type)
+    lat_space = TruncatedNormalLatent(device=device, latent_dim=latent_dim, kl_type=kl_type)
     
     z2sim_mat = get_z2prosailparams_mat()
     z2sim_offset = get_z2prosailparams_offset()

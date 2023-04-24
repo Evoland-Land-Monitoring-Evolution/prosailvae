@@ -1,6 +1,6 @@
 from math import pi 
 import torch
-from prosailvae.utils import torch_select_unsqueeze
+from utils.utils import torch_select_unsqueeze
 
 def get_layer_1_neuron_weights(ver="2.1"):
     if ver =="2.1":

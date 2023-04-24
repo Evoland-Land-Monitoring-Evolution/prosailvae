@@ -7,15 +7,16 @@ Created on Wed Aug 31 14:54:24 2022
 """
 import torch.nn as nn
 import torch
-from .dist_utils import (kl_tn_uniform, truncated_gaussian_cdf, ordered_truncated_gaussian_nll, 
-                         get_latent_ordered_truncated_pdfs, truncated_gaussian_nll, kl_tntn,
-                         sample_truncated_gaussian)
-eps=5e-4
-MAX_MATRIX = torch.eye(10)
+from utils.TruncatedNormal import (TruncatedNormal, kl_truncated_normal_truncated_normal, 
+                                   kl_truncated_normal_uniform)
+from utils.utils import torch_select_unsqueeze
+from .dist_utils import truncated_gaussian_nll
+
 
 class LatentSpace(nn.Module):
     """ 
-    A class used to represent the latent space of an auto-encoder. All latent spaces are to inherit from this class
+    A class used to represent the latent space of an auto-encoder. 
+    All latent spaces are to inherit from this class
     ...
 
     Methods
@@ -23,23 +24,27 @@ class LatentSpace(nn.Module):
     reparametrize(y, n_samples)
         Uses encoding y of time series and outputs n_samples samples from latent distribution.
     latent_pdf(params, support_sampling)
-        Uses latent distributions parameters derived from encoding of time series to output a discretized pdf of the latent distribution sampled with step support_sampling.
+        Uses latent distributions parameters derived from encoding of time series to output 
+        a discretized pdf of the latent distribution sampled with step support_sampling.
     loss(z, params)
         computes a loss (likely a NLL) of latent parameters params from sample z. 
     """
-    def reparametrize(self, y, n_samples):
+    def reparametrize(self, y:torch.Tensor, n_samples:int):
         raise NotImplementedError()
     
-    def latent_pdf(self, params, support_sampling):
+    def latent_pdf(self, params:torch.Tensor, support_sampling:float):
         raise NotImplementedError()
         
-    def loss(self, z, params):
+    def loss(self, z:torch.Tensor, params:torch.Tensor):
         raise NotImplementedError()
 
-class OrderedTruncatedGaussianLatent(LatentSpace):
-    def __init__(self, latent_dim=10, min_sigma=5e-4, max_sigma=1.4,
-                 max_mu=1, device='cpu', max_matrix=MAX_MATRIX, kl_type="tnu",
-                 lower=torch.tensor(0), upper=torch.tensor(1)):
+class TruncatedNormalLatent(LatentSpace):
+    """
+    A Latent distribution with independant Truncated Normal variables.
+    Assumes all variables are in the [0,1] interval.
+    """
+    def __init__(self, latent_dim:int=10, min_sigma:float=5e-4, max_sigma:float=1.4,
+                 device:str='cpu', kl_type:str="tnu"):
         super().__init__()
         self.device=device
         self.latent_dim = latent_dim
@@ -47,112 +52,128 @@ class OrderedTruncatedGaussianLatent(LatentSpace):
         self.log_max_sigma = torch.log(self.max_sigma).to(self.device)
         self.min_sigma = torch.tensor(min_sigma).to(device)
         self.log_min_sigma = torch.log(self.min_sigma).to(device)
-        self.lower = lower.to(device)
-        self.upper = upper.to(device)
-        # self.max_mu = max_mu.to(device)
-        # self.eps=torch.tensor(5e-4).float().to(self.device)
         self.kl_type=kl_type
-        if max_matrix is None:
-            self.max_matrix = torch.eye(latent_dim).to(device)
-        else:
-            assert max_matrix.size(0)==latent_dim
-            self.max_matrix = max_matrix.to(self.device)
-        pass
-    
-    def change_device(self, device):
+
+    def change_device(self, device:str):
+        """
+        A method to change all attributes to desired device
+        """
         self.device=device
         self.max_sigma = self.max_sigma.to(device)
         self.log_max_sigma = self.log_max_sigma.to(self.device)
         self.min_sigma = self.min_sigma.to(device)
         self.log_min_sigma = self.log_min_sigma.to(device)
-        self.max_matrix = self.max_matrix.to(self.device)
-        self.lower = self.lower.to(device)
-        self.upper = self.upper.to(device)
         pass
 
-    def get_params_from_encoder(self, y):
-        if len(y.size())==3:
-            # Input dimension (B x L x 2)
-            params = torch.zeros((y.size(0), y.size(1), self.latent_dim, 2)).to(y.device)
-            for i in range(y.size(0)):
-                output_i = y[i,:,:]
-                output_i = output_i.view(-1, 2, self.latent_dim)
-                mu_i = torch.sigmoid(output_i[:, 0, :].view(-1, self.latent_dim, 1))
-                ordered_mu_i = rectify(mu_i, self.max_matrix)
-                logstd_i = torch.sigmoid(output_i[:, 1, :].view(-1, self.latent_dim, 1)) 
-                logstd_i = logstd_i * (self.log_max_sigma - self.log_min_sigma) + self.log_min_sigma
-                sigma_i = torch.exp(logstd_i) 
-                params_i = torch.stack([ordered_mu_i, sigma_i], dim=2)
-                params[i,:,:,:] = params_i.squeeze(3)
-        elif len(y.size())==2:
+    def get_params_from_encoder(self, encoder_output:torch.Tensor):
+        """
+        Transforms an encoder's output into distribution parameters
+        """
+        # if len(y.size())==3:
+        #     # Input dimension (B x L x 2)
+        #     params = torch.zeros((y.size(0), y.size(1), self.latent_dim, 2)).to(y.device)
+        #     for i in range(y.size(0)):
+        #         output_i = y[i,:,:]
+        #         output_i = output_i.view(-1, 2, self.latent_dim)
+        #         mu_i = torch.sigmoid(output_i[:, 0, :].view(-1, self.latent_dim, 1))
+        #         logstd_i = torch.sigmoid(output_i[:, 1, :].view(-1, self.latent_dim, 1))
+        #         logstd_i = logstd_i * (self.log_max_sigma - self.log_min_sigma) + self.log_min_sigma
+        #         sigma_i = torch.exp(logstd_i)
+        #         params_i = torch.stack([mu_i, sigma_i], dim=2)
+        #         params[i,:,:,:] = params_i.squeeze(3)
+        if len(encoder_output.size())==2:
             # input size (B x 2L)
-            y = y.reshape(y.size(0), 2, self.latent_dim)
-            mu = torch.sigmoid(y[:, 0, :].view(-1, self.latent_dim, 1))
-            ordered_mu = rectify(mu, self.max_matrix)
-            logstd = torch.sigmoid(y[:, 1, :].view(-1, self.latent_dim, 1)) 
+            encoder_output = encoder_output.reshape(encoder_output.size(0), 2, self.latent_dim)
+            mu = torch.sigmoid(encoder_output[:, 0, :].view(-1, self.latent_dim))
+            logstd = torch.sigmoid(encoder_output[:, 1, :].view(-1, self.latent_dim))
             logstd = logstd * (self.log_max_sigma - self.log_min_sigma) + self.log_min_sigma
-            sigma = torch.exp(logstd) 
-            params = torch.stack([ordered_mu, sigma], dim=2)
-        else:
-            raise NotImplementedError
-        
-        return params
-    
-    def get_order_loss(self, y, params):
-        y = y.view(-1, 2, self.latent_dim)
-        mu = torch.sigmoid(y[:, 0, :].view(-1, self.latent_dim, 1)).squeeze(2)
-        ordered_mu = params[:, :, 0].squeeze(2)
-        order_loss = torch.relu(ordered_mu - mu).mean()
-        return order_loss
-    
-    def reparametrize(self, y, n_samples=1):
-        params, _ = self.get_params_from_encoder(y)
+            sigma = torch.exp(logstd)
+            params = torch.stack([mu, sigma], dim=2)
+            return params
+        raise NotImplementedError
+
+    def reparametrize(self, encoder_output: torch.Tensor, n_samples:int=1):
+        """
+        Sample the latent variables in a differentiable manner from an encoder's output.
+        """
+        params, _ = self.get_params_from_encoder(encoder_output)
         z = self.sample_latent_from_params(params, n_samples=n_samples)
         return z
-    
-    def sample_latent_from_params(self, params, n_samples=1, n_sigma=4):
-        mu = params[:, :, 0, ...]
-        sigma = params[:, :, 1, ...]
-        z = sample_truncated_gaussian(mu, sigma, n_samples=n_samples, n_sigma=n_sigma, lower=self.lower, upper=self.upper)
-        ordered_z = rectify(z, self.max_matrix)
-        return ordered_z 
-    
-    def latent_pdf(self, params, support_sampling=0.001, n_sigma_interval=5):
+
+    def sample_latent_from_params(self, params: torch.Tensor, n_samples:int=1):
+        """
+        Sample the latent variables in a differentiable manner from distribution parameters.
+        """
+        mu = params[..., 0]
+        sigma = params[..., 1]
+        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
+        z = tn_dist.rsample([n_samples]).permute(1, 2, 0) # Batch x Latent x Sample
+        return z
+
+    def latent_pdf(self, params, support_sampling:float=0.001):
+        """
+        Get the latent distribution pdf and its support.
+        """
         mu = params[:, :, 0]
         sigma = params[:, :, 1]
-        pdfs, supports = get_latent_ordered_truncated_pdfs(mu, sigma, 
-                                                           n_sigma_interval, 
-                                                           support_sampling, 
-                                                           self.max_matrix, 
-                                                           latent_dim=self.latent_dim)
+        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
+        supports = torch.arange(0, 1, support_sampling).to(self.device)
+        supports = torch_select_unsqueeze(supports, select_dim=0, nb_dim=len(mu.size()) + 1)
+        pdfs = tn_dist.pdf(supports)
+        supports = supports.repeat(mu.unsqueeze(0).size())
         return pdfs, supports
     
-    def loss(self, z, params, reduction="mean", reduction_nll="sum"):
+    def mode(self, params: torch.Tensor):
+        """
+        Computes the distribution mode (from marginals)
+        """
+        mu = params[:, :, 0]
+        sigma = params[:, :, 1]
+        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
+        return tn_dist.loc
+    
+    def median(self, params: torch.Tensor):
+        """
+        Computes the distribution median
+        """
+        mu = params[:, :, 0]
+        sigma = params[:, :, 1]
+        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
+        return tn_dist.icdf(torch.tensor(0.5))
+    
+    def expectation(self, params: torch.Tensor):
+        """
+        Computes the distribution expectation
+        """
+        mu = params[:, :, 0]
+        sigma = params[:, :, 1]
+        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
+        return tn_dist.mean()
+    
+    def supervised_loss(self, z, params, reduction="mean", reduction_nll="sum"):
+        """
+        Computes a supervised loss to train the encoder.
+        """
         mu = params[:, :, 0].squeeze()
         sigma = params[:, :, 1].squeeze()
-        # nll = ordered_truncated_gaussian_nll(z, mu, sigma, self.max_matrix, 
-        #                                      device=self.device).mean()
         nll = truncated_gaussian_nll(z, mu.unsqueeze(2), sigma.unsqueeze(2), reduction=reduction_nll)
         if reduction=='mean':
             nll=nll.mean()
         return nll
     
-    def kl(self, params, params2=None):
+    def kl(self, params: torch.Tensor, params2: torch.Tensor | None=None):
+        """
+        Computes the Kullback-Leibler divergence
+        """
         sigma = params[:, :, 1].squeeze()
         mu = params[:, :, 0].squeeze()
+        p_tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
         if self.kl_type=='tnu':
-
-            return kl_tn_uniform(mu, sigma) 
-        elif self.kl_type=='tntn':
+            return kl_truncated_normal_uniform(p=p_tn_dist, q=None)
+        if self.kl_type=='tntn':
+            assert params is not None
             sigma2 = params2[:, :, 1].squeeze()
             mu2 = params2[:, :, 0].squeeze()
-            return kl_tntn(mu, sigma, mu2, sigma2) 
-        else:
-            raise NotImplementedError
-
-
-def rectify(z, max_matrix):
-    max_matrix = max_matrix.unsqueeze(0).unsqueeze(3)
-    z = z.unsqueeze(2)
-    rectified_z = (max_matrix * z).max(axis=1)[0]
-    return rectified_z
+            q_tn_dist = TruncatedNormal(loc=mu2, scale=sigma2, low=torch.zeros_like(mu2), high=torch.ones_like(mu2))
+            return kl_truncated_normal_truncated_normal(p_tn_dist, q_tn_dist)
+        raise NotImplementedError

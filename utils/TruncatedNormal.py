@@ -129,14 +129,16 @@ def kl_truncated_normal_truncated_normal(p, q):
     return kl_pq
 
 @register_kl(TruncatedNormal, Uniform)
-def kl_truncated_normal_uniform(p, q):
+def kl_truncated_normal_uniform(p, q=None):
     """
     Kullback-Leibler divergence between a truncated normal distribution and a uniform distribution
       on the same interval
     """
-    assert isinstance(p, TruncatedNormal) and isinstance(q, Uniform)
-    assert torch.isclose(p.low, q.low).all()
-    assert torch.isclose(p.high, q.high).all()
+    assert isinstance(p, TruncatedNormal)
+    if q is not None:
+        assert isinstance(q, Uniform)
+        assert torch.isclose(p.low, q.low).all()
+        assert torch.isclose(p.high, q.high).all()
     kl_pq = - torch.log(p.scale.float() * p.Z.float()) - torch.log(torch.tensor(2 * math.pi)) / 2 - 1 / 2
     kl_pq += - (p.scaled_low * p.little_phi_a - p.scaled_high * p.little_phi_b) / (2 * p.Z)
     kl_pq += torch.log(p.high - p.low)
@@ -162,7 +164,6 @@ def test_kl_tntn():
     high= torch.tensor(3.0)
     p = TruncatedNormal(loc=mu_1, scale=sigma_1, low=low, high=high)
     q_tn = TruncatedNormal(loc=mu_2, scale=sigma_2, low=low, high=high)
-    q_u = Uniform(low=low, high=high)
 
     kl_pq_tntn_cls = kl_truncated_normal_truncated_normal(p, q_tn)
 

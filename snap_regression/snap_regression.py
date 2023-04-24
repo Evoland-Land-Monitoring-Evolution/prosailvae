@@ -1,4 +1,7 @@
 import os
+from typing import Callable, List
+from collections import OrderedDict
+from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -14,9 +17,7 @@ import argparse
 import socket
 import prosailvae
 from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf
-from typing import Callable, List
-from dataclasses import dataclass
-from collections import OrderedDict
+
 
 
 def get_parser():

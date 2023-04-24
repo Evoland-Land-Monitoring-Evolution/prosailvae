@@ -24,7 +24,7 @@ import shutil
 
 
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
-from prosailvae.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
+from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
 torch.autograd.set_detect_anomaly(True)
 import logging
 import logging.config

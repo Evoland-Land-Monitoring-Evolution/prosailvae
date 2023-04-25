@@ -58,20 +58,24 @@ class TotalLoss(nn.Module):
         self.rec_feature_dim = rec_feature_dim
         self.lat_feature_dim = lat_feature_dim
 
-    def forward(self, targets, inputs):
+    def forward(self, model_outputs, model_inputs):
         """
-        Computes and sums all loss components
+        Computes and sums all loss components, computed from input data (with or without labels)
+        and model outputs.
         """
-        return gaussian_nll_loss(targets, inputs, sample_dim=self.sample_dim, feature_dim=self.feature_dim)
+
+        return # gaussian_nll_loss(targets, inputs, sample_dim=self.sample_dim, feature_dim=self.feature_dim)
     
-    def supervised_loss():
+    def supervised_loss(self):
 
         return
     
-    def reconstruction_loss():
+    def reconstruction_loss(self):
+
         return
 
-    def latent_loss():
+    def latent_loss(self):
+        
         return
     
 

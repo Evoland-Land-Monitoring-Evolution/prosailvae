@@ -124,8 +124,7 @@ def get_prosail_VAE(rsr_dir,
                       beta_index=vae_params["beta_index"],
                       logger_name=logger_name, inference_mode=inference_mode,
                       supervised_model=supervised_model,
-                      lat_nll="lai_nll" if loss_type=="lai_nll" else "",
-                      spatial_mode=encoder_type in spatial_encoder_types)
+                      lat_nll="lai_nll" if loss_type=="lai_nll" else "")
     return prosailVAE
 
 def load_prosailVAE(rsr_dir, vae_params, vae_file_path, optimizer=None, device='cpu',

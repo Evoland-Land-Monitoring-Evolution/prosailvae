@@ -20,3 +20,21 @@ def crop_s2_input(s2_input:torch.Tensor, hw_crop:int=0) -> torch.Tensor:
     Assumes at least a 3D Tensor, whose spatial dimensions are the last two
     """
     return s2_input[..., hw_crop:-hw_crop, hw_crop:-hw_crop]
+
+
+def batchify_batch_latent(tensor:torch.Tensor):
+    """
+    Puts a patch tensor into a batched form.
+    """
+    # Input dim (B x 2L x H x W)
+    tensor = tensor.permute(0, 2, 3, 1)
+    return tensor.reshape(-1, tensor.size(3)) # Output dim (BxHxW) x 2L
+
+def get_invalid_symetrical_padding(enc_kernel_sizes):
+    """
+    Computes how much border pixels are lost due to convolutions
+    """
+    hw = 0
+    for kernel_size in enumerate(enc_kernel_sizes):
+        hw += kernel_size//2
+    return hw

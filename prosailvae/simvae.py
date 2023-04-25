@@ -5,24 +5,13 @@ Created on Thu Sep  1 08:25:49 2022
 
 @author: yoel
 """
-from dataclasses import dataclass
+
 import logging
 import torch.nn as nn
 import torch
 from utils.utils import NaN_model_params
-from utils.image_utils import unbatchify, crop_s2_input
+from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent
 
-@dataclass
-class SimVAEForwardResults:
-    """
-    Data class to hold the output of a forward pass of simvae
-    """
-    dist_params: torch.Tensor
-    latent_sample: torch.Tensor
-    sim_variables: torch.Tensor
-    reconstruction: torch.Tensor
-
-    
 class SimVAE(nn.Module):
     """
     A class used to represent an encoder with simulator-decoder.
@@ -71,18 +60,18 @@ class SimVAE(nn.Module):
         Samples can be random, the mode, the expectation, the median from distributions. 
         This is selected by mode.
     """
-    def __init__(self, encoder, decoder, lat_space, sim_space, loss,
+    def __init__(self, encoder, decoder, lat_space, sim_space,
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
                  inference_mode:bool=False, supervised_model:nn.Module|None=None,
-                 lat_nll:str="", spatial_mode:bool=False):
+                 lat_nll:str=""):
         super(SimVAE, self).__init__()
         # encoder
         self.encoder = encoder
         self.lat_space = lat_space
         self.sim_space = sim_space
         self.decoder = decoder
-        self.loss = loss
+        # self.loss = loss
         self.encoder.eval()
         self.lat_space.eval()
         self.supervised = supervised
@@ -94,7 +83,7 @@ class SimVAE(nn.Module):
         self.inference_mode = inference_mode
         self.supervised_model = supervised_model
         self.lat_nll = lat_nll
-        self.spatial_mode = spatial_mode
+        self.spatial_mode = self.encoder.get_spatial_encoding()
 
     def change_device(self, device:str):
         """
@@ -106,42 +95,42 @@ class SimVAE(nn.Module):
         self.sim_space.change_device(device)
         self.decoder.change_device(device)
 
-    def encode(self, x, angles):
+    def encode(self, s2_r, s2_a):
         """
         Uses encoder to encode data
         """
-        y, angles = self.encoder.encode(x, angles)
+        y, angles = self.encoder.encode(s2_r, s2_a)
         return y, angles
-    
-    def encode2lat_params(self, x, angles):
+
+    def encode2lat_params(self, s2_r, s2_a):
         """
         Uses encoder to encode data into latent distribution parameters
         """
-        y, angles = self.encode(x, angles)
+        y, _ = self.encode(s2_r, s2_a)
         dist_params = self.lat_space.get_params_from_encoder(y)
         return dist_params
-    
+
     def sample_latent_from_params(self, dist_params, n_samples=1):
         """
         Sample latent distribution
         """
         z = self.lat_space.sample_latent_from_params(dist_params, n_samples=n_samples)
         return z
-    
+
     def transfer_latent(self, z):
         """
         Transform latent samples into physical variables
         """
         sim = self.sim_space.z2sim(z)
         return sim
-    
+
     def decode(self, sim, angles, apply_norm=None):
         """
         Uses decoder to reconstruct data
         """
         rec = self.decoder.decode(sim, angles, apply_norm=apply_norm)
         return rec
-        
+
     def forward(self, x, angles=None, n_samples=1, apply_norm=None):
         """
         Forward pass through the VAE
@@ -150,31 +139,31 @@ class SimVAE(nn.Module):
         if angles is None:
             angles = x[:,-3:]
             x = x[:,:-3]
-        
+
         y, angles = self.encode(x, angles)
         dist_params = self.lat_space.get_params_from_encoder(y)
         if self.inference_mode:
             return dist_params, None, None, None
         # latent sampling
         z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
-        
+
         # transfer to simulator variable
         sim = self.transfer_latent(z)
-        
+
         # decoding
         rec = self.decode(sim, angles, apply_norm=apply_norm)
         if self.spatial_mode:
             return dist_params, z, unbatchify(sim), unbatchify(rec)
         else:
             return dist_params, z, sim, rec
-    
+
     def point_estimate_rec(self, x, angles, mode='random', apply_norm=False):
         """
         Forward pass with point estimate of latent distribution
         """
         if mode == 'random':
             dist_params, z, sim, rec = self.forward(x, angles, n_samples=1, apply_norm=apply_norm)
-            
+
         elif mode == 'lat_mode':
             y, angles = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
@@ -184,7 +173,7 @@ class SimVAE(nn.Module):
             sim = self.transfer_latent(z)
             # decoding
             rec = self.decode(sim, angles, apply_norm=apply_norm)
-            
+
         elif mode == "sim_mode":
             y, angles = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
@@ -196,7 +185,7 @@ class SimVAE(nn.Module):
                 angles = angles.permute(0,2,3,1)
                 angles = angles.reshape(-1, 3)
             rec = self.decode(sim, angles, apply_norm=apply_norm)
-            
+
         elif mode == "sim_median":
             y = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
@@ -204,14 +193,14 @@ class SimVAE(nn.Module):
             sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
             rec = self.decode(sim, angles, apply_norm=apply_norm)
-            
+
         elif mode == "sim_expectation":
             y, angles = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
-            rec = self.decode(sim, angles, apply_norm=apply_norm)           
+            rec = self.decode(sim, angles, apply_norm=apply_norm)
 
         else:
             raise NotImplementedError()
@@ -222,7 +211,8 @@ class SimVAE(nn.Module):
             return unbatchify(dist_params), z, unbatchify(sim), unbatchify(rec)
         return dist_params, z, sim, rec
 
-    def unsupervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1, n_samples=1, mmdc_dataset=True):
+    def unsupervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1,
+                                n_samples=1, mmdc_dataset=True):
         """
         Computes the unsupervised loss on batch (ELBO)
         """
@@ -253,14 +243,15 @@ class SimVAE(nn.Module):
             else: # KL Truncated Normal latent || Truncated Normal hyperprior
                 s2_r_sup = s2_r
                 s2_a_sup = s2_a
-                if self.spatial_mode:
-                    if self.encoder.nb_enc_cropped_hw > 0:
+                if self.spatial_mode: # if encoder 1 encodes patches
+                    if self.encoder.nb_enc_cropped_hw > 0: # Padding management
                         s2_r_sup = crop_s2_input(s2_r_sup, self.encoder.nb_enc_cropped_hw)
                         s2_a_sup = crop_s2_input(s2_a_sup, self.encoder.nb_enc_cropped_hw)
-                    s2_r_sup = s2_r_sup.permute(0,2,3,1)
-                    s2_r_sup = s2_r_sup.reshape(-1, s2_r_sup.size(3))
-                    s2_a_sup = s2_a_sup.permute(0,2,3,1)
-                    s2_a_sup = s2_a_sup.reshape(-1, s2_a_sup.size(3))
+                    if self.supervised_model.encoder.get_spatial_encoding():
+                        # Case of a spatial hyperprior
+                        raise NotImplementedError
+                    s2_r_sup = batchify_batch_latent(s2_r_sup)
+                    s2_a_sup = batchify_batch_latent(s2_a_sup)
                 params2 = self.supervised_model.encode2lat_params(s2_r_sup, s2_a_sup)
                 kl_loss = self.beta_kl * self.lat_space.kl(params, params2).sum(1).mean()
 
@@ -274,19 +265,19 @@ class SimVAE(nn.Module):
 
         loss_dict['loss_sum'] = loss_sum.item()
 
-        for key in loss_dict.keys():
-            if key not in normalized_loss_dict.keys():
-                normalized_loss_dict[key] = 0.0
-            normalized_loss_dict[key] += loss_dict[key]/len_loader    
+        for loss_type, loss in loss_dict.items():
+            if loss_type not in normalized_loss_dict.keys():
+                normalized_loss_dict[loss_type] = 0.0
+            normalized_loss_dict[loss_type] += loss / len_loader
         return loss_sum, normalized_loss_dict
 
     def supervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1):
         """
         Computes supervised loss on batch (gaussian NLL)
         """
-        s2_r = batch[0].to(self.device) 
-        s2_a = batch[1].to(self.device)  
-        ref_sim = batch[2].to(self.device)  
+        s2_r = batch[0].to(self.device)
+        s2_a = batch[1].to(self.device) 
+        ref_sim = batch[2].to(self.device) 
         ref_lat = self.sim_space.sim2z(ref_sim)
         encoder_outputs, _ = self.encode(s2_r, s2_a)
         if encoder_outputs.isnan().any() or encoder_outputs.isinf().any():
@@ -304,11 +295,11 @@ class SimVAE(nn.Module):
             raise ValueError
         all_losses = {'lat_loss': loss_sum.item()}
         all_losses['loss_sum'] = loss_sum.item()
-        for key in all_losses.keys():
-            if key not in normalized_loss_dict.keys():
-                normalized_loss_dict[key] = 0.0
-            normalized_loss_dict[key] += all_losses[key] / len_loader
-        
+        for loss_type, loss in all_losses.items():
+            if loss_type not in normalized_loss_dict.keys():
+                normalized_loss_dict[loss_type] = 0.0
+            normalized_loss_dict[loss_type] += loss / len_loader
+
         return loss_sum, normalized_loss_dict
 
     def compute_lat_nlls_batch(self, batch):
@@ -386,9 +377,9 @@ class SimVAE(nn.Module):
             optimizer.zero_grad()
             try:
                 if not self.supervised:
-                    loss_sum, _ = self.unsupervised_batch_loss(batch, train_loss_dict, 
-                                                               n_samples=n_samples, 
-                                                               len_loader=len_loader, 
+                    loss_sum, _ = self.unsupervised_batch_loss(batch, train_loss_dict,
+                                                               n_samples=n_samples,
+                                                               len_loader=len_loader,
                                                                mmdc_dataset=mmdc_dataset)
                 else:
                     loss_sum, _ = self.supervised_batch_loss(batch, train_loss_dict,

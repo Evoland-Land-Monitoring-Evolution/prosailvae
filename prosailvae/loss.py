@@ -1,8 +1,19 @@
+from dataclasses import dataclass
 import torch 
 import torch.nn as nn
 from prosailvae.dist_utils import kl_tn_uniform, truncated_gaussian_nll
 from utils.utils import select_rec_loss_fn
 from utils.image_utils import crop_s2_input
+
+@dataclass
+class LossConfig:
+    """
+    Dataclass to hold loss config.
+    """
+    supervised:bool = False
+    beta_kl:float = 0.0
+    beta_index:float = 0.0
+    loss_type: str = 'diag_nll'
 
 def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1):
     """

@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 
 from packaging import version
 
-from prosailvae.simvae import lr_finder_elbo, lr_finder_sup_nll
+from prosailvae.loss import lr_finder_elbo, lr_finder_sup_nll
 from dataset.loaders import lr_finder_loader
 import torch.optim as optim
 

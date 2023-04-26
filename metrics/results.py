@@ -22,7 +22,7 @@ import traceback
 import argparse
 import socket
 from utils.utils import load_dict, save_dict
-from prosailvae.prosail_vae import load_PROSAIL_VAE_with_supervised_kl
+from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 LOGGER_NAME = "PROSAIL-VAE results logger"
 import torch
 from datetime import datetime 
@@ -64,7 +64,7 @@ def get_prosailvae_results_parser():
     return parser
 
 
-def save_results_2d(PROSAIL_VAE, loader, res_dir, image_dir, all_train_loss_df=None, 
+def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None):
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
@@ -317,103 +317,6 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     logger.info("Program completed.")
     return
 
-def check_fold_res_dir(fold_dir, n_xp, params):
-    same_fold = ""
-    all_dirs = os.listdir(fold_dir)
-    for d in all_dirs:
-        if d.startswith(f"{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}") :
-            same_fold = d
-    return same_fold
-
-def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
-    
-    if not os.path.exists(root_results_dir):
-        os.makedirs(root_results_dir)
-    if not os.path.exists(root_results_dir+"n_xp.json"):    
-        save_dict({"xp":0}, root_results_dir+"n_xp.json")
-    if n_xp is None:
-        n_xp = load_dict(root_results_dir+"n_xp.json")['xp']+1
-    save_dict({"xp":n_xp}, root_results_dir+"n_xp.json")
-    date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    if params['k_fold']>1:
-        k_fold_dir = f"{root_results_dir}/{n_xp}_kfold_{params['k_fold']}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-        if not params['supervised']:
-            k_fold_dir + f"kl_{params['beta_kl']}"
-        if not os.path.exists(k_fold_dir):
-            os.makedirs(k_fold_dir)    
-        res_dir = f"{k_fold_dir}/{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-        same_fold_dir = check_fold_res_dir(k_fold_dir, n_xp, params)
-        if len(same_fold_dir)>0:
-            if overwrite_xp:
-                warnings.warn("WARNING: Overwriting existing fold experiment in 5s")
-                sleep(5)
-                shutil.rmtree(k_fold_dir + "/"+ same_fold_dir)
-            else:
-                raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
-    else:
-        res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
-    if not os.path.isdir(res_dir):
-        os.makedirs(res_dir)    
-    return res_dir
-
-def setupResults():
-    if socket.gethostname()=='CELL200973':
-        args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
-              "-r", "",
-              "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
-              "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/"]
-        
-        parser = get_prosailvae_results_parser().parse_args(args)    
-    else:
-        parser = get_prosailvae_results_parser().parse_args()
-    root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
-
-    if len(parser.data_dir)==0:
-        data_dir = os.path.join(root_dir,"data/")
-    else:
-        data_dir = parser.data_dir
-
-    if len(parser.root_results_dir)==0:
-        res_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                                     os.pardir),"results/")
-    else:
-        res_dir = parser.root_results_dir    
-    params = load_dict(res_dir + "/config.json")
-    if params["supervised"]:
-        params["simulated_dataset"]=True
-    params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
-
-    params_sup_kl_model = None
-    if params["supervised_kl"]:
-        params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
-        params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.tar"
-    
-    logging.basicConfig(filename=res_dir+'/results_log.log', 
-                              level=logging.INFO, force=True)
-    logger_name = LOGGER_NAME
-    # create logger
-    logger = logging.getLogger(logger_name)
-    logger.info('Starting computation of results of PROSAIL-VAE.')
-    logger.info('========================================================================')
-    logger.info('Parameters are : ')
-    for _, key in enumerate(params):
-        logger.info(f'{key} : {params[key]}')
-    logger.info('========================================================================')
-
-    return params, parser, res_dir, data_dir, params_sup_kl_model
-    
-def configureEmissionTracker(parser):
-    logger = logging.getLogger(LOGGER_NAME)
-    try:
-        from codecarbon import OfflineEmissionsTracker
-        tracker = OfflineEmissionsTracker(country_iso_code="FRA", output_dir=parser.root_results_dir)
-        tracker.start()
-        useEmissionTracker = True
-    except:
-        logger.error("Couldn't start codecarbon ! Emissions not tracked for this execution.")
-        useEmissionTracker = False
-        tracker = None
-    return tracker, useEmissionTracker
 
 
 def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='sim_mode'):
@@ -485,21 +388,119 @@ def get_weiss_lai_from_batch(batch, patch_size=32, sensor=None):
     lai_image = unpatchify(patched_lai_image)[:,:s2_r.size(2),:s2_r.size(3)]
     return lai_image
 
-def main():
-    params, parser, res_dir, data_dir, params_sup_kl_model = setupResults()
-    tracker, useEmissionTracker = configureEmissionTracker(parser)
-    try:
-        vae_file_path = res_dir + '/prosailvae_weights.tar'
-        PROSAIL_VAE = load_PROSAIL_VAE_with_supervised_kl(params, parser.rsr_dir, data_dir, 
-                                logger_name=LOGGER_NAME, vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model)
-        save_results(PROSAIL_VAE, res_dir, data_dir, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
-    except Exception as e:
-        traceback.print_exc()
-        print(e)
-    if useEmissionTracker:
-        tracker.stop()
-    pass
-    pass
+def check_fold_res_dir(fold_dir, n_xp, params):
+    same_fold = ""
+    all_dirs = os.listdir(fold_dir)
+    for d in all_dirs:
+        if d.startswith(f"{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}") :
+            same_fold = d
+    return same_fold
 
-if __name__ == "__main__":
-    main()
+def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
+    
+    if not os.path.exists(root_results_dir):
+        os.makedirs(root_results_dir)
+    if not os.path.exists(root_results_dir+"n_xp.json"):    
+        save_dict({"xp":0}, root_results_dir+"n_xp.json")
+    if n_xp is None:
+        n_xp = load_dict(root_results_dir+"n_xp.json")['xp']+1
+    save_dict({"xp":n_xp}, root_results_dir+"n_xp.json")
+    date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    if params['k_fold']>1:
+        k_fold_dir = f"{root_results_dir}/{n_xp}_kfold_{params['k_fold']}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+        if not params['supervised']:
+            k_fold_dir + f"kl_{params['beta_kl']}"
+        if not os.path.exists(k_fold_dir):
+            os.makedirs(k_fold_dir)    
+        res_dir = f"{k_fold_dir}/{n_xp}_kfold_{params['k_fold']}_n_{params['n_fold']}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+        same_fold_dir = check_fold_res_dir(k_fold_dir, n_xp, params)
+        if len(same_fold_dir)>0:
+            if overwrite_xp:
+                warnings.warn("WARNING: Overwriting existing fold experiment in 5s")
+                sleep(5)
+                shutil.rmtree(k_fold_dir + "/"+ same_fold_dir)
+            else:
+                raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
+    else:
+        res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+    if not os.path.isdir(res_dir):
+        os.makedirs(res_dir)    
+    return res_dir
+
+# def setupResults():
+#     if socket.gethostname()=='CELL200973':
+#         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
+#               "-r", "",
+#               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
+#               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/"]
+        
+#         parser = get_prosailvae_results_parser().parse_args(args)    
+#     else:
+#         parser = get_prosailvae_results_parser().parse_args()
+#     root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
+
+#     if len(parser.data_dir)==0:
+#         data_dir = os.path.join(root_dir,"data/")
+#     else:
+#         data_dir = parser.data_dir
+
+#     if len(parser.root_results_dir)==0:
+#         res_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
+#                                                      os.pardir),"results/")
+#     else:
+#         res_dir = parser.root_results_dir    
+#     params = load_dict(res_dir + "/config.json")
+#     if params["supervised"]:
+#         params["simulated_dataset"]=True
+#     params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
+
+#     params_sup_kl_model = None
+#     if params["supervised_kl"]:
+#         params_sup_kl_model = load_dict(res_dir+"/sup_kl_model_config.json")
+#         params_sup_kl_model['sup_model_weights_path'] = res_dir+"/sup_kl_model_weights.tar"
+    
+#     logging.basicConfig(filename=res_dir+'/results_log.log', 
+#                               level=logging.INFO, force=True)
+#     logger_name = LOGGER_NAME
+#     # create logger
+#     logger = logging.getLogger(logger_name)
+#     logger.info('Starting computation of results of PROSAIL-VAE.')
+#     logger.info('========================================================================')
+#     logger.info('Parameters are : ')
+#     for _, key in enumerate(params):
+#         logger.info(f'{key} : {params[key]}')
+#     logger.info('========================================================================')
+
+#     return params, parser, res_dir, data_dir, params_sup_kl_model
+    
+def configureEmissionTracker(parser):
+    logger = logging.getLogger(LOGGER_NAME)
+    try:
+        from codecarbon import OfflineEmissionsTracker
+        tracker = OfflineEmissionsTracker(country_iso_code="FRA", output_dir=parser.root_results_dir)
+        tracker.start()
+        useEmissionTracker = True
+    except:
+        logger.error("Couldn't start codecarbon ! Emissions not tracked for this execution.")
+        useEmissionTracker = False
+        tracker = None
+    return tracker, useEmissionTracker
+
+# def main():
+#     params, parser, res_dir, data_dir, params_sup_kl_model = setupResults()
+#     tracker, useEmissionTracker = configureEmissionTracker(parser)
+#     try:
+#         vae_file_path = res_dir + '/prosailvae_weights.tar'
+#         PROSAIL_VAE = load_prosail_vae_with_hyperprior(params, parser.rsr_dir, data_dir, 
+#                                 logger_name=LOGGER_NAME, vae_file_path=vae_file_path, params_sup_kl_model=params_sup_kl_model)
+#         save_results(PROSAIL_VAE, res_dir, data_dir, LOGGER_NAME=LOGGER_NAME, plot_results=parser.plot_results)
+#     except Exception as e:
+#         traceback.print_exc()
+#         print(e)
+#     if useEmissionTracker:
+#         tracker.stop()
+#     pass
+#     pass
+
+# if __name__ == "__main__":
+#     main()

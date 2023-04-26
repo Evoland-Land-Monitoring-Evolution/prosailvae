@@ -63,7 +63,7 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space,
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
-                 inference_mode:bool=False, supervised_model:nn.Module|None=None,
+                 inference_mode:bool=False, hyper_prior:nn.Module|None=None,
                  lat_nll:str=""):
         super(SimVAE, self).__init__()
         # encoder
@@ -81,7 +81,7 @@ class SimVAE(nn.Module):
         self.logger = logging.getLogger(logger_name)
         self.beta_index = beta_index
         self.inference_mode = inference_mode
-        self.supervised_model = supervised_model
+        self.hyper_prior = hyper_prior
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
 
@@ -212,18 +212,12 @@ class SimVAE(nn.Module):
         return dist_params, z, sim, rec
 
     def unsupervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1,
-                                n_samples=1, mmdc_dataset=True):
+                                n_samples=1):
         """
         Computes the unsupervised loss on batch (ELBO)
         """
-        if mmdc_dataset:
-            (s2_r, s2_a) = batch
-            # (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
-            s2_r = s2_r.to(self.device)
-            s2_a = s2_a.to(self.device)
-        else:
-            s2_r = batch[0].to(self.device)
-            s2_a = batch[1].to(self.device)
+        s2_r = batch[0].to(self.device)
+        s2_a = batch[1].to(self.device)
         # Forward Pass
         params, _, _, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
         # Reconstruction term
@@ -238,7 +232,7 @@ class SimVAE(nn.Module):
         loss_sum = rec_loss
         # Kl term
         if self.beta_kl > 0:
-            if self.supervised_model is None: # KL Truncated Normal latent || Uniform prior
+            if self.hyper_prior is None: # KL Truncated Normal latent || Uniform prior
                 kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
             else: # KL Truncated Normal latent || Truncated Normal hyperprior
                 s2_r_sup = s2_r
@@ -247,12 +241,12 @@ class SimVAE(nn.Module):
                     if self.encoder.nb_enc_cropped_hw > 0: # Padding management
                         s2_r_sup = crop_s2_input(s2_r_sup, self.encoder.nb_enc_cropped_hw)
                         s2_a_sup = crop_s2_input(s2_a_sup, self.encoder.nb_enc_cropped_hw)
-                    if self.supervised_model.encoder.get_spatial_encoding():
+                    if self.hyper_prior.encoder.get_spatial_encoding():
                         # Case of a spatial hyperprior
                         raise NotImplementedError
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
-                params2 = self.supervised_model.encode2lat_params(s2_r_sup, s2_a_sup)
+                params2 = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
                 kl_loss = self.beta_kl * self.lat_space.kl(params, params2).sum(1).mean()
 
             loss_sum += kl_loss
@@ -359,7 +353,7 @@ class SimVAE(nn.Module):
         return epoch, loss
 
     def fit(self, dataloader, optimizer, n_samples=1,
-            batch_per_epoch=None, mmdc_dataset=False, max_samples=None):
+            batch_per_epoch=None, max_samples=None):
         """
         Computes loss and steps optimizer for a whole epoch
         """
@@ -379,8 +373,7 @@ class SimVAE(nn.Module):
                 if not self.supervised:
                     loss_sum, _ = self.unsupervised_batch_loss(batch, train_loss_dict,
                                                                n_samples=n_samples,
-                                                               len_loader=len_loader,
-                                                               mmdc_dataset=mmdc_dataset)
+                                                               len_loader=len_loader,)
                 else:
                     loss_sum, _ = self.supervised_batch_loss(batch, train_loss_dict,
                                                             len_loader=len_loader)
@@ -401,7 +394,7 @@ class SimVAE(nn.Module):
         self.eval()
         return train_loss_dict
 
-    def validate(self, dataloader, n_samples=1, batch_per_epoch=None, mmdc_dataset=False, max_samples=None):
+    def validate(self, dataloader, n_samples=1, batch_per_epoch=None, max_samples=None):
         """
         Computes loss for a whole epoch
         """
@@ -418,8 +411,7 @@ class SimVAE(nn.Module):
                 if not self.supervised:
                     loss_sum, _ = self.unsupervised_batch_loss(batch, valid_loss_dict,
                                                                n_samples=n_samples, 
-                                                               len_loader=len_loader,
-                                                               mmdc_dataset=mmdc_dataset)
+                                                               len_loader=len_loader)
                 else:
                     loss_sum, _ = self.supervised_batch_loss(batch, valid_loss_dict,
                                                         len_loader=len_loader)

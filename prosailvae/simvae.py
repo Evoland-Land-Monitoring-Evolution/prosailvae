@@ -251,8 +251,10 @@ class SimVAE(nn.Module):
                         raise NotImplementedError
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
-                params2 = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
-                kl_loss = self.beta_kl * self.lat_space.kl(params, params2).sum(1).mean()
+                params_hyper = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
+                print(params_hyper.size())
+                print(params.size())
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper).sum(1).mean()
 
             loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()

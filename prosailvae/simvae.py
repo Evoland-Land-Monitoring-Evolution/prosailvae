@@ -63,7 +63,7 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space,
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
-                 inference_mode:bool=False, hyper_prior:nn.Module|None=None,
+                 inference_mode:bool=False,
                  lat_nll:str=""):
         super(SimVAE, self).__init__()
         # encoder
@@ -81,9 +81,12 @@ class SimVAE(nn.Module):
         self.logger = logging.getLogger(logger_name)
         self.beta_index = beta_index
         self.inference_mode = inference_mode
-        self.hyper_prior = hyper_prior
+        self.hyper_prior = None
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
+
+    def set_hyper_prior(self,hyper_prior:nn.Module|None=None):
+        self.hyper_prior = hyper_prior
 
     def change_device(self, device:str):
         """
@@ -94,6 +97,8 @@ class SimVAE(nn.Module):
         self.lat_space.change_device(device)
         self.sim_space.change_device(device)
         self.decoder.change_device(device)
+        if self.hyper_prior is not None:
+            self.hyper_prior.change_device(device)
 
     def encode(self, s2_r, s2_a):
         """

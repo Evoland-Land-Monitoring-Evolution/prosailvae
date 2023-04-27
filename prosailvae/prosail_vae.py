@@ -163,12 +163,11 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         beta_kl=pv_config.loss_config.beta_kl,
                         beta_index=pv_config.loss_config.beta_index,
                         logger_name=logger_name, inference_mode=pv_config.inference_mode,
-                        hyper_prior=hyper_prior,
                         lat_nll="lai_nll" if pv_config.loss_config.loss_type=="lai_nll" else "")
     if pv_config.vae_file_path is not None:
         _, _ = prosail_vae.load_ae(pv_config.vae_file_path, optimizer)
+    prosail_vae.set_hyper_prior(hyper_prior)
     prosail_vae.change_device(device)
-
     return prosail_vae
 
 def load_prosail_vae_with_hyperprior(logger_name:str,

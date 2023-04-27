@@ -229,8 +229,8 @@ class ProsailNNEncoder(Encoder):
         """
         Encode S2 reflectances and angles. Asserts s2_refl dimension is batch x features.
         """
-        normed_refl = (s2_refl - self.norm_mean) / self.norm_std
-        encoder_output = self.net(torch.concat((normed_refl[:, self.bands],
+        normed_refl = (s2_refl[:, self.bands] - self.norm_mean) / self.norm_std
+        encoder_output = self.net(torch.concat((normed_refl,
                                    torch.cos(torch.deg2rad(angles)),
                                    torch.sin(torch.deg2rad(angles))
                                   ), axis=1))
@@ -398,8 +398,8 @@ class ProsailRNNEncoder(Encoder):
         """
         Encode S2 reflectances and angles
         """
-        normed_refl = (s2_refl - self.norm_mean) / self.norm_std
-        encoder_output = self.net(torch.concat((normed_refl[:, self.bands],
+        normed_refl = (s2_refl[:, self.bands] - self.norm_mean) / self.norm_std
+        encoder_output = self.net(torch.concat((normed_refl,
                                                 torch.cos(torch.deg2rad(angles)),
                                                 torch.sin(torch.deg2rad(angles))
                                  ), axis=1))
@@ -482,12 +482,12 @@ class ProsailCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
-        normed_refl = (s2_refl - self.norm_mean) / self.norm_std
+        normed_refl = (s2_refl[:, self.bands, ...] - self.norm_mean) / self.norm_std
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0)
         if len(angles.size())==3:
             angles = angles.unsqueeze(0)
-        y = self.cnet(torch.concat((normed_refl[:, self.bands, ...],
+        y = self.cnet(torch.concat((normed_refl,
                                  torch.cos(torch.deg2rad(angles)),
                                  torch.sin(torch.deg2rad(angles))
                                  ), axis=1))
@@ -649,12 +649,12 @@ class ProsailResCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
-        normed_refl = (s2_refl - torch_select_unsqueeze(self.norm_mean,1,4)) / torch_select_unsqueeze(self.norm_std,1,4)
+        normed_refl = (s2_refl[:,self.bands,...] - torch_select_unsqueeze(self.norm_mean,1,4)) / torch_select_unsqueeze(self.norm_std,1,4)
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0) # Ensures batch dimension appears
         if len(angles.size())==3:
             angles = angles.unsqueeze(0)
-        y = self.cnet(torch.concat((normed_refl[:,self.bands,...],
+        y = self.cnet(torch.concat((normed_refl,
                                     torch.cos(torch.deg2rad(angles)),
                                     torch.sin(torch.deg2rad(angles))
                                    ), axis=1))

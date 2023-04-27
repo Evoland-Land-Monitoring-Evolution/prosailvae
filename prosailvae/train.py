@@ -395,10 +395,14 @@ def setupTraining():
         logger.info(f"copying {parser.supervised_weight_file} into {res_dir+'/sup_kl_model_weights.tar'}")
         shutil.copyfile(parser.supervised_config_file, res_dir+"/sup_kl_model_config.json")
         shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
+        shutil.copyfile(os.path.join(os.path.dirname(parser.supervised_config_file), "norm_mean.pt"),
+                        res_dir+"/sup_kl_norm_mean.pt")
+        shutil.copyfile(os.path.join(os.path.dirname(parser.supervised_weight_file), "norm_std.pt"),
+                        res_dir+"/sup_kl_norm_std.pt")
         params_sup_kl_model = load_params(res_dir, "/sup_kl_model_config.json", parser=None)
         params_sup_kl_model['vae_file_path'] = res_dir + "/sup_kl_model_weights.tar"
-        sup_norm_mean = torch.load(res_dir + "/norm_mean.pt")
-        sup_norm_std =torch.load(res_dir + "/norm_std.pt")
+        sup_norm_mean = torch.load(res_dir + "/sup_kl_norm_mean.pt")
+        sup_norm_std =torch.load(res_dir + "/sup_kl_norm_std.pt")
     else:
         params_sup_kl_model = None
         sup_norm_mean = None

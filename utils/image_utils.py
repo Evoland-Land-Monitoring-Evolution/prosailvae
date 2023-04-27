@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+from typing import Tuple
 
 def unbatchify(tensor: torch.Tensor) -> torch.Tensor:
     """
@@ -38,3 +40,46 @@ def get_invalid_symetrical_padding(enc_kernel_sizes):
     for kernel_size in enumerate(enc_kernel_sizes):
         hw += kernel_size//2
     return hw
+
+def rgb_render(
+        data: np.ndarray,
+        clip: int = 2,
+        bands: list[int] = [2, 1, 0],
+        norm: bool = True,
+        dmin: np.ndarray = None,
+        dmax: np.ndarray = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Prepare data for visualization with matplot lib
+
+    :param data: nd_array of shape [bands, w, h]
+    :param clip: clip percentile (between 0 and 100). Ignored if norm is False
+    :bands: List of bands to extract (len is 1 or 3 for RGB)
+    :norm: If true, clip a percentile at each end
+
+    :returns: a tuple of data ready for matplotlib, dmin, dmax
+    """
+    assert (len(bands) == 1 or len(bands) == 3)
+    assert (clip >= 0 and clip <= 100)
+
+    # Extract bands from data
+    data_ready = np.take(data, bands, axis=0)
+
+    # If normalization is on
+    if norm:
+        # Rescale and clip data according to percentile
+        if dmin is None:
+            dmin = np.percentile(data_ready, clip, axis=(1, 2))
+        if dmax is None:
+            dmax = np.percentile(data_ready, 100 - clip, axis=(1, 2))
+        data_ready = np.clip(
+            (np.einsum("ijk->jki", data_ready) - dmin) / (dmax - dmin), 0, 1)
+
+    else:
+        data_ready = np.einsum("ijk->jki", data_ready)
+
+    # Strip of one dimension if number of bands is 1
+    if data_ready.shape[-1] == 1:
+        data_ready = data_ready[:, :, 0]
+
+    return data_ready, dmin, dmax
+

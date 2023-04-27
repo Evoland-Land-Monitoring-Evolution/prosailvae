@@ -161,7 +161,10 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", r
     if plot_dist:
         fig, ax = plt.subplots()
         ax.hist(data_eval_weiss[:,-1], bins=200, range=[0,14], density=True, label="evaluation samples")
-        ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), torch.tensor(2), torch.tensor(3), lower=torch.tensor(0), upper=torch.tensor(14)), 'r', label='Original distribution')
+        ax.plot(torch.arange(0,14,0.1), 
+                truncated_gaussian_pdf(torch.arange(0,14,0.1), torch.tensor(2), torch.tensor(3),
+                                       lower=torch.tensor(0), upper=torch.tensor(14)),
+                'r', label='Original distribution')
         ax.set_xlabel("Eval data LAI distribution")
         ax.legend()
         fig.savefig(save_dir + "/eval_data_lai.png")
@@ -180,40 +183,45 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", r
     list_kl = []
     list_idx_samples = []
     min_sample_nb = n_samples_sub
-    for i in range(len(tg_mu)):
-        
+    for i, mu in enumerate(tg_mu):
         list_idx_samples_i = []
-        for j in range(len(tg_sigma)):
-            kl = kl_tntn(mu_ref, sigma_ref, tg_mu[i], tg_sigma[j], lower=torch.tensor(0.0), upper=torch.tensor(14.0)).item()
+        for j, sigma in enumerate(tg_sigma):
+            kl = kl_tntn(mu_ref, sigma_ref, mu, sigma, lower=torch.tensor(0.0), upper=torch.tensor(14.0)).item()
             list_kl.append(kl)
-            list_params.append([tg_mu[i], tg_sigma[j]])
-            tgt_dist_samples = sample_truncated_gaussian(tg_mu[i].reshape(1,1), tg_sigma[j].reshape(1,1), n_samples=n_samples_sub, 
+            list_params.append([mu, sigma])
+            tgt_dist_samples = sample_truncated_gaussian(mu.reshape(1,1), sigma.reshape(1,1), n_samples=n_samples_sub, 
                                                         lower = torch.tensor(0), upper=torch.tensor(14))
             idx_samples = swap_sampling(data_train[:,-1], tgt_dist_samples.squeeze(), allow_doubles=False)
-            print(f"number of samples for mu = {tg_mu[i].item()} sigma = {tg_sigma[j].item()} (kl = {kl}) : {len(idx_samples)}")
+            print(f"number of samples for mu = {mu.item()} sigma = {sigma.item()} (kl = {kl}) : {len(idx_samples)}")
             list_idx_samples_i.append(idx_samples)
             min_sample_nb = min(min_sample_nb, len(idx_samples))
             if plot_dist:
                 fig, ax = plt.subplots(1, dpi=150)
-                ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), mu_ref, sigma_ref, lower=torch.tensor(0), upper=torch.tensor(14)), 'k', label='original distribution')
+                ax.plot(torch.arange(0,14,0.1), 
+                        truncated_gaussian_pdf(torch.arange(0,14,0.1), mu_ref, sigma_ref,
+                                               lower=torch.tensor(0), upper=torch.tensor(14)),
+                        'k', label='original distribution')
                 ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, range=[0,14], alpha=0.5, density=True, label='samples')
-                ax.plot(torch.arange(0,14,0.1), truncated_gaussian_pdf(torch.arange(0,14,0.1), tg_mu[i], tg_sigma[j], lower=torch.tensor(0), upper=torch.tensor(14)), 'r', label='sampling distribution (kl={:.2f})'.format(kl))
+                ax.plot(torch.arange(0,14,0.1),
+                        truncated_gaussian_pdf(torch.arange(0,14,0.1), mu, sigma,
+                                               lower=torch.tensor(0), upper=torch.tensor(14)),
+                        'r', label='sampling distribution (kl={:.2f})'.format(kl))
                 ax.legend()
-                fig.savefig( save_dir + f"/samples_lai_mu_{tg_mu[i].item()}_sigma_{tg_sigma[j].item()}.png")
+                fig.savefig( save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
         list_idx_samples.append(list_idx_samples_i)
     tg_data_list = []
-    for i in range(len(tg_mu)):
-        for j in range(len(tg_sigma)):
+    for i, mu in enumerate(tg_mu):
+        for j, sigma in enumerate(tg_sigma):
             idx_samples = list_idx_samples[i][j]
             if reduce_to_common_samples_nb:
                 idx_samples = idx_samples[:min_sample_nb]
-            torch.save(data_train[idx_samples, :], save_dir + f"/tg_lai_mu_{tg_mu[i].item()}_sigma_{tg_sigma[j].item()}_data.pth")
+            torch.save(data_train[idx_samples, :], save_dir + f"/tg_lai_mu_{mu.item()}_sigma_{sigma.item()}_data.pth")
             tg_data_list.append(data_train[idx_samples, :])
     return data_eval_list, fold_data_list, tg_data_list, list_kl, list_params
 
 
 @dataclass
-class ParametersSnapNN:
+class ParametersSnapLAINN:
     """
     Weights and biases of Snap NN's two layers
     """
@@ -246,22 +254,105 @@ class NormSnapNN:
     input_min: torch.Tensor = torch.tensor([0.0000,  0.0000,  0.0000,  0.0066,
                                             0.0140,  0.0267,  0.0164,  0.0000,
                                             0.9186,  0.3420, -1.0000])
-    
+
     input_max: torch.Tensor = torch.tensor([0.2531,  0.2904,  0.3054,  0.6089,
                                             0.7538,  0.7820,  0.4938,  0.4930,
                                             1.0000,  0.9362,  1.0000])
+
+
+@dataclass
+class DenormSNAPLAI:
     lai_min: torch.Tensor = torch.tensor(0.000319182538301)
     lai_max: torch.Tensor = torch.tensor(14.4675094548)
 
-def get_norm_factors(ver:str='2.1'):
+@dataclass
+class DenormSNAPCab:
+    cab_min: torch.Tensor = torch.tensor(0.00742669295987)
+    cab_max: torch.Tensor = torch.tensor(873.90822211)
+
+@dataclass
+class DenormSNAPCw:
+    cw_min: torch.Tensor = torch.tensor(3.85066859366e-06)
+    cw_max: torch.Tensor = torch.tensor(0.522417054645)
+
+def get_norm_factors(ver:str='2.1', variable='lai'):
     """
     Get normalization factor for SNAP NN
     """
     if ver == "2.1":
         snap_norm = NormSnapNN()
+        if variable=="lai":
+            variable_min = DenormSNAPLAI().lai_min
+            variable_max = DenormSNAPLAI().lai_max
+        elif variable=="cab":
+            variable_min = DenormSNAPCab().cab_min
+            variable_max = DenormSNAPCab().cab_max
+        elif variable=="cw":
+            variable_min = DenormSNAPCw().cw_min
+            variable_max = DenormSNAPCw().cw_max
+        else:
+            raise NotImplementedError
     else:
         raise NotImplementedError
-    return snap_norm.input_min, snap_norm.input_max, snap_norm.lai_min, snap_norm.lai_max
+
+    return snap_norm.input_min, snap_norm.input_max, variable_min, variable_max
+
+
+@dataclass
+class ParametersSnapCabNN:
+    """
+    Weights and biases of Snap NN's two layers for Cab
+    """
+    layer_1_weight: torch.Tensor = torch.tensor([[0.400396555257,0.607936279259,0.13746865078,-2.95586657346,
+                                                  -3.18674668773,2.20680075125,-0.31378433614,0.256063547511,
+                                                  -0.0716132198051,0.51011350421,0.142813982139],
+                                                 [-0.250781102415,0.43908630292,-1.16059093752,-1.86193525027,
+                                                  0.981359868452,1.63423083425,-0.872527934646,0.448240475035,
+                                                  0.0370780835012,0.0300441896704,0.0059566866194],
+                                                 [0.552080132569,-0.502919673167,6.10504192497,-1.29438611914,
+                                                  -1.05995638835,-1.39409290242,0.324752732711,-1.75887182283,
+                                                  -0.0366636798603,-0.183105291401,-0.0381453121174],
+                                                 [0.211591184882,-0.248788896074,0.887151598039,1.14367589557,
+                                                  -0.753968830338,-1.18545695308,0.541897860472,-0.252685834608,
+                                                  -0.0234149010781,-0.0460225035496,-0.00657028408066],
+                                                 [0.254790234231,-0.724968611431,0.731872806027,2.30345382102,
+                                                  -0.849907966922,-6.42531550054,2.23884455846,-0.199937574298,
+                                                  0.0973033317146,0.334528254938,0.113075306592]])
+
+    layer_1_bias: torch.Tensor = torch.tensor([4.24229967016,-0.259569088226,3.13039262734,
+                                               0.774423577182,2.58427664853])
+    layer_2_weight: torch.Tensor = torch.tensor([[-0.352760040599,-0.603407399151,0.135099379384,
+                                                  -1.73567312385,-0.147546813318]])
+    layer_2_bias: torch.Tensor = torch.tensor([0.463426463934])
+
+
+@dataclass
+class ParametersSnapCwNN:
+    """
+    Weights and biases of Snap NN's two layers for Cw
+    """
+    layer_1_weight: torch.Tensor = torch.tensor([[0.146378710426,1.18979928187,-0.906235139963,-0.808337508767,
+                                                  -0.97333491783,-1.42591277646,-0.00561253629588,-0.634520356267,
+                                                  -0.117226059989,-0.0602700912102,0.229407587132],
+                                                 [0.283319173374,0.149342023041,1.08480588387,-0.138658791035,
+                                                  -0.455759407329,0.420571438078,-1.7372949037,-0.704286287226,
+                                                  0.0190953782358,-0.0393971316513,-0.00750241581744],
+                                                 [-0.197487427943,-0.105460325978,0.158347670681,2.14912426654,
+                                                  -0.970716842916,-4.92725317909,1.42034301781,1.45316917226,
+                                                  0.0227257053609,0.269298650421,0.0849047657715],
+                                                 [0.141405799763,0.33386260328,0.356218929123,-0.545942267639,
+                                                  0.0891043076856,0.919298362929,-1.8520892625,-0.427539590779,
+                                                  0.00791385646467,0.0148333201478,-0.00153786769736],
+                                                 [-0.186781083395,-0.549163704901,-0.181287638772,0.96864043656,
+                                                  -0.470442559117,-1.24859725244,2.67014942338,0.49009062438,
+                                                  -0.00144931939526,0.00314829369692,0.0206517883893]])
+
+    layer_1_bias: torch.Tensor = torch.tensor([-2.1064083686,-1.69022094794,3.10117655255,
+                                               -1.31231626496,1.01131930348])
+    layer_2_weight: torch.Tensor = torch.tensor([[-0.0775555890347,-0.86411786119,-0.199212415374,
+                                                  1.98730461219,0.458926743489]])
+    layer_2_bias: torch.Tensor = torch.tensor([-0.197591709977])
+
 
 def get_loaders(data:torch.Tensor, seed:int=86294692001, valid_ratio:float=0.1, batch_size:int=256):
     """
@@ -270,16 +361,18 @@ def get_loaders(data:torch.Tensor, seed:int=86294692001, valid_ratio:float=0.1, 
     # data = torch.load(filepath)
     g_cpu = torch.Generator()
     g_cpu.manual_seed(seed)
-    n_valid = int(valid_ratio * data.size(0)) 
+    n_valid = int(valid_ratio * data.size(0))
     idx = torch.randperm(data.size(0), generator=g_cpu)
     data_valid = data[idx[:n_valid],:].float()
     data_train = data[idx[n_valid:],:].float()
     train_dataset = TensorDataset(data_train[:,:-1], data_train[:,-1].unsqueeze(1))
     valid_dataset = TensorDataset(data_valid[:,:-1], data_valid[:,-1].unsqueeze(1))
-    
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=0, shuffle=True)
+
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
+                              num_workers=0, shuffle=True)
     if n_valid > 0:
-        valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, num_workers=0, shuffle=True)
+        valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size,
+                                  num_workers=0, shuffle=True)
     else:
         valid_loader = None
     return train_loader, valid_loader
@@ -309,7 +402,7 @@ class SnapNN(nn.Module):
         Set Neural Network weights and biases to SNAP's original values
         """
         if ver==2.1:
-            nn_parameters = ParametersSnapNN()
+            nn_parameters = ParametersSnapLAINN()
             self.net.layer_1.bias = nn.Parameter(nn_parameters.layer_1_bias.to(self.device))
             self.net.layer_1.weight = nn.Parameter(nn_parameters.layer_1_weight.to(self.device))
             self.net.layer_2.bias = nn.Parameter(nn_parameters.layer_2_bias.to(self.device))

@@ -1,14 +1,14 @@
 import os
 import sys
 import glob
-from sensorsio.utils import rgb_render
+from utils.image_utils import rgb_render
 from torchutils import patches
 from shapely.geometry import Point
 import geopandas as gpd
 import rasterio as rio
 import torch
 import matplotlib.pyplot as plt
-from sensorsio.utils import rgb_render
+# from sensorsio.utils import rgb_render
 
 # export_sample = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/after_SENTINEL2A_20171122-105612-379_L2A_T31TCJ_C_V2-2_roi_0.pth'
 # export_sample = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/after_SENTINEL2A_20170522-110912-028_L2A_T30TUM_D_V1-4_roi_0.pth'

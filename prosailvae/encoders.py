@@ -31,12 +31,12 @@ class EncoderConfig:
     kernel_sizes: list[int] = field(default_factory=lambda: [3])
     padding:str = "valid"
 
-    first_layer_kernel:int = 7
-    first_layer_size:int = 64
-    block_layer_sizes: list[int] = field(default_factory=lambda: [64, 64])
+    first_layer_kernel:int = 3
+    first_layer_size:int = 128
+    block_layer_sizes: list[int] = field(default_factory=lambda: [128, 128])
     block_layer_depths: list[int] = field(default_factory=lambda: [2, 2])
-    block_kernel_sizes: list[int] = field(default_factory=lambda: [3, 3])
-    block_n: list[int] = field(default_factory=lambda: [1, 1])
+    block_kernel_sizes: list[int] = field(default_factory=lambda: [3, 1])
+    block_n: list[int] = field(default_factory=lambda: [1, 2])
 
 # @dataclass
 # class ProsailNNEncoderConfig(EncoderConfig):

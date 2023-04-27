@@ -18,7 +18,8 @@ import numpy as np
 import pandas as pd
 import torch
 from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
-from sensorsio.utils import rgb_render
+# from sensorsio.utils import rgb_render
+from utils.image_utils import rgb_render
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 

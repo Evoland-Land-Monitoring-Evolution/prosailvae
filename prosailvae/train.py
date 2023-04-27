@@ -327,7 +327,7 @@ def load_params(config_dir, config_file, parser=None):
     if "first_layer_size" not in params.keys():
         params["first_layer_size"] = 128
     if "block_layer_sizes" not in params.keys():
-        params["block_layer_sizes"] = [128,128]
+        params["block_layer_sizes"] = [128, 128]
     if "block_layer_depths" not in params.keys():
         params["block_layer_depths"] = [2, 2]
     if "block_kernel_sizes" not in params.keys():

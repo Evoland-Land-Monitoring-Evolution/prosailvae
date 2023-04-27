@@ -69,6 +69,7 @@ RSR of the sensor.
             if len(norm_mean.squeeze()) != len(bands):
                 print(norm_mean.size())
                 print(norm_mean)
+                print(bands)
                 raise ValueError
         if norm_std is None:
             norm_std = torch.ones((1, len(bands)))

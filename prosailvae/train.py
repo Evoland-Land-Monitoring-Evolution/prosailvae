@@ -393,6 +393,7 @@ def setupTraining():
         logger.info("Supervised KL loss (hyperprior) enabled.")
         logger.info(f"copying {parser.supervised_config_file} into {res_dir+'/sup_kl_model_config.json'}")
         logger.info(f"copying {parser.supervised_weight_file} into {res_dir+'/sup_kl_model_weights.tar'}")
+        logger.info(f"copying {os.path.join(os.path.dirname(parser.supervised_config_file), 'norm_mean.pt')} into {res_dir+'/sup_kl_norm_mean.pt'}")
         shutil.copyfile(parser.supervised_config_file, res_dir+"/sup_kl_model_config.json")
         shutil.copyfile(parser.supervised_weight_file, res_dir+"/sup_kl_model_weights.tar")
         shutil.copyfile(os.path.join(os.path.dirname(parser.supervised_config_file), "norm_mean.pt"),
@@ -413,7 +414,7 @@ def trainProsailVae(params, parser, res_dir, data_dir:str, params_sup_kl_model, 
     logger = logging.getLogger(LOGGER_NAME)
     logger.info(f'Loading training and validation loader in {data_dir}/{params["dataset_file_prefix"]}...')
     bands, prosail_bands = get_bands_idx(params["weiss_bands"])
-
+    
     if params["simulated_dataset"]:
         train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"], 
                             file_prefix=params["dataset_file_prefix"], 
@@ -450,7 +451,8 @@ def trainProsailVae(params, parser, res_dir, data_dir:str, params_sup_kl_model, 
                                        norm_mean=norm_mean, norm_std=norm_std)
     pv_config_hyper=None
     if params_sup_kl_model is not None:
-        pv_config_hyper = get_prosail_vae_config(params_sup_kl_model, bands=bands, prosail_bands=prosail_bands,
+        bands_hyper, prosail_bands_hyper = get_bands_idx(params_sup_kl_model["weiss_bands"])
+        pv_config_hyper = get_prosail_vae_config(params_sup_kl_model, bands=bands_hyper, prosail_bands=prosail_bands_hyper,
                                              inference_mode=True, rsr_dir=parser.rsr_dir,
                                              norm_mean=sup_norm_mean, norm_std=sup_norm_std)
     if params['init_model']:
@@ -547,14 +549,14 @@ def save_array_xp_path(job_array_dir, res_dir):
                 outfile.write(f"{res_dir}\n")
 
 def main():
-    (params, parser, res_dir, data_dir, params_sup_kl_model, 
+    (params, parser, res_dir, data_dir, params_sup_kl_model,
      job_array_dir, sup_norm_mean, sup_norm_std) = setupTraining()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
 
     try:
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
-         info_df) = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model, 
+         info_df) = trainProsailVae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                     sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
         if params['encoder_type'] in spatial_encoder_types:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),

@@ -352,7 +352,7 @@ class ProsailRNNEncoder(Encoder):
         resnet = []
         # First Layer
         resnet.append(nn.Linear(in_features=config.input_size,
-                                out_features=config.block_layer_sizes))
+                                out_features=config.block_layer_sizes[0]))
         resnet.append(nn.ReLU())
         # Residual connexion blocks
         n_groups = len(config.block_n)
@@ -369,6 +369,8 @@ class ProsailRNNEncoder(Encoder):
             resnet.append(config.last_activation)
         self.device=device
         self.net = nn.Sequential(*resnet).to(device)
+        norm_mean = config.norm_mean
+        norm_std = config.norm_std
         if norm_mean is None:
             norm_mean = torch.zeros((1, config.input_size))
         if norm_std is None:

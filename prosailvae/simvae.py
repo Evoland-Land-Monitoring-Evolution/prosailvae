@@ -241,16 +241,19 @@ class SimVAE(nn.Module):
                 kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
             else: # KL Truncated Normal latent || Truncated Normal hyperprior
                 s2_r_sup = s2_r
+                print(s2_r_sup.size())
                 s2_a_sup = s2_a
                 if self.spatial_mode: # if encoder 1 encodes patches
                     if self.encoder.nb_enc_cropped_hw > 0: # Padding management
                         s2_r_sup = crop_s2_input(s2_r_sup, self.encoder.nb_enc_cropped_hw)
                         s2_a_sup = crop_s2_input(s2_a_sup, self.encoder.nb_enc_cropped_hw)
+                        print(s2_r_sup.size())
                     if self.hyper_prior.encoder.get_spatial_encoding():
                         # Case of a spatial hyperprior
                         raise NotImplementedError
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
+                    print(s2_r_sup.size())
                 params_hyper = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
                 print(params_hyper.size())
                 print(params.size())

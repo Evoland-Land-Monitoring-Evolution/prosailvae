@@ -108,9 +108,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         all_sigma = []
         with torch.no_grad():
             for i, batch in enumerate(loader):
-                rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
+                rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
                 rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
-                                                                                   bands=torch.arange(10), 
+                                                                                   bands=torch.arange(10),
                                                                                    mode=rec_mode)
                 info = info_test_data[i,:] 
                 weiss_lai = get_weiss_lai_from_batch((cropped_s2_r.unsqueeze(0), cropped_s2_a.unsqueeze(0)), patch_size=32, sensor=info[0])
@@ -319,7 +319,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
 
 
 
-def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='sim_mode'):
+def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='lat_mode'):
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_tensor = patchify(image_tensor, patch_size=patch_size, margin=hw)
     patched_sim_image = torch.zeros((patched_tensor.size(0), patched_tensor.size(1), 11, patch_size, patch_size)).to(PROSAIL_VAE.device)
@@ -332,7 +332,8 @@ def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tens
             angles[1,:,:] = patched_tensor[i, j, 13, :,:]
             angles[2,:,:] = patched_tensor[i, j, 12, :,:] - patched_tensor[i,j,14, :,:]
             with torch.no_grad():
-                dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
+                dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x.unsqueeze(0), 
+                                                                          angles.unsqueeze(0), mode=mode)
             patched_rec_image[i,j,:,:,:] = rec
             patched_sim_image[i,j,:,:,:] = sim
     sim_image = unpatchify(patched_sim_image)[:,:image_tensor.size(1),:image_tensor.size(2)][:,hw:-hw,hw:-hw]
@@ -340,7 +341,7 @@ def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tens
     cropped_image = image_tensor[:,hw:-hw,hw:-hw]
     return rec_image, sim_image, cropped_image
 
-def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='sim_mode'):
+def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='lat_mode'):
     s2_r, s2_a = batch
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
@@ -350,8 +351,8 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.
     patched_sigma_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11, patch_size, patch_size)).to(PROSAIL_VAE.device)
     for i in range(patched_s2_r.size(0)):
         for j in range(patched_s2_r.size(1)):
-            x = patched_s2_r[i, j, ...]
-            angles = patched_s2_a[i, j, ...]
+            x = patched_s2_r[i, j, ...].unsqueeze(0)
+            angles = patched_s2_a[i, j, ...].unsqueeze(0)
             with torch.no_grad():
                 dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
             patched_rec_image[i,j,:,:,:] = rec

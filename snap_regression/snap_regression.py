@@ -619,7 +619,7 @@ def main():
     prepare_data = True
     epochs = parser.epochs
     n_models = parser.n_model_train
-    compute_metrics = False
+    compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     lr = parser.lr

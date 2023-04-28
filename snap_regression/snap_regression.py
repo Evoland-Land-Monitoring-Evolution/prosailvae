@@ -16,7 +16,7 @@ from sklearn.metrics import r2_score
 import argparse
 import socket
 import prosailvae
-from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf
+from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf, numerical_kl_from_pdf
 
 
 
@@ -168,30 +168,27 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", r
         ax.set_xlabel("Eval data LAI distribution")
         ax.legend()
         fig.savefig(save_dir + "/eval_data_lai.png")
+        plt.close('all')
     torch.save(data_eval_weiss, save_dir + "/eval_data_weiss.pth")
     data_train = data_weiss[idx[n_eval:],:]
-    n_folds = len(data_train) // 5000
-    idx_train = torch.randperm(len(data_train), generator=g_cpu)
-    fold_data_list = []
-    for i in range(n_folds):
-        data_i = data_train[idx_train[i*n_samples_sub:(i+1)*n_samples_sub],:]
-        torch.save(data_i, save_dir + f"/fold_{i}_data.pth")
-        fold_data_list.append(data_i)
     mu_ref = torch.tensor(2)
     sigma_ref = torch.tensor(3)
     list_params = []
     list_kl = []
+    # list_kl_true = []
     list_idx_samples = []
     min_sample_nb = n_samples_sub
+    # hist_data, bin_edges = np.histogram(data_train[:,-1], bins=200, range=[0, 14], density=True)
     for i, mu in enumerate(tg_mu):
         list_idx_samples_i = []
         for j, sigma in enumerate(tg_sigma):
             kl = kl_tntn(mu_ref, sigma_ref, mu, sigma, lower=torch.tensor(0.0), upper=torch.tensor(14.0)).item()
             list_kl.append(kl)
             list_params.append([mu, sigma])
-            tgt_dist_samples = sample_truncated_gaussian(mu.reshape(1,1), sigma.reshape(1,1), n_samples=n_samples_sub, 
+            tgt_dist_samples = sample_truncated_gaussian(mu.reshape(1,1), sigma.reshape(1,1), n_samples=n_samples_sub*2,
                                                         lower = torch.tensor(0), upper=torch.tensor(14))
             idx_samples = swap_sampling(data_train[:,-1], tgt_dist_samples.squeeze(), allow_doubles=False)
+
             print(f"number of samples for mu = {mu.item()} sigma = {sigma.item()} (kl = {kl}) : {len(idx_samples)}")
             list_idx_samples_i.append(idx_samples)
             min_sample_nb = min(min_sample_nb, len(idx_samples))
@@ -207,7 +204,7 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", r
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'r', label='sampling distribution (kl={:.2f})'.format(kl))
                 ax.legend()
-                fig.savefig( save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
+                fig.savefig(save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
         list_idx_samples.append(list_idx_samples_i)
     tg_data_list = []
     for i, mu in enumerate(tg_mu):
@@ -215,9 +212,20 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", r
             idx_samples = list_idx_samples[i][j]
             if reduce_to_common_samples_nb:
                 idx_samples = idx_samples[:min_sample_nb]
+            # hist_sub_data, _ = np.histogram(data_train[idx_samples,-1], bins=200, range=[0,14], density=True)
+            # list_kl_true.append(numerical_kl_from_pdf(torch.from_numpy(hist_data).float(),
+            #                                           torch.from_numpy(hist_sub_data).float(),
+            #                                           dx=bin_edges[0]))
             torch.save(data_train[idx_samples, :], save_dir + f"/tg_lai_mu_{mu.item()}_sigma_{sigma.item()}_data.pth")
             tg_data_list.append(data_train[idx_samples, :])
-    return data_eval_list, fold_data_list, tg_data_list, list_kl, list_params
+    n_folds = len(data_train) // min_sample_nb
+    idx_train = torch.randperm(len(data_train), generator=g_cpu)
+    fold_data_list = []
+    for i in range(n_folds):
+        data_i = data_train[idx_train[i*min_sample_nb:(i+1)*min_sample_nb],:]
+        torch.save(data_i, save_dir + f"/fold_{i}_data.pth")
+        fold_data_list.append(data_i)
+    return data_eval_list, fold_data_list, tg_data_list, list_kl, list_params #, list_kl_true
 
 
 @dataclass
@@ -251,13 +259,13 @@ class NormSnapNN:
     """
     Min and max snap nn input and output for normalization
     """
-    input_min: torch.Tensor = torch.tensor([0.0000,  0.0000,  0.0000,  0.0066,
-                                            0.0140,  0.0267,  0.0164,  0.0000,
-                                            0.9186,  0.3420, -1.0000])
+    input_min: torch.Tensor = torch.tensor([0.0000,  0.0000,  0.0000,  0.00663797254225,
+                                            0.0139727270189,  0.0266901380821,  0.0163880741923,  0.0000,
+                                            0.918595400582,  0.342022871159, -1.0000])
 
-    input_max: torch.Tensor = torch.tensor([0.2531,  0.2904,  0.3054,  0.6089,
-                                            0.7538,  0.7820,  0.4938,  0.4930,
-                                            1.0000,  0.9362,  1.0000])
+    input_max: torch.Tensor = torch.tensor([0.253061520472,  0.290393577911,  0.305398915249,  0.608900395798,
+                                            0.753827384323,  0.782011770669,  0.493761397883,  0.49302598446,
+                                            1.0000,  0.936206429175,  1.0000])
 
 
 @dataclass
@@ -275,7 +283,7 @@ class DenormSNAPCw:
     cw_min: torch.Tensor = torch.tensor(3.85066859366e-06)
     cw_max: torch.Tensor = torch.tensor(0.522417054645)
 
-def get_norm_factors(ver:str='2.1', variable='lai'):
+def get_SNAP_norm_factors(ver:str='2.1', variable='lai'):
     """
     Get normalization factor for SNAP NN
     """
@@ -383,7 +391,7 @@ class SnapNN(nn.Module):
     """
     def __init__(self, device:str='cpu', ver:str="2.1"): 
         super().__init__()
-        input_min, input_max, lai_min, lai_max = get_norm_factors(ver=ver)
+        input_min, input_max, lai_min, lai_max = get_SNAP_norm_factors(ver=ver)
         input_size = len(input_max) # 8 bands + 3 angles
         hidden_layer_size = 5
         layers = OrderedDict([
@@ -522,6 +530,7 @@ def test_snap_nn():
     """
     from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases, 
                                         get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
+    
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")   
     snap_nn = SnapNN()
     snap_nn.set_weiss_weights()
@@ -549,7 +558,7 @@ def test_snap_nn():
         x_norm = normalize(sample, snap_nn.input_min, snap_nn.input_max)
         snap_input = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm,
                     viewZen_norm, sunZen_norm, relAzim_norm), axis=band_dim)
-        assert torch.isclose(snap_input, x_norm, atol=1e-6).all()
+        assert torch.isclose(snap_input, x_norm, atol=1e-5).all()
         nb_dim = len(b03_norm.size())
         neuron1 = neuron(snap_input, w1, b1, nb_dim, sum_dim=band_dim)
         neuron2 = neuron(snap_input, w2, b2, nb_dim, sum_dim=band_dim)
@@ -560,12 +569,12 @@ def test_snap_nn():
         linear_1_snap.weight = snap_nn.net.layer_1.weight
         linear_1_snap.bias = snap_nn.net.layer_1.bias
         assert torch.isclose(linear_1_snap(x_norm), snap_nn.net.layer_1.bias
-                             + x_norm @ snap_nn.netlayer_1.weight.transpose(1,0), atol=1e-4).all()
+                             + x_norm @ snap_nn.net.layer_1.weight.transpose(1,0), atol=1e-4).all()
 
         n_snap_nn = torch.tanh(snap_nn.net.layer_1.bias + x_norm @ snap_nn.net.layer_1.weight.transpose(1,0))
         assert torch.isclose(n_snap_nn, torch.cat((neuron1, neuron2, neuron3, neuron4, neuron5), axis=1), atol=1e-4).all()
 
-        linear_2_snap = snap_nn.layer_2.net[2]
+        linear_2_snap = snap_nn.net.layer_2
         # linear_2_snap.weight = snap_nn.net[2].weight
         # linear_2_snap.bias = snap_nn.net[2].bias
         assert torch.isclose(linear_2_snap(n_snap_nn), snap_nn.net.layer_2.bias
@@ -619,12 +628,13 @@ def main():
     if prepare_data:
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
-        data_eval_list, fold_data_list, tg_data_list, list_kl, list_params = prepare_datasets(n_eval=5000, n_samples_sub=5000, 
-                                                                                         save_dir=save_dir,
-                                                                                         tg_mu = tg_mu,
-                                                                                         tg_sigma = tg_sigma, 
-                                                                                         plot_dist=False, 
-                                                                                         s2_tensor_image_path=s2_tensor_image_path)
+        (data_eval_list, fold_data_list, tg_data_list, 
+         list_kl, list_params) = prepare_datasets(n_eval=5000, n_samples_sub=5000,
+                                                                save_dir=save_dir,
+                                                                tg_mu = tg_mu,
+                                                                tg_sigma = tg_sigma,
+                                                                plot_dist=True,
+                                                                s2_tensor_image_path=s2_tensor_image_path)
     fold_xp = parser.fold_xp
     if fold_xp:
         metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]

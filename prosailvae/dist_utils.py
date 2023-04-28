@@ -3,7 +3,7 @@
 """
 Created on Thu Sep  1 11:03:21 2022
 
-@author: yoel
+min_sample_nb@author: yoel
 """
 import torch
 from math import pi
@@ -73,6 +73,17 @@ def numerical_kl_tn_uniform(mu, sigma, support=torch.arange(0,1, 0.001), eps=1e-
     log_p = torch.log(p)
     kl = (p * log_p).sum()/len(support)
     return kl
+
+def numerical_kl_from_pdf(pdf_p, pdf_q, dx, eps=1e-4):
+    """
+    Computes numerical Kullback-Leibler divegence from two densities with assumed same support
+    """
+    pdf_p_non_zero_idx = torch.where(pdf_p!=0)[0]
+    pdf_p = pdf_p[pdf_p_non_zero_idx]
+    pdf_q = pdf_q[pdf_p_non_zero_idx]
+    pdf_q[pdf_q==0] = eps
+
+    return ((pdf_p * pdf_p.log()).sum() - (pdf_p * pdf_q.log()).sum()).item() * dx
 
 def truncated_gaussian_pdf(x, mu, sigma, eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(1)):
     return normal_pdf(x, mu, sigma)  / (normal_cdf(upper*torch.ones_like(mu), mu, sigma) 
@@ -259,7 +270,7 @@ def scale_pdf(pdf, support, support_scale, support_min, support_max:float|None=N
                                   support_max+sampling, 
                                   sampling).to(pdf.device).repeat(pdf.size(0), 
                                                                   pdf.size(1), 1)
-    lower_support = torch.arange(-support_max, ext_support[0,0,0], 
+    lower_support = torch.arange(- support_max, ext_support[0,0,0], 
                                   sampling).to(pdf.device).repeat(pdf.size(0), 
                                                                   pdf.size(1), 1)
     upper_pdf = torch.zeros((pdf.size(0), pdf.size(1), upper_support.size(2))).to(pdf.device)

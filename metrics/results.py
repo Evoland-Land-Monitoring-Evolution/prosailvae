@@ -7,6 +7,7 @@ if __name__ == "__main__":
                               plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                               all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
     from snap_regression.weiss_lai_sentinel_hub import weiss_lai
+    from snap_regression.snap_regression import SnapNN
 else:
     from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
@@ -14,6 +15,7 @@ else:
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                        all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
     from snap_regression.weiss_lai_sentinel_hub import weiss_lai
+    from snap_regression.snap_regression import SnapNN
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -102,8 +104,12 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
         all_rec = []
         all_lai = []
+        all_cab = []
+        all_cw = []
         all_vars = []
         all_weiss_lai = []
+        all_weiss_cab = []
+        all_weiss_cw = []
         all_s2_r = []
         all_sigma = []
         with torch.no_grad():
@@ -112,23 +118,36 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                 rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
                                                                                    bands=torch.arange(10),
                                                                                    mode=rec_mode)
-                info = info_test_data[i,:] 
-                weiss_lai = get_weiss_lai_from_batch((cropped_s2_r.unsqueeze(0), cropped_s2_a.unsqueeze(0)), patch_size=32, sensor=info[0])
+                info = info_test_data[i,:]
+                (weiss_lai, weiss_cab,
+                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r.unsqueeze(0), 
+                                                               cropped_s2_a.unsqueeze(0)), 
+                                                               patch_size=32, sensor=info[0])
                 PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r, rec_image, weiss_lai, i, info=info)
                 all_rec.append(rec_image.reshape(10,-1))
                 all_lai.append(sim_image[6,...].reshape(-1))
+                all_cab.append(sim_image[1,...].reshape(-1))
+                all_cw.append(sim_image[4,...].reshape(-1))
                 all_vars.append(sim_image.reshape(11,-1))
                 all_weiss_lai.append(weiss_lai.reshape(-1))
+                all_weiss_cab.append(weiss_cab.reshape(-1))
+                all_weiss_cw.append(weiss_cw.reshape(-1))
                 all_s2_r.append(cropped_s2_r.reshape(10,-1))
                 all_sigma.append(sigma_image.reshape(11,-1))
             all_rec = torch.cat(all_rec, axis=1)
             all_lai = torch.cat(all_lai)
+            all_cab = torch.cat(all_cab)
+            all_cw = torch.cat(all_cw)
             all_vars = torch.cat(all_vars, axis=1)
             all_weiss_lai = torch.cat(all_weiss_lai)
-            all_s2_r = torch.cat(all_s2_r, axis=1)  
+            all_weiss_cab = torch.cat(all_weiss_cab)
+            all_weiss_cw = torch.cat(all_weiss_cw)
+            all_s2_r = torch.cat(all_s2_r, axis=1)
             all_sigma = torch.cat(all_sigma, axis=1)
 
-            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars, all_weiss_lai, all_sigma)
+            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, 
+                                          all_lai, all_cab, all_cw, all_vars, 
+                                          all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma)
             # for n, filename in enumerate(image_tensor_file_names):
             #     image_tensor = torch.load(image_dir + "/" + filename)
             #     patch_size=128
@@ -366,7 +385,7 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.
     return rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image
 
 
-def get_weiss_lai_from_batch(batch, patch_size=32, sensor=None):
+def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None):
     if sensor is None:
         ver = "2.1"
     elif sensor =="2A":
@@ -375,19 +394,36 @@ def get_weiss_lai_from_batch(batch, patch_size=32, sensor=None):
         ver = "3B"
     else:
         raise ValueError
+    weiss_bands = torch.tensor([1,2,3,4,5,7,8,9])
     s2_r, s2_a = batch
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=0)
     patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=0)
     patched_lai_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 1, patch_size, patch_size))
+    patched_cab_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 1, patch_size, patch_size))
+    patched_cw_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 1, patch_size, patch_size))
     for i in range(patched_s2_r.size(0)):
         for j in range(patched_s2_r.size(1)):
-            x = patched_s2_r[i, j,...]
-            angles = patched_s2_a[i, j, ...]
+            x = patched_s2_r[i, j, weiss_bands, ...]
+            angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, ...]))
+            s2_data = torch.cat((x, angles),0)
             with torch.no_grad():
-                lai = weiss_lai(x, angles, band_dim=0, ver=ver)
+                lai_snap = SnapNN(variable='lai')
+                lai_snap.set_weiss_weights(variable='lai')
+                lai = lai_snap.forward(s2_data, spatial_mode=True)
+                cab_snap = SnapNN(variable='cab')
+                cab_snap.set_weiss_weights(variable='cab')
+                cab = cab_snap.forward(s2_data, spatial_mode=True)
+                cw_snap = SnapNN(variable='cw')
+                cw_snap.set_weiss_weights(variable='cw')
+                cw = cw_snap.forward(s2_data, spatial_mode=True)
+                # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
             patched_lai_image[i,j,...] = lai
+            patched_cab_image[i,j,...] = cab
+            patched_cw_image[i,j,...] = cw
     lai_image = unpatchify(patched_lai_image)[:,:s2_r.size(2),:s2_r.size(3)]
-    return lai_image
+    cab_image = unpatchify(patched_cab_image)[:,:s2_r.size(2),:s2_r.size(3)]
+    cw_image = unpatchify(patched_cw_image)[:,:s2_r.size(2),:s2_r.size(3)]
+    return lai_image, cab_image, cw_image
 
 def check_fold_res_dir(fold_dir, n_xp, params):
     same_fold = ""

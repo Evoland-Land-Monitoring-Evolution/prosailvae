@@ -927,43 +927,54 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
     plt.show()
     return fig, ax
 
-def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars, all_weiss_lai, all_sigma, max_sigma=1.4):
+def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
+                                  all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, max_sigma=1.4):
 
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai).abs(), all_sigma[6,:], s=0.5)
     ax.set_xlabel('LAI absolute difference (SNAP LAI - predicted LAI)')
     ax.set_ylabel('LAI latent sigma')
     fig.savefig(f"{plot_dir}/lai_err_vs_sigma.png")
+    fig, ax = plt.subplots()
+    ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
+    ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
+    ax.set_ylabel('Cab latent sigma')
+    fig.savefig(f"{plot_dir}/cab_err_vs_sigma.png")
+    fig, ax = plt.subplots()
+    ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
+    ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
+    ax.set_ylabel('Cw latent sigma')
+    fig.savefig(f"{plot_dir}/cw_err_vs_sigma.png")
 
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
-    for idx in range(len(PROSAILVARS)):
+    for idx, prosail_var in enumerate(PROSAILVARS):
         row = idx // n_cols
         col = idx % n_cols
         ax[row, col].hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
-        ax[row, col].set_ylabel(PROSAILVARS[idx])
+        ax[row, col].set_ylabel(prosail_var)
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions")
     fig.savefig(f"{plot_dir}/all_prosail_var_pred_dist.png")
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150, sharex=True)
-    for idx in range(len(PROSAILVARS)):
+    for idx, prosail_var in enumerate(PROSAILVARS):
         row = idx // n_cols
         col = idx % n_cols
         ax[row, col].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, range=[0, max_sigma])
         ax[row, col].set_yticks([])
         ax[row, col].set_xlim(0, max_sigma)
-        ax[row, col].set_ylabel(PROSAILVARS[idx])
+        ax[row, col].set_ylabel(prosail_var)
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables sigma")
     fig.savefig(f"{plot_dir}/all_prosail_var_sigma.png")
     n_cols = 5
     n_rows = 2
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
-    for idx in range(len(BANDS)):
+    for idx, band in enumerate(BANDS):
         row = idx // n_cols
         col = idx % n_cols
         ax[row, col].scatter(all_s2_r[idx,:].reshape(-1).cpu(),
@@ -973,27 +984,28 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                         [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
         ax[row, col].set_yticks([])
-        ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
-        ax[row, col].set_xlabel(f"True {BANDS[idx]}")
+        ax[row, col].set_ylabel(f"Reconstructed {band}")
+        ax[row, col].set_xlabel(f"True {band}")
         ax[row, col].set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_bands_scatter_true_vs_pred.png")
     n_cols = 5
     n_rows = 2
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
-    for idx in range(len(BANDS)):
+    for idx, band in enumerate(BANDS):
         row = idx // n_cols
         col = idx % n_cols
         xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
-                            all_rec[idx,:].reshape(-1).cpu().numpy(),range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
+                            all_rec[idx,:].reshape(-1).cpu().numpy(),
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                         [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
         ax[row, col].set_yticks([])
-        ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
-        ax[row, col].set_xlabel(f"True {BANDS[idx]}")
+        ax[row, col].set_ylabel(f"Reconstructed {band}")
+        ax[row, col].set_xlabel(f"True {band}")
         ax[row, col].set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_bands_2dhist_true_vs_pred.png")
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
@@ -1005,8 +1017,8 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    ax.set_ylabel(f"Predicted LAI")
-    ax.set_xlabel(f"Sentinel-hub LAI")
+    ax.set_ylabel("Predicted LAI")
+    ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_lai_2dhist_true_vs_pred.png")
 
@@ -1019,16 +1031,59 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_vars
     ax.scatter(all_weiss_lai.cpu().numpy(),
                         all_lai.cpu().numpy(),s=0.5)
     ax.plot([xmin, xmax],
-            [m * xmin + b, m * xmax + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
     ax.legend()
-    ax.set_ylabel(f"Predicted LAI")
-    ax.set_xlabel(f"Sentinel-hub LAI")
+    ax.set_ylabel("Predicted LAI")
+    ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_lai_scatter_true_vs_pred.png")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_weiss_cab.cpu().numpy(), all_cab.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cab.cpu().numpy(), all_cab.cpu().numpy())
+    mse = (all_weiss_cab - all_cab).pow(2).mean().cpu().numpy()
+    xmin = min(all_cab.cpu().min().item(), all_weiss_cab.cpu().min().item())
+    xmax = max(all_cab.cpu().max().item(), all_weiss_cab.cpu().max().item())
+    ax.scatter(all_weiss_cab.cpu().numpy(),
+                        all_cab.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted Cab")
+    ax.set_xlabel(f"SNAP Cab")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_cab_scatter_true_vs_pred.png")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy())
+    mse = (all_weiss_cw - all_cw).pow(2).mean().cpu().numpy()
+    xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    ax.scatter(all_weiss_cw.cpu().numpy(),
+                        all_cw.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted Cw")
+    ax.set_xlabel(f"SNAP Cw")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_cw_scatter_true_vs_pred.png")
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, i, info=None):

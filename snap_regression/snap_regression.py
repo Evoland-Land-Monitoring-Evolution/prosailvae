@@ -389,9 +389,9 @@ class SnapNN(nn.Module):
     """
     Neural Network with SNAP architecture to predict LAI from S2 reflectances and angles
     """
-    def __init__(self, device:str='cpu', ver:str="2.1"): 
+    def __init__(self, device:str='cpu', ver:str="2.1", variable='lai'):
         super().__init__()
-        input_min, input_max, lai_min, lai_max = get_SNAP_norm_factors(ver=ver)
+        input_min, input_max, variable_min, variable_max = get_SNAP_norm_factors(ver=ver, variable=variable)
         input_size = len(input_max) # 8 bands + 3 angles
         hidden_layer_size = 5
         layers = OrderedDict([
@@ -400,17 +400,24 @@ class SnapNN(nn.Module):
                   ('layer_2', nn.Linear(in_features=hidden_layer_size, out_features=1))])
         self.input_min = input_min.to(device)
         self.input_max = input_max.to(device)
-        self.lai_min = lai_min.to(device)
-        self.lai_max = lai_max.to(device)
+        self.variable_min = variable_min.to(device)
+        self.variable_max = variable_max.to(device)
         self.net:nn.Sequential = nn.Sequential(layers).to(device)
         self.device = device
 
-    def set_weiss_weights(self, ver:str=2.1):
+    def set_weiss_weights(self, ver:str=2.1, variable='lai'):
         """
         Set Neural Network weights and biases to SNAP's original values
         """
         if ver==2.1:
-            nn_parameters = ParametersSnapLAINN()
+            if variable=='lai':
+                nn_parameters = ParametersSnapLAINN()
+            elif variable=="cab":
+                nn_parameters = ParametersSnapCabNN()
+            elif variable=="cw":
+                nn_parameters = ParametersSnapCwNN()
+            else:
+                raise NotImplementedError
             self.net.layer_1.bias = nn.Parameter(nn_parameters.layer_1_bias.to(self.device))
             self.net.layer_1.weight = nn.Parameter(nn_parameters.layer_1_weight.to(self.device))
             self.net.layer_2.bias = nn.Parameter(nn_parameters.layer_2_bias.to(self.device))
@@ -418,14 +425,22 @@ class SnapNN(nn.Module):
         else:
             raise NotImplementedError
     
-    def forward(self, s2_data: torch.Tensor):
+    def forward(self, s2_data: torch.Tensor, spatial_mode=False):
         """
-        Forward method of SNAP NN to predict LAI
+        Forward method of SNAP NN to predict a biophysical variable
         """
+        if spatial_mode:
+            if len(s2_data.size()) == 3:
+                (_, size_h, size_w) = s2_data.size()
+                s2_data = s2_data.permute(1,2,0).reshape(size_h * size_w,-1)
+            else:
+                raise NotImplementedError
         s2_data_norm = normalize(s2_data, self.input_min, self.input_max)
-        lai_norm = self.net.forward(s2_data_norm)
-        lai = denormalize(lai_norm, self.lai_min, self.lai_max)
-        return lai
+        variable_norm = self.net.forward(s2_data_norm)
+        variable = denormalize(variable_norm, self.variable_min, self.variable_max)
+        if spatial_mode:
+            variable = variable.reshape(size_h, size_w, 1).permute(2,0,1)
+        return variable
     
     def train_model(self, train_loader, valid_loader, optimizer, 
                     epochs:int=100, lr_scheduler=None, disable_tqdm:bool=False):
@@ -452,7 +467,7 @@ class SnapNN(nn.Module):
         Apply mini-batch optimization from a train dataloader
         """
         self.train()
-        loss_mean = torch.tensor(0.0).to(self.device) 
+        loss_mean = torch.tensor(0.0).to(self.device)
         for _, batch in enumerate(loader):
             loss = self.get_batch_loss(batch)
             optimizer.zero_grad()
@@ -468,7 +483,7 @@ class SnapNN(nn.Module):
         """
         self.eval()
         with torch.no_grad():
-            loss_mean = torch.tensor(0.0).to(self.device) 
+            loss_mean = torch.tensor(0.0).to(self.device)
             for _, batch in enumerate(loader):
                 loss = self.get_batch_loss(batch)
                 loss_mean += loss / batch[0].size(0)
@@ -478,9 +493,9 @@ class SnapNN(nn.Module):
         """
         Computes loss on batch
         """
-        s2_data, lai = batch
-        lai_pred = self.forward(s2_data.to(self.device))
-        return (lai_pred - lai.to(self.device)).pow(2).mean()
+        s2_data, variable = batch
+        variable_pred = self.forward(s2_data.to(self.device))
+        return (variable_pred - variable.to(self.device)).pow(2).mean()
 
 def get_model_metrics(test_data, model, all_valid_losses=[]):
     with torch.no_grad():
@@ -585,7 +600,7 @@ def test_snap_nn():
         assert torch.isclose(l_snap_nn.squeeze(), layer_2_output.squeeze(), atol=1e-4).all()
         assert torch.isclose(lai_prenorm_snap.squeeze(), layer_2_output.squeeze(), atol=1e-4).all()
         lai = denormalize(layer_2_output, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
-        snap_lai = denormalize(l_snap_nn, snap_nn.lai_min, snap_nn.lai_max)
+        snap_lai = denormalize(l_snap_nn, snap_nn.variable_min, snap_nn.variable_max)
         assert torch.isclose(snap_lai.squeeze(), lai.squeeze(), atol=1e-4).all()
         assert torch.isclose(snap_nn.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
 

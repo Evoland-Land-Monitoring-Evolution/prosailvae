@@ -33,7 +33,7 @@ def load_prosail_params(path_to_data_dir):
     car = prosail_params[:,6].reshape(-1,1)
     cbrown = prosail_params[:,9].reshape(-1,1)
     CwRel = prosail_params[:,8].reshape(-1,1)
-    cm = prosail_params[:,7].reshape(-1,1) 
+    cm = prosail_params[:,7].reshape(-1,1)
     cw = cm / (1 - CwRel)
     lai = prosail_params[:,0].reshape(-1,1)
     lidfa = prosail_params[:,1].reshape(-1,1)

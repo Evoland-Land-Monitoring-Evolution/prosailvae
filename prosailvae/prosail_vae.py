@@ -14,59 +14,9 @@ from prosailvae.loss import LossConfig
 from prosailvae.latentspace import TruncatedNormalLatent
 from prosailvae.simspaces import LinearVarSpace
 from prosailvae.ProsailSimus import (SensorSimulator, ProsailSimulator, get_z2prosailparams_offset,
-                                     get_z2prosailparams_mat, get_prosailparams_pdf_span, PROSAILVARS)
+                                     get_z2prosailparams_mat, get_prosailparams_pdf_span, 
+                                     PROSAILVARS)
 from prosailvae.decoders import ProsailSimulatorDecoder
-
-
-
-# def select_encoder(encoder_type, vae_params, device, refl_norm_mean, refl_norm_std, 
-#                    rnn_number, rnn_depth, latent_dim=11):
-#     output_size = latent_dim * 2
-#     if encoder_type=='nn':
-
-#         encoder = ProsailNNEncoder(s2refl_size=vae_params["input_size"],
-#                             output_size=output_size, 
-#                             hidden_layers_size=vae_params["hidden_layers_size"],
-#                             last_activation=vae_params["encoder_last_activation"],
-#                             device=device,
-#                             norm_mean=refl_norm_mean,
-#                             norm_std=refl_norm_std)
-#     elif encoder_type=='rnn':
-#         encoder = ProsailRNNEncoder(s2refl_size=vae_params["input_size"],
-#                             output_size=output_size,
-#                             n_res_block = rnn_number,
-#                             res_block_layer_sizes=vae_params["hidden_layers_size"][0],
-#                             res_block_layer_depth=rnn_depth,
-#                             last_activation=vae_params["encoder_last_activation"],
-#                             device=device,
-#                             norm_mean=refl_norm_mean,
-#                             norm_std=refl_norm_std)
-#     elif encoder_type=='rcnn':
-#         first_layer_kernel = 3
-#         first_layer_size = 128
-#         crnn_group_sizes = [128,128]
-#         crnn_group_depth = [2,2]
-#         crnn_group_kernel_sizes = [3,1]
-#         crnn_group_n = [1,3]
-#         # crnn_group_n = [1,2]
-#         encoder = ProsailRCNNEncoder(s2refl_size=vae_params["input_size"], 
-#                                     output_size=latent_dim, 
-#                                     device=device,
-#                                     norm_mean=refl_norm_mean,
-#                                     norm_std=refl_norm_std,
-#                                     first_layer_kernel = first_layer_kernel,
-#                                     first_layer_size = first_layer_size,
-#                                     crnn_group_sizes = crnn_group_sizes,
-#                                     crnn_group_depth = crnn_group_depth,
-#                                     crnn_group_kernel_sizes = crnn_group_kernel_sizes,
-#                                     crnn_group_n = crnn_group_n)
-#     elif encoder_type=='cnn':
-#         encoder_sizes = [vae_params["input_size"] + 2 * 3] + vae_params["hidden_layers_size"] + [output_size]
-#         enc_kernel_sizes = [3] * (len(encoder_sizes) - 1)
-#         encoder = ProsailCNNEncoder(encoder_sizes=encoder_sizes, enc_kernel_sizes=enc_kernel_sizes, device=device)
-#     else:
-#         raise NotImplementedError
-#     return encoder
 
 @dataclass
 class ProsailVAEConfig:
@@ -76,12 +26,14 @@ class ProsailVAEConfig:
     encoder_config:EncoderConfig
     loss_config:LossConfig
     rsr_dir:str
-    vae_file_path:str
+    vae_load_file_path:str
+    vae_save_file_path:str
+    load_vae:bool=False
     apply_norm_rec:bool = True
     inference_mode:bool = False
     prosail_bands:list[int] = field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12])
 
-def get_prosail_vae_config(params, bands, norm_mean, norm_std, 
+def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                            inference_mode, prosail_bands, rsr_dir):
     """
     Get ProsailVAEConfig from params dict
@@ -113,11 +65,12 @@ def get_prosail_vae_config(params, bands, norm_mean, norm_std,
     return ProsailVAEConfig(encoder_config=encoder_config,
                             loss_config=loss_config,
                             rsr_dir=rsr_dir,
-                            vae_file_path=params["vae_file_path"],
+                            vae_load_file_path=params["vae_load_file_path"],
+                            vae_save_file_path=params["vae_save_file_path"],
+                            load_vae=params["load_model"],
                             apply_norm_rec=params["apply_norm_rec"],
                             inference_mode=inference_mode,
                             prosail_bands=prosail_bands)
-                      
 
 
 def get_prosail_vae(pv_config:ProsailVAEConfig,
@@ -164,8 +117,8 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         beta_index=pv_config.loss_config.beta_index,
                         logger_name=logger_name, inference_mode=pv_config.inference_mode,
                         lat_nll="lai_nll" if pv_config.loss_config.loss_type=="lai_nll" else "")
-    if pv_config.vae_file_path is not None:
-        _, _ = prosail_vae.load_ae(pv_config.vae_file_path, optimizer)
+    if pv_config.load_vae is not None and pv_config.vae_load_file_path is not None:
+        _, _ = prosail_vae.load_ae(pv_config.vae_load_file_path, optimizer)
     prosail_vae.set_hyper_prior(hyper_prior)
     prosail_vae.change_device(device)
     return prosail_vae

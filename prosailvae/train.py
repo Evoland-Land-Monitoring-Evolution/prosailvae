@@ -342,6 +342,7 @@ def load_params(config_dir, config_file, parser=None):
         params["supervised_kl"] = False
     if "weiss_bands" not in params.keys():
         params["weiss_bands"] = False
+    params["vae_save_file_path"] = None
     return params
 
 def setup_training():

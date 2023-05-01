@@ -314,7 +314,7 @@ def load_params(config_dir, config_file, parser=None):
     if not "load_model" in params.keys():
         params["load_model"]=False
     if not "vae_load_dir_path" in params.keys():
-        params["vae_load_file_path"]=None
+        params["vae_load_dir_path"]=None
     if not "lr_recompute_mode" in params.keys():
         params["lr_recompute_mode"]=False
     if not "init_model" in params.keys():
@@ -446,9 +446,9 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     print(f"Weiss mode : {parser.weiss_mode}")
     if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
         #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
-        vae_load_file_path = params["vae_load_dir_patj"] + "/prosailvae_weights.tar"
-        norm_mean = torch.load(os.path.join(params["vae_load_dir_patj"], "norm_mean.pt"))
-        norm_std = torch.load(os.path.join(params["vae_load_dir_patj"], "norm_std.pt"))
+        vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
+        norm_mean = torch.load(os.path.join(params["vae_load_dir_path"], "norm_mean.pt"))
+        norm_std = torch.load(os.path.join(params["vae_load_dir_path"], "norm_std.pt"))
         torch.save(norm_mean, res_dir + "/norm_mean.pt")
         torch.save(norm_std, res_dir + "/norm_std.pt")
     else:

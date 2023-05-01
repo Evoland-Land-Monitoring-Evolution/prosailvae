@@ -208,17 +208,16 @@ def convolve_pdfs(pdfs, supports, transfer_mat_line, n_pdf_sample_points=2001, s
         return None, None
     if transfer_mat_line.count_nonzero().item()==1:
         idx_nonzero = transfer_mat_line.nonzero().item()
-        
-        convolved_pdf, convolved_pdf_support = scale_pdf(pdfs[:,idx_nonzero,:].view(batch_size,1,-1), 
-                                                            supports[:,idx_nonzero,:].view(batch_size,1,-1), 
-                                                            transfer_mat_line[idx_nonzero].item(), 
+        convolved_pdf, convolved_pdf_support = scale_pdf(pdfs[:,idx_nonzero,:].view(batch_size,1,-1),
+                                                            supports[:,idx_nonzero,:].view(batch_size,1,-1),
+                                                            transfer_mat_line[idx_nonzero].item(),
                                                             0, support_max=support_max)
-        convolved_pdf, convolved_pdf_support = resample_pdf(convolved_pdf, 
-                                                            convolved_pdf_support, 
+        convolved_pdf, convolved_pdf_support = resample_pdf(convolved_pdf,
+                                                            convolved_pdf_support,
                                                             n_pdf_sample_points=n_pdf_sample_points)
         if convolved_pdf.sum()==0:
             raise NotImplementedError
-        return convolved_pdf.view(batch_size,-1), convolved_pdf_support.view(batch_size,-1)
+        return convolved_pdf.reshape(batch_size,-1), convolved_pdf_support.reshape(batch_size,-1)
     else:
         raise NotImplementedError()
 
@@ -252,6 +251,9 @@ def resample_pdf(pdf, support, n_pdf_sample_points=1001):
 
 
 def scale_pdf(pdf, support, support_scale, support_min, support_max:float|None=None):
+    """
+    pdf dimension and support should be Batch x latent nb x latent domain
+    """
     if support_max is None:
         support_max = support.max()
     assert support_scale != 0
@@ -266,16 +268,16 @@ def scale_pdf(pdf, support, support_scale, support_min, support_max:float|None=N
     else:
         # assuming same support
         support_max = max(support_max, abs(ext_support[0,0,-1]), abs(ext_support[0,0,0]))
-    upper_support = torch.arange(ext_support[0,0,-1]+sampling, 
-                                  support_max+sampling, 
-                                  sampling).to(pdf.device).repeat(pdf.size(0), 
+    upper_support = torch.arange(ext_support[0,0,-1] + sampling,
+                                 support_max + sampling,
+                                 sampling).to(pdf.device).repeat(pdf.size(0),
                                                                   pdf.size(1), 1)
-    lower_support = torch.arange(- support_max, ext_support[0,0,0], 
-                                  sampling).to(pdf.device).repeat(pdf.size(0), 
+    lower_support = torch.arange(- support_max, ext_support[0,0,0],
+                                  sampling).to(pdf.device).repeat(pdf.size(0),
                                                                   pdf.size(1), 1)
     upper_pdf = torch.zeros((pdf.size(0), pdf.size(1), upper_support.size(2))).to(pdf.device)
     lower_pdf = torch.zeros((pdf.size(0), pdf.size(1), lower_support.size(2))).to(pdf.device)
-        
+
     ext_pdf = torch.cat([lower_pdf, pdf, upper_pdf], axis=2)
-    ext_support = torch.cat([lower_support, ext_support, upper_support],axis=2)
+    ext_support = torch.cat([lower_support, ext_support, upper_support], axis=2)
     return ext_pdf, ext_support

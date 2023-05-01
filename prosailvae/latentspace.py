@@ -116,11 +116,12 @@ class TruncatedNormalLatent(LatentSpace):
         """
         mu = params[:, :, 0]
         sigma = params[:, :, 1]
-        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
+        tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu),
+                                  high=torch.ones_like(mu))
         supports = torch.arange(0, 1, support_sampling).to(self.device)
         supports = torch_select_unsqueeze(supports, select_dim=0, nb_dim=len(mu.size()) + 1)
-        pdfs = tn_dist.pdf(supports)
-        supports = supports.repeat(mu.unsqueeze(0).size())
+        pdfs = tn_dist.pdf(supports).permute(1,2,0)
+        supports = supports.repeat(mu.unsqueeze(0).size()).permute(1,2,0)
         return pdfs, supports
     
     def mode(self, params: torch.Tensor):

@@ -59,6 +59,9 @@ class TruncatedNormal(Distribution):
 
     @constraints.dependent_property
     def support(self):
+        """
+        Domain of the Truncated Normal
+        """
         return constraints.interval(self.low, self.high)
 
     @property
@@ -90,24 +93,41 @@ class TruncatedNormal(Distribution):
         return CONST_SQRT_2 * (2 * x - 1).erfinv()
 
     def cdf(self, value: torch.Tensor):
+        """
+        Cumulative Distribution Function
+        """
         if self._validate_args:
             self._validate_sample(value)
         return ((self._normal_cdf((value - self.loc) / self.scale) - self._big_phi_a) / self.Z).clamp(0, 1)
 
     def icdf(self, value: torch.Tensor):
+        """
+        Inverse Cumulative Distribution Function
+        """
         return self._normal_icdf(self._big_phi_a + value * self.Z) * self.scale + self.loc
 
     def log_prob(self, value: torch.Tensor):
+        """
+        Log PDF
+        """
         if self._validate_args:
             self._validate_sample(value)
         return CONST_LOG_INV_SQRT_2PI - self._logZ - (((value - self.loc) / self.scale) ** 2) * 0.5 - self._log_scale
 
     def pdf(self, value: torch.Tensor):
+        """
+        Probability Density Function
+        """
         return self.log_prob(value).exp()
 
     def rsample(self, sample_shape=torch.Size()):
+        """
+        Reparametrized sampled (differentiable w.r.t. distribution parameters)
+        """
         shape = self._extended_shape(sample_shape)
-        p = torch.empty(shape, device=self.low.device).uniform_(self._dtype_min_gt_0, self._dtype_max_lt_1)
+        p = torch.empty(shape,
+                        device=self.low.device).uniform_(self._dtype_min_gt_0,
+                                                         self._dtype_max_lt_1)
         return self.icdf(p)
 
 @register_kl(TruncatedNormal, TruncatedNormal)

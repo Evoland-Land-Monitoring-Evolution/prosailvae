@@ -84,11 +84,11 @@ def get_prosailvae_train_parser():
     Creates a new argument parser.
     """
     parser = argparse.ArgumentParser(description='Parser for data generation')
-    
+
     parser.add_argument("-n", dest="n_fold",
                         help="number k of fold",
                         type=int, default=0)
-    
+
     parser.add_argument("-c", dest="config_file",
                         help="name of config json file on config directory.",
                         type=str, default="config.json")
@@ -100,15 +100,15 @@ def get_prosailvae_train_parser():
     parser.add_argument("-ws", dest="supervised_weight_file",
                         help="path to model weights used to supervise the KL loss",
                         type=str, default="model.tar")
-    
+
     parser.add_argument("-x", dest="n_xp",
                         help="Number of experience (to use in case of kfold)",
                         type=int, default=1)
-    
+
     parser.add_argument("-o", dest="overwrite_xp",
                         help="Allow overwrite of experiment (fold)",
                         type=bool, default=True)
-    
+
     parser.add_argument("-d", dest="data_dir",
                         help="path to data direcotry",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
@@ -125,7 +125,7 @@ def get_prosailvae_train_parser():
                         help="directory of mmdc tensor files",
                         type=str,
                         default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
-               
+
     parser.add_argument("-a", dest="xp_array",
                         help="array training (false for single xp) ",
                         type=bool, default=False)
@@ -133,10 +133,10 @@ def get_prosailvae_train_parser():
     parser.add_argument("-p", dest="plot_results",
                         help="toggle results plotting",
                         type=bool, default=False)
-    
+
     parser.add_argument("-w", dest="weiss_mode",
                         help="removes B2 and B8 bands for validation with weiss data",
-                        type=bool, default=False)             
+                        type=bool, default=False)
     return parser
 
 def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, optimizer, lrtrainloader, 

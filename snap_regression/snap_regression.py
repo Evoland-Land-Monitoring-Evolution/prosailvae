@@ -538,15 +538,21 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
                 metrics[i,j,:] = get_model_metrics(test_data, snap_nn, all_valid_losses=all_valid_losses)
     return metrics
 
+def get_pixel_log_likelihood_with_weiss(s2_r):
+    from sklearn.mixture import GaussianMixture
+    s2_r_ref, _, _ = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/") 
+    gm = GaussianMixture(n_components=8, random_state=0).fit(s2_r_ref)
+    return gm.score_samples(s2_r)
+
 def test_snap_nn():
     """
     Test if SNAP neural network's outputs are identical to that of the translated java
     code of SNAP
     """
-    from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases, 
+    from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases,
                                         get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
     
-    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")   
+    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
     snap_nn = SnapNN()
     snap_nn.set_weiss_weights()
     sample = torch.cat((torch.from_numpy(s2_r), torch.cos(torch.from_numpy(s2_a))), 1).float()
@@ -605,6 +611,7 @@ def test_snap_nn():
         assert torch.isclose(snap_nn.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
 
 def main():
+
     test_snap_nn()
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
@@ -643,13 +650,12 @@ def main():
     if prepare_data:
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
-        (data_eval_list, fold_data_list, tg_data_list, 
+        (data_eval_list, fold_data_list, tg_data_list,
          list_kl, list_params) = prepare_datasets(n_eval=5000, n_samples_sub=5000,
-                                                                save_dir=save_dir,
-                                                                tg_mu = tg_mu,
-                                                                tg_sigma = tg_sigma,
-                                                                plot_dist=True,
-                                                                s2_tensor_image_path=s2_tensor_image_path)
+                                                  save_dir=save_dir,  tg_mu = tg_mu,
+                                                  tg_sigma = tg_sigma,
+                                                  plot_dist=True,
+                                                  s2_tensor_image_path=s2_tensor_image_path)
     fold_xp = parser.fold_xp
     if fold_xp:
         metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
@@ -658,29 +664,30 @@ def main():
         snap_ref.set_weiss_weights()
         test_loader_list = []
         all_metrics_ref = []
+        sample_log_likelihood = []
         for _, data_eval in enumerate(data_eval_list):
             test_loader, _ = get_loaders(data_eval, seed=86294692001, valid_ratio=0, batch_size=256)
             test_loader_list.append(test_loader)
             metrics_ref = []
-            for i in range(len(fold_data_list)):
-                _, valid_loader = get_loaders(fold_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
+            for i, fold_data in enumerate(fold_data_list):
+                _, valid_loader = get_loaders(fold_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
                 snap_valid_loss = snap_ref.validate(valid_loader)
-                metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref, all_valid_losses=[snap_valid_loss]))
+                metrics_ref.append(get_model_metrics(test_loader.dataset[:],
+                                                     model=snap_ref, all_valid_losses=[snap_valid_loss]))
             metrics_ref = torch.stack(metrics_ref, dim=0)
             all_metrics_ref.append(metrics_ref)
         metrics_ref = torch.stack(all_metrics_ref, dim=0).transpose(1,0)
         if compute_metrics:
             mean_metrics = []
             all_metrics = []
-            for i in range(len(fold_data_list)):
-                train_loader, valid_loader = get_loaders(fold_data_list[i], seed=86294692001, valid_ratio=0.1, batch_size=256)
-                metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list, 
-                                                n_models=n_models, epochs=epochs, lr=lr, disable_tqdm=disable_tqdm, patience=20, 
-                                                                init_models=init_models)
+            for i, fold_data in enumerate(fold_data_list):
+                train_loader, valid_loader = get_loaders(fold_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
+                metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list,
+                                              n_models=n_models, epochs=epochs, lr=lr,
+                                              disable_tqdm=disable_tqdm, patience=20,
+                                              init_models=init_models)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
-            
-            
             mean_metrics = torch.cat(mean_metrics, 0)
             all_metrics = torch.cat(all_metrics, 0)
             torch.save(all_metrics, res_dir + "/all_metrics.pth")
@@ -758,7 +765,8 @@ def main():
             for i, tg_data in enumerate(tg_data_list):
                 _, valid_loader = get_loaders(tg_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
                 snap_valid_loss = snap_ref.validate(valid_loader)
-                metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref, all_valid_losses=[snap_valid_loss]))
+                metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref, 
+                                                     all_valid_losses=[snap_valid_loss]))
             metrics_ref = torch.stack(metrics_ref, dim=0)
             all_metrics_ref.append(metrics_ref)
         metrics_ref = torch.stack(all_metrics_ref, dim=0).transpose(1,0)

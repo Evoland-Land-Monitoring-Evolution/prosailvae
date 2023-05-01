@@ -173,9 +173,9 @@ class SimVAE(nn.Module):
             y, angles = self.encode(x, angles)
             dist_params = self.lat_space.get_params_from_encoder(y)
             # latent mode
-            z = self.lat_space.mode(x)
+            z = self.lat_space.mode(dist_params)
             # transfer to simulator variable
-            sim = self.transfer_latent(z)
+            sim = self.transfer_latent(z.unsqueeze(2))
             # decoding
             rec = self.decode(sim, angles, apply_norm=apply_norm)
 

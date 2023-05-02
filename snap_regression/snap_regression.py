@@ -115,6 +115,27 @@ def swap_sampling(samples: torch.Tensor, tgt_dist_samples: torch.Tensor, allow_d
         samples_idx = torch.unique(samples_idx)
     return samples_idx
 
+def swap_sampling_truncated_gaussians(samples:torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor,
+                                      n_samples:int=1, allow_doubles:bool=True):
+    """
+    Draw samples of an input dataset with a specified distribution, by finding the closest match to 
+    target distribution.
+    """
+    samples_idx = []
+    for _ in range(n_samples):
+        idx = 0
+        while idx in samples_idx:
+            tgt_sample = sample_truncated_gaussian(mu.reshape(1,1),
+                                                   sigma.reshape(1,1),
+                                                   n_samples=1,
+                                                   lower=torch.tensor(0),
+                                                                upper=torch.tensor(14))
+            idx = torch.argmin((samples - tgt_sample).abs()).item()
+            if allow_doubles:
+                break
+        samples_idx.append(idx)
+    return samples_idx
+
 def normalize(unnormalized:torch.Tensor, min_sample:torch.Tensor, max_sample:torch.Tensor):
     """
     Normalize with sample min and max of distribution
@@ -127,7 +148,8 @@ def denormalize(normalized:torch.Tensor, min_sample:torch.Tensor, max_sample:tor
     """
     return 0.5 * (normalized + 1) * (max_sample - min_sample) + min_sample
 
-def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", reduce_to_common_samples_nb:bool=True,
+def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", 
+                     reduce_to_common_samples_nb:bool=True,
                      tg_mu: torch.Tensor=torch.tensor([0,4]), tg_sigma:torch.Tensor=torch.tensor([1,4]),
                      plot_dist:bool=False, s2_tensor_image_path:str = ""):
     """
@@ -182,29 +204,38 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", r
     for i, mu in enumerate(tg_mu):
         list_idx_samples_i = []
         for j, sigma in enumerate(tg_sigma):
-            kl = kl_tntn(mu_ref, sigma_ref, mu, sigma, lower=torch.tensor(0.0), upper=torch.tensor(14.0)).item()
+            kl = kl_tntn(mu_ref, sigma_ref, mu, sigma, lower=torch.tensor(0.0),
+                         upper=torch.tensor(14.0)).item()
             list_kl.append(kl)
             list_params.append([mu, sigma])
-            tgt_dist_samples = sample_truncated_gaussian(mu.reshape(1,1), sigma.reshape(1,1), n_samples=n_samples_sub*2,
-                                                        lower = torch.tensor(0), upper=torch.tensor(14))
-            idx_samples = swap_sampling(data_train[:,-1], tgt_dist_samples.squeeze(), allow_doubles=False)
-
+            # tgt_dist_samples = sample_truncated_gaussian(mu.reshape(1,1), sigma.reshape(1,1),
+            #                                              n_samples=n_samples_sub*2,
+            #                                              lower = torch.tensor(0),
+            #                                              upper=torch.tensor(14))
+            # idx_samples = swap_sampling(data_train[:,-1], tgt_dist_samples.squeeze(),
+            #                             allow_doubles=False)
+            idx_samples = swap_sampling_truncated_gaussians(data_train[:,-1], mu.reshape(1,1),
+                                                            sigma.reshape(1,1),
+                                                            n_samples=n_samples_sub,
+                                                            allow_doubles=False)
             print(f"number of samples for mu = {mu.item()} sigma = {sigma.item()} (kl = {kl}) : {len(idx_samples)}")
             list_idx_samples_i.append(idx_samples)
             min_sample_nb = min(min_sample_nb, len(idx_samples))
             if plot_dist:
                 fig, ax = plt.subplots(1, dpi=150)
-                ax.plot(torch.arange(0,14,0.1), 
+                ax.plot(torch.arange(0,14,0.1),
                         truncated_gaussian_pdf(torch.arange(0,14,0.1), mu_ref, sigma_ref,
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'k', label='original distribution')
-                ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, range=[0,14], alpha=0.5, density=True, label='samples')
+                ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, range=[0,14], 
+                        alpha=0.5, density=True, label='samples')
                 ax.plot(torch.arange(0,14,0.1),
                         truncated_gaussian_pdf(torch.arange(0,14,0.1), mu, sigma,
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'r', label='sampling distribution (kl={:.2f})'.format(kl))
                 ax.legend()
                 fig.savefig(save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
+                plt.close('all')
         list_idx_samples.append(list_idx_samples_i)
     tg_data_list = []
     for i, mu in enumerate(tg_mu):
@@ -540,7 +571,7 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
 
 def get_pixel_log_likelihood_with_weiss(s2_r):
     from sklearn.mixture import GaussianMixture
-    s2_r_ref, _, _ = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/") 
+    s2_r_ref, _, _ = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
     gm = GaussianMixture(n_components=8, random_state=0).fit(s2_r_ref)
     return gm.score_samples(s2_r)
 
@@ -611,7 +642,6 @@ def test_snap_nn():
         assert torch.isclose(snap_nn.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
 
 def main():
-
     test_snap_nn()
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
@@ -619,9 +649,9 @@ def main():
               "-e", "3",
               "-n", "2",
               "-i", 't',
-              "-lr", "0.001"]
+              "-lr", "0.001",
+              "-f", 't']
         disable_tqdm=False
-        
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
         tg_mu = torch.tensor([0,1,2,3,4,5])
@@ -664,25 +694,42 @@ def main():
         snap_ref.set_weiss_weights()
         test_loader_list = []
         all_metrics_ref = []
-        sample_log_likelihood = []
-        for _, data_eval in enumerate(data_eval_list):
+        for k, data_eval in enumerate(data_eval_list):
             test_loader, _ = get_loaders(data_eval, seed=86294692001, valid_ratio=0, batch_size=256)
             test_loader_list.append(test_loader)
             metrics_ref = []
             for i, fold_data in enumerate(fold_data_list):
-                _, valid_loader = get_loaders(fold_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
+                _, valid_loader = get_loaders(fold_data, seed=86294692001, valid_ratio=0.1,
+                                              batch_size=256)
                 snap_valid_loss = snap_ref.validate(valid_loader)
                 metrics_ref.append(get_model_metrics(test_loader.dataset[:],
-                                                     model=snap_ref, all_valid_losses=[snap_valid_loss]))
+                                                     model=snap_ref,
+                                                     all_valid_losses=[snap_valid_loss]))
             metrics_ref = torch.stack(metrics_ref, dim=0)
             all_metrics_ref.append(metrics_ref)
+            loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy())
+            with torch.no_grad():
+                absolute_errors = (snap_ref.forward(test_loader.dataset[:][0]) - test_loader.dataset[:][1]).abs().squeeze().numpy()
+            fig, ax = plt.subplots()
+            ax.scatter(loader_pixels_ll, absolute_errors, s=0.5)
+            ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_ylabel("LAI Absolute error")
+            fig.savefig(res_dir + f"/scatter_error_vs_loglikelihood_{eval_data_name[k]}.png")
+            fig, ax = plt.subplots()
+            ax.hist2d(loader_pixels_ll, absolute_errors, bins=100)
+            ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_ylabel("LAI Absolute error")
+            fig.savefig(res_dir + f"/hist_error_vs_loglikelihood_{eval_data_name[k]}.png")
         metrics_ref = torch.stack(all_metrics_ref, dim=0).transpose(1,0)
+
         if compute_metrics:
             mean_metrics = []
             all_metrics = []
             for i, fold_data in enumerate(fold_data_list):
-                train_loader, valid_loader = get_loaders(fold_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
-                metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list,
+                train_loader, valid_loader = get_loaders(fold_data, seed=86294692001, 
+                                                         valid_ratio=0.1, batch_size=256)
+                metrics = get_n_model_metrics(train_loader, valid_loader, 
+                                              test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs, lr=lr,
                                               disable_tqdm=disable_tqdm, patience=20,
                                               init_models=init_models)
@@ -855,7 +902,8 @@ def main():
                 fig.savefig(kl_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-                ax.scatter(kl.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+                ax.scatter(kl.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1),
+                           all_metrics[:,:,j,k].reshape(-1), s=0.5)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -961,7 +1009,8 @@ def main():
                 fig.savefig(sigma_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-                ax.scatter(tg_sigma_rep.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+                ax.scatter(tg_sigma_rep.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), 
+                           all_metrics[:,:,j,k].reshape(-1), s=0.5)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -971,53 +1020,6 @@ def main():
                 ax.set_xscale('symlog')
                 fig.savefig(sigma_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
                 plt.close('all')
-    # snap_nn = SnapNN()
-    # lr=0.001
-    # epochs = 500
-    # optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
-    # lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience=10, threshold=0.001)
-    # all_train_losses, all_valid_losses, all_lr = snap_nn.train_model(train_loader, valid_loader, optimizer, epochs=epochs, lr_scheduler=lr_scheduler)
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots(2,1, sharex=True)
-    # ax[0].plot(torch.arange(epochs).numpy().tolist(), all_train_losses, label='train loss')
-    # ax[0].plot(torch.arange(epochs).numpy().tolist(), all_valid_losses, label= "validation loss")
-    # ax[0].legend()
-    # ax[1].plot(torch.arange(epochs).numpy().tolist(), all_lr, label='lr')
-    # ax[1].legend()
-    # ax[0].set_yscale('log')
-    # ax[1].set_yscale('log')
-    # plt.show()
-    # with torch.no_grad():
-    #     test_data = test_loader.dataset[:]
-    #     lai_pred = snap_nn.forward(test_data[0])
-    #     lai_true = test_data[1]
-    # plt.figure()
-    # plt.scatter(lai_true, lai_pred, s=0.5)
-    # plt.plot([0,14], [0,14], 'k--')
-    # plt.axis('equal')
-    # plt.show()
-
-    # s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
-    # fig, ax = plt.subplots()
-
-    # ax.hist(lai, bins=100, density=True)
-    # ax.plot([0, lai.max()],[1/lai.max(), 1/lai.max()])
-    # x = torch.arange(0,14,0.01)
-    # mu = torch.tensor(2)
-    # sigma = torch.tensor(3)
-    # p_x = truncated_gaussian_pdf(x, mu, sigma, eps=1e-9, lower=torch.tensor(0), upper=torch.tensor(14)).numpy()
-    # ax.plot(x, p_x.squeeze())
-    # n=1000
-    # mu2 = mu.reshape(1,1)+1
-    # sigma2 = sigma.reshape(1,1) * 100
-    # tgt_dist_samples = sample_truncated_gaussian(mu2, sigma2, n_samples=n, lower = torch.tensor(0), upper=torch.tensor(14))
-    # idx_samples = swap_sampling(torch.from_numpy(lai), tgt_dist_samples.squeeze(), allow_doubles=False)
-    # subsampled_lai = lai[idx_samples]
-    # ax.hist(subsampled_lai, bins=100, density=True)
-    # ax.plot(x, truncated_gaussian_pdf(x, mu2, sigma2, eps=1e-9, lower =torch.tensor(0), upper=torch.tensor(14)).squeeze())
-    # kernel_p = lambda x: truncated_gaussian_pdf(torch.tensor(x), mu, sigma, eps=1e-9, lower =torch.tensor(0), upper=torch.tensor(14)).numpy()
-    # kernel_q = lambda x: truncated_gaussian_pdf(torch.tensor(x), mu + 2, sigma/2, eps=1e-9, lower =torch.tensor(0), upper=torch.tensor(14)).numpy()
-    # sampled_idx = sample_from_dist(lai, n=100000, kernel_p=kernel_p, kernel_q=kernel_q)
     return
 
 if __name__=="__main__":

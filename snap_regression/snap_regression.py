@@ -16,7 +16,7 @@ from sklearn.metrics import r2_score
 import argparse
 import socket
 import prosailvae
-from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf, numerical_kl_from_pdf
+from prosailvae.dist_utils import sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf, numerical_kl_from_pdf, truncated_gaussian_cdf
 
 
 
@@ -236,6 +236,21 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
                 ax.set_xlabel("LAI")
                 ax.legend()
                 fig.savefig(save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
+                
+                fig, ax = plt.subplots(1, dpi=150)
+                ax.plot(torch.arange(0,14,0.1),
+                        truncated_gaussian_cdf(torch.arange(0,14,0.1), mu_ref, sigma_ref,
+                                               lower=torch.tensor(0), upper=torch.tensor(14)),
+                        'k', label='original distribution')
+                ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, range=[0,14], cumulative=True,histtype='step',
+                        alpha=0.5, density=True, label='samples')
+                ax.plot(torch.arange(0,14,0.1),
+                        truncated_gaussian_cdf(torch.arange(0,14,0.1), mu, sigma,
+                                               lower=torch.tensor(0), upper=torch.tensor(14)),
+                        'r', label='sampling distribution (kl={:.2f})'.format(kl))
+                ax.set_xlabel("LAI")
+                ax.legend()
+                fig.savefig(save_dir + f"/cdf_samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
                 plt.close('all')
         list_idx_samples.append(list_idx_samples_i)
     tg_data_list = []
@@ -650,8 +665,7 @@ def main():
               "-e", "3",
               "-n", "2",
               "-i", 't',
-              "-lr", "0.001",
-              "-f", 't']
+              "-lr", "0.001"]
         disable_tqdm=False
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
@@ -710,8 +724,8 @@ def main():
             all_metrics_ref.append(metrics_ref)
             loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy())
             with torch.no_grad():
-                absolute_errors = (snap_ref.forward((test_loader.dataset[:][0])
-                                                    - test_loader.dataset[:][1]).to(snap_ref.device)).abs().squeeze().numpy()
+                absolute_errors = (snap_ref.forward((test_loader.dataset[:][0]
+                                                    - test_loader.dataset[:][1])).to(snap_ref.device)).abs().squeeze().numpy()
             fig, ax = plt.subplots()
             ax.scatter(loader_pixels_ll, absolute_errors, s=0.5)
             ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")

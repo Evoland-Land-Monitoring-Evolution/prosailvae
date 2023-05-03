@@ -119,7 +119,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                         loss_type=pv_config.loss_config.loss_type)
 
     prosail_vae = SimVAE(encoder=encoder, decoder=decoder,
-                        lat_space=lat_space, sim_space=pheno_var_space,
+                        lat_space=lat_space, sim_space=pheno_var_space, config=pv_config,
                         supervised=pv_config.loss_config.supervised,
                         device='cpu',
                         beta_kl=pv_config.loss_config.beta_kl,
@@ -143,8 +143,8 @@ def load_prosail_vae_with_hyperprior(logger_name:str,
     hyper_prior=None
     if pv_config_hyper is not None:
         hyper_prior = get_prosail_vae(pv_config_hyper, device=device,
-                                        logger_name=logger_name,
-                                        load_simulator=False)
+                                      logger_name=logger_name,
+                                      load_simulator=False)
 
     prosail_vae = get_prosail_vae(pv_config, device=device,
                                         logger_name=logger_name,

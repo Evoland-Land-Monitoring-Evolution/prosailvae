@@ -60,13 +60,14 @@ class SimVAE(nn.Module):
         Samples can be random, the mode, the expectation, the median from distributions. 
         This is selected by mode.
     """
-    def __init__(self, encoder, decoder, lat_space, sim_space,
+    def __init__(self, encoder, decoder, lat_space, sim_space, config,
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
                  inference_mode:bool=False,
                  lat_nll:str=""):
         super(SimVAE, self).__init__()
         # encoder
+        self.config = config
         self.encoder = encoder
         self.lat_space = lat_space
         self.sim_space = sim_space
@@ -85,7 +86,7 @@ class SimVAE(nn.Module):
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
 
-    def set_hyper_prior(self,hyper_prior:nn.Module|None=None):
+    def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
 
     def change_device(self, device:str):
@@ -338,14 +339,18 @@ class SimVAE(nn.Module):
         """
         Saves the neural network weights and optimizer state into file
         """
-        # if self.hyper_prior is not None:
-        #     hyper_prior_save = 
+        hyper_prior = None
+        if self.hyper_prior is not None: # Removing hyperprior before saving
+            hyper_prior = self.hyper_prior.config
+            self.set_hyper_prior(None)
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss
             }, path)
+        if hyper_prior is not None:
+            self.set_hyper_prior(hyper_prior)
     
     def load_ae(self, path:str, optimizer=None, weights_only:bool=False):
         """

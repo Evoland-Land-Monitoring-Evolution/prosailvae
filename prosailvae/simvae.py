@@ -357,6 +357,10 @@ class SimVAE(nn.Module):
         Loads neural network weights from file.
         """
         # map_location = 'cuda:0' if self.device != torch.device('cpu') else 'cpu'
+        hyper_prior = None
+        if self.hyper_prior is not None: # Removing hyperprior before saving
+            hyper_prior = self.hyper_prior.config # Not a deep copy, but it seems to work...
+            self.set_hyper_prior(None) 
         checkpoint = torch.load(path, map_location=self.device, weights_only=weights_only)
         try:
             self.load_state_dict(checkpoint['model_state_dict'])
@@ -369,6 +373,8 @@ class SimVAE(nn.Module):
             raise ValueError
         if optimizer is not None:
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if hyper_prior is not None:
+            self.set_hyper_prior(hyper_prior)
         epoch = checkpoint['epoch']
         loss = checkpoint['loss']
         return epoch, loss

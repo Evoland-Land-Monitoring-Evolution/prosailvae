@@ -28,17 +28,18 @@ class ProsailVAEConfig:
     rsr_dir:str
     vae_load_file_path:str
     vae_save_file_path:str
+    spatial_mode:bool=False
     load_vae:bool=False
     apply_norm_rec:bool = True
     inference_mode:bool = False
     prosail_bands:list[int] = field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12])
 
 def get_prosail_vae_config(params, bands, norm_mean, norm_std,
-                           inference_mode, prosail_bands, rsr_dir):
+                           inference_mode, prosail_bands, rsr_dir, spatial_mode):
     """
     Get ProsailVAEConfig from params dict
     """
-    assert len(prosail_bands) == len(bands)
+    # assert len(prosail_bands) == len(bands)
     encoder_config = EncoderConfig(encoder_type=params['encoder_type'],
                                    input_size=len(bands) + 2 * 3,
                                    output_size=len(PROSAILVARS),
@@ -55,7 +56,8 @@ def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                                    block_layer_sizes = params["block_layer_sizes"],
                                    block_layer_depths = params["block_layer_depths"],
                                    block_kernel_sizes = params["block_kernel_sizes"],
-                                   block_n = params["block_n"])
+                                   block_n = params["block_n"],
+                                   spatial_mode=spatial_mode)
     
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
@@ -117,9 +119,10 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         beta_index=pv_config.loss_config.beta_index,
                         logger_name=logger_name, inference_mode=pv_config.inference_mode,
                         lat_nll="lai_nll" if pv_config.loss_config.loss_type=="lai_nll" else "")
+    prosail_vae.set_hyper_prior(hyper_prior)
     if pv_config.load_vae is not None and pv_config.vae_load_file_path is not None:
         _, _ = prosail_vae.load_ae(pv_config.vae_load_file_path, optimizer)
-    prosail_vae.set_hyper_prior(hyper_prior)
+    
     prosail_vae.change_device(device)
     return prosail_vae
 

@@ -1,0 +1,32 @@
+{
+    "batch_size": 128,
+    "epochs": 2,
+    "lr": 0.0001,
+    "hidden_layers_size": [
+        256,256,256
+    ],
+    "test_size": 0.01,
+    "valid_ratio": 0.01,
+    "workers": 0,
+    "encoder_last_activation": null,
+    "n_samples": 3,
+    "supervised": false,
+    "beta_kl": 1,
+    "beta_index": 1,
+    "k_fold": 0,
+    "dataset_file_prefix": "small_test_",
+    "n_fold": null,
+    "simulated_dataset": false,
+    "lr_recompute": 3,
+    "loss_type": "spatial_nll",
+    "apply_norm_rec": true,
+    "exp_lr_decay": 0.98,
+    "supervised_kl": false,
+    "encoder_type": "rnn",
+    "first_layer_size": 1024,
+    "block_layer_sizes": [1024, 1024],
+    "block_layer_depths": [2],
+    "block_n": [6],
+    "weiss_bands":true,
+    "init_model": true
+}

@@ -556,6 +556,8 @@ class SnapNN(nn.Module):
         return (variable_pred - variable.to(self.device)).pow(2).mean()
 
 def get_model_metrics(test_data, model, all_valid_losses=[]):
+    """
+    """
     with torch.no_grad():
         if len(all_valid_losses) == 0 :
             all_valid_losses = [100000]

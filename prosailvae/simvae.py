@@ -338,6 +338,8 @@ class SimVAE(nn.Module):
         """
         Saves the neural network weights and optimizer state into file
         """
+        # if self.hyper_prior is not None:
+        #     hyper_prior_save = 
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),

@@ -439,16 +439,18 @@ def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands = torch.
     path_to_train_patches = os.path.join(path_to_patches_dir, "train_patches.pth")
     path_to_valid_patches = os.path.join(path_to_patches_dir, "valid_patches.pth")
     path_to_test_patches = os.path.join(path_to_patches_dir, "test_patches.pth")
-    train_loader = get_loader_from_patches(path_to_train_patches, bands = bands, 
-                             batch_size=batch_size, num_workers=num_workers, concat=concat)
-    valid_loader = get_loader_from_patches(path_to_valid_patches, bands = bands, 
-                             batch_size=batch_size, num_workers=num_workers, max_samples=max_valid_samples, concat=concat)
-    test_loader = get_loader_from_patches(path_to_test_patches, bands = bands, 
+    train_loader = get_loader_from_patches(path_to_train_patches, bands = bands,
+                                            batch_size=batch_size, num_workers=num_workers, 
+                                            concat=concat)
+    valid_loader = get_loader_from_patches(path_to_valid_patches, bands = bands,
+                                            batch_size=batch_size, num_workers=num_workers, 
+                                            max_samples=max_valid_samples, concat=concat)
+    test_loader = get_loader_from_patches(path_to_test_patches, bands = bands,
                                             batch_size=batch_size, num_workers=num_workers, concat=concat,
                                             shuffle=False)
     return train_loader, valid_loader, test_loader
 
-def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
+def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]),
                              batch_size=1, num_workers=0, concat=False, max_samples=None,
                              shuffle=True):
     patches = torch.load(path_to_patches)

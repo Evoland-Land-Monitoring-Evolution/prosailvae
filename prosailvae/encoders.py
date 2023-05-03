@@ -25,7 +25,7 @@ class EncoderConfig:
     bands:torch.Tensor|None = torch.arange(10)
     last_activation:nn.Module|None = None
     n_latent_params:int=2
-
+    spatial_mode:bool=False
     layer_sizes:list[int]|None = field(default_factory=lambda: [128])
 
     kernel_sizes: list[int] = field(default_factory=lambda: [3])
@@ -207,7 +207,8 @@ class ProsailNNEncoder(Encoder):
             norm_std = torch.ones((1, config.input_size))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self._spatial_encoding = True
+        self._spatial_encoding = config.spatial_mode
+        self.nb_enc_cropped_hw = 0
 
     def get_spatial_encoding(self):
         """
@@ -377,7 +378,8 @@ class ProsailRNNEncoder(Encoder):
             norm_std = torch.ones((1, config.input_size))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self._spatial_encoding = False
+        self._spatial_encoding = config.spatial_mode
+        self.nb_enc_cropped_hw = 0
 
     def get_spatial_encoding(self):
         """
@@ -398,7 +400,10 @@ class ProsailRNNEncoder(Encoder):
         """
         Encode S2 reflectances and angles
         """
-        normed_refl = (s2_refl[:, self.bands] - self.norm_mean) / self.norm_std
+        if len(s2_refl.size())==4:
+            s2_refl = batchify_batch_latent(s2_refl)
+            angles = batchify_batch_latent(angles)
+        normed_refl = ((s2_refl - self.norm_mean) / self.norm_std)[:, self.bands]
         encoder_output = self.net(torch.concat((normed_refl,
                                                 torch.cos(torch.deg2rad(angles)),
                                                 torch.sin(torch.deg2rad(angles))
@@ -482,7 +487,7 @@ class ProsailCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
-        normed_refl = (s2_refl[:, self.bands, ...] - self.norm_mean) / self.norm_std
+        normed_refl = ((s2_refl - self.norm_mean) / self.norm_std)[:, self.bands, ...]
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0)
         if len(angles.size())==3:
@@ -634,9 +639,10 @@ class ProsailResCNNEncoder(nn.Module):
                     self.nb_enc_cropped_hw += config.block_kernel_sizes[i]//2
         self._spatial_encoding = True
 
+
     def get_spatial_encoding(self):
         """
-        Return private attribute about wether the encoder takes patches as input
+        Return private attribute about whether the encoder takes patches as input
         """
         return self._spatial_encoding
     
@@ -649,7 +655,7 @@ class ProsailResCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
-        normed_refl = (s2_refl[:,self.bands,...] - torch_select_unsqueeze(self.norm_mean,1,4)) / torch_select_unsqueeze(self.norm_std,1,4)
+        normed_refl = ((s2_refl - torch_select_unsqueeze(self.norm_mean,1,4)) / torch_select_unsqueeze(self.norm_std,1,4))[:,self.bands,...]
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0) # Ensures batch dimension appears
         if len(angles.size())==3:

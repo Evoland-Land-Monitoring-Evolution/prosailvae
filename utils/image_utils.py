@@ -21,6 +21,8 @@ def crop_s2_input(s2_input:torch.Tensor, hw_crop:int=0) -> torch.Tensor:
     Crops pixels on the border of an image tensor.
     Assumes at least a 3D Tensor, whose spatial dimensions are the last two
     """
+    if hw_crop == 0:
+        return s2_input
     return s2_input[..., hw_crop:-hw_crop, hw_crop:-hw_crop]
 
 

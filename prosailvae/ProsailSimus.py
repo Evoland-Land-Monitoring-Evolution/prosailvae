@@ -62,7 +62,7 @@ RSR of the sensor.
         self.solar = self.rsr_prospect[1, :].unsqueeze(0)
         self.rsr = self.rsr_prospect[2:, :].unsqueeze(0)
         self.rsr = self.rsr[:,bands,:]
-        
+
         if norm_mean is None:
             norm_mean = torch.zeros((1, len(bands)))
         else:
@@ -117,7 +117,7 @@ RSR of the sensor.
     
     def unnormalize(self, s2_r, bands_dim=1):
         dim_s2_r = len(s2_r.size())
-        u_s2_r = s2_r * torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r) 
+        u_s2_r = s2_r * torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r)
         u_s2_r = u_s2_r + torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)
         return u_s2_r
 

@@ -341,8 +341,8 @@ class SimVAE(nn.Module):
         """
         hyper_prior = None
         if self.hyper_prior is not None: # Removing hyperprior before saving
-            hyper_prior = self.hyper_prior.config
-            self.set_hyper_prior(None)
+            hyper_prior = self.hyper_prior.config # Not a deep copy, but it seems to work...
+            self.set_hyper_prior(None) 
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
@@ -351,14 +351,22 @@ class SimVAE(nn.Module):
             }, path)
         if hyper_prior is not None:
             self.set_hyper_prior(hyper_prior)
-    
+
     def load_ae(self, path:str, optimizer=None, weights_only:bool=False):
         """
         Loads neural network weights from file.
         """
         # map_location = 'cuda:0' if self.device != torch.device('cpu') else 'cpu'
         checkpoint = torch.load(path, map_location=self.device, weights_only=weights_only)
-        self.load_state_dict(checkpoint['model_state_dict'])
+        try:
+            self.load_state_dict(checkpoint['model_state_dict'])
+        except Exception as exc:
+            print("checkpoint state dict")
+            print(checkpoint['model_state_dict'].keys())
+            print("self state dict")
+            print(self.state_dict().keys())
+            print(exc)
+            raise ValueError
         if optimizer is not None:
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']

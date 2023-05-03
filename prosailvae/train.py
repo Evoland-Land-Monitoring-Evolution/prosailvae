@@ -470,7 +470,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                  spatial_mode=False)
     if params['init_model']:
         n_models=10
-        lr = 1e-3
+        lr = 1e-4
         n_epochs=5
         if socket.gethostname()=='CELL200973':
             n_epochs = 1

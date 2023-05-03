@@ -474,7 +474,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
         n_epochs=5
         if socket.gethostname()=='CELL200973':
             n_epochs = 1
-            n_models = 1
+            n_models = 2
 
         initialize_by_training(n_models=n_models,
                                n_epochs=n_epochs,

@@ -341,8 +341,8 @@ class SimVAE(nn.Module):
         """
         hyper_prior = None
         if self.hyper_prior is not None: # Removing hyperprior before saving
-            hyper_prior = self.hyper_prior.config # Not a deep copy, but it seems to work...
-            self.set_hyper_prior(None) 
+            hyper_prior = self.hyper_prior # Not a deep copy, but it seems to work...
+            self.set_hyper_prior(None)
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
@@ -359,7 +359,7 @@ class SimVAE(nn.Module):
         # map_location = 'cuda:0' if self.device != torch.device('cpu') else 'cpu'
         hyper_prior = None
         if self.hyper_prior is not None: # Removing hyperprior before saving
-            hyper_prior = self.hyper_prior.config # Not a deep copy, but it seems to work...
+            hyper_prior = self.hyper_prior # Not a deep copy, but it seems to work...
             self.set_hyper_prior(None) 
         checkpoint = torch.load(path, map_location=self.device, weights_only=weights_only)
         try:

@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Callable, List
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -218,7 +219,14 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
                                                             sigma.reshape(1,1),
                                                             n_samples=n_samples_sub,
                                                             allow_doubles=False)
-            print(f"number of samples for mu = {mu.item()} sigma = {sigma.item()} (kl = {kl}) : {len(idx_samples)}")
+            h, p = np.histogram(data_train[idx_samples,-1].squeeze(), bins=200,
+                                range=[0,14], density=True)
+            cum_hist = np.cumsum(h) * np.diff(p)[0]
+            cdf_hist = truncated_gaussian_cdf(torch.from_numpy(p[:-1]), mu, sigma,
+                                                lower=torch.tensor(0), upper=torch.tensor(14)).numpy()
+            mse_at_hist = np.mean((cum_hist - cdf_hist)**2)
+            print(f"number of samples for mu = {mu.item()} sigma = {sigma.item()} (kl = {kl:.2e}, "
+                  f"sampling cdf mse: {mse_at_hist:.2e}) : {len(idx_samples)}")
             list_idx_samples_i.append(idx_samples)
             min_sample_nb = min(min_sample_nb, len(idx_samples))
             if plot_dist:
@@ -234,21 +242,24 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'r', label='sampling distribution (kl={:.2f})'.format(kl))
                 ax.set_xlabel("LAI")
+                ax.set_xlim([0,14])
                 ax.legend()
                 fig.savefig(save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
-                
+
                 fig, ax = plt.subplots(1, dpi=150)
                 ax.plot(torch.arange(0,14,0.1),
                         truncated_gaussian_cdf(torch.arange(0,14,0.1), mu_ref, sigma_ref,
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'k', label='original distribution')
-                ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, range=[0,14], cumulative=True,histtype='step',
+                ax.hist(data_train[idx_samples,-1].squeeze(), bins=200, 
+                        range=[0,14], cumulative=True,histtype='step',
                         alpha=0.5, density=True, label='samples')
                 ax.plot(torch.arange(0,14,0.1),
                         truncated_gaussian_cdf(torch.arange(0,14,0.1), mu, sigma,
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'r', label='sampling distribution (kl={:.2f})'.format(kl))
                 ax.set_xlabel("LAI")
+                ax.set_xlim([0,14])
                 ax.legend()
                 fig.savefig(save_dir + f"/cdf_samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
                 plt.close('all')
@@ -676,8 +687,8 @@ def main():
     else:
         parser = get_parser().parse_args()
 
-        tg_mu = torch.tensor([0,1,2,3,4,5])
-        tg_sigma = torch.tensor([0.5,1,2,3,4])
+        tg_mu = torch.tensor([0, 1, 2, 3, 4])
+        tg_sigma = torch.tensor([0.1, 0.5, 1, 2, 3])
         TENSOR_DIR="/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/torchfiles/T31TCJ/"
         image_filename = "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
         s2_tensor_image_path = TENSOR_DIR + image_filename
@@ -695,6 +706,16 @@ def main():
     if prepare_data:
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
+        else:
+            for filename in os.listdir(save_dir):
+                file_path = os.path.join(save_dir, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as exc:
+                    print('Failed to delete %s. Reason: %s' % (file_path, exc))
         (data_eval_list, fold_data_list, tg_data_list,
          list_kl, list_params) = prepare_datasets(n_eval=5000, n_samples_sub=5000,
                                                   save_dir=save_dir,  tg_mu = tg_mu,
@@ -725,7 +746,7 @@ def main():
             loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy())
             with torch.no_grad():
                 absolute_errors = (snap_ref.forward((test_loader.dataset[:][0]
-                                                    - test_loader.dataset[:][1])).to(snap_ref.device)).abs().squeeze().numpy()
+                                                    - test_loader.dataset[:][1]).to(snap_ref.device))).abs().squeeze().numpy()
             fig, ax = plt.subplots()
             ax.scatter(loader_pixels_ll, absolute_errors, s=0.5)
             ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
@@ -742,9 +763,9 @@ def main():
             mean_metrics = []
             all_metrics = []
             for i, fold_data in enumerate(fold_data_list):
-                train_loader, valid_loader = get_loaders(fold_data, seed=86294692001, 
+                train_loader, valid_loader = get_loaders(fold_data, seed=86294692001,
                                                          valid_ratio=0.1, batch_size=256)
-                metrics = get_n_model_metrics(train_loader, valid_loader, 
+                metrics = get_n_model_metrics(train_loader, valid_loader,
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs, lr=lr,
                                               disable_tqdm=disable_tqdm, patience=20,
@@ -862,19 +883,19 @@ def main():
         else:
             all_metrics = torch.load(res_dir + "/all_metrics.pth")
             mean_metrics = all_metrics.mean(1)
-        
+
             kl = torch.load(res_dir + "/kl.pth")
         median_metrics = torch.quantile(all_metrics,0.5,dim=1)
         kl_res_dir = res_dir + "/kl/"
         if not os.path.isdir(kl_res_dir):
             os.makedirs(kl_res_dir)
-        
 
         for j in range(mean_metrics.size(1)):
             fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-            sc = ax.scatter(all_metrics[:,:,j,5], all_metrics[:,:,j,1], 
+            sc = ax.scatter(all_metrics[:,:,j,5], all_metrics[:,:,j,1],
                             c=kl.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), s=1)
-            plt.colorbar(sc, ax=ax, label='kl divergence between evaluation dataset and training dataset')
+            plt.colorbar(sc, ax=ax, 
+                         label='kl divergence between evaluation dataset and training dataset')
             ax.set_xlabel("Validation loss")
             ax.set_ylabel(f"r2 score on evaluation dataset {eval_data_name[j]}")
             plt.legend()

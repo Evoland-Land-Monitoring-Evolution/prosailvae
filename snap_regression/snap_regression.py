@@ -148,7 +148,7 @@ def denormalize(normalized:torch.Tensor, min_sample:torch.Tensor, max_sample:tor
     """
     return 0.5 * (normalized + 1) * (max_sample - min_sample) + min_sample
 
-def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="", 
+def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
                      reduce_to_common_samples_nb:bool=True,
                      tg_mu: torch.Tensor=torch.tensor([0,4]), tg_sigma:torch.Tensor=torch.tensor([1,4]),
                      plot_dist:bool=False, s2_tensor_image_path:str = ""):
@@ -233,6 +233,7 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
                         truncated_gaussian_pdf(torch.arange(0,14,0.1), mu, sigma,
                                                lower=torch.tensor(0), upper=torch.tensor(14)),
                         'r', label='sampling distribution (kl={:.2f})'.format(kl))
+                ax.set_xlabel("LAI")
                 ax.legend()
                 fig.savefig(save_dir + f"/samples_lai_mu_{mu.item()}_sigma_{sigma.item()}.png")
                 plt.close('all')
@@ -306,8 +307,8 @@ class DenormSNAPLAI:
 
 @dataclass
 class DenormSNAPCab:
-    cab_min: torch.Tensor = torch.tensor(0.00742669295987)
-    cab_max: torch.Tensor = torch.tensor(873.90822211)
+    cab_min: torch.Tensor = torch.tensor(0.00742669295987) /10
+    cab_max: torch.Tensor = torch.tensor(873.90822211) /10
 
 @dataclass
 class DenormSNAPCw:
@@ -709,7 +710,8 @@ def main():
             all_metrics_ref.append(metrics_ref)
             loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy())
             with torch.no_grad():
-                absolute_errors = (snap_ref.forward(test_loader.dataset[:][0]) - test_loader.dataset[:][1]).abs().squeeze().numpy()
+                absolute_errors = (snap_ref.forward((test_loader.dataset[:][0])
+                                                    - test_loader.dataset[:][1]).to(snap_ref.device)).abs().squeeze().numpy()
             fig, ax = plt.subplots()
             ax.scatter(loader_pixels_ll, absolute_errors, s=0.5)
             ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
@@ -761,7 +763,8 @@ def main():
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
-                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
+                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k],
+                               label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("Fold number")
                 ax.set_ylabel(metrics_names[k])
                 fig.savefig(res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_fold.png")
@@ -771,7 +774,8 @@ def main():
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
-                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
+                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k],
+                               label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("Fold number")
                 ax.set_ylabel(metrics_names[k])
                 fig.savefig(res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_fold.png")
@@ -781,18 +785,21 @@ def main():
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
-                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
+                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k],
+                               label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xticks(np.arange(0,11), np.arange(0,11))
                 ax.set_xlabel("Fold number")
                 ax.set_ylabel(metrics_names[k])
                 fig.savefig(res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_fold.png")
 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-                ax.scatter(torch.arange(len(fold_data_list)).repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), all_metrics[:,:,j,k].reshape(-1), s=0.5)
+                ax.scatter(torch.arange(len(fold_data_list)).repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1),
+                           all_metrics[:,:,j,k].reshape(-1), s=0.5)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
-                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
+                    ax.scatter(np.arange(len(fold_data_list)), metrics_ref[:,j,k],
+                               label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("Fold Number")
                 ax.set_ylabel(metrics_names[k])
                 fig.savefig(res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_fold.png")
@@ -806,13 +813,15 @@ def main():
         test_loader_list = []
         all_metrics_ref = []
         for _, data_eval in enumerate(data_eval_list):
-            test_loader, _ = get_loaders(data_eval, seed=86294692001, valid_ratio=0, batch_size=256)
+            test_loader, _ = get_loaders(data_eval, seed=86294692001,
+                                         valid_ratio=0, batch_size=256)
             test_loader_list.append(test_loader)
             metrics_ref = []
             for i, tg_data in enumerate(tg_data_list):
-                _, valid_loader = get_loaders(tg_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
+                _, valid_loader = get_loaders(tg_data, seed=86294692001,
+                                              valid_ratio=0.1, batch_size=256)
                 snap_valid_loss = snap_ref.validate(valid_loader)
-                metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref, 
+                metrics_ref.append(get_model_metrics(test_loader.dataset[:], model=snap_ref,
                                                      all_valid_losses=[snap_valid_loss]))
             metrics_ref = torch.stack(metrics_ref, dim=0)
             all_metrics_ref.append(metrics_ref)
@@ -823,14 +832,15 @@ def main():
             all_metrics = []
             for i, tg_data in enumerate(tg_data_list):
                 kl[i] = list_kl[i]
-                train_loader, valid_loader = get_loaders(tg_data, seed=86294692001, valid_ratio=0.1, batch_size=256)
-                metrics = get_n_model_metrics(train_loader, valid_loader, test_loader_list=test_loader_list, 
-                                                                n_models=n_models, epochs=epochs, lr=lr,disable_tqdm=disable_tqdm, patience=20, 
-                                                                init_models=init_models)
+                train_loader, valid_loader = get_loaders(tg_data, seed=86294692001, valid_ratio=0.1,
+                                                         batch_size=256)
+                metrics = get_n_model_metrics(train_loader, valid_loader,
+                                              test_loader_list=test_loader_list,
+                                              n_models=n_models, epochs=epochs,
+                                              lr=lr,disable_tqdm=disable_tqdm, patience=20,
+                                              init_models=init_models)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
-            
-            
             mean_metrics = torch.cat(mean_metrics, 0)
             all_metrics = torch.cat(all_metrics, 0)
             torch.save(all_metrics, res_dir + "/all_metrics.pth")

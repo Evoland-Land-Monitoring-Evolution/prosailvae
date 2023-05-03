@@ -38,7 +38,6 @@ def load_prosail_params(path_to_data_dir):
     lai = prosail_params[:,0].reshape(-1,1)
     lidfa = prosail_params[:,1].reshape(-1,1)
     hspot = prosail_params[:,3].reshape(-1,1)
-    
     rsoil = prosail_params[:,10].reshape(-1,1)
     psoil = np.zeros_like(rsoil)
     return N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil

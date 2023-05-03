@@ -14,7 +14,7 @@ from prosail import spectral_lib
 from utils.utils import gaussian_nll_loss, torch_select_unsqueeze
 from prosailvae.spectral_indices import INDEX_DICT
 
-PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm", 
+PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm",
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
 BANDS = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
 
@@ -202,7 +202,7 @@ class ProsailVarsBounds:
     #  car        | Carotenoid concentration
     car: Tuple[float, float] = (0.0, 2.0)
     #  cbrown     | Brown pigment => Cbp
-    cbrown: Tuple[float, float] = (0.0, 2.0) 
+    cbrown: Tuple[float, float] = (0.0, 2.0)
     #  caw        | Equivalent water thickiness
     caw: Tuple[float, float] = (0.004, 0.04)
     #  cm         | Dry matter content (in g/cm2, while ATBD uses g/m2)

@@ -403,7 +403,12 @@ class ProsailRNNEncoder(Encoder):
         if len(s2_refl.size())==4:
             s2_refl = batchify_batch_latent(s2_refl)
             angles = batchify_batch_latent(angles)
-        normed_refl = ((s2_refl - self.norm_mean) / self.norm_std)[:, self.bands]
+        if s2_refl.size(1) == self.norm_mean.size(0): # Same number of bands in input than in normalization
+            normed_refl = ((s2_refl - self.norm_mean) / self.norm_std)[:, self.bands]
+        elif len(self.bands) == self.norm_mean.size(0): # Same number of bands in bands than in normalization
+            normed_refl = ((s2_refl[:, self.bands] - self.norm_mean) / self.norm_std)
+        else:
+            raise NotImplementedError
         encoder_output = self.net(torch.concat((normed_refl,
                                                 torch.cos(torch.deg2rad(angles)),
                                                 torch.sin(torch.deg2rad(angles))

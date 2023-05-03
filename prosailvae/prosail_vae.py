@@ -78,7 +78,7 @@ def get_prosail_vae_config(params, bands, norm_mean, norm_std,
 def get_prosail_vae(pv_config:ProsailVAEConfig,
                     device:str='cpu',
                     logger_name:str='',
-                    hyper_prior:SimVAE=None,
+                    hyper_prior:SimVAE|None=None,
                     optimizer:torch.optim.Optimizer|None=None,
                     load_simulator=True):
     """
@@ -143,7 +143,7 @@ def load_prosail_vae_with_hyperprior(logger_name:str,
     hyper_prior=None
     if pv_config_hyper is not None:
         hyper_prior = get_prosail_vae(pv_config_hyper, device=device,
-                                        logger_name=logger_name, 
+                                        logger_name=logger_name,
                                         load_simulator=False)
 
     prosail_vae = get_prosail_vae(pv_config, device=device,

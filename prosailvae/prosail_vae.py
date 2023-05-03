@@ -80,7 +80,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                     logger_name:str='',
                     hyper_prior:SimVAE=None,
                     optimizer:torch.optim.Optimizer|None=None,
-                    ):
+                    load_simulator=True):
     """
     Intializes an instance of prosail_vae
     """
@@ -102,16 +102,23 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                      sim_pdf_support_span=sim_pdf_support_span,
                                      device='cpu')
     psimulator = ProsailSimulator(device='cpu')
-    ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
-                                 norm_mean=pv_config.encoder_config.norm_mean,
-                                 norm_std=pv_config.encoder_config.norm_std,
-                                 apply_norm=pv_config.apply_norm_rec,
-                                 bands=pv_config.prosail_bands)
-    sigmo_decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
-                                            ssimulator=ssimulator,
-                                            loss_type=pv_config.loss_config.loss_type)
+    if load_simulator:
+        ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
+                                    norm_mean=pv_config.encoder_config.norm_mean,
+                                    norm_std=pv_config.encoder_config.norm_std,
+                                    apply_norm=pv_config.apply_norm_rec,
+                                    bands=pv_config.prosail_bands)
+    else:
+        ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
+                                    norm_mean=None,
+                                    norm_std=None,
+                                    apply_norm=pv_config.apply_norm_rec,
+                                    bands=pv_config.prosail_bands)
+    decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
+                                        ssimulator=ssimulator,
+                                        loss_type=pv_config.loss_config.loss_type)
 
-    prosail_vae = SimVAE(encoder=encoder, decoder=sigmo_decoder,
+    prosail_vae = SimVAE(encoder=encoder, decoder=decoder,
                         lat_space=lat_space, sim_space=pheno_var_space,
                         supervised=pv_config.loss_config.supervised,
                         device='cpu',
@@ -136,7 +143,8 @@ def load_prosail_vae_with_hyperprior(logger_name:str,
     hyper_prior=None
     if pv_config_hyper is not None:
         hyper_prior = get_prosail_vae(pv_config_hyper, device=device,
-                                            logger_name=logger_name)
+                                        logger_name=logger_name, 
+                                        load_simulator=False)
 
     prosail_vae = get_prosail_vae(pv_config, device=device,
                                         logger_name=logger_name,

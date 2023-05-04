@@ -167,7 +167,7 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
         ax.hist(snap_lai.squeeze().cpu().numpy(), density=True, bins=200)
         fig.savefig(save_dir + "/s2_data_laid_hist.png")
 
-    data_s2 = torch.cat((s2_r, s2_a, snap_lai), 1)
+    data_s2 = torch.cat((s2_r, np.cos(np.deg2rad(s2_a)), snap_lai), 1)
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
     data_weiss = torch.from_numpy(np.concatenate((s2_r, np.cos(np.deg2rad(s2_a)), lai.reshape(-1,1)), 1))
     seed = 4567895683301
@@ -324,7 +324,7 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
 
 def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=None,
                         n_models:int=10, epochs:int=500, lr:float=0.001,
-                        disable_tqdm:bool=False,  patience:int=10, init_models:bool=False):
+                        disable_tqdm:bool=False,  patience:int=10, init_models:bool=False, ver:str="2.1"):
     """
     Trains several models on given train and validation dataloaders and assesses their regression metrics
     on provided test dataloader
@@ -334,7 +334,7 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
     metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
     metrics = torch.zeros((n_models, len(test_loader_list), len(metrics_names)))
     for i in range(n_models):
-        snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
         if init_models:
             snap_nn.set_weiss_weights()
         optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
@@ -360,13 +360,15 @@ def main():
     test_snap_nn(ver="2.1")
     test_snap_nn(ver="3A")
     test_snap_nn(ver="3B")
+    
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",
               "-e", "3",
               "-n", "2",
               "-i", 't',
-              "-lr", "0.001"]
+              "-lr", "0.001", 
+              "-f", "t"]
         disable_tqdm=False
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
@@ -374,6 +376,7 @@ def main():
         tg_sigma = torch.tensor([0.5,1,2,3,4])
         parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
+        ver="3B"
     else:
         parser = get_parser().parse_args()
 
@@ -381,6 +384,7 @@ def main():
         tg_sigma = torch.tensor([0.5, 1, 2, 3])
         TENSOR_DIR="/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/torchfiles/T31TCJ/"
         image_filename = "/before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth"
+        ver="3A"
         s2_tensor_image_path = TENSOR_DIR + image_filename
         disable_tqdm=True
     init_models = parser.init_models
@@ -416,7 +420,7 @@ def main():
     if fold_xp:
         metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
         eval_data_name = ["simulated_data", "snap_s2"]
-        snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
         snap_ref.set_weiss_weights()
         test_loader_list = []
         all_metrics_ref = []
@@ -459,7 +463,7 @@ def main():
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs, lr=lr,
                                               disable_tqdm=disable_tqdm, patience=20,
-                                              init_models=init_models)
+                                              init_models=init_models, ver=ver)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
             mean_metrics = torch.cat(mean_metrics, 0)

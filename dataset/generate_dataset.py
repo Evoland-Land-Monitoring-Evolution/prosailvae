@@ -440,7 +440,7 @@ def get_data_generation_parser():
     
     parser.add_argument("-w", dest="weiss_mode",
                         help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
-                        type=bool, default=True)        
+                        type=bool, default=False)
     
     parser.add_argument("-wd", dest="weiss_dataset",
                         help="Set to True to generate a training dataset from weiss data",

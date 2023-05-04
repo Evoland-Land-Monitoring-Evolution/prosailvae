@@ -71,10 +71,13 @@ class ModelConfig:
 
 
 def get_bands_idx(weiss_bands=False):
-    bands = torch.arange(10)
+    """
+    Outputs the index of bands to be taken into account in the reflectance tensor
+    """
+    bands = torch.arange(10) # Bands are supposed to come in number order, not by resolution group
     prosail_bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
     if weiss_bands: # Removing B2 and B8
-        bands = torch.tensor([1,2,3,4,5,7,8,9])
+        bands = torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]) # removing b2 and b8
         # prosail_bands = [2, 3, 4, 5, 6, 8, 11, 12]
     return bands, prosail_bands
 
@@ -449,7 +452,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     print(f"Weiss mode : {parser.weiss_mode}")
-    if not socket.gethostname()=='CELL200973' and params["load_model"] is not None:
+    if not socket.gethostname()=='CELL200973' and params["load_model"]:
         #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
         vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
         norm_mean = torch.load(os.path.join(params["vae_load_dir_path"], "norm_mean.pt"))

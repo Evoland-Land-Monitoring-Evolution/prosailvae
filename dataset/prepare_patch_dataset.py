@@ -141,16 +141,16 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
 
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
-    train_perms = torch.randperm(train_clean_patches.size(0), generator=g_cpu) 
+    train_perms = torch.randperm(train_clean_patches.size(0), generator=g_cpu)
     train_clean_patches = train_clean_patches[train_perms,...]
     train_patch_info = np.array(train_patch_info)[train_perms,:]
     valid_clean_patches = torch.cat(valid_clean_patches, dim=0)
     valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
-    valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu) 
+    valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu)
     valid_clean_patches = valid_clean_patches[valid_perms,...]
     valid_patch_info = np.array(valid_patch_info)[valid_perms,:]
     test_clean_patches = torch.cat(test_clean_patches, dim=0)
-    test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu) 
+    test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu)
     test_clean_patches = test_clean_patches[test_perms,...]
     test_patch_info = np.array(test_patch_info)[test_perms,:]
     print(f"Train patches : {train_clean_patches.size()}")
@@ -164,7 +164,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
 def swap_bands(patches):
     idx = torch.LongTensor([ v for _, (_,v) in enumerate(BANDS_IDX.items()) ])
     patches[:,torch.arange(10),...] = patches[:,idx,...]
-    return 
+    return
 
 def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
     with torch.no_grad():
@@ -218,7 +218,7 @@ def main():
                 ]
     valid_files = None
     (train_patches, valid_patches, test_patches,
-     train_patch_info, valid_patch_info, 
+     train_patch_info, valid_patch_info,
      test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 
                                                         train_patch_size = train_patch_size, 
                                                         valid_size = valid_size, test_size = test_size,

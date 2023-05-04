@@ -214,7 +214,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     logger.info("Test loader, loaded.")
     
-    alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 
+    alpha_pi = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5,
                 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
     alpha_pi.reverse()
     PROSAIL_VAE.eval()
@@ -223,8 +223,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     nlls = PROSAIL_VAE.compute_lat_nlls(loader).mean(0).squeeze()
     torch.save(nlls, res_dir + "/params_nll.pt")
-    
-    
+
     if weiss_mode:
         weiss_validation_dir = res_dir + "/weiss_validation/"
         if not os.path.isdir(weiss_validation_dir):

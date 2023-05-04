@@ -17,6 +17,7 @@ import prosailvae
 from prosailvae.dist_utils import (sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf, 
                                    numerical_kl_from_pdf, truncated_gaussian_cdf)
 from snap_nn import SnapNN, test_snap_nn
+from utils.image_utils import rgb_render
 
 
 
@@ -156,9 +157,15 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
     s2_r = image_tensor[bands,...].reshape(len(bands), -1).transpose(1,0)
     s2_a = angles.reshape(3, -1).transpose(1,0)
     with torch.no_grad():
-        snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver="3A")
         snap_nn.set_weiss_weights()
-        snap_lai = snap_nn.forward(torch.cat((s2_r, s2_a), 1).to(snap_nn.device)).cpu()
+        snap_lai = snap_nn.forward(torch.cat((s2_r, np.cos(np.deg2rad(s2_a))), 1).to(snap_nn.device)).cpu()
+        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+        ax.imshow(rgb_render(image_tensor)[0])
+        fig.savefig(save_dir + "/s2_data_image.png")
+        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+        ax.hist(snap_lai.squeeze().cpu().numpy(), density=True, bins=200)
+        fig.savefig(save_dir + "/s2_data_laid_hist.png")
 
     data_s2 = torch.cat((s2_r, s2_a, snap_lai), 1)
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
@@ -350,7 +357,9 @@ def get_pixel_log_likelihood_with_weiss(s2_r):
 
 
 def main():
-    test_snap_nn()
+    test_snap_nn(ver="2.1")
+    test_snap_nn(ver="3A")
+    test_snap_nn(ver="3B")
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_validation_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",
@@ -371,7 +380,7 @@ def main():
         tg_mu = torch.tensor([0, 1, 2, 3, 4])
         tg_sigma = torch.tensor([0.5, 1, 2, 3])
         TENSOR_DIR="/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/torchfiles/T31TCJ/"
-        image_filename = "/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"
+        image_filename = "/before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth"
         s2_tensor_image_path = TENSOR_DIR + image_filename
         disable_tqdm=True
     init_models = parser.init_models

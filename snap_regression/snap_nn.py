@@ -40,7 +40,7 @@ class ParametersSnapLAINNV2:
                                                   1.71387397514, 0.7130691861, 0.138970813499, -0.060771761518,
                                                   0.124263341255, 0.210086140404, -0.1838781387]])
     
-    layer_1_bias: torch.Tensor = torch.tensor([4.96238030555, 1.41600844398, 1.07589704721, 
+    layer_1_bias: torch.Tensor = torch.tensor([4.96238030555, 1.41600844398, 1.07589704721,
                                                1.53398826466, 3.02411593076])
     layer_2_weight: torch.Tensor = torch.tensor([[-1.50013548973,-0.0962832691215,-0.194935930577,-0.352305895756,0.0751074158475]])
     layer_2_bias: torch.Tensor = torch.tensor([1.09696310708])
@@ -312,7 +312,7 @@ class NormSnapNNV3A:
     Min and max snap nn input and output for normalization
     """
     input_min: torch.Tensor = torch.tensor([0.0000,  0.0000,  0.0000,  0.008717364330310326,
-                                            0.019693160430621366,  0.0176448354545,  0.018931934894415213,  0.0000,
+                                            0.019693160430621366,  0.026217828282102625,  0.018931934894415213,  0.0000,
                                             0.979624800125421,  0.342108564072183, -1.0000])
 
     input_max: torch.Tensor = torch.tensor([0.23901527463861838,  0.29172736471507876,  0.32652671459255694,  0.5938903910368211,
@@ -570,7 +570,7 @@ def load_weiss_dataset(path_to_data_dir: str):
     s2_a = np.stack((tto, tts, psi), 1)
     return s2_r, s2_a, lai
 
-def test_snap_nn():
+def test_snap_nn(ver="2.1"):
     """
     Test if SNAP neural network's outputs are identical to that of the translated java
     code of SNAP
@@ -579,10 +579,10 @@ def test_snap_nn():
                                         get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
     import prosailvae
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
-    snap_nn = SnapNN(ver="2.1", variable="lai")
+    snap_nn = SnapNN(ver=ver, variable="lai")
     snap_nn.set_weiss_weights()
     sample = torch.cat((torch.from_numpy(s2_r), torch.cos(torch.from_numpy(s2_a))), 1).float()
-    ver="2.1"
+    ver=ver
     norm_factors = get_norm_factors(ver=ver)
     w1, w2, w3, w4, w5 = get_layer_1_neuron_weights(ver=ver)
     b1, b2, b3, b4, b5 = get_layer_1_neuron_biases(ver=ver)
@@ -605,7 +605,7 @@ def test_snap_nn():
         x_norm = normalize(sample, snap_nn.input_min, snap_nn.input_max)
         snap_input = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm,
                     viewZen_norm, sunZen_norm, relAzim_norm), axis=band_dim)
-        assert torch.isclose(snap_input, x_norm, atol=1e-5).all()
+        assert torch.isclose(snap_input, x_norm, atol=1e-5,rtol=1e-5).all()
         nb_dim = len(b03_norm.size())
         neuron1 = neuron(snap_input, w1, b1, nb_dim, sum_dim=band_dim)
         neuron2 = neuron(snap_input, w2, b2, nb_dim, sum_dim=band_dim)

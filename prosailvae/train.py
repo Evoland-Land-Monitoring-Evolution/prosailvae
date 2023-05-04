@@ -273,6 +273,8 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                         lr_scheduler.step()
                     else:
                         lr_scheduler.step(valid_loss_dict['loss_sum'])
+                    if optimizer.param_groups[0]['lr'] < 5e-7:
+                        break #stop training if lr too low
             except Exception as exc:
                 logger.error(f"Error during Validation at epoch {epoch} !")
                 logger.error('Original error :')

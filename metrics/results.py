@@ -4,8 +4,8 @@ if __name__ == "__main__":
     from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
     from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                               plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                              plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                              all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
+                              plot_metric_boxplot, plot_lai_preds, plot_single_lat_hist_2D,
+                              all_loss_curve, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
     from snap_regression.weiss_lai_sentinel_hub import weiss_lai
     from snap_regression.snap_regression import SnapNN
 else:
@@ -15,7 +15,7 @@ else:
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                        all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
     from snap_regression.weiss_lai_sentinel_hub import weiss_lai
-    from snap_regression.snap_regression import SnapNN
+    from snap_regression.snap_nn import SnapNN
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -410,14 +410,15 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None):
             angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, ...]))
             s2_data = torch.cat((x, angles),0)
             with torch.no_grad():
-                lai_snap = SnapNN(variable='lai')
-                lai_snap.set_weiss_weights(variable='lai')
+                ver = "3B"
+                lai_snap = SnapNN(variable='lai', ver=ver)
+                lai_snap.set_weiss_weights()
                 lai = lai_snap.forward(s2_data, spatial_mode=True)
-                cab_snap = SnapNN(variable='cab')
-                cab_snap.set_weiss_weights(variable='cab')
+                cab_snap = SnapNN(variable='cab', ver=ver)
+                cab_snap.set_weiss_weights()
                 cab = cab_snap.forward(s2_data, spatial_mode=True)
-                cw_snap = SnapNN(variable='cw')
-                cw_snap.set_weiss_weights(variable='cw')
+                cw_snap = SnapNN(variable='cw', ver=ver)
+                cw_snap.set_weiss_weights()
                 cw = 1 / (1 - cw_snap.forward(s2_data, spatial_mode=True))
                 # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
             patched_lai_image[i,j,...] = lai

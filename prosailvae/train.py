@@ -235,6 +235,9 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
+            if optimizer.param_groups[0]['lr'] < 5e-8:
+                break #stop training if lr too low
+
             switch_loss(epoch, n_epoch, prosail_vae, swith_ratio=0.75)
             if lr_recompute_mode:
                 raise NotImplementedError
@@ -273,8 +276,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                         lr_scheduler.step()
                     else:
                         lr_scheduler.step(valid_loss_dict['loss_sum'])
-                    if optimizer.param_groups[0]['lr'] < 5e-7:
-                        break #stop training if lr too low
+
             except Exception as exc:
                 logger.error(f"Error during Validation at epoch {epoch} !")
                 logger.error('Original error :')

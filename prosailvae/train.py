@@ -76,9 +76,11 @@ def get_bands_idx(weiss_bands=False):
     """
     bands = torch.arange(10) # Bands are supposed to come in number order, not by resolution group
     prosail_bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+    
     if weiss_bands: # Removing B2 and B8
+        print("Weiss bands enabled")
         bands = torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]) # removing b2 and b8
-        # prosail_bands = [2, 3, 4, 5, 6, 8, 11, 12]
+        prosail_bands = [2, 3, 4, 5, 6, 8, 11, 12]
     return bands, prosail_bands
 
 
@@ -177,7 +179,6 @@ def initialize_by_training(n_models:int,
     """
     min_valid_loss = torch.inf
     logger.info("Intializing by training {n_models} models for {n_epochs} epochs:")
-    best_prosail_vae = None
     for _ in range(n_models):
         prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
                                                        pv_config_hyper=pv_config_hyper,

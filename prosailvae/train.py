@@ -347,10 +347,10 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_dev.json",
+              "-c", "config_dev_rnn.json",
               "-x", "1",
               "-o", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
@@ -435,8 +435,12 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
         spatial_mode = True
 
     if params["apply_norm_rec"]:
-        norm_mean = torch.load(os.path.join(data_dir, "norm_mean.pt"))#[bands]
-        norm_std = torch.load(os.path.join(data_dir, "norm_std.pt"))#[bands]
+        norm_mean = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_mean.pt"))#[bands]
+        norm_std = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_std.pt"))#[bands]
+        if isinstance(norm_mean, np.ndarray):
+            norm_mean = torch.from_numpy(norm_mean)
+        if isinstance(norm_std, np.ndarray):
+            norm_std = torch.from_numpy(norm_std)
     else:
         norm_mean = torch.zeros(1, len(bands))
         norm_std = torch.ones(1, len(bands))

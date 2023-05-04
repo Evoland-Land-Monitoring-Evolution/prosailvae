@@ -280,14 +280,14 @@ class SimVAE(nn.Module):
         s2_a = batch[1].to(self.device) 
         ref_sim = batch[2].to(self.device) 
         ref_lat = self.sim_space.sim2z(ref_sim)
-        encoder_outputs, _ = self.encode(s2_r, s2_a)
-        if encoder_outputs.isnan().any() or encoder_outputs.isinf().any():
+        encoder_output, _ = self.encode(s2_r, s2_a)
+        if encoder_output.isnan().any() or encoder_output.isinf().any():
             nan_in_params = NaN_model_params(self)
             err_str = "NaN encountered during encoding, but there is no NaN in network parameters!"
             if nan_in_params:
                 err_str = "NaN encountered during encoding, there are NaN in network parameters!"
             raise ValueError(err_str)
-        params = self.lat_space.get_params_from_encoder(encoder_outputs=encoder_outputs)
+        params = self.lat_space.get_params_from_encoder(encoder_output=encoder_output)
         reduction_nll = "sum"
         if self.lat_nll == "lai_nll":
             reduction_nll = "lai"
@@ -311,8 +311,8 @@ class SimVAE(nn.Module):
         s2_a = batch[1].to(self.device)
         ref_sim = batch[2].to(self.device)
         ref_lat = self.sim_space.sim2z(ref_sim)
-        encoder_outputs, _ = self.encode(s2_r, s2_a)
-        params = self.lat_space.get_params_from_encoder(encoder_outputs=encoder_outputs)
+        encoder_output, _ = self.encode(s2_r, s2_a)
+        params = self.lat_space.get_params_from_encoder(encoder_output=encoder_output)
         nll = self.lat_space.supervised_loss(ref_lat, params, reduction=None, reduction_nll=None)
         if nll.isnan().any() or nll.isinf().any():
             raise ValueError

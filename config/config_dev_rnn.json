@@ -10,13 +10,13 @@
     "workers": 0,
     "encoder_last_activation": null,
     "n_samples": 3,
-    "supervised": false,
+    "supervised": true,
     "beta_kl": 1,
     "beta_index": 1,
     "k_fold": 0,
     "dataset_file_prefix": "small_test_",
     "n_fold": null,
-    "simulated_dataset": false,
+    "simulated_dataset": true,
     "lr_recompute": 3,
     "loss_type": "spatial_nll",
     "apply_norm_rec": true,
@@ -27,6 +27,6 @@
     "block_layer_sizes": [1024, 1024],
     "block_layer_depths": [2],
     "block_n": [6],
-    "weiss_bands":true,
+    "weiss_bands":false,
     "init_model": true
 }

@@ -368,21 +368,21 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
     if weiss_mode:
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
-    prosail_vars, prosail_s2_sim = np_simulate_prosail_dataset(nb_simus=nb_simus, 
+    prosail_vars, prosail_s2_sim = np_simulate_prosail_dataset(nb_simus=nb_simus,
                                                             noise=noise,
                                                             psimulator=psimulator,
                                                             ssimulator=ssimulator,
-                                                            n_samples_per_batch=1024, 
+                                                            n_samples_per_batch=1024,
                                                             uniform_mode=uniform_mode,
                                                             lai_corr=lai_corr)
     norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
-    torch.save(torch.from_numpy(prosail_vars), 
-               data_dir + data_file_prefix + "prosail_sim_vars.pt") 
+    torch.save(torch.from_numpy(prosail_vars),
+               data_dir + data_file_prefix + "prosail_sim_vars.pt")
     
-    torch.save(torch.from_numpy(prosail_s2_sim), 
-               data_dir + data_file_prefix + "prosail_s2_sim_refl.pt") 
-    torch.save(norm_mean, parser.data_dir + data_file_prefix + "norm_mean.pt") 
-    torch.save(norm_std, parser.data_dir + data_file_prefix + "norm_std.pt") 
+    torch.save(torch.from_numpy(prosail_s2_sim),
+               data_dir + data_file_prefix + "prosail_s2_sim_refl.pt")
+    torch.save(torch.from_numpy(norm_mean), parser.data_dir + data_file_prefix + "norm_mean.pt")
+    torch.save(torch.from_numpy(norm_std), parser.data_dir + data_file_prefix + "norm_std.pt")
 
 
 def save_weiss_dataset(data_dir, rsr_dir, noise, lai_corr=True):
@@ -397,14 +397,14 @@ def save_weiss_dataset(data_dir, rsr_dir, noise, lai_corr=True):
     weiss_data_dir = os.path.join(data_dir, os.pardir) + "/weiss/"
     if not os.path.isdir(weiss_data_dir):
         os.makedirs(weiss_data_dir)
-    torch.save(torch.from_numpy(test_prosail_vars), weiss_data_dir + "/weiss_test_prosail_sim_vars.pt") 
-    torch.save(torch.from_numpy(test_prosail_s2_sim), weiss_data_dir + "weiss_test_prosail_s2_sim_refl.pt") 
-    torch.save(torch.from_numpy(train_prosail_vars), data_dir + "weiss_prosail_sim_vars.pt") 
-    torch.save(torch.from_numpy(train_prosail_s2_sim), data_dir + "weiss_prosail_s2_sim_refl.pt") 
+    torch.save(torch.from_numpy(test_prosail_vars), weiss_data_dir + "/weiss_test_prosail_sim_vars.pt")
+    torch.save(torch.from_numpy(test_prosail_s2_sim), weiss_data_dir + "weiss_test_prosail_s2_sim_refl.pt")
+    torch.save(torch.from_numpy(train_prosail_vars), data_dir + "weiss_prosail_sim_vars.pt")
+    torch.save(torch.from_numpy(train_prosail_s2_sim), data_dir + "weiss_prosail_s2_sim_refl.pt")
     
     norm_mean, norm_std = get_refl_normalization(train_prosail_s2_sim)
-    torch.save(norm_mean, parser.data_dir + "weiss_norm_mean.pt") 
-    torch.save(norm_std, parser.data_dir + "weiss_norm_std.pt") 
+    torch.save(norm_mean, parser.data_dir + "weiss_norm_mean.pt")
+    torch.save(norm_std, parser.data_dir + "weiss_norm_std.pt")
 
     save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True, lai_corr=lai_corr)
 

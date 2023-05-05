@@ -439,8 +439,8 @@ def main():
             all_metrics_ref.append(metrics_ref)
             loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy())
             with torch.no_grad():
-                absolute_errors = (snap_ref.forward((test_loader.dataset[:][0]
-                                                    - test_loader.dataset[:][1]).to(snap_ref.device))).abs().squeeze().cpu().numpy()
+                absolute_errors = (snap_ref.forward(test_loader.dataset[:][0].to(snap_ref.device))
+                                                    - test_loader.dataset[:][1].to(snap_ref.device)).abs().squeeze().cpu().numpy()
             fig, ax = plt.subplots()
             ax.scatter(loader_pixels_ll, absolute_errors, s=0.5)
             ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")

@@ -159,9 +159,13 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     swap_bands(train_clean_patches)
     swap_bands(valid_clean_patches)
     swap_bands(test_clean_patches)
-    return train_clean_patches, valid_clean_patches, test_clean_patches, train_patch_info, valid_patch_info, test_patch_info
+    return (train_clean_patches, valid_clean_patches, test_clean_patches,
+            train_patch_info, valid_patch_info, test_patch_info)
 
 def swap_bands(patches):
+    """
+    Put bands in reflectance order in patches, instead of resolution order
+    """
     idx = torch.LongTensor([ v for _, (_,v) in enumerate(BANDS_IDX.items()) ])
     patches[:,torch.arange(10),...] = patches[:,idx,...]
     return

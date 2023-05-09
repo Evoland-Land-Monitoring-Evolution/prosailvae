@@ -136,6 +136,13 @@ class SimVAE(nn.Module):
         """
         rec = self.decoder.decode(sim, angles, apply_norm=apply_norm)
         return rec
+    
+    def freeze_weigths(self):
+        """
+        Freeze weights of the model
+        """
+        for param in self.parameters():
+            param.requires_grad = False
 
     def forward(self, x, angles=None, n_samples=1, apply_norm=None):
         """
@@ -360,7 +367,7 @@ class SimVAE(nn.Module):
         hyper_prior = None
         if self.hyper_prior is not None: # Removing hyperprior before saving
             hyper_prior = self.hyper_prior # Not a deep copy, but it seems to work...
-            self.set_hyper_prior(None) 
+            self.set_hyper_prior(None)
         checkpoint = torch.load(path, map_location=self.device, weights_only=weights_only)
         try:
             self.load_state_dict(checkpoint['model_state_dict'])

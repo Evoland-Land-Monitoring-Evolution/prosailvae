@@ -169,7 +169,6 @@ def initialize_by_training(n_models:int,
                            valid_loader,
                            lr:float,
                            logger,
-                           res_dir:str,
                            pv_config:ProsailVAEConfig,
                            pv_config_hyper:ProsailVAEConfig|None=None,
                            ):
@@ -355,17 +354,17 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_dev_rnn.json",
+              "-c", "config_dev.json",
               "-x", "1",
               "-o", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
               "-a", "False",
               "-p", "False",
               "-w", ""]
-        parser = get_prosailvae_train_parser().parse_args(args)    
+        parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
@@ -439,7 +438,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     data_dir=data_dir)
         spatial_mode = False
     else:
-        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=1, num_workers=0)
+        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=1, 
+                                                                                 num_workers=0)
         spatial_mode = True
 
     if params["apply_norm_rec"]:
@@ -495,7 +495,6 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                 lr=lr,
                                 logger=logger,
                                 n_samples=training_config.n_samples,
-                                res_dir=res_dir,
                                 pv_config=pv_config,
                                 pv_config_hyper=pv_config_hyper
                             )

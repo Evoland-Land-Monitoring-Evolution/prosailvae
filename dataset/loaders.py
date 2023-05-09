@@ -434,8 +434,9 @@ def get_loaders_from_image(path_to_image, patch_size=32, train_ratio=0.8, valid_
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers)
     return train_loader, valid_loader, test_loader
 
-def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands = torch.tensor([0,1,2,4,5,6,3,7,8,9]), 
+def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands=torch.arange(10),
                                              batch_size=1, num_workers=0, max_valid_samples=50, concat=False):
+    # bands = torch.tensor([0,1,2,4,5,6,3,7,8,9])
     path_to_train_patches = os.path.join(path_to_patches_dir, "train_patches.pth")
     path_to_valid_patches = os.path.join(path_to_patches_dir, "valid_patches.pth")
     path_to_test_patches = os.path.join(path_to_patches_dir, "test_patches.pth")
@@ -459,6 +460,7 @@ def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3
     s2_a_patches[:,1,...] = patches[:,13,...]
     s2_a_patches[:,2,...] = patches[:,12,...] - patches[:,14, ...]
     s2_r_patches = patches[:,bands,...]
+    print(f"sample mean of bands values in loader: {patches[0,:10,:,:].reshape(10,-1).mean(1).cpu()}")
     if max_samples is not None:
         max_samples = min(max_samples, s2_r_patches.size(0))
         s2_r_patches = s2_r_patches[:max_samples,...]

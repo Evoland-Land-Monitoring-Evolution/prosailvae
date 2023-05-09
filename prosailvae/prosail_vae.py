@@ -80,7 +80,8 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                     logger_name:str='',
                     hyper_prior:SimVAE|None=None,
                     optimizer:torch.optim.Optimizer|None=None,
-                    load_simulator=True):
+                    load_simulator=True,
+                    freeze_weights=False):
     """
     Intializes an instance of prosail_vae
     """
@@ -129,8 +130,10 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
     prosail_vae.set_hyper_prior(hyper_prior)
     if pv_config.load_vae is not None and pv_config.vae_load_file_path is not None:
         _, _ = prosail_vae.load_ae(pv_config.vae_load_file_path, optimizer)
-    
+
     prosail_vae.change_device(device)
+    if freeze_weights:
+        prosail_vae.freeze_weigths()
     return prosail_vae
 
 def load_prosail_vae_with_hyperprior(logger_name:str,
@@ -144,7 +147,7 @@ def load_prosail_vae_with_hyperprior(logger_name:str,
     if pv_config_hyper is not None:
         hyper_prior = get_prosail_vae(pv_config_hyper, device=device,
                                       logger_name=logger_name,
-                                      load_simulator=False)
+                                      load_simulator=False, freeze_weights = True)
 
     prosail_vae = get_prosail_vae(pv_config, device=device,
                                         logger_name=logger_name,

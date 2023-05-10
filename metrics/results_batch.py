@@ -23,6 +23,7 @@ import shutil
 from time import sleep
 import warnings
 
+
 def get_prosailvae_results_parser():
     """
     Creates a new argument parser.

@@ -1,30 +1,33 @@
 import os
 import logging
-import traceback
 import argparse
 import socket
-from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
-from prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
+import torch
+from prosailvae import __path__ as PPATH
+TOP_PATH = os.path.join(PPATH[0], os.pardir)
+from .metrics_utils import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
+from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                     plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                     all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
-from snap_regression.weiss_lai_sentinel_hub import weiss_lai
-from snap_regression.snap_nn import SnapNN
 from dataset.loaders import  get_simloader
-import pandas as pd
+from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
-import prosailvae
+
 from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
-LOGGER_NAME = "PROSAIL-VAE results logger"
-import torch
+
+
 from datetime import datetime 
 import shutil
 from time import sleep
 import warnings
 from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
 from torchutils.patches import patchify, unpatchify 
+import pandas as pd
+
+LOGGER_NAME = "PROSAIL-VAE results logger"
 
 def get_prosailvae_results_parser():
     """
@@ -238,7 +241,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                                     res_dir=weiss_validation_dir, fig=None, ax=None, var_name="LAI", nbin=100)
 
     if juan_validation:
-        juan_data_dir_path = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/processed/"
+        juan_data_dir_path = TOP_PATH + "/field_data/processed/"
         juan_validation_dir = res_dir + "/juan_validation/"
         if not os.path.isdir(juan_validation_dir):
             os.makedirs(juan_validation_dir)
@@ -353,50 +356,6 @@ def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tens
     cropped_image = image_tensor[:,hw:-hw,hw:-hw]
     return rec_image, sim_image, cropped_image
 
-
-
-def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None):
-    if ver is None:
-        if sensor is None:
-            ver = "2.1"
-        elif sensor =="2A":
-            ver = "3A"
-        elif sensor == "2B":
-            ver = "3B"
-        else:
-            raise ValueError
-    elif ver not in ["2.1", "3A", "3B"]:
-        raise ValueError
-    weiss_bands = torch.tensor([1,2,3,4,5,7,8,9])
-    s2_r, s2_a = batch
-    patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=0)
-    patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=0)
-    patched_lai_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 1, patch_size, patch_size))
-    patched_cab_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 1, patch_size, patch_size))
-    patched_cw_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 1, patch_size, patch_size))
-    for i in range(patched_s2_r.size(0)):
-        for j in range(patched_s2_r.size(1)):
-            x = patched_s2_r[i, j, weiss_bands, ...]
-            angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, ...]))
-            s2_data = torch.cat((x, angles),0)
-            with torch.no_grad():
-                lai_snap = SnapNN(variable='lai', ver=ver)
-                lai_snap.set_weiss_weights()
-                lai = lai_snap.forward(s2_data, spatial_mode=True)
-                cab_snap = SnapNN(variable='cab', ver=ver)
-                cab_snap.set_weiss_weights()
-                cab = cab_snap.forward(s2_data, spatial_mode=True)
-                cw_snap = SnapNN(variable='cw', ver=ver)
-                cw_snap.set_weiss_weights()
-                cw = cw_snap.forward(s2_data, spatial_mode=True)
-                # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
-            patched_lai_image[i,j,...] = lai
-            patched_cab_image[i,j,...] = cab
-            patched_cw_image[i,j,...] = cw
-    lai_image = unpatchify(patched_lai_image)[:,:s2_r.size(2),:s2_r.size(3)]
-    cab_image = unpatchify(patched_cab_image)[:,:s2_r.size(2),:s2_r.size(3)]
-    cw_image = unpatchify(patched_cw_image)[:,:s2_r.size(2),:s2_r.size(3)]
-    return lai_image, cab_image, cw_image
 
 def check_fold_res_dir(fold_dir, n_xp, params):
     same_fold = ""

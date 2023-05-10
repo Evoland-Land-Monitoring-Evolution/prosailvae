@@ -5,12 +5,15 @@ Created on Mon Nov 14 14:20:44 2022
 
 @author: yoel
 """
+import os
+import sys
+from prosailvae import __path__ as PPATH
+TOP_PATH = os.path.join(PPATH[0], os.pardir)
 from dataclasses import dataclass
 import shutil
 import logging
 import logging.config
 import traceback
-import prosailvae
 import time
 from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
 from torch_lr_finder import get_PROSAIL_VAE_lr
@@ -357,7 +360,7 @@ def setup_training():
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
-    root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
+    root_dir = TOP_PATH
     xp_array = parser.xp_array
     job_array_dir = None
     if xp_array:
@@ -370,8 +373,7 @@ def setup_training():
     assert parser.n_fold < parser.n_xp
     params = load_params(config_dir, config_file=parser.config_file, parser=parser)
     if len(parser.root_results_dir)==0:
-        root_results_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
-                                                     os.pardir),"results/")
+        root_results_dir = os.path.join(TOP_PATH,"results/")
     else:
         root_results_dir = parser.root_results_dir
     res_dir = get_res_dir_path(root_results_dir, params, parser.n_xp, parser.overwrite_xp)

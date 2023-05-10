@@ -14,8 +14,7 @@ from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 from dataset.juan_datapoints import get_interpolated_validation_data
-from dataset.validate_prosail_weiss import load_weiss_dataset
-import prosailvae
+from dataset.weiss_utils import load_weiss_dataset
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
     metrics_dir = res_dir + "/metrics/"

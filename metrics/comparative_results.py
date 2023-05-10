@@ -1,15 +1,15 @@
+import os
 import torch
 import numpy as np
-import os
 import argparse
 import socket
 from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch
-from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
+from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
 from prosail_plots import plot_patches
 from prosailvae.ProsailSimus import get_bands_idx
-from results import get_weiss_biophyiscal_from_batch
+from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from tqdm import tqdm
 import pandas as pd
 import seaborn as sns

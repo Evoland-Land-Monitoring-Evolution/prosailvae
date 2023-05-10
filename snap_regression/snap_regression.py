@@ -733,7 +733,7 @@ def main():
                 ax.set_xlabel("sampling distribution mu")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog',linthresh=linthresh)
-                ax.set_xlim(xmin=-1e-3)
+                ax.set_xlim(xmin=tg_mu_rep.min().item()-1e-3)
                 fig.savefig(mu_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
@@ -787,7 +787,7 @@ def main():
                 ax.set_xlabel("sampling distribution sigma")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog', linthresh=linthresh)
-                ax.set_xlim(xmin=-1e-3)
+                ax.set_xlim(xmin=tg_sigma_rep.min().item()-1e-3)
                 fig.savefig(sigma_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)

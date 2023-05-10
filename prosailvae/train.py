@@ -12,12 +12,12 @@ import logging.config
 import traceback
 import prosailvae
 import time
-from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
-from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
+from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
+from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path
 from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
-from prosailvae.ProsailSimus import get_bands_idx
+from ProsailSimus import get_bands_idx
 import argparse
 import pandas as pd
 

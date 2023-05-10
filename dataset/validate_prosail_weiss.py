@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os 
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, PROSAILVARS
 from tqdm import trange
-from prosail_plots import plot_param_compare_dist
+from metrics.prosail_plots import plot_param_compare_dist
 
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
 

@@ -100,7 +100,7 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
         clean_patches = torch.cat(clean_patches, dim=0)
     if nan_flag:
         print("WARNING: patches with nan values were detected in this data !")
-    return clean_patches
+    return clean_patches, nan_flag
 
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
                                        valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None):
@@ -113,6 +113,8 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     train_patch_info = []
     valid_patch_info = []
     test_patch_info = []
+    list_valid_image_files = []
+    list_invalid_image_files = []
     for i, tensor_file in enumerate(tensor_files):
         info = file_info[i]
         print(tensor_file)
@@ -126,9 +128,17 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         g_cpu = torch.Generator()
         g_cpu.manual_seed(seed)
         perms = torch.randperm(patches.size(0), generator=g_cpu) # For image tensor with identical sizes (i.e. the same sites) permutation will always be the same
-        train_patches = get_clean_patch_tensor(patches[perms[:n_train],...], cloud_mask_idx=10, reject_mode='all')
-        valid_patches = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid] ,...], cloud_mask_idx=10, reject_mode='all')
-        test_patches = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...], cloud_mask_idx=10, reject_mode='all')
+        train_patches, nan_flag_1 = get_clean_patch_tensor(patches[perms[:n_train],...], 
+                                                         cloud_mask_idx=10, reject_mode='all')
+        valid_patches, nan_flag_2 = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid] ,...],
+                                                         cloud_mask_idx=10, reject_mode='all')
+        test_patches, nan_flag_3 = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...],
+                                                        cloud_mask_idx=10, reject_mode='all')
+        if nan_flag_1 or nan_flag_2 or nan_flag_3:
+            list_invalid_image_files.append(tensor_file)
+        else:
+            list_valid_image_files.append(tensor_file)
+
         if len(train_patches) > 0:
             train_clean_patches.append(train_patches)
             train_patch_info += [info] * n_train * (large_patch_size // train_patch_size)**2
@@ -140,12 +150,16 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             test_patch_info += [info] * n_test
 
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
-    train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
+    train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), 
+                                   patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
+                                                                        train_patch_size, train_patch_size)
     train_perms = torch.randperm(train_clean_patches.size(0), generator=g_cpu)
     train_clean_patches = train_clean_patches[train_perms,...]
     train_patch_info = np.array(train_patch_info)[train_perms,:]
     valid_clean_patches = torch.cat(valid_clean_patches, dim=0)
-    valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), patch_size=train_patch_size).reshape(-1,image_tensor.size(0), train_patch_size, train_patch_size)
+    valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), 
+                                   patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
+                                                                        train_patch_size, train_patch_size)
     valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu)
     valid_clean_patches = valid_clean_patches[valid_perms,...]
     valid_patch_info = np.array(valid_patch_info)[valid_perms,:]
@@ -159,6 +173,10 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     swap_bands(train_clean_patches)
     swap_bands(valid_clean_patches)
     swap_bands(test_clean_patches)
+    if len(list_invalid_image_files) >0:
+        print("invalid files :")
+        for file in list_invalid_image_files:
+            print(file)
     return (train_clean_patches, valid_clean_patches, test_clean_patches,
             train_patch_info, valid_patch_info, test_patch_info)
 
@@ -221,6 +239,7 @@ def main():
                    "before_SENTINEL2A_20170518-095716-529_L2A_T33TWG_D_V1-4_roi_0.pth"
                 ]
     valid_files = None
+    # valid_files = ["after_SENTINEL2A_20170621-111222-373_L2A_T30TUM_D_V1-4_roi_0.pth"]
     (train_patches, valid_patches, test_patches,
      train_patch_info, valid_patch_info,
      test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 

@@ -1,28 +1,19 @@
 import os
 import logging
-if __name__ == "__main__":
-    from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
-    from prosail_plots import(plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
-                              plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                              plot_metric_boxplot, plot_lai_preds, plot_single_lat_hist_2D,
-                              all_loss_curve, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
-    from snap_regression.weiss_lai_sentinel_hub import weiss_lai
-    from snap_regression.snap_regression import SnapNN
-else:
-    from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
-    from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
-                                       plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
-                                       plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                                       all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
-    from snap_regression.weiss_lai_sentinel_hub import weiss_lai
-    from snap_regression.snap_nn import SnapNN
+import traceback
+import argparse
+import socket
+from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
+from prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
+                                    plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
+                                    plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
+                                    all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
+from snap_regression.weiss_lai_sentinel_hub import weiss_lai
+from snap_regression.snap_nn import SnapNN
 from dataset.loaders import  get_simloader
 import pandas as pd
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 import prosailvae
-import traceback
-import argparse
-import socket
 from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior

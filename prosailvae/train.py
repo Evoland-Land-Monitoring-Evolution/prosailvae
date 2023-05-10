@@ -17,7 +17,7 @@ from prosailvae.torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path
 from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
-
+from prosailvae.ProsailSimus import get_bands_idx
 import argparse
 import pandas as pd
 
@@ -68,20 +68,6 @@ class ModelConfig:
     supervised:bool=False
     beta_kl:float=1
     beta_index:float=1
-
-
-def get_bands_idx(weiss_bands=False):
-    """
-    Outputs the index of bands to be taken into account in the reflectance tensor
-    """
-    bands = torch.arange(10) # Bands are supposed to come in number order, not by resolution group
-    prosail_bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
-    
-    if weiss_bands: # Removing B2 and B8
-        print("Weiss bands enabled")
-        bands = torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]) # removing b2 and b8
-        prosail_bands = [2, 3, 4, 5, 6, 8, 11, 12]
-    return bands, prosail_bands
 
 
 def get_prosailvae_train_parser():
@@ -251,7 +237,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                                                         index=[0])],ignore_index=True)
             try:
                 train_loss_dict = prosail_vae.fit(train_loader, optimizer,
-                                                  n_samples=n_samples, 
+                                                  n_samples=n_samples,
                                                   max_samples=max_train_samples_per_epoch)
                 if plot_gradient and res_dir is not None:
                     if not os.path.isdir(res_dir + "/gradient_flows"):
@@ -300,6 +286,10 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                 if res_dir is not None:
                     prosail_vae.save_ae(epoch, optimizer, best_val_loss,
                                         res_dir + "/prosailvae_weights.tar")
+    if n_epoch < 1: # In case we just want to plot results
+        all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0})
+        all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0})
+        info_df = pd.DataFrame(data={"lr":10000, "epoch":0})
     return all_train_loss_df, all_valid_loss_df, info_df
 
 

@@ -9,8 +9,8 @@ if __name__ == "__main__":
     from snap_regression.weiss_lai_sentinel_hub import weiss_lai
     from snap_regression.snap_regression import SnapNN
 else:
-    from metrics.metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
-    from metrics.prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
+    from metrics import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
+    from prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                        plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                        plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                        all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
@@ -24,6 +24,7 @@ import traceback
 import argparse
 import socket
 from utils.utils import load_dict, save_dict
+from utils.image_utils import get_encoded_image_from_batch
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 LOGGER_NAME = "PROSAIL-VAE results logger"
 import torch
@@ -120,8 +121,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                                                                                    mode=rec_mode)
                 info = info_test_data[i,:]
                 (weiss_lai, weiss_cab,
-                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r.unsqueeze(0), 
-                                                               cropped_s2_a.unsqueeze(0)), 
+                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r.unsqueeze(0),
+                                                               cropped_s2_a.unsqueeze(0)),
                                                                patch_size=32, sensor=info[0])
                 PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r, rec_image, weiss_lai, i, info=info)
                 all_rec.append(rec_image.reshape(10,-1))
@@ -137,17 +138,19 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             all_rec = torch.cat(all_rec, axis=1)
             all_lai = torch.cat(all_lai)
             all_cab = torch.cat(all_cab)
+            all_ccc = all_lai * all_cab
+            
             all_cw = torch.cat(all_cw)
             all_vars = torch.cat(all_vars, axis=1)
+            all_cw_rel =  1 - all_vars[5,...] / all_cw
             all_weiss_lai = torch.cat(all_weiss_lai)
             all_weiss_cab = torch.cat(all_weiss_cab)
             all_weiss_cw = torch.cat(all_weiss_cw)
             all_s2_r = torch.cat(all_s2_r, axis=1)
             all_sigma = torch.cat(all_sigma, axis=1)
 
-            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, 
-                                          all_lai, all_cab, all_cw, all_vars, 
-                                          all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma)
+            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
+                                          all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel)
             # for n, filename in enumerate(image_tensor_file_names):
             #     image_tensor = torch.load(image_dir + "/" + filename)
             #     patch_size=128
@@ -359,42 +362,19 @@ def get_encoded_image(image_tensor, PROSAIL_VAE, patch_size=32, bands=torch.tens
     cropped_image = image_tensor[:,hw:-hw,hw:-hw]
     return rec_image, sim_image, cropped_image
 
-def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='lat_mode'):
-    s2_r, s2_a = batch
-    hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
-    patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
-    patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
-    patched_sim_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
-                                     11, patch_size, patch_size)).to(PROSAIL_VAE.device)
-    patched_rec_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
-                                     len(bands), patch_size, patch_size)).to(PROSAIL_VAE.device)
-    patched_sigma_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11,
-                                       patch_size, patch_size)).to(PROSAIL_VAE.device)
-    for i in range(patched_s2_r.size(0)):
-        for j in range(patched_s2_r.size(1)):
-            x = patched_s2_r[i, j, ...].unsqueeze(0)
-            angles = patched_s2_a[i, j, ...].unsqueeze(0)
-            with torch.no_grad():
-                dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
-            patched_rec_image[i,j,:,:,:] = rec
-            patched_sim_image[i,j,:,:,:] = sim
-            patched_sigma_image[i,j,:,:,:] = dist_params[1,...]
-    sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
-    rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
-    sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
-    cropped_s2_a = s2_a.squeeze()[:,hw:-hw,hw:-hw]
-    cropped_s2_r = s2_r.squeeze()[:,hw:-hw,hw:-hw]
-    return rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image
 
 
-def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None):
-    if sensor is None:
-        ver = "2.1"
-    elif sensor =="2A":
-        ver = "3A"
-    elif sensor == "2B":
-        ver = "3B"
-    else:
+def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None):
+    if ver is None:
+        if sensor is None:
+            ver = "2.1"
+        elif sensor =="2A":
+            ver = "3A"
+        elif sensor == "2B":
+            ver = "3B"
+        else:
+            raise ValueError
+    elif ver not in ["2.1", "3A", "3B"]:
         raise ValueError
     weiss_bands = torch.tensor([1,2,3,4,5,7,8,9])
     s2_r, s2_a = batch
@@ -409,7 +389,6 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None):
             angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, ...]))
             s2_data = torch.cat((x, angles),0)
             with torch.no_grad():
-                ver = "3B"
                 lai_snap = SnapNN(variable='lai', ver=ver)
                 lai_snap.set_weiss_weights()
                 lai = lai_snap.forward(s2_data, spatial_mode=True)
@@ -418,7 +397,7 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None):
                 cab = cab_snap.forward(s2_data, spatial_mode=True)
                 cw_snap = SnapNN(variable='cw', ver=ver)
                 cw_snap.set_weiss_weights()
-                cw = 1 / (1 - cw_snap.forward(s2_data, spatial_mode=True))
+                cw = cw_snap.forward(s2_data, spatial_mode=True)
                 # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
             patched_lai_image[i,j,...] = lai
             patched_cab_image[i,j,...] = cab

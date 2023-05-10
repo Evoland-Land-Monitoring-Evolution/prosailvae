@@ -723,7 +723,7 @@ def main():
                 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
                 linthresh=0.01
-                symlog_wisth = get_boxplot_symlog_width(positions=kl, threshold=linthresh, linear_width=0.1)
+                symlog_wisth = get_boxplot_symlog_width(positions=tg_mu_rep, threshold=linthresh, linear_width=0.1)
                 ax.boxplot(all_metrics[:,:,j,k], positions=tg_mu_rep, widths=symlog_wisth, showfliers=False)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
@@ -777,7 +777,7 @@ def main():
                 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
                 linthresh=0.01
-                symlog_wisth = get_boxplot_symlog_width(positions=kl, threshold=linthresh, linear_width=0.1)
+                symlog_wisth = get_boxplot_symlog_width(positions=tg_sigma_rep, threshold=linthresh, linear_width=0.1)
                 ax.boxplot(all_metrics[:,:,j,k], positions=tg_sigma_rep, widths=symlog_wisth, showfliers=False)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')

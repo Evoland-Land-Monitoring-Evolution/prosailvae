@@ -24,14 +24,15 @@ from utils.image_utils import rgb_render
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True):
+def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
     fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
     minvisu = None 
     maxvisu = None
-    for i in range(len(patch_list)):
-        if patch_list[i].size(0)==1:
+    for i, patch in enumerate(patch_list):
+        # patch = patch.squeeze()
+        if patch.size(0)==1:
             tensor_visu = patch_list[i].squeeze()
-            im = axs[i].imshow(tensor_visu)#, cmap='YlGn')
+            im = axs[i].imshow(tensor_visu, vmin=vmin, vmax=vmax)#, cmap='YlGn')
             divider = make_axes_locatable(axs[i])
             cax = divider.append_axes('right', size='5%', pad=0.05)
             if colorbar:
@@ -40,9 +41,9 @@ def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True):
                 plt.delaxes(ax = cax)
         else:
             if use_same_visu:
-                tensor_visu, minvisu, maxvisu = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)
+                tensor_visu, minvisu, maxvisu = rgb_render(patch, dmin=minvisu, dmax=maxvisu)
             else:
-                tensor_visu, _, _ = rgb_render(patch_list[i], dmin=minvisu, dmax=maxvisu)
+                tensor_visu, _, _ = rgb_render(patch, dmin=minvisu, dmax=maxvisu)
             axs[i].imshow(tensor_visu)
             divider = make_axes_locatable(axs[i])
             cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -928,7 +929,8 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
     return fig, ax
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
-                                  all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, max_sigma=1.4):
+                                  all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
+                                  all_cw_rel, max_sigma=1.4):
 
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai).abs(), all_sigma[6,:], s=0.5)
@@ -990,7 +992,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig.savefig(f"{plot_dir}/all_bands_scatter_true_vs_pred.png")
     n_cols = 5
     n_rows = 2
-    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols, n_rows*2), tight_layout=True, dpi=150)
     for idx, band in enumerate(BANDS):
         row = idx // n_cols
         col = idx % n_cols
@@ -1011,12 +1013,12 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
-    ax.hist2d(all_weiss_lai.cpu().numpy(),
-                        all_lai.cpu().numpy(),range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='BrBG')
+    ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='BrBG')
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
     ax.set_ylabel("Predicted LAI")
     ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
@@ -1065,6 +1067,27 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig.savefig(f"{plot_dir}/all_cab_scatter_true_vs_pred.png")
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy())
+    mse = (all_weiss_cab - all_ccc).pow(2).mean().cpu().numpy()
+    xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+    xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
+    ax.scatter(all_weiss_cab.cpu().numpy(),
+                        all_ccc.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted CCC")
+    ax.set_xlabel(f"SNAP Cab")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy(), 1)
     r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy())
     mse = (all_weiss_cw - all_cw).pow(2).mean().cpu().numpy()
@@ -1084,6 +1107,48 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel(f"SNAP Cw")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_cw_scatter_true_vs_pred.png")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy())
+    mse = (all_weiss_cw * 10 - all_cw).pow(2).mean().cpu().numpy()
+    xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item() * 10)
+    xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item() * 10)
+    ax.scatter(all_weiss_cw.cpu().numpy() * 10,
+                        all_cw.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted Cw")
+    ax.set_xlabel(f"SNAP Cw")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_cw_x10_scatter_true_vs_pred.png")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy())
+    mse = (all_weiss_cw - all_cw_rel).pow(2).mean().cpu().numpy()
+    xmin = min(all_cw_rel.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    xmax = max(all_cw_rel.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    ax.scatter(all_weiss_cw.cpu().numpy(),
+                        all_cw_rel.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0], ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted CwRel")
+    ax.set_xlabel(f"SNAP Cw")
+    ax.set_aspect('equal')
+    fig.savefig(f"{plot_dir}/all_cwrel_scatter_true_vs_pred.png")
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, i, info=None):
@@ -1135,13 +1200,13 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
     fig.suptitle(f"Histogram S2 bands{info[1]} {info[2]}")
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_bands_hist_true_vs_pred.png')
 
-    fig, _ = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
+    fig, _ = plot_patches((cropped_image.cpu(), rec_image.cpu(),
             (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
             title_list=[f'original patch \n {info[1]} {info[2]}', 'reconstruction', 'mean absolute\n reconstruction error'])
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_rgb.png")
 
-    fig, _ = plot_patches((cropped_image[torch.tensor([8,3,6]),...].cpu(), 
-                            rec_image[torch.tensor([8,3,6]),...].cpu()), 
+    fig, _ = plot_patches((cropped_image[torch.tensor([8,3,6]),...].cpu(),
+                            rec_image[torch.tensor([8,3,6]),...].cpu()),
                             title_list=[f'original patch RGB:B8-B5-B11 \n {info[1]} {info[2]}', 'reconstruction'])
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png")
 

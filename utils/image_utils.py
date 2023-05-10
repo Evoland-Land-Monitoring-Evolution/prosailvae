@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from typing import Tuple
+from torchutils.patches import patchify, unpatchify 
 
 def unbatchify(tensor: torch.Tensor) -> torch.Tensor:
     """
@@ -85,3 +86,31 @@ def rgb_render(
 
     return data_ready, dmin, dmax
 
+
+def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
+                                 bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='lat_mode'):
+    s2_r, s2_a = batch
+    hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
+    patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
+    patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
+    patched_sim_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
+                                     11, patch_size, patch_size)).to(PROSAIL_VAE.device)
+    patched_rec_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
+                                     len(bands), patch_size, patch_size)).to(PROSAIL_VAE.device)
+    patched_sigma_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11,
+                                       patch_size, patch_size)).to(PROSAIL_VAE.device)
+    for i in range(patched_s2_r.size(0)):
+        for j in range(patched_s2_r.size(1)):
+            x = patched_s2_r[i, j, ...].unsqueeze(0)
+            angles = patched_s2_a[i, j, ...].unsqueeze(0)
+            with torch.no_grad():
+                dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
+            patched_rec_image[i,j,:,:,:] = rec
+            patched_sim_image[i,j,:,:,:] = sim
+            patched_sigma_image[i,j,:,:,:] = dist_params[1,...]
+    sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
+    rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
+    sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
+    cropped_s2_a = s2_a.squeeze()[:,hw:-hw,hw:-hw]
+    cropped_s2_r = s2_r.squeeze()[:,hw:-hw,hw:-hw]
+    return rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image

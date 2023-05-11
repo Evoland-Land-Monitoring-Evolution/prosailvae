@@ -4,7 +4,7 @@ import numpy as np
 import argparse
 import socket
 from utils.utils import load_dict, save_dict
-from utils.image_utils import get_encoded_image_from_batch
+from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
 from prosail_plots import plot_patches
@@ -56,8 +56,7 @@ def get_model_and_dataloader(parser):
             config["vae_load_file_path"] = params_path
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
-                                                norm_mean = norm_mean, norm_std=norm_std,
-                                                spatial_mode=True)
+                                                norm_mean = norm_mean, norm_std=norm_std)
             model = load_prosail_vae_with_hyperprior(pv_config=pv_config, pv_config_hyper=None,
                                                      logger_name="No logger")
             model_info["model"] = model
@@ -69,49 +68,76 @@ def get_model_results(model_dict: dict, test_loader, info_test_data):
     Compute results for all models
     """
     rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
+    for model_name, model_info in model_dict.items():
+        model_info["reconstruction"] = []
+        model_info["prosail_vars"] = []
+        model_info["latent_sigma"] = []
+    all_s2_r = []
+    all_snap_lai = []
+    all_snap_cab = []
+    all_snap_cw = []
     with torch.no_grad():
-        for model_name, model_info in model_dict.items():
-            print(f"Computing results for {model_name}.")
-            model = model_info["model"]
-            all_rec = []
-            all_vars = []
-            all_sigma = []
-            for _, batch in enumerate(tqdm(test_loader)):
-                (rec_image, sim_image, _, _,
+        for i, batch in enumerate(tqdm(test_loader)):
+            current_patch_results = {}
+            largest_hw = 0
+            for model_name, model_info in model_dict.items():
+                hw = 0
+                model = model_info["model"]
+                if model.spatial_mode:
+                    hw = model.encoder.nb_enc_cropped_hw
+                if hw > largest_hw:
+                    largest_hw = hw                
+                (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 sigma_image) = get_encoded_image_from_batch(batch, model, patch_size=32,
                                                             bands=torch.arange(10),
                                                             mode=rec_mode)
-                all_rec.append(rec_image)
-                all_vars.append(sim_image)
-                all_sigma.append(sigma_image)
-            model_info["reconstruction"] = torch.stack(all_rec, axis=0)
-            model_info["prosail_vars"] = torch.stack(all_vars, axis=0)
-            model_info["latent_sigma"] = torch.stack(all_sigma, axis=0)
-        all_snap_lai = []
-        all_snap_cab = []
-        all_snap_cw = []
-        all_s2_r = []
-        print(f"Computing results for SNAP.")
-        for i, batch in enumerate(tqdm(test_loader)):
+                current_patch_results[model_name] = {"reconstruction": rec_image,
+                                                       "prosail_vars": sim_image, 
+                                                       "latent_sigma": sigma_image,
+                                                       "cropped_s2_r" : cropped_s2_r,
+                                                       "cropped_s2_a": cropped_s2_a,
+                                                       "hw":hw}
+            for model_name, model_info in model_dict.items():
+                delta_hw = largest_hw - current_patch_results[model_name]['hw']
+                rec_image = current_patch_results[model_name]["reconstruction"]
+                sim_image = current_patch_results[model_name]["prosail_vars"]
+                sigma_image = current_patch_results[model_name]["latent_sigma"]
+                cropped_s2_r = current_patch_results[model_name]["cropped_s2_r"]
+                cropped_s2_a = current_patch_results[model_name]["cropped_s2_a"]
+                if delta_hw > 0 :
+                    rec_image = crop_s2_input(rec_image, delta_hw)
+                    sim_image = crop_s2_input(sim_image, delta_hw)
+                    sigma_image = crop_s2_input(sigma_image, delta_hw)
+                    cropped_s2_r = crop_s2_input(cropped_s2_r, delta_hw)
+                    cropped_s2_a = crop_s2_input(cropped_s2_a, delta_hw)
+
+                model_info["reconstruction"].append(rec_image)
+                model_info["prosail_vars"].append(sim_image)
+                model_info["latent_sigma"].append(sigma_image)
+            all_s2_r.append(cropped_s2_r)
             info = info_test_data[i,:]
             try:
                 (snap_lai, snap_cab,
-                snap_cw) = get_weiss_biophyiscal_from_batch((batch[0], batch[1]),
-                                                            patch_size=32, sensor=info[0])
+                snap_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
+                                                             patch_size=32, sensor=info[0])
             except Exception as exc:
                 print(exc)
                 print(i)
                 print(batch)
-                print(cropped_s2_r.unsqueeze(0).size())
-                print(cropped_s2_a.unsqueeze(0).size())
+                print(cropped_s2_r.size())
+                print(cropped_s2_a.size())
                 ValueError
             all_snap_lai.append(snap_lai)
             all_snap_cab.append(snap_cab)
             all_snap_cw.append(snap_cw)
-            all_s2_r.append(cropped_s2_r)
+            all_s2_r.append(batch[0])
         all_snap_lai = torch.stack(all_snap_lai, axis=0)
         all_snap_cab = torch.stack(all_snap_cab, axis=0)
         all_snap_cw = torch.stack(all_snap_cw, axis=0)
+        for model_name, model_info in model_dict.items():
+            model_info["reconstruction"] = torch.stack(model_info["reconstruction"], 0)
+            model_info["prosail_vars"] = torch.stack(model_info["prosail_vars"], 0)
+            model_info["latent_sigma"] = torch.stack(model_info["latent_sigma"], 0)
         all_s2_r = torch.stack(all_s2_r, axis=0)
     return model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw
 

@@ -357,7 +357,7 @@ def get_pixel_log_likelihood_with_weiss(s2_r, lai, n_components=128, max_iter=50
     return gm.score_samples(np.concatenate((s2_r, lai.reshape(-1,1)),1))
 
 def get_boxplot_symlog_width(positions:np.ndarray, threshold:float=0.01, linear_width:float = 0.1):
-    symlog_width = np.zeros_like(positions)
+    symlog_width = np.zeros_like(positions).astype(float)
     symlog_width[np.where(positions <= threshold)] = threshold * linear_width
     symlog_width[np.where(positions>threshold)] = 10**(np.log10(positions[positions>threshold])+ linear_width/2.)-10**(np.log10(positions[positions>threshold])-linear_width/2.)
 
@@ -379,8 +379,8 @@ def main():
         disable_tqdm=False
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
-        tg_mu = torch.tensor([0,2])
-        tg_sigma = torch.tensor([0.5,3])
+        tg_mu = torch.tensor([0, 1, 2, 3, 4])
+        tg_sigma = torch.tensor([0.5, 1, 2, 3])
         parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
         ver="3B"
@@ -398,7 +398,7 @@ def main():
     prepare_data = True
     epochs = parser.epochs
     n_models = parser.n_model_train
-    compute_metrics = True
+    compute_metrics = False
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     lr = parser.lr

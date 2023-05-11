@@ -104,6 +104,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data):
                                                             patch_size=32, sensor=info[0])
             except Exception as exc:
                 print(exc)
+                print(i)
+                print(batch)
                 print(cropped_s2_r.unsqueeze(0).size())
                 print(cropped_s2_a.unsqueeze(0).size())
                 ValueError

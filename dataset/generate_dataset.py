@@ -416,19 +416,19 @@ def get_data_generation_parser():
 
     parser.add_argument("-n_samples", "-n", dest="n_samples",
                         help="number of samples in simulated dataset",
-                        type=int, default=42000)
+                        type=int, default=2000)
     
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
-                        type=str, default="test_dist_")
+                        type=str, default="")
     
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
-                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/")
     
     parser.add_argument("-s", dest="noise",
                         help="gaussian noise level on simulated data",
-                        type=float, default=0)
+                        type=float, default=0.01)
     
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",

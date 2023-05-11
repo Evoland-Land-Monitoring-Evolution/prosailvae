@@ -166,7 +166,7 @@ def initialize_by_training(n_models:int,
       and selecting the best.
     """
     min_valid_loss = torch.inf
-    logger.info("Intializing by training {n_models} models for {n_epochs} epochs:")
+    logger.info(f"Intializing by training {n_models} models for {n_epochs} epochs:")
     for _ in range(n_models):
         prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
                                                        pv_config_hyper=pv_config_hyper,
@@ -350,7 +350,7 @@ def setup_training():
               "-c", "config_dev.json",
               "-x", "1",
               "-o", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",

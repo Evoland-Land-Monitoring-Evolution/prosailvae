@@ -428,11 +428,9 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     sample_ids=None,
                                                     batch_size=params["batch_size"],
                                                     data_dir=data_dir)
-        spatial_mode = False
     else:
         train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=1, 
                                                                                  num_workers=0)
-        spatial_mode = True
 
     if params["apply_norm_rec"]:
         norm_mean = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_mean.pt"))#[bands]
@@ -462,16 +460,14 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     training_config = get_training_config(params)
     pv_config = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
                                        inference_mode = False, rsr_dir=parser.rsr_dir,
-                                       norm_mean = norm_mean, norm_std=norm_std, 
-                                       spatial_mode=spatial_mode)
+                                       norm_mean = norm_mean, norm_std=norm_std)
     pv_config_hyper=None
     if params_sup_kl_model is not None:
         bands_hyper, prosail_bands_hyper = get_bands_idx(params_sup_kl_model["weiss_bands"])
         pv_config_hyper = get_prosail_vae_config(params_sup_kl_model, bands=bands_hyper,
                                                  prosail_bands=prosail_bands_hyper,
                                                  inference_mode=True, rsr_dir=parser.rsr_dir,
-                                                 norm_mean=sup_norm_mean, norm_std=sup_norm_std,
-                                                 spatial_mode=False)
+                                                 norm_mean=sup_norm_mean, norm_std=sup_norm_std)
     if params['init_model']:
         n_models=10
         lr = 1e-4
@@ -495,8 +491,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
         params["vae_load_file_path"] = params["vae_save_file_path"]
         pv_config = get_prosail_vae_config(params, bands=bands, prosail_bands=prosail_bands,
                                             inference_mode=False, rsr_dir=parser.rsr_dir,
-                                            norm_mean=norm_mean, norm_std=norm_std,
-                                            spatial_mode=spatial_mode)
+                                            norm_mean=norm_mean, norm_std=norm_std)
 
     prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
                                                     pv_config_hyper=pv_config_hyper,

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import torch.nn as nn
 import torch
 from utils.utils import torch_select_unsqueeze
-from utils.image_utils import batchify_batch_latent, crop_s2_input
+from utils.image_utils import batchify_batch_latent, crop_s2_input, check_is_patch
 
 @dataclass
 class EncoderConfig:
@@ -25,7 +25,6 @@ class EncoderConfig:
     bands:torch.Tensor|None = torch.arange(10)
     last_activation:nn.Module|None = None
     n_latent_params:int=2
-    spatial_mode:bool=False
     layer_sizes:list[int]|None = field(default_factory=lambda: [128])
 
     kernel_sizes: list[int] = field(default_factory=lambda: [3])
@@ -37,45 +36,6 @@ class EncoderConfig:
     block_layer_depths: list[int] = field(default_factory=lambda: [2, 2])
     block_kernel_sizes: list[int] = field(default_factory=lambda: [3, 1])
     block_n: list[int] = field(default_factory=lambda: [1, 2])
-
-# @dataclass
-# class ProsailNNEncoderConfig(EncoderConfig):
-#     """
-#     Configuration to initialize ProsailNNEncoder
-#     """
-#     layer_sizes:list[int]|None = None
-
-# @dataclass
-# class ProsailRNNEncoderConfig(EncoderConfig):
-#     """
-#     Configuration to initialize ProsailRNNEncoder
-#     """
-#     block_n:int = 3
-#     block_layer_sizes:int = 512
-#     block_layer_depths:int = 2
-
-# @dataclass
-# class ProsailCNNEncoderConfig(EncoderConfig):
-#     """
-#     Configuration to initialize ProsailCNNEncoder
-#     """
-#     layer_sizes: list[int] = [20]
-#     kernel_sizes: list[int] = [3]
-#     padding:str = "valid"
-
-
-# @dataclass
-# class ProsailResCNNEncoderConfig(EncoderConfig):
-#     """
-#     Configuration to initialize ProsailResCNNEncoder
-#     """
-#     first_layer_kernel:int = 7
-#     first_layer_size:int = 64
-#     block_layer_sizes: list[int] = [64, 64]
-#     block_depths: list[int] = [2, 2]
-#     block_kernel_sizes: list[int]=[3, 3]
-#     block_n: list[int] = [1, 1]
-#     padding:str = 'valid'
 
 class Encoder(nn.Module):
     """ 
@@ -91,73 +51,6 @@ class Encoder(nn.Module):
     """
     def encode(self):
         raise NotImplementedError
-
-
-# class NNEncoder(Encoder):
-#     """
-#     A class used to represent a simple MLP encoder of an auto encoder.
-#     ...
-
-#     Attributes
-#     ----------
-#     net : nn.Sequential
-#         NN layers of the encoder
-
-#     Methods
-#     -------
-#     encode(x)
-#         Encode time series x using net.
-#     """
-#     def __init__(self, input_size:int=73, output_size:int=12,
-#                  hidden_layers_size:list[int]|None=None,
-#                  last_activation=None, device:int='cpu',
-#                  bands:torch.Tensor|None=None):
-#         if hidden_layers_size is None:
-#             hidden_layers_size=[512, 512]
-#         if bands is None:
-#             bands = torch.arange(10)
-#         super().__init__()
-#         layers = []
-#         layers.append(nn.Linear(in_features=input_size,
-#                                 out_features=hidden_layers_size[0]))
-
-#         for i in range(len(hidden_layers_size)-1):
-
-#             in_features = hidden_layers_size[i]
-#             out_features = hidden_layers_size[i+1]
-#             layers.append(nn.Linear(in_features=in_features, out_features=out_features))
-#             layers.append(nn.ReLU())
-#             # layers.append(nn.BatchNorm1d(num_features=out_features))
-#         layers.append(nn.Linear(in_features=hidden_layers_size[-1],
-#                                 out_features=output_size))
-
-#         if last_activation is not None :
-#             layers.append(last_activation)
-
-#         self.net = nn.Sequential(*layers).to(device)
-#         self.bands = bands.to(device)
-#         self.device = device
-#         self._spatial_encoding = False
-
-#     def get_spatial_encoding(self):
-#         """
-#         Return private attribute about wether the encoder takes patches as input
-#         """
-#         return self._spatial_encoding
-
-#     def encode(self, x):
-#         """
-#         Encode input data. Asserts input dimension is Batch x Features.
-#         """
-#         y = self.net.forward(x[...,self.bands])
-#         return y
-#     def forward(self, x):
-#         """
-#         Encode input data
-#         """
-#         return self.encode(x)
-
-
 
 
 class ProsailNNEncoder(Encoder):
@@ -207,7 +100,7 @@ class ProsailNNEncoder(Encoder):
             norm_std = torch.ones((1, config.input_size))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self._spatial_encoding = config.spatial_mode
+        self._spatial_encoding = False
         self.nb_enc_cropped_hw = 0
 
     def get_spatial_encoding(self):
@@ -285,50 +178,6 @@ class EncoderResBlock(nn.Module):
         y = self.net(x)
         return y + x
 
-# class EncoderNNBlock(nn.Module):
-#     """ 
-#     A class used to represent a MPL block encoder of an auto encoder. 
-#     ...
-
-#     Attributes
-#     ----------
-#     net : nn.Sequential
-#         NN layers of the encoder
-    
-#     Methods
-#     -------
-#     encode(x)
-#         Encode time series x using net.
-#     """
-#     def __init__(self,
-#                  hidden_layers_size:int=128,
-#                  depth:int=2,
-#                  last_activation=None, device:str='cpu'):
-#         super().__init__()
-#         layers = []
-#         for _ in range(depth):
-#             layers.append(nn.Linear(in_features=hidden_layers_size, 
-#                                     out_features=hidden_layers_size))
-#             layers.append(nn.ReLU())
-#             # layers.append(nn.BatchNorm1d(num_features=out_features))
-
-#         if last_activation is not None :
-#             layers.append(last_activation)
-#         self.device=device
-#         self.net = nn.Sequential(*layers).to(device)
-
-#     def change_device(self, device:str):
-#         """
-#         Move the class attributes to desired device
-#         """
-#         self.device=device
-#         self.net = self.net.to(device)
-
-#     def forward(self, x):
-#         y = self.net(x)
-#         return y
-
-
 class ProsailRNNEncoder(Encoder):
     """ 
     A class used to represent a simple MLP encoder of an auto encoder. 
@@ -378,7 +227,7 @@ class ProsailRNNEncoder(Encoder):
             norm_std = torch.ones((1, config.input_size))
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
-        self._spatial_encoding = config.spatial_mode
+        self._spatial_encoding = False
         self.nb_enc_cropped_hw = 0
 
     def get_spatial_encoding(self):
@@ -492,6 +341,9 @@ class ProsailCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
+        is_patch = check_is_patch(s2_refl)
+        if not is_patch:
+            raise AttributeError("Input data is a not a patch: spatial encoder can only take patches as input")
         normed_refl = ((s2_refl - self.norm_mean) / self.norm_std)[:, self.bands, ...]
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0)
@@ -660,6 +512,9 @@ class ProsailResCNNEncoder(nn.Module):
         :return: Output Dataclass that holds mu and var
                  tensors of shape [N,C_out,H,W]
         """
+        is_patch = check_is_patch(s2_refl)
+        if not is_patch:
+            raise AttributeError("Input data is a not a patch: spatial encoder can only take patches as input")
         normed_refl = ((s2_refl - torch_select_unsqueeze(self.norm_mean,1,4)) / torch_select_unsqueeze(self.norm_std,1,4))[:,self.bands,...]
         if len(normed_refl.size())==3:
             normed_refl = normed_refl.unsqueeze(0) # Ensures batch dimension appears

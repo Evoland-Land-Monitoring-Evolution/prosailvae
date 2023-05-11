@@ -35,7 +35,7 @@ class ProsailVAEConfig:
     prosail_bands:list[int] = field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12])
 
 def get_prosail_vae_config(params, bands, norm_mean, norm_std,
-                           inference_mode, prosail_bands, rsr_dir, spatial_mode):
+                           inference_mode, prosail_bands, rsr_dir):
     """
     Get ProsailVAEConfig from params dict
     """
@@ -56,9 +56,10 @@ def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                                    block_layer_sizes = params["block_layer_sizes"],
                                    block_layer_depths = params["block_layer_depths"],
                                    block_kernel_sizes = params["block_kernel_sizes"],
-                                   block_n = params["block_n"],
-                                   spatial_mode=spatial_mode)
-    
+                                   block_n = params["block_n"])
+    spatial_encoder = get_encoder(encoder_config).get_spatial_encoding()
+    if spatial_encoder:
+        params["loss_type"] = "spatial_nll"
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],
@@ -115,9 +116,10 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                     norm_std=None,
                                     apply_norm=pv_config.apply_norm_rec,
                                     bands=pv_config.prosail_bands)
+    
     decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
-                                        ssimulator=ssimulator,
-                                        loss_type=pv_config.loss_config.loss_type)
+                                      ssimulator=ssimulator,
+                                      loss_type=pv_config.loss_config.loss_type)
 
     prosail_vae = SimVAE(encoder=encoder, decoder=decoder,
                         lat_space=lat_space, sim_space=pheno_var_space, config=pv_config,

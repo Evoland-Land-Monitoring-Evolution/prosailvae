@@ -233,15 +233,25 @@ class SimVAE(nn.Module):
         """
         s2_r = batch[0].to(self.device)
         s2_a = batch[1].to(self.device)
+        input_is_patch = check_is_patch(s2_r)
+
+        if self.spatial_mode: # self.decoder.loss_type=='spatial_nll':
+            assert input_is_patch
+        else: # encoder is pixellic
+            if input_is_patch: # converting patch into batch
+                s2_r = batchify_batch_latent(s2_r)
+                s2_a = batchify_batch_latent(s2_a)
         # Forward Pass
         params, _, _, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
-        # Reconstruction term
-        if self.decoder.loss_type=='spatial_nll':
+
+        # cropping pixels lost to padding
+        if self.spatial_mode:
+            assert check_is_patch(rec)
             s2_r = crop_s2_input(s2_r, self.encoder.nb_enc_cropped_hw)
             s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
-            rec_loss = self.decoder.loss(s2_r, rec)
-        else:
-            rec_loss = self.decoder.loss(s2_r, rec)
+
+        # Reconstruction term
+        rec_loss = self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum = rec_loss

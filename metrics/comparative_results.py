@@ -114,7 +114,7 @@ def get_model_results(model_dict: dict, test_loader, info_test_data):
                 model_info["reconstruction"].append(rec_image)
                 model_info["prosail_vars"].append(sim_image)
                 model_info["latent_sigma"].append(sigma_image)
-            all_s2_r.append(cropped_s2_r)
+            all_s2_r.append(cropped_s2_r.squeeze())
             info = info_test_data[i,:]
             try:
                 (snap_lai, snap_cab,
@@ -182,7 +182,12 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                                             + [model_info["plot_name"] for _, model_info in model_dict.items()])
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png"))
-
+        fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]] 
+                              + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...] 
+                                 for _, model_info in model_dict.items()],
+                              title_list = [f"Sentinel {info[0]} \n"
+                                            f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
+                                            + [model_info["plot_name"] for _, model_info in model_dict.items()])
         fig, _ = plot_patches(patch_list = [all_s2_r[i,...]
                                             ] + [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
                                  for _, model_info in model_dict.items()],

@@ -130,7 +130,6 @@ def get_model_results(model_dict: dict, test_loader, info_test_data):
             all_snap_lai.append(snap_lai)
             all_snap_cab.append(snap_cab)
             all_snap_cw.append(snap_cw)
-            all_s2_r.append(batch[0])
         all_snap_lai = torch.stack(all_snap_lai, axis=0)
         all_snap_cab = torch.stack(all_snap_cab, axis=0)
         all_snap_cw = torch.stack(all_snap_cw, axis=0)

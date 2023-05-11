@@ -352,9 +352,14 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
 def get_pixel_log_likelihood_with_weiss(s2_r, lai, n_components=128, max_iter=500):
     from sklearn.mixture import GaussianMixture
     s2_r_ref, _, lai_ref = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
-    gm = GaussianMixture(n_components=n_components, random_state=0, 
-                         max_iter=max_iter, verbose=1).fit(np.concatenate((s2_r_ref, lai_ref.reshape(-1,1)),1))
-    return gm.score_samples(np.concatenate((s2_r, lai.reshape(-1,1)),1))
+    s2_ref_mean = np.mean(s2_r_ref, 0)
+    s2_ref_std = np.std(s2_r_ref, 0)
+    lai_mean = np.mean(lai)
+    lai_std = np.std(lai)
+    gm = GaussianMixture(n_components=n_components, random_state=0,
+                         max_iter=max_iter, verbose=1).fit(np.concatenate(((s2_r_ref - s2_ref_mean) / s2_ref_std,
+                                                                           (lai_ref.reshape(-1,1) - lai_mean)/lai_std),1))
+    return gm.score_samples(np.concatenate(((s2_r- s2_ref_mean) / s2_ref_std, (lai.reshape(-1,1) - lai_mean)/lai_std),1))
 
 def get_boxplot_symlog_width(positions:np.ndarray, threshold:float=0.01, linear_width:float = 0.1):
     symlog_width = np.zeros_like(positions).astype(float)
@@ -362,6 +367,71 @@ def get_boxplot_symlog_width(positions:np.ndarray, threshold:float=0.01, linear_
     symlog_width[np.where(positions>threshold)] = 10**(np.log10(positions[positions>threshold])+ linear_width/2.)-10**(np.log10(positions[positions>threshold])-linear_width/2.)
 
     return symlog_width
+
+def weiss_dataset_lai_vs_ll(res_dir):
+    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    data_weiss = torch.from_numpy(np.concatenate((s2_r, np.cos(np.deg2rad(s2_a)), lai.reshape(-1,1)), 1))
+    train_loader, valid_loader = get_loaders(data_weiss, seed=86294692001, valid_ratio=0.1,
+                                batch_size=256)
+    ver="3A"
+    snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
+    lr=0.001
+    patience = 25
+    epochs=1000
+    disable_tqdm=False
+    snap_nn.set_weiss_weights()
+    optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
+    lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
+                                        threshold=0.001)
+    _, all_valid_losses, _ = snap_nn.train_model(loader, valid_loader, optimizer,
+                                                    epochs=epochs, lr_scheduler=lr_scheduler,
+                                                    disable_tqdm=disable_tqdm)
+    loader = valid_loader
+    loader_name="valid"
+    loader_pixels_ll = get_pixel_log_likelihood_with_weiss(loader.dataset[:][0][:,:8].numpy(),
+                                                           loader.dataset[:][1].numpy(),
+                                                           n_components=256)
+    with torch.no_grad():
+        absolute_errors = (snap_nn.forward(loader.dataset[:][0].to(snap_nn.device))
+                                            - loader.dataset[:][1].to(snap_nn.device)).abs().squeeze().cpu().numpy()
+        errors = (snap_nn.forward(loader.dataset[:][0].to(snap_nn.device))
+                                                - loader.dataset[:][1].to(snap_nn.device)).squeeze().cpu().numpy()
+    fig, ax = plt.subplots()
+    sc = ax.scatter(loader_pixels_ll, absolute_errors, c=loader.dataset[:][1].squeeze().numpy(), s=0.5)
+    plt.colorbar(sc)
+    # ax.set_xscale('symlog')
+    ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+    ax.set_ylabel("LAI Absolute error")
+    fig.savefig(res_dir + f"/scatter_abs_error_vs_loglikelihood_weiss_{loader_name}.png")
+    fig, ax = plt.subplots()
+    sc = ax.scatter(loader.dataset[:][1].squeeze().numpy(), loader_pixels_ll, s=0.5)
+    # ax.set_xscale('symlog')
+    ax.set_ylabel("Reflectances log-likelihood from the simulated dataset distribution")
+    ax.set_xlabel("LAI")
+    fig.savefig(res_dir + f"/scatter_lai_vs_loglikelihood_weiss_{loader_name}.png")
+    fig, ax = plt.subplots()
+    sc = ax.hist2d(loader.dataset[:][1].squeeze().numpy(), loader_pixels_ll, bins=100)
+    # ax.set_xscale('symlog')
+    ax.set_ylabel("Reflectances log-likelihood from the simulated dataset distribution")
+    ax.set_xlabel("LAI")
+    fig.savefig(res_dir + f"/hist_lai_vs_loglikelihood_weiss_{loader_name}.png")
+    fig, ax = plt.subplots()
+    ax.scatter(loader_pixels_ll, errors, s=0.5)
+    ax.set_xscale('symlog')
+    ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+    ax.set_ylabel("LAI error")
+    fig.savefig(res_dir + f"/scatter_error_vs_loglikelihood_weiss_{loader_name}.png")
+    fig, ax = plt.subplots()
+    ax.hist2d(loader_pixels_ll, absolute_errors, bins=100)
+    ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+    ax.set_ylabel("LAI Absolute error")
+    fig.savefig(res_dir + f"/hist_error_vs_loglikelihood_weiss_{loader_name}.png")
+    fig, ax = plt.subplots()
+    ax.hist2d(loader_pixels_ll, absolute_errors, bins=1000)
+    ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+    ax.set_ylabel("LAI Absolute error")
+    ax.set_xscale('symlog')
+    return
 
 def main():
     test_snap_nn(ver="2.1")
@@ -374,8 +444,8 @@ def main():
               "-e", "3",
               "-n", "2",
               "-i", 't',
-              "-lr", "0.001", ]
-            #   "-f", "t"]
+              "-lr", "0.001",
+              "-f", "t"]
         disable_tqdm=False
         # tg_mu = torch.tensor([0,1])
         # tg_sigma = torch.tensor([0.5,1])
@@ -401,6 +471,7 @@ def main():
     compute_metrics = False
     save_dir = parser.data_dir
     res_dir = parser.results_dir
+    weiss_dataset_lai_vs_ll(res_dir)
     lr = parser.lr
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
@@ -444,47 +515,48 @@ def main():
                                                      all_valid_losses=[snap_valid_loss]))
             metrics_ref = torch.stack(metrics_ref, dim=0)
             all_metrics_ref.append(metrics_ref)
-            # loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy(), test_loader.dataset[:][1].numpy(),
-            #                                                        n_components=256)
-            # with torch.no_grad():
-            #     absolute_errors = (snap_ref.forward(test_loader.dataset[:][0].to(snap_ref.device))
-            #                                         - test_loader.dataset[:][1].to(snap_ref.device)).abs().squeeze().cpu().numpy()
-            #     errors = (snap_ref.forward(test_loader.dataset[:][0].to(snap_ref.device))
-            #                                             - test_loader.dataset[:][1].to(snap_ref.device)).squeeze().cpu().numpy()
-            # fig, ax = plt.subplots()
-            # sc = ax.scatter(loader_pixels_ll, absolute_errors, c=test_loader.dataset[:][1].squeeze().numpy(), s=0.5)
-            # plt.colorbar(sc)
-            # # ax.set_xscale('symlog')
-            # ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
-            # ax.set_ylabel("LAI Absolute error")
-            # fig.savefig(res_dir + f"/scatter_abs_error_vs_loglikelihood_{eval_data_name[k]}.png")
-            # fig, ax = plt.subplots()
-            # sc = ax.scatter(test_loader.dataset[:][1].squeeze().numpy(), loader_pixels_ll, s=0.5)
-            # # ax.set_xscale('symlog')
-            # ax.set_ylabel("Reflectances log-likelihood from the simulated dataset distribution")
-            # ax.set_xlabel("LAI")
-            # fig, ax = plt.subplots()
-            # sc = ax.hist2d(test_loader.dataset[:][1].squeeze().numpy(), loader_pixels_ll, bins=100)
-            # # ax.set_xscale('symlog')
-            # ax.set_ylabel("Reflectances log-likelihood from the simulated dataset distribution")
-            # ax.set_xlabel("LAI")
+            loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy(),
+                                                                   test_loader.dataset[:][1].numpy(),
+                                                                   n_components=256)
+            with torch.no_grad():
+                absolute_errors = (snap_ref.forward(test_loader.dataset[:][0].to(snap_ref.device))
+                                                    - test_loader.dataset[:][1].to(snap_ref.device)).abs().squeeze().cpu().numpy()
+                errors = (snap_ref.forward(test_loader.dataset[:][0].to(snap_ref.device))
+                                                        - test_loader.dataset[:][1].to(snap_ref.device)).squeeze().cpu().numpy()
+            fig, ax = plt.subplots()
+            sc = ax.scatter(loader_pixels_ll, absolute_errors, c=test_loader.dataset[:][1].squeeze().numpy(), s=0.5)
+            plt.colorbar(sc)
+            # ax.set_xscale('symlog')
+            ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_ylabel("LAI Absolute error")
+            fig.savefig(res_dir + f"/scatter_abs_error_vs_loglikelihood_{eval_data_name[k]}.png")
+            fig, ax = plt.subplots()
+            sc = ax.scatter(test_loader.dataset[:][1].squeeze().numpy(), loader_pixels_ll, s=0.5)
+            # ax.set_xscale('symlog')
+            ax.set_ylabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_xlabel("LAI")
+            fig, ax = plt.subplots()
+            sc = ax.hist2d(test_loader.dataset[:][1].squeeze().numpy(), loader_pixels_ll, bins=100)
+            # ax.set_xscale('symlog')
+            ax.set_ylabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_xlabel("LAI")
             
-            # fig, ax = plt.subplots()
-            # ax.scatter(loader_pixels_ll, errors, s=0.5)
-            # ax.set_xscale('symlog')
-            # ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
-            # ax.set_ylabel("LAI Absolute error")
-            # fig.savefig(res_dir + f"/scatter_error_vs_loglikelihood_{eval_data_name[k]}.png")
-            # fig, ax = plt.subplots()
-            # ax.hist2d(loader_pixels_ll, absolute_errors, bins=100)
-            # ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
-            # ax.set_ylabel("LAI Absolute error")
-            # fig.savefig(res_dir + f"/hist_error_vs_loglikelihood_{eval_data_name[k]}.png")
-            # fig, ax = plt.subplots()
-            # ax.hist2d(loader_pixels_ll, absolute_errors, bins=1000)
-            # ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
-            # ax.set_ylabel("LAI Absolute error")
-            # ax.set_xscale('symlog')
+            fig, ax = plt.subplots()
+            ax.scatter(loader_pixels_ll, errors, s=0.5)
+            ax.set_xscale('symlog')
+            ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_ylabel("LAI error")
+            fig.savefig(res_dir + f"/scatter_error_vs_loglikelihood_{eval_data_name[k]}.png")
+            fig, ax = plt.subplots()
+            ax.hist2d(loader_pixels_ll, absolute_errors, bins=100)
+            ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_ylabel("LAI Absolute error")
+            fig.savefig(res_dir + f"/hist_error_vs_loglikelihood_{eval_data_name[k]}.png")
+            fig, ax = plt.subplots()
+            ax.hist2d(loader_pixels_ll, absolute_errors, bins=1000)
+            ax.set_xlabel("Reflectances log-likelihood from the simulated dataset distribution")
+            ax.set_ylabel("LAI Absolute error")
+            ax.set_xscale('symlog')
         metrics_ref = torch.stack(all_metrics_ref, dim=0).transpose(1,0)
 
         if compute_metrics:

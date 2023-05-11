@@ -290,9 +290,9 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                     prosail_vae.save_ae(epoch, optimizer, best_val_loss,
                                         res_dir + "/prosailvae_weights.tar")
     if n_epoch < 1: # In case we just want to plot results
-        all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0})
-        all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0})
-        info_df = pd.DataFrame(data={"lr":10000, "epoch":0})
+        all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
+        all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
+        info_df = pd.DataFrame(data={"lr":10000, "epoch":0}, index=[0])
     return all_train_loss_df, all_valid_loss_df, info_df
 
 
@@ -350,13 +350,12 @@ def setup_training():
               "-c", "config_dev.json",
               "-x", "1",
               "-o", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
               "-a", "False",
-              "-p", "False",
-              "-w", ""]
+              "-p", "False"]
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
@@ -447,7 +446,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     print(f"Weiss mode : {parser.weiss_mode}")
-    if not socket.gethostname()=='CELL200973' and params["load_model"]:
+    if params["load_model"] : # and not socket.gethostname()=='CELL200973' :
         #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
         vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
         norm_mean = torch.load(os.path.join(params["vae_load_dir_path"], "norm_mean.pt"))

@@ -115,10 +115,10 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                                                                                    mode=rec_mode)
                 info = info_test_data[i,:]
                 (weiss_lai, weiss_cab,
-                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r.unsqueeze(0),
-                                                               cropped_s2_a.unsqueeze(0)),
+                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
+                                                               cropped_s2_a),
                                                                patch_size=32, sensor=info[0])
-                PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r, rec_image, weiss_lai, i, info=info)
+                PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image, weiss_lai, i, info=info)
                 all_rec.append(rec_image.reshape(10,-1))
                 all_lai.append(sim_image[6,...].reshape(-1))
                 all_cab.append(sim_image[1,...].reshape(-1))

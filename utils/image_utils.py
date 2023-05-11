@@ -114,3 +114,14 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
     cropped_s2_a = s2_a.squeeze()[:,hw:-hw,hw:-hw]
     cropped_s2_r = s2_r.squeeze()[:,hw:-hw,hw:-hw]
     return rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image
+
+def check_is_patch(tensor:torch.Tensor):
+    """
+    Checks if a tensor (reflectances or angles) is a patch or a pixellic batch
+    """
+    if len(tensor.size()) == 4: # B x F x H x W
+        return True
+    elif len(tensor.size()) == 2: # B x F
+        return False
+    else:
+        raise ValueError

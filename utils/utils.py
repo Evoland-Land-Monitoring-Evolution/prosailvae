@@ -88,7 +88,7 @@ def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1):
     else:
         rec_err_var = torch.var(recs, sample_dim).unsqueeze(sample_dim)
         rec_mu = recs.mean(sample_dim).unsqueeze(sample_dim)
-    return gaussian_nll(tgt, rec_mu, rec_err_var, sum_dim=feature_dim).mean() 
+    return gaussian_nll(tgt, rec_mu, rec_err_var, sum_dim=feature_dim).mean()
 
 def full_gaussian_nll_loss(tgt, recs):
     err = recs # - tgt.unsqueeze(2)

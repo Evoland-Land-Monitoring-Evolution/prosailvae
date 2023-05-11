@@ -181,7 +181,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
 
 def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, 
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,
-                 juan_validation=True, weiss_mode=False):
+                 juan_validation=True, weiss_mode=False, n_samples=1):
     bands_name = BANDS
     if weiss_mode:
         bands_name = ["B03", "B04", "B05", "B06", "B07", "B8A", "B11", "B12"]
@@ -216,7 +216,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     alpha_pi.reverse()
     PROSAIL_VAE.eval()
     logger.info("Computing inference metrics with test dataset...")
-    test_loss = PROSAIL_VAE.validate(loader)
+    test_loss = PROSAIL_VAE.validate(loader, n_samples=n_samples)
     pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     nlls = PROSAIL_VAE.compute_lat_nlls(loader).mean(0).squeeze()
     torch.save(nlls, res_dir + "/params_nll.pt")

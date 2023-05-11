@@ -93,14 +93,10 @@ def get_model_results(model_dict: dict, test_loader, info_test_data):
         all_s2_r = []
         print(f"Computing results for SNAP.")
         for i, batch in enumerate(tqdm(test_loader)):
-            (_, _, cropped_s2_r, cropped_s2_a,
-            _) = get_encoded_image_from_batch(batch, model, patch_size=32,
-                                              bands=torch.arange(10), mode=rec_mode)
             info = info_test_data[i,:]
             try:
-                (snap_lai, snap_cab,    
-                snap_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r.unsqueeze(0),
-                                                            cropped_s2_a.unsqueeze(0)), 
+                (snap_lai, snap_cab,
+                snap_cw) = get_weiss_biophyiscal_from_batch((batch[0], batch[1]),
                                                             patch_size=32, sensor=info[0])
             except Exception as exc:
                 print(exc)

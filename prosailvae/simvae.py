@@ -10,7 +10,7 @@ import logging
 import torch.nn as nn
 import torch
 from utils.utils import NaN_model_params
-from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent
+from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
 
 class SimVAE(nn.Module):
     """
@@ -148,6 +148,7 @@ class SimVAE(nn.Module):
         """
         Forward pass through the VAE
         """
+        is_patch = check_is_patch(x)
         # encoding
         if angles is None:
             angles = x[:,-3:]
@@ -165,7 +166,7 @@ class SimVAE(nn.Module):
 
         # decoding
         rec = self.decode(sim, angles, apply_norm=apply_norm)
-        if self.spatial_mode:
+        if is_patch:
             return dist_params, z, unbatchify(sim), unbatchify(rec)
         else:
             return dist_params, z, sim, rec
@@ -174,6 +175,7 @@ class SimVAE(nn.Module):
         """
         Forward pass with point estimate of latent distribution
         """
+        is_patch = check_is_patch(x)
         if mode == 'random':
             dist_params, z, sim, rec = self.forward(x, angles, n_samples=1, apply_norm=apply_norm)
 
@@ -218,7 +220,7 @@ class SimVAE(nn.Module):
         else:
             raise NotImplementedError()
 
-        if self.spatial_mode:# and mode != 'random':
+        if is_patch:# and mode != 'random':
             if mode == 'random':
                 return unbatchify(dist_params), z, sim, rec
             return unbatchify(dist_params), z, unbatchify(sim), unbatchify(rec)

@@ -1047,14 +1047,15 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_lai_scatter_true_vs_pred.png")
 
+    ccc = all_cab * all_lai
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cab.cpu().numpy(), all_cab.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cab.cpu().numpy(), all_cab.cpu().numpy())
-    mse = (all_weiss_cab - all_cab).pow(2).mean().cpu().numpy()
-    xmin = min(all_cab.cpu().min().item(), all_weiss_cab.cpu().min().item())
-    xmax = max(all_cab.cpu().max().item(), all_weiss_cab.cpu().max().item())
+    m, b = np.polyfit(all_weiss_cab.cpu().numpy(), ccc.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cab.cpu().numpy(), ccc.cpu().numpy())
+    mse = (all_weiss_cab - ccc).pow(2).mean().cpu().numpy()
+    xmin = min(ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+    xmax = max(ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
     ax.scatter(all_weiss_cab.cpu().numpy(),
-                        all_cab.cpu().numpy(),s=0.5)
+                        ccc.cpu().numpy(),s=0.5)
     ax.plot([xmin, xmax],
             [m * xmin + b, m * xmax + b],'r', 
             label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
@@ -1063,11 +1064,10 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
     ax.legend()
-    ax.set_ylabel(f"Predicted Cab")
-    ax.set_xlabel(f"SNAP Cab")
+    ax.set_ylabel(f"Predicted CCC")
+    ax.set_xlabel(f"SNAP CCC")
     ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_cab_scatter_true_vs_pred.png")
-    
+    fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
 
     # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     # weiss_ccc = all_weiss_cab / all_weiss_lai * 10
@@ -1133,14 +1133,15 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     # ax.set_aspect('equal')
     # fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
 
+    cwc = all_lai * all_cw
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy())
-    mse = (all_weiss_cw - all_cw).pow(2).mean().cpu().numpy()
-    xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item())
-    xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    m, b = np.polyfit(all_weiss_cw.cpu().numpy(), cwc.cpu().numpy(), 1)
+    r2 = r2_score(all_weiss_cw.cpu().numpy(), cwc.cpu().numpy())
+    mse = (all_weiss_cw - cwc).pow(2).mean().cpu().numpy()
+    xmin = min(cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    xmax = max(cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
     ax.scatter(all_weiss_cw.cpu().numpy(),
-                        all_cw.cpu().numpy(),s=0.5)
+                        cwc.cpu().numpy(),s=0.5)
     ax.plot([xmin, xmax],
             [m * xmin + b, m * xmax + b],'r', 
             label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
@@ -1149,10 +1150,10 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
     ax.legend()
-    ax.set_ylabel(f"Predicted Cw")
-    ax.set_xlabel(f"SNAP Cw")
+    ax.set_ylabel(f"Predicted CWC")
+    ax.set_xlabel(f"SNAP CWC")
     ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_cw_scatter_true_vs_pred.png")
+    fig.savefig(f"{plot_dir}/all_cwc_scatter_true_vs_pred.png")
 
     # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     # m, b = np.polyfit(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy(), 1)

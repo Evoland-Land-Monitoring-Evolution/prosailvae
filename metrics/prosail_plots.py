@@ -1065,6 +1065,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel(f"SNAP Cab")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_cab_scatter_true_vs_pred.png")
+    
 
     # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     # weiss_ccc = all_weiss_cab / all_weiss_lai * 10
@@ -1194,7 +1195,8 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     # fig.savefig(f"{plot_dir}/all_cwrel_scatter_true_vs_pred.png")
     return
 
-def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, i, info=None):
+def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
+                         weiss_cw, i, info=None):
     if info is None:
         info = ["SENSOR","DATE","TILE"]
     n_cols = 4
@@ -1253,7 +1255,27 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
                             title_list=[f'original patch RGB:B8-B5-B11 \n {info[1]} {info[2]}', 'reconstruction'])
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png")
 
+    vmin = min(sim_image[6,...].unsqueeze(0).cpu().min().item(), weiss_lai.unsqueeze(0).cpu().min().item())
+    vmax = min(sim_image[6,...].unsqueeze(0).cpu().max().item(), weiss_lai.unsqueeze(0).cpu().max().item())
     fig, _ = plot_patches((cropped_image.cpu(), sim_image[6,...].unsqueeze(0).cpu(), weiss_lai.cpu()),
-                            title_list=[f'original patch \n {info[1]} {info[2]}', 'PROSAIL-VAE lai', 'Sentinel-hub lai'])
+                            title_list=[f'original patch \n {info[1]} {info[2]}', 
+                                        'PROSAIL-VAE lai', 'Sentinel-hub lai'], 
+                                        vmin=vmin, vmax=vmax)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_LAI_prediction_vs_weiss.png')
+
+    vmin = min(sim_image[1,...].unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item())
+    vmax = min(sim_image[1,...].unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item())
+    fig, _ = plot_patches((cropped_image.cpu(), sim_image[1,...].unsqueeze(0).cpu(), weiss_cab.cpu()),
+                            title_list=[f'original patch \n {info[1]} {info[2]}',
+                                        'PROSAIL-VAE Cab', 'Sentinel-hub Cab'], 
+                                        vmin=vmin, vmax=vmax)
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_Cab_prediction_vs_weiss.png')
+
+    vmin = min(sim_image[4,...].unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item())
+    vmax = min(sim_image[4,...].unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item())
+    fig, _ = plot_patches((cropped_image.cpu(), sim_image[4,...].unsqueeze(0).cpu(), weiss_cw.cpu()),
+                            title_list=[f'original patch \n {info[1]} {info[2]}',
+                                        'PROSAIL-VAE Cw', 'Sentinel-hub Cw'], 
+                                        vmin=vmin, vmax=vmax)
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_Cw_prediction_vs_weiss.png')
     return

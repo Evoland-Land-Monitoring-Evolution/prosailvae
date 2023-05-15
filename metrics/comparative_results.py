@@ -175,25 +175,22 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
             fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_reconstructions_rgb.png"))
 
         fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]] 
-                              + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...] 
+                              + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...]
                                  for _, model_info in model_dict.items()],
                               title_list = [f"Sentinel {info[0]} \n"
                                             f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
                                             + [model_info["plot_name"] for _, model_info in model_dict.items()])
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png"))
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]] 
-                              + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...] 
-                                 for _, model_info in model_dict.items()],
-                              title_list = [f"Sentinel {info[0]} \n"
-                                            f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
-                                            + [model_info["plot_name"] for _, model_info in model_dict.items()])
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,...]
-                                            ] + [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
-                                 for _, model_info in model_dict.items()],
+        models_errs = [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
+                                 for _, model_info in model_dict.items()]
+        vmin = min([err.cpu().min().item() for err in models_errs])
+        vmin = max([err.cpu().max().item() for err in models_errs])
+        fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] + models_errs,
                               title_list = [f"Sentinel {info[0]} \n"
                                             f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"
-                                            ] + [model_info["plot_name"] for _, model_info in model_dict.items()])
+                                            ] + [model_info["plot_name"] for _, model_info in model_dict.items()],
+                                            vmin=vmin, vmax=vmax)
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_err.png"))
         lai_patch_tensors = [model_info["prosail_vars"][i,6,...].unsqueeze(0) 

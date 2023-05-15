@@ -48,7 +48,10 @@ def get_parser():
     parser.add_argument("-lr", dest="lr", 
                         type=float, default=0.001)
     
-    parser.add_argument("-f", dest="fold_xp", 
+    parser.add_argument("-f", dest="fold_xp",
+                        type=bool, default=False)
+    
+    parser.add_argument("-t", dest="third_layer",
                         type=bool, default=False)
     return parser
 
@@ -325,7 +328,8 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
 
 def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=None,
                         n_models:int=10, epochs:int=500, lr:float=0.001,
-                        disable_tqdm:bool=False,  patience:int=10, init_models:bool=False, ver:str="2.1"):
+                        disable_tqdm:bool=False,  patience:int=10, init_models:bool=False, 
+                        ver:str="2.1", third_layer=False):
     """
     Trains several models on given train and validation dataloaders and assesses their regression metrics
     on provided test dataloader
@@ -335,7 +339,7 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
     metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss", "MSE"]
     metrics = torch.zeros((n_models, len(test_loader_list), len(metrics_names)))
     for i in range(n_models):
-        snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
+        snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver, third_layer=third_layer)
         if init_models:
             snap_nn.set_weiss_weights()
         optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
@@ -446,12 +450,12 @@ def main():
               "-n", "2",
               "-i", 't',
               "-lr", "0.001",
-              "-f", "t"]
+              "-t", "t"]
         disable_tqdm=False
-        # tg_mu = torch.tensor([0,1])
-        # tg_sigma = torch.tensor([0.5,1])
-        tg_mu = torch.tensor([0, 1, 2, 3, 4])
-        tg_sigma = torch.tensor([0.5, 1, 2, 3])
+        tg_mu = torch.tensor([0,1])
+        tg_sigma = torch.tensor([0.5,1])
+        # tg_mu = torch.tensor([0, 1, 2, 3, 4])
+        # tg_sigma = torch.tensor([0.5, 1, 2, 3])
         parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
         ver="3B"
@@ -472,7 +476,7 @@ def main():
     compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
-    weiss_dataset_lai_vs_ll(res_dir)
+    # weiss_dataset_lai_vs_ll(res_dir)
     lr = parser.lr
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
@@ -570,7 +574,7 @@ def main():
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs, lr=lr,
                                               disable_tqdm=disable_tqdm, patience=20,
-                                              init_models=init_models, ver=ver)
+                                              init_models=init_models, ver=ver, third_layer=third_layer)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
             mean_metrics = torch.cat(mean_metrics, 0)
@@ -675,7 +679,8 @@ def main():
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs,
                                               lr=lr,disable_tqdm=disable_tqdm, patience=20,
-                                              init_models=init_models)
+                                              init_models=init_models, 
+                                              third_layer=parser.third_layer)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
             mean_metrics = torch.cat(mean_metrics, 0)

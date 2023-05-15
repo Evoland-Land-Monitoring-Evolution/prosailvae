@@ -417,13 +417,13 @@ class SnapNN(nn.Module):
     """
     Neural Network with SNAP architecture to predict LAI from S2 reflectances and angles
     """
-    def __init__(self, device:str='cpu', ver:str="3A", variable='lai', second_layer=False):
+    def __init__(self, device:str='cpu', ver:str="3A", variable='lai', third_layer=False):
         super().__init__()
         
         input_min, input_max, variable_min, variable_max = get_SNAP_norm_factors(ver=ver, variable=variable)
         input_size = len(input_max) # 8 bands + 3 angles
         hidden_layer_size = 5
-        if not second_layer:
+        if not third_layer:
             layers = OrderedDict([
                     ('layer_1', nn.Linear(in_features=input_size, out_features=hidden_layer_size)),
                     ('tanh', nn.Tanh()),

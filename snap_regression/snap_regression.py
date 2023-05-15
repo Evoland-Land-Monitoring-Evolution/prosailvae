@@ -574,7 +574,7 @@ def main():
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs, lr=lr,
                                               disable_tqdm=disable_tqdm, patience=20,
-                                              init_models=init_models, ver=ver, third_layer=third_layer)
+                                              init_models=init_models, ver=ver, third_layer=parser.third_layer)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
             mean_metrics = torch.cat(mean_metrics, 0)

@@ -497,7 +497,7 @@ def main():
                                                   s2_tensor_image_path=s2_tensor_image_path)
     fold_xp = parser.fold_xp
     if fold_xp:
-        metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
+        metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "MSE"]
         eval_data_name = ["simulated_data", "snap_s2"]
         snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
         snap_ref.set_weiss_weights()
@@ -642,7 +642,7 @@ def main():
                 plt.close('all')
 
     else:
-        metrics_names = ["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
+        metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "MSE"]
         eval_data_name = ["simulated_data", "snap_s2"]
         snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         snap_ref.set_weiss_weights()

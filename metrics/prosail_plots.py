@@ -957,6 +957,8 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(prosail_var)
+        ax[row, col].set_xlim(ProsailVarsDist.Dists[PROSAILVARS[idx]]['min'],
+                              ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions")
     fig.savefig(f"{plot_dir}/all_prosail_var_pred_dist.png")
@@ -1208,6 +1210,8 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
         ax[row, col].hist(sim_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(PROSAILVARS[idx])
+        ax[row, col].set_xlim(ProsailVarsDist.Dists[PROSAILVARS[idx]]['min'], 
+                              ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions {info[1]} {info[2]}")
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_prosail_var_pred_dist.png")
@@ -1258,24 +1262,38 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
     vmin = min(sim_image[6,...].unsqueeze(0).cpu().min().item(), weiss_lai.unsqueeze(0).cpu().min().item())
     vmax = min(sim_image[6,...].unsqueeze(0).cpu().max().item(), weiss_lai.unsqueeze(0).cpu().max().item())
     fig, _ = plot_patches((cropped_image.cpu(), sim_image[6,...].unsqueeze(0).cpu(), weiss_lai.cpu()),
-                            title_list=[f'original patch \n {info[1]} {info[2]}', 
-                                        'PROSAIL-VAE lai', 'Sentinel-hub lai'], 
+                            title_list=[f'original patch \n {info[1]} {info[2]}',
+                                        'PROSAIL-VAE lai', 'SNAP lai'], 
                                         vmin=vmin, vmax=vmax)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_LAI_prediction_vs_weiss.png')
-
-    vmin = min(sim_image[1,...].unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item())
-    vmax = min(sim_image[1,...].unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item())
-    fig, _ = plot_patches((cropped_image.cpu(), sim_image[1,...].unsqueeze(0).cpu(), weiss_cab.cpu()),
+    ccc = sim_image[1,...] * sim_image[6,...]
+    vmin = min(ccc.unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item())
+    vmax = min(ccc.unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item())
+    fig, _ = plot_patches((cropped_image.cpu(), ccc.unsqueeze(0).cpu(), weiss_cab.cpu()),
                             title_list=[f'original patch \n {info[1]} {info[2]}',
-                                        'PROSAIL-VAE Cab', 'Sentinel-hub Cab'], 
+                                        'PROSAIL-VAE CCC', 'SNAP CCC'], 
                                         vmin=vmin, vmax=vmax)
-    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_Cab_prediction_vs_weiss.png')
-
-    vmin = min(sim_image[4,...].unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item())
-    vmax = min(sim_image[4,...].unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item())
-    fig, _ = plot_patches((cropped_image.cpu(), sim_image[4,...].unsqueeze(0).cpu(), weiss_cw.cpu()),
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_CCC_prediction_vs_weiss.png')
+    
+    fig, _ = plot_patches((cropped_image.cpu(), ccc.unsqueeze(0).cpu() - weiss_cab.cpu()),
                             title_list=[f'original patch \n {info[1]} {info[2]}',
-                                        'PROSAIL-VAE Cw', 'Sentinel-hub Cw'], 
+                                        'PROSAIL-VAE / SNAP CCC difference'], 
+                                        vmin=None, vmax=None)
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_CCC_err_prediction_vs_weiss.png')
+
+    cwc = sim_image[4,...] * sim_image[6,...]
+    vmin = min(cwc.unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item())
+    vmax = min(cwc.unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item())
+    fig, _ = plot_patches((cropped_image.cpu(), cwc.unsqueeze(0).cpu(), weiss_cw.cpu()),
+                            title_list=[f'original patch \n {info[1]} {info[2]}',
+                                        'PROSAIL-VAE CWC', 'SNAP CWC'],
                                         vmin=vmin, vmax=vmax)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_Cw_prediction_vs_weiss.png')
+
+    cwc = sim_image[4,...] * sim_image[6,...]
+    fig, _ = plot_patches((cropped_image.cpu(), cwc.unsqueeze(0).cpu() - weiss_cw.cpu()),
+                            title_list=[f'original patch \n {info[1]} {info[2]}',
+                                        'PROSAIL-VAE / SNAP \n CWC difference'],
+                                        vmin=None, vmax=None)
+    fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_CWC_err_prediction_vs_weiss.png')
     return

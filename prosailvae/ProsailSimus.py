@@ -225,7 +225,7 @@ class ProsailVarsBounds:
     #  lidfa      | Leaf angle distribution => ALA ?
     lidfa: Tuple[float, float] = (0.0, 90.0)
     #  hspot      | Hotspot parameter => HsD
-    hspot: Tuple[float, float] = (0.0, 0.05) 
+    hspot: Tuple[float, float] = (0.0, 0.05)
     #  psoil      | Dry/Wet soil factor
     psoil: Tuple[float, float] = (0.0, 1.0)
     #  rsoil      | Soil brigthness factor

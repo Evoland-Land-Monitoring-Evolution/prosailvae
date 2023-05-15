@@ -1066,69 +1066,69 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_cab_scatter_true_vs_pred.png")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    weiss_ccc = all_weiss_cab / all_weiss_lai * 10
-    m, b = np.polyfit(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy(), 1)
-    r2 = r2_score(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy())
-    mse = (weiss_ccc - all_cab).pow(2).mean().cpu().numpy()
-    xmin = min(all_cab.cpu().min().item(), weiss_ccc.cpu().min().item())
-    xmax = max(all_cab.cpu().max().item(), weiss_ccc.cpu().max().item())
-    ax.scatter(weiss_ccc.cpu().numpy(),
-                        all_cab.cpu().numpy(),s=0.5)
-    ax.plot([xmin, xmax],
-            [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    ax.legend()
-    ax.set_ylabel(f"Predicted Cab")
-    ax.set_xlabel(f"SNAP 'CCC'")
-    ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_other_cab_scatter_true_vs_pred.png")
+    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    # weiss_ccc = all_weiss_cab / all_weiss_lai * 10
+    # m, b = np.polyfit(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy(), 1)
+    # r2 = r2_score(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy())
+    # mse = (weiss_ccc - all_cab).pow(2).mean().cpu().numpy()
+    # xmin = min(all_cab.cpu().min().item(), weiss_ccc.cpu().min().item())
+    # xmax = max(all_cab.cpu().max().item(), weiss_ccc.cpu().max().item())
+    # ax.scatter(weiss_ccc.cpu().numpy(),
+    #                     all_cab.cpu().numpy(),s=0.5)
+    # ax.plot([xmin, xmax],
+    #         [m * xmin + b, m * xmax + b],'r', 
+    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    # xlim = ax.get_xlim()
+    # ylim = ax.get_ylim()
+    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    # ax.legend()
+    # ax.set_ylabel(f"Predicted Cab")
+    # ax.set_xlabel(f"SNAP 'CCC'")
+    # ax.set_aspect('equal')
+    # fig.savefig(f"{plot_dir}/all_other_cab_scatter_true_vs_pred.png")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cab.cpu().numpy()*10, all_cab.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cab.cpu().numpy()*10, all_cab.cpu().numpy())
-    mse = (all_weiss_cab*10 - all_cab).pow(2).mean().cpu().numpy()
-    xmin = min(all_cab.cpu().min().item(), all_weiss_cab.cpu().min().item()*10)
-    xmax = max(all_cab.cpu().max().item(), all_weiss_cab.cpu().max().item()*10)
-    ax.scatter(all_weiss_cab.cpu().numpy()*10,
-                        all_cab.cpu().numpy(),s=0.5)
-    ax.plot([xmin, xmax],
-            [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    ax.legend()
-    ax.set_ylabel(f"Predicted Cab")
-    ax.set_xlabel(f"SNAP Cab")
-    ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_cab_times10_scatter_true_vs_pred.png")
+    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    # m, b = np.polyfit(all_weiss_cab.cpu().numpy()*10, all_cab.cpu().numpy(), 1)
+    # r2 = r2_score(all_weiss_cab.cpu().numpy()*10, all_cab.cpu().numpy())
+    # mse = (all_weiss_cab*10 - all_cab).pow(2).mean().cpu().numpy()
+    # xmin = min(all_cab.cpu().min().item(), all_weiss_cab.cpu().min().item()*10)
+    # xmax = max(all_cab.cpu().max().item(), all_weiss_cab.cpu().max().item()*10)
+    # ax.scatter(all_weiss_cab.cpu().numpy()*10,
+    #                     all_cab.cpu().numpy(),s=0.5)
+    # ax.plot([xmin, xmax],
+    #         [m * xmin + b, m * xmax + b],'r', 
+    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    # xlim = ax.get_xlim()
+    # ylim = ax.get_ylim()
+    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    # ax.legend()
+    # ax.set_ylabel(f"Predicted Cab")
+    # ax.set_xlabel(f"SNAP Cab")
+    # ax.set_aspect('equal')
+    # fig.savefig(f"{plot_dir}/all_cab_times10_scatter_true_vs_pred.png")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy())
-    mse = (all_weiss_cab - all_ccc).pow(2).mean().cpu().numpy()
-    xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
-    xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
-    ax.scatter(all_weiss_cab.cpu().numpy(),
-                        all_ccc.cpu().numpy(),s=0.5)
-    ax.plot([xmin, xmax],
-            [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    ax.legend()
-    ax.set_ylabel(f"Predicted CCC")
-    ax.set_xlabel(f"SNAP Cab")
-    ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
+    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    # m, b = np.polyfit(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(), 1)
+    # r2 = r2_score(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy())
+    # mse = (all_weiss_cab - all_ccc).pow(2).mean().cpu().numpy()
+    # xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+    # xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
+    # ax.scatter(all_weiss_cab.cpu().numpy(),
+    #                     all_ccc.cpu().numpy(),s=0.5)
+    # ax.plot([xmin, xmax],
+    #         [m * xmin + b, m * xmax + b],'r', 
+    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    # xlim = ax.get_xlim()
+    # ylim = ax.get_ylim()
+    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    # ax.legend()
+    # ax.set_ylabel(f"Predicted CCC")
+    # ax.set_xlabel(f"SNAP Cab")
+    # ax.set_aspect('equal')
+    # fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy(), 1)
@@ -1151,47 +1151,47 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_cw_scatter_true_vs_pred.png")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy())
-    mse = (all_weiss_cw * 10 - all_cw).pow(2).mean().cpu().numpy()
-    xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item() * 10)
-    xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item() * 10)
-    ax.scatter(all_weiss_cw.cpu().numpy() * 10,
-                        all_cw.cpu().numpy(),s=0.5)
-    ax.plot([xmin, xmax],
-            [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    ax.legend()
-    ax.set_ylabel(f"Predicted Cw")
-    ax.set_xlabel(f"SNAP Cw")
-    ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_cw_x10_scatter_true_vs_pred.png")
+    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    # m, b = np.polyfit(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy(), 1)
+    # r2 = r2_score(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy())
+    # mse = (all_weiss_cw * 10 - all_cw).pow(2).mean().cpu().numpy()
+    # xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item() * 10)
+    # xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item() * 10)
+    # ax.scatter(all_weiss_cw.cpu().numpy() * 10,
+    #                     all_cw.cpu().numpy(),s=0.5)
+    # ax.plot([xmin, xmax],
+    #         [m * xmin + b, m * xmax + b],'r', 
+    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    # xlim = ax.get_xlim()
+    # ylim = ax.get_ylim()
+    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    # ax.legend()
+    # ax.set_ylabel(f"Predicted Cw")
+    # ax.set_xlabel(f"SNAP Cw")
+    # ax.set_aspect('equal')
+    # fig.savefig(f"{plot_dir}/all_cw_x10_scatter_true_vs_pred.png")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy())
-    mse = (all_weiss_cw - all_cw_rel).pow(2).mean().cpu().numpy()
-    xmin = min(all_cw_rel.cpu().min().item(), all_weiss_cw.cpu().min().item())
-    xmax = max(all_cw_rel.cpu().max().item(), all_weiss_cw.cpu().max().item())
-    ax.scatter(all_weiss_cw.cpu().numpy(),
-                        all_cw_rel.cpu().numpy(),s=0.5)
-    ax.plot([xmin, xmax],
-            [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0], ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    ax.legend()
-    ax.set_ylabel(f"Predicted CwRel")
-    ax.set_xlabel(f"SNAP Cw")
-    ax.set_aspect('equal')
-    fig.savefig(f"{plot_dir}/all_cwrel_scatter_true_vs_pred.png")
+    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    # m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy(), 1)
+    # r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy())
+    # mse = (all_weiss_cw - all_cw_rel).pow(2).mean().cpu().numpy()
+    # xmin = min(all_cw_rel.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    # xmax = max(all_cw_rel.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    # ax.scatter(all_weiss_cw.cpu().numpy(),
+    #                     all_cw_rel.cpu().numpy(),s=0.5)
+    # ax.plot([xmin, xmax],
+    #         [m * xmin + b, m * xmax + b],'r', 
+    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+    # xlim = ax.get_xlim()
+    # ylim = ax.get_ylim()
+    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+    #                 [min(xlim[0], ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    # ax.legend()
+    # ax.set_ylabel(f"Predicted CwRel")
+    # ax.set_xlabel(f"SNAP Cw")
+    # ax.set_aspect('equal')
+    # fig.savefig(f"{plot_dir}/all_cwrel_scatter_true_vs_pred.png")
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, i, info=None):

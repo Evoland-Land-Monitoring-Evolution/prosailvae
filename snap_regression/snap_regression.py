@@ -314,13 +314,14 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
             all_valid_losses = [100000]
         lai_pred = model.forward(test_data[0].to(model.device)).cpu()
         lai_true = test_data[1].cpu()
-        rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
+        mse_loss = (lai_pred - lai_true).pow(2).mean().item()
+        rmse = (lai_pred - lai_true).pow(2).mean().item()
         r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
         mae = (lai_pred - lai_true).abs().mean().item()
         reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
         best_valid_loss = min(all_valid_losses)
 
-    return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss])
+    return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss, mse_loss])
 
 def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=None,
                         n_models:int=10, epochs:int=500, lr:float=0.001,
@@ -383,7 +384,7 @@ def weiss_dataset_lai_vs_ll(res_dir):
     optimizer = optim.Adam(snap_nn.parameters(), lr=lr)
     lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                         threshold=0.001)
-    _, all_valid_losses, _ = snap_nn.train_model(loader, valid_loader, optimizer,
+    _, all_valid_losses, _ = snap_nn.train_model(train_loader, valid_loader, optimizer,
                                                     epochs=epochs, lr_scheduler=lr_scheduler,
                                                     disable_tqdm=disable_tqdm)
     loader = valid_loader

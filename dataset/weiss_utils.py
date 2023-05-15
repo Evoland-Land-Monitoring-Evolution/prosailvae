@@ -89,10 +89,10 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
                 lai = lai_snap.forward(s2_data, spatial_mode=True)
                 cab_snap = SnapNN(variable='cab', ver=ver)
                 cab_snap.set_weiss_weights()
-                cab = cab_snap.forward(s2_data, spatial_mode=True) / lai
+                cab = cab_snap.forward(s2_data, spatial_mode=True) / torch.clip(lai, min=0.1)
                 cw_snap = SnapNN(variable='cw', ver=ver)
                 cw_snap.set_weiss_weights()
-                cw = cw_snap.forward(s2_data, spatial_mode=True) / lai
+                cw = cw_snap.forward(s2_data, spatial_mode=True) / torch.clip(lai, min=0.1)
                 # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
             patched_lai_image[i,j,...] = lai
             patched_cab_image[i,j,...] = cab

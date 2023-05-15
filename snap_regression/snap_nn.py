@@ -336,18 +336,18 @@ class DenormSNAPLAIV3A:
 
 @dataclass
 class DenormSNAPCabV2:
-    cab_min: torch.Tensor = torch.tensor(0.00742669295987) /10
-    cab_max: torch.Tensor = torch.tensor(873.90822211) /10
+    cab_min: torch.Tensor = torch.tensor(0.00742669295987)
+    cab_max: torch.Tensor = torch.tensor(873.90822211) 
 
 @dataclass
 class DenormSNAPCabV3B:
-    cab_min: torch.Tensor = torch.tensor(0.0184770096032) /10
-    cab_max: torch.Tensor = torch.tensor(888.156665152) /10
+    cab_min: torch.Tensor = torch.tensor(0.0184770096032) 
+    cab_max: torch.Tensor = torch.tensor(888.156665152)
 
 @dataclass
 class DenormSNAPCabV3A:
-    cab_min: torch.Tensor = torch.tensor(0.01847700960324858) /10
-    cab_max: torch.Tensor = torch.tensor(888.1566651521919) /10
+    cab_min: torch.Tensor = torch.tensor(0.01847700960324858) 
+    cab_max: torch.Tensor = torch.tensor(888.1566651521919) 
 
 @dataclass
 class DenormSNAPCwV2:

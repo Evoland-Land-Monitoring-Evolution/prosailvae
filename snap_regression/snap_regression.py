@@ -39,10 +39,10 @@ def get_parser():
                         help="number of epochs",
                         type=int, default=1000)
     
-    parser.add_argument("-n", dest="n_model_train", 
+    parser.add_argument("-n", dest="n_model_train",
                         type=int, default=20)
     
-    parser.add_argument("-i", dest="init_models", 
+    parser.add_argument("-i", dest="init_models",
                         type=bool, default=False)
     
     parser.add_argument("-lr", dest="lr", 
@@ -314,14 +314,14 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
             all_valid_losses = [100000]
         lai_pred = model.forward(test_data[0].to(model.device)).cpu()
         lai_true = test_data[1].cpu()
-        mse_loss = (lai_pred - lai_true).pow(2).mean().item()
+        mse_eval_loss = (lai_pred - lai_true).pow(2).mean().item()
         rmse = (lai_pred - lai_true).pow(2).mean().item()
         r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
         mae = (lai_pred - lai_true).abs().mean().item()
         reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
         best_valid_loss = min(all_valid_losses)
 
-    return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss, mse_loss])
+    return torch.tensor([rmse, r2, mae, reg_m, reg_b, best_valid_loss, mse_eval_loss])
 
 def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=None,
                         n_models:int=10, epochs:int=500, lr:float=0.001,
@@ -332,7 +332,7 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
     """
     if test_loader_list is None:
         raise ValueError("Please input a list of test loaders")
-    metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss"]
+    metrics_names=["rmse", "r2", "mae", "reg_m", "reg_b", "best_valid_loss", "MSE"]
     metrics = torch.zeros((n_models, len(test_loader_list), len(metrics_names)))
     for i in range(n_models):
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
@@ -469,7 +469,7 @@ def main():
     prepare_data = True
     epochs = parser.epochs
     n_models = parser.n_model_train
-    compute_metrics = False
+    compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     weiss_dataset_lai_vs_ll(res_dir)
@@ -497,7 +497,7 @@ def main():
                                                   s2_tensor_image_path=s2_tensor_image_path)
     fold_xp = parser.fold_xp
     if fold_xp:
-        metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "MSE"]
+        metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "best_valid_loss", "MSE"]
         eval_data_name = ["simulated_data", "snap_s2"]
         snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
         snap_ref.set_weiss_weights()
@@ -642,8 +642,9 @@ def main():
                 plt.close('all')
 
     else:
-        metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "MSE"]
+        metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "best_valid_loss", "MSE"]
         eval_data_name = ["simulated_data", "snap_s2"]
+        eval_data_plot_name = ["simulated", "Sentinel-2"]
         snap_ref = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         snap_ref.set_weiss_weights()
         test_loader_list = []
@@ -698,14 +699,14 @@ def main():
             plt.colorbar(sc, ax=ax, 
                          label='kl divergence between evaluation dataset and training dataset')
             ax.set_xlabel("Validation loss")
-            ax.set_ylabel(f"r2 score on evaluation dataset {eval_data_name[j]}")
+            ax.set_ylabel(f"r2 score on {eval_data_plot_name[j]} evaluation data-set")
             plt.legend()
             fig.savefig(res_dir + f"/{eval_data_name[j]}_valid_loss_vs_r2.png")
 
             for k in range(mean_metrics.size(2)):
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
                 ax.hist(all_metrics[:,:,j,k].reshape(-1), bins=100, density=True, label='trained models')
-                ax.set_xlabel(f"{metrics_names[k]} histogram")
+                ax.set_xlabel(f"{metrics_names[k]}")
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axvline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -719,7 +720,7 @@ def main():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
-                ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
+                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog')
                 fig.savefig(kl_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
@@ -730,7 +731,7 @@ def main():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
-                ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
+                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog')
                 fig.savefig(kl_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
@@ -744,7 +745,7 @@ def main():
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xticks(np.arange(0,11), np.arange(0,11))
-                ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
+                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog', linthresh=linthresh)
                 ax.set_xlim(xmin=-1e-3)
@@ -757,7 +758,7 @@ def main():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
-                ax.set_xlabel("KL distance between distribution of lai in training and evaluation dataset")
+                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog')
                 fig.savefig(kl_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
@@ -780,7 +781,7 @@ def main():
                     ax.scatter(tg_mu_rep, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("sampling distribution mu")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog')
+                # ax.set_xscale('symlog')
                 fig.savefig(mu_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
                         
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
@@ -791,13 +792,13 @@ def main():
                     ax.scatter(tg_mu_rep, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("sampling distribution mu")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog')
+                # ax.set_xscale('symlog')
                 fig.savefig(mu_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
                 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-                linthresh=0.01
-                symlog_wisth = get_boxplot_symlog_width(positions=tg_mu_rep, threshold=linthresh, linear_width=0.1)
-                ax.boxplot(all_metrics[:,:,j,k], positions=tg_mu_rep, widths=symlog_wisth, showfliers=False)
+                # linthresh=0.01
+                # symlog_wisth = get_boxplot_symlog_width(positions=tg_mu_rep, threshold=linthresh, linear_width=0.1)
+                ax.boxplot(all_metrics[:,:,j,k], positions=tg_mu_rep, widths=0.1, showfliers=False)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -805,7 +806,7 @@ def main():
                 ax.set_xticks(np.arange(0,11), np.arange(0,11))
                 ax.set_xlabel("sampling distribution mu")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog',linthresh=linthresh)
+                # ax.set_xscale('symlog',linthresh=linthresh)
                 ax.set_xlim(xmin=tg_mu_rep.min().item()-1e-3)
                 fig.savefig(mu_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
 
@@ -817,7 +818,7 @@ def main():
                     ax.scatter(tg_mu_rep, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("sampling distribution mu")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog')
+                # ax.set_xscale('symlog')
                 fig.savefig(mu_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_mu.png")
                 plt.close('all')
 
@@ -834,7 +835,7 @@ def main():
                     ax.scatter(tg_sigma_rep, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("sampling distribution sigma")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog')
+                # ax.set_xscale('symlog')
                 fig.savefig(sigma_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
                         
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
@@ -845,13 +846,13 @@ def main():
                     ax.scatter(tg_sigma_rep, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("sampling distribution sigma")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog')
+                # ax.set_xscale('symlog')
                 fig.savefig(sigma_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
                 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-                linthresh=0.01
-                symlog_wisth = get_boxplot_symlog_width(positions=tg_sigma_rep, threshold=linthresh, linear_width=0.1)
-                ax.boxplot(all_metrics[:,:,j,k], positions=tg_sigma_rep, widths=symlog_wisth, showfliers=False)
+                # linthresh=0.01
+                # symlog_wisth = get_boxplot_symlog_width(positions=tg_sigma_rep, threshold=linthresh, linear_width=0.1)
+                ax.boxplot(all_metrics[:,:,j,k], positions=tg_sigma_rep, widths=0.1, showfliers=False)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -859,12 +860,12 @@ def main():
                 ax.set_xticks(np.arange(0,11), np.arange(0,11))
                 ax.set_xlabel("sampling distribution sigma")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog', linthresh=linthresh)
+                # ax.set_xscale('symlog', linthresh=linthresh)
                 ax.set_xlim(xmin=tg_sigma_rep.min().item()-1e-3)
                 fig.savefig(sigma_res_dir + f"/boxplot_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
-                ax.scatter(tg_sigma_rep.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1), 
+                ax.scatter(tg_sigma_rep.repeat(all_metrics.size(1),1).transpose(1,0).reshape(-1),
                            all_metrics[:,:,j,k].reshape(-1), s=0.5)
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
@@ -872,7 +873,7 @@ def main():
                     ax.scatter(tg_sigma_rep, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xlabel("sampling distribution sigma")
                 ax.set_ylabel(metrics_names[k])
-                ax.set_xscale('symlog')
+                # ax.set_xscale('symlog')
                 fig.savefig(sigma_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_sigma.png")
                 plt.close('all')
     return

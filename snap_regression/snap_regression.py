@@ -622,6 +622,8 @@ def main():
                 
                 fig, ax = plt.subplots(1, dpi=150, tight_layout=True)
                 ax.boxplot(all_metrics[:,:,j,k], positions=np.arange(len(fold_data_list)), widths=0.1, showfliers=False)
+                if {metrics_names[k]}=="r2":
+                    ax.set_ylim(min=max(np.min(all_metrics[:,:,j,k]), 0))
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -725,7 +727,7 @@ def main():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
-                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
+                ax.set_xlabel("KL divergence between LAI distribution of the training sub-data-set \n and the evaluation data-set")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog')
                 fig.savefig(kl_res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
@@ -736,7 +738,7 @@ def main():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
-                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
+                ax.set_xlabel("KL divergence between LAI distribution of the training sub-data-set \n and the evaluation data-set")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog')
                 fig.savefig(kl_res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
@@ -745,12 +747,14 @@ def main():
                 linthresh=0.01
                 symlog_wisth = get_boxplot_symlog_width(positions=kl, threshold=linthresh, linear_width=0.1)
                 ax.boxplot(all_metrics[:,:,j,k], positions=kl, widths=symlog_wisth, showfliers=False)
+                if {metrics_names[k]}=="r2":
+                    ax.set_ylim(min=max(np.min(all_metrics[:,:,j,k]), 0))
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
                 ax.set_xticks(np.arange(0,11), np.arange(0,11))
-                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
+                ax.set_xlabel("KL divergence between LAI distribution of the training sub-data-set \n and the evaluation data-set")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog', linthresh=linthresh)
                 ax.set_xlim(xmin=-1e-3)
@@ -763,7 +767,7 @@ def main():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
                     ax.scatter(kl, metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', c='k')
-                ax.set_xlabel("KL distance between LAI distribution in training and the simulated evaluation data-sets")
+                ax.set_xlabel("KL divergence between LAI distribution of the training sub-data-set \n and the evaluation data-set")
                 ax.set_ylabel(metrics_names[k])
                 ax.set_xscale('symlog')
                 fig.savefig(kl_res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_kl.png")
@@ -804,6 +808,8 @@ def main():
                 # linthresh=0.01
                 # symlog_wisth = get_boxplot_symlog_width(positions=tg_mu_rep, threshold=linthresh, linear_width=0.1)
                 ax.boxplot(all_metrics[:,:,j,k], positions=tg_mu_rep, widths=0.1, showfliers=False)
+                if {metrics_names[k]}=="r2":
+                    ax.set_ylim(min=max(np.min(all_metrics[:,:,j,k]), 0))
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:
@@ -858,6 +864,8 @@ def main():
                 # linthresh=0.01
                 # symlog_wisth = get_boxplot_symlog_width(positions=tg_sigma_rep, threshold=linthresh, linear_width=0.1)
                 ax.boxplot(all_metrics[:,:,j,k], positions=tg_sigma_rep, widths=0.1, showfliers=False)
+                if {metrics_names[k]}=="r2":
+                    ax.set_ylim(min=max(np.min(all_metrics[:,:,j,k]), 0))
                 if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                     ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
                 else:

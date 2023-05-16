@@ -381,7 +381,7 @@ def weiss_dataset_lai_vs_ll(res_dir):
     ver="3A"
     snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver=ver)
     lr=0.001
-    patience = 25
+    patience = 10
     epochs=1000
     disable_tqdm=False
     snap_nn.set_weiss_weights()
@@ -573,7 +573,7 @@ def main():
                 metrics = get_n_model_metrics(train_loader, valid_loader,
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs, lr=lr,
-                                              disable_tqdm=disable_tqdm, patience=20,
+                                              disable_tqdm=disable_tqdm, patience=10,
                                               init_models=init_models, ver=ver, third_layer=parser.third_layer)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))
@@ -679,7 +679,7 @@ def main():
                                               test_loader_list=test_loader_list,
                                               n_models=n_models, epochs=epochs,
                                               lr=lr,disable_tqdm=disable_tqdm, patience=20,
-                                              init_models=init_models, 
+                                              init_models=init_models,
                                               third_layer=parser.third_layer)
                 mean_metrics.append(metrics.mean(0).unsqueeze(0))
                 all_metrics.append(metrics.unsqueeze(0))

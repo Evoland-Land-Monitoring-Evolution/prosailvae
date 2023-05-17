@@ -185,7 +185,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         models_errs = [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
                                  for _, model_info in model_dict.items()]
         vmin = min([err.cpu().min().item() for err in models_errs])
-        vmin = max([err.cpu().max().item() for err in models_errs])
+        vmax = max([err.cpu().max().item() for err in models_errs])
         fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] + models_errs,
                               title_list = [f"Sentinel {info[0]} \n"
                                             f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"

@@ -350,7 +350,7 @@ def setup_training():
               "-c", "config_dev.json",
               "-x", "1",
               "-o", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
@@ -422,6 +422,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                 f" {data_dir}/{params['dataset_file_prefix']}...")
     bands, prosail_bands = get_bands_idx(params["weiss_bands"])
     if params["simulated_dataset"]:
+        if params["batch_size"] < 2:
+            raise ValueError("With simulated data, batch_size cannot be inferior to 2.")
         train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"],
                                                     file_prefix=params["dataset_file_prefix"],
                                                     sample_ids=None,

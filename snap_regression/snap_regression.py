@@ -316,7 +316,7 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
         lai_pred = model.forward(test_data[0].to(model.device)).cpu()
         lai_true = test_data[1].cpu()
         mse_eval_loss = (lai_pred - lai_true).pow(2).mean().item()
-        rmse = (lai_pred - lai_true).pow(2).mean().item()
+        rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
         r2 = r2_score(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy())
         mae = (lai_pred - lai_true).abs().mean().item()
         reg_m, reg_b = np.polyfit(lai_true.squeeze().numpy(), lai_pred.squeeze().numpy(), 1)
@@ -449,6 +449,8 @@ def get_plots(res_dir, x_positions, all_metrics, mean_metrics, median_metrics, m
             else:
                 ax.hist(metrics_ref[:,j,k], label=f'SNAP {metrics_names[k]}', bins=50, color='k')
             ax.legend()
+            if metrics_names[k]=="r2":
+                ax.set_ylim(bottom=max((all_metrics[:,:,j,k]).min(), 0), top=1)
             fig.savefig(res_dir + f"/{eval_data_name[j]}_{metrics_names[k]}_histogram_vs_{file_suffix}.png")
 
             # Scatterplot of mean metrics
@@ -465,6 +467,8 @@ def get_plots(res_dir, x_positions, all_metrics, mean_metrics, median_metrics, m
                 ax.set_xlim(xmin=-1e-3)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(metrics_names[k])
+            if metrics_names[k]=="r2":
+                ax.set_ylim(bottom=max((all_metrics[:,:,j,k]).min(), 0), top=1)
             fig.savefig(res_dir + f"/means_{eval_data_name[j]}_{metrics_names[k]}_vs_{file_suffix}.png")
             
             # Scatterplot of median metrics
@@ -479,6 +483,8 @@ def get_plots(res_dir, x_positions, all_metrics, mean_metrics, median_metrics, m
                 linthresh=0.01
                 ax.set_xscale('symlog', linthresh=linthresh)
                 ax.set_xlim(xmin=-1e-3)
+            if metrics_names[k]=="r2":
+                ax.set_ylim(bottom=max((all_metrics[:,:,j,k]).min(), 0), top=1)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(metrics_names[k])
             fig.savefig(res_dir + f"/median_{eval_data_name[j]}_{metrics_names[k]}_vs_{file_suffix}.png")
@@ -493,8 +499,8 @@ def get_plots(res_dir, x_positions, all_metrics, mean_metrics, median_metrics, m
                 ax.set_xlim(xmin=-1e-3)
             else:
                 ax.boxplot(all_metrics[:,:,j,k], positions=x_positions, widths=0.1, showfliers=False)
-            if {metrics_names[k]}=="r2":
-                ax.set_ylim(min=max(np.min(all_metrics[:,:,j,k]), 0))
+            if metrics_names[k]=="r2":
+                ax.set_ylim(bottom=max((all_metrics[:,:,j,k]).min(), 0), top=1)
             if metrics_ref[:,j,k].min() == metrics_ref[:,j,k].max():
                 ax.axhline(metrics_ref[:,j,k].min(), c='k', label=f'SNAP {metrics_names[k]}')
             else:
@@ -516,10 +522,12 @@ def get_plots(res_dir, x_positions, all_metrics, mean_metrics, median_metrics, m
                             label=f"SNAP {metrics_names[k]}", c='k')
             ax.set_xlabel(xlabel)
             ax.set_ylabel(metrics_names[k])
+            if metrics_names[k]=="r2":
+                ax.set_ylim(bottom=max((all_metrics[:,:,j,k]).min(), 0), top=1)
             fig.savefig(res_dir + f"/scatter_{eval_data_name[j]}_{metrics_names[k]}_vs_{file_suffix}.png")
             plt.close('all')
 
-def ll_plots(res_dir, test_loader, snap_ref, eval_data_name):
+def ll_plots(res_dir, test_loader, snap_ref, eval_data_name, k):
     loader_pixels_ll = get_pixel_log_likelihood_with_weiss(test_loader.dataset[:][0][:,:8].numpy(),
                                                                    test_loader.dataset[:][1].numpy(),
                                                                    n_components=256)
@@ -578,11 +586,11 @@ def get_metrics_ref(data_eval_list, train_data_list, ver="3A"):
                                             batch_size=256)
             snap_valid_loss = snap_ref.validate(valid_loader)
             metrics_ref.append(get_model_metrics(test_loader.dataset[:],
-                                                    model=snap_ref,
-                                                    all_valid_losses=[snap_valid_loss]))
+                                                 model=snap_ref,
+                                                 all_valid_losses=[snap_valid_loss]))
         metrics_ref = torch.stack(metrics_ref, dim=0)
         all_metrics_ref.append(metrics_ref)
-        # ll_plots(res_dir, test_loader, snap_ref, eval_data_name)
+        # ll_plots(res_dir, test_loader, snap_ref, eval_data_name, k)
     metrics_ref = torch.stack(all_metrics_ref, dim=0).transpose(1,0)
     return metrics_ref, test_loader_list
 
@@ -596,16 +604,16 @@ def main():
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_validation/",
               "-e", "3",
               "-n", "2",
-              "-i", 't',
+            #   "-i", 't',
               "-lr", "0.001"]
         disable_tqdm=False
-        tg_mu = torch.tensor([0,1])
-        tg_sigma = torch.tensor([0.5,1])
-        # tg_mu = torch.tensor([0, 1, 2, 3, 4])
-        # tg_sigma = torch.tensor([0.5, 1, 2, 3])
+        # tg_mu = torch.tensor([0,1])
+        # tg_sigma = torch.tensor([0.5,1])
+        tg_mu = torch.tensor([0, 1, 2, 3, 4])
+        tg_sigma = torch.tensor([0.5, 1, 2, 3])
         parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
-        ver="3B"
+
     else:
         parser = get_parser().parse_args()
 
@@ -613,14 +621,14 @@ def main():
         tg_sigma = torch.tensor([0.5, 1, 2, 3])
         TENSOR_DIR="/work/CESBIO/projects/MAESTRIA/prosail_validation/validation_sites/torchfiles/T31TCJ/"
         image_filename = "/before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth"
-        ver="3A"
         s2_tensor_image_path = TENSOR_DIR + image_filename
         disable_tqdm=True
+    ver="3A"
     init_models = parser.init_models
     prepare_data = True
     epochs = parser.epochs
     n_models = parser.n_model_train
-    compute_metrics = True
+    compute_metrics = False
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     # weiss_dataset_lai_vs_ll(res_dir)
@@ -682,7 +690,7 @@ def main():
         metrics_names = ["RMSE", "r2", "MAE", "reg_m", "reg_b", "best_valid_loss", "MSE"]
         eval_data_name = ["simulated_data", "snap_s2"]
         eval_data_plot_name = ["simulated", "Sentinel-2"]
-        metrics_ref, test_loader_list = get_metrics_ref(data_eval_list, fold_data_list, ver=ver)
+        metrics_ref, test_loader_list = get_metrics_ref(data_eval_list, tg_data_list, ver=ver)
         if compute_metrics:
             kl = torch.zeros(len(tg_data_list))
             mean_metrics = []
@@ -725,7 +733,7 @@ def main():
             fig.savefig(res_dir + f"/{eval_data_name[j]}_valid_loss_vs_r2.png")
 
         x_positions = kl
-        get_plots(kl_res_dir, x_positions, all_metrics, mean_metrics, 
+        get_plots(kl_res_dir, x_positions, all_metrics, mean_metrics,
                   median_metrics, metrics_ref,
                   metrics_names, eval_data_name,
                   xlabel="KL divergence between LAI distribution of the training sub-data-set \n and the evaluation data-set",

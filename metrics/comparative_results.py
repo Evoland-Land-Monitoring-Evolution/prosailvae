@@ -12,6 +12,7 @@ from prosailvae.ProsailSimus import get_bands_idx
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from tqdm import tqdm
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
 import prosailvae
 from snap_regression.snap_nn import SnapNN
@@ -218,6 +219,25 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     fig, _ = regression_pair_plot(lai_scatter_dict, global_lim)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
+
+    err_scatter_dict = {}
+    global_lim = [10, 0]
+    for _, model_info in model_dict.items():
+        err_scatter_dict[model_info["plot_name"]] = (model_info["reconstruction"][:,:10,...]
+                                                     - all_s2_r[:,:10,...]).pow(2).mean(1).sqrt().reshape(-1)
+        global_lim[0] = min(global_lim[0], err_scatter_dict[model_info["plot_name"]].min().item())
+        global_lim[1] = max(global_lim[1], err_scatter_dict[model_info["plot_name"]].max().item())
+    fig, _ = regression_pair_plot(err_scatter_dict, global_lim)
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
+
+    fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
+    for i, (_, model_info) in enumerate(model_dict.items()):
+        axs[i].hist(err_scatter_dict[model_info["plot_name"]], bins=200, range=global_lim)
+        axs[i].plot(global_lim, global_lim, 'k--')
+        axs[i].suptitle(model_info["plot_name"])
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "model_err_hist.png"))
 
 def compare_snap_versions_on_real_data(test_loader, res_dir):
     snap_ver = ["2.1", "3A", "3B"]

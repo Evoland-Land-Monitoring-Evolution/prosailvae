@@ -365,12 +365,13 @@ def setup_training():
     if xp_array:
         job_array_dir = os.path.join(parser.root_results_dir, os.pardir)
     config_dir = os.path.join(root_dir,"config/")
-    if len(parser.data_dir)==0:
+
+    params = load_params(config_dir, config_file=parser.config_file, parser=parser)
+    if len("data_dir" not in params.keys()):
         data_dir = os.path.join(root_dir,"data/")
     else:
-        data_dir = parser.data_dir
+        data_dir = params["data_dir"]
     assert parser.n_fold < parser.n_xp
-    params = load_params(config_dir, config_file=parser.config_file, parser=parser)
     if len(parser.root_results_dir)==0:
         root_results_dir = os.path.join(TOP_PATH,"results/")
     else:

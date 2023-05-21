@@ -367,7 +367,7 @@ def setup_training():
     config_dir = os.path.join(root_dir,"config/")
 
     params = load_params(config_dir, config_file=parser.config_file, parser=parser)
-    if len("data_dir" not in params.keys()):
+    if "data_dir" not in params.keys():
         data_dir = os.path.join(root_dir,"data/")
     else:
         data_dir = params["data_dir"]

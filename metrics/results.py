@@ -110,16 +110,22 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
-                rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32, 
-                                                                                   bands=torch.arange(10),
-                                                                                   mode=rec_mode)
+                (rec_image, sim_image, cropped_s2_r, cropped_s2_a, 
+                 sigma_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
+                                                             bands=torch.arange(10),
+                                                             mode=rec_mode)
                 info = info_test_data[i,:]
                 (weiss_lai, weiss_cab,
                  weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
                                                                cropped_s2_a),
                                                                patch_size=32, sensor=info[0])
-                PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image, weiss_lai, weiss_cab,
-                                     weiss_cw, i, info=info)
+                
+                patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}/"
+                if not os.path.isdir(patch_plot_dir):
+                    os.makedirs(patch_plot_dir)
+                PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image, 
+                                     weiss_lai, weiss_cab,
+                                     weiss_cw, sigma_image, i, info=info)
                 all_rec.append(rec_image.reshape(10,-1))
                 all_lai.append(sim_image[6,...].reshape(-1))
                 all_cab.append(sim_image[1,...].reshape(-1))

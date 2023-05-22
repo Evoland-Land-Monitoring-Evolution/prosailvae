@@ -1199,7 +1199,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
-                         weiss_cw, i, info=None):
+                         weiss_cw, sigma_image, i, info=None):
     if info is None:
         info = ["SENSOR","DATE","TILE"]
     n_cols = 4
@@ -1261,15 +1261,24 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png")
 
     vmin = min(sim_image[6,...].unsqueeze(0).cpu().min().item(), weiss_lai.unsqueeze(0).cpu().min().item())
-    vmax = min(sim_image[6,...].unsqueeze(0).cpu().max().item(), weiss_lai.unsqueeze(0).cpu().max().item())
+    vmax = max(sim_image[6,...].unsqueeze(0).cpu().max().item(), weiss_lai.unsqueeze(0).cpu().max().item())
     fig, _ = plot_patches((cropped_image.cpu(), sim_image[6,...].unsqueeze(0).cpu(), weiss_lai.cpu()),
                             title_list=[f'original patch \n {info[1]} {info[2]}',
-                                        'PROSAIL-VAE lai', 'SNAP lai'], 
+                                        'PROSAIL-VAE LAI', 'SNAP LAI'], 
                                         vmin=vmin, vmax=vmax)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_LAI_prediction_vs_weiss.png')
+
+    for i, varname in enumerate(PROSAILVARS):
+        fig, _ = plot_patches((cropped_image.cpu(), sim_image[i,...].unsqueeze(0).cpu(),
+                                                    sigma_image[i,...].unsqueeze(0).cpu()),
+                                title_list=[f'original patch \n {info[1]} {info[2]}',
+                                            f'PROSAIL-VAE {varname}',
+                                            f"{varname} sigma"])
+        fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_{varname}.png')
+
     ccc = sim_image[1,...] * sim_image[6,...]
     vmin = min(ccc.unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item())
-    vmax = min(ccc.unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item())
+    vmax = max(ccc.unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item())
     fig, _ = plot_patches((cropped_image.cpu(), ccc.unsqueeze(0).cpu(), weiss_cab.cpu()),
                             title_list=[f'original patch \n {info[1]} {info[2]}',
                                         'PROSAIL-VAE CCC', 'SNAP CCC'], 
@@ -1284,7 +1293,7 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
 
     cwc = sim_image[4,...] * sim_image[6,...]
     vmin = min(cwc.unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item())
-    vmax = min(cwc.unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item())
+    vmax = max(cwc.unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item())
     fig, _ = plot_patches((cropped_image.cpu(), cwc.unsqueeze(0).cpu(), weiss_cw.cpu()),
                             title_list=[f'original patch \n {info[1]} {info[2]}',
                                         'PROSAIL-VAE CWC', 'SNAP CWC'],

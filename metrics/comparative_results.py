@@ -229,13 +229,13 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         global_lim[1] = max(global_lim[1], err_scatter_dict[model_info["plot_name"]].max().item())
     fig, _ = regression_pair_plot(err_scatter_dict, global_lim)
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
+        fig.savefig(os.path.join(res_dir, "rec_error_comparison.png"))
 
     fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
     for i, (_, model_info) in enumerate(model_dict.items()):
         axs[i].hist(err_scatter_dict[model_info["plot_name"]], bins=200, range=global_lim)
         axs[i].plot(global_lim, global_lim, 'k--')
-        axs[i].suptitle(model_info["plot_name"])
+        axs[i].set_title(model_info["plot_name"])
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_err_hist.png"))
 

@@ -213,7 +213,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
             if lr_recompute is not None:
                 lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                                            patience=lr_recompute,
-                                                                           threshold=0.01)
+                                                                           threshold=0.01, threshold_mode='abs')
 
     max_train_samples_per_epoch = 100
     max_valid_samples_per_epoch = None
@@ -245,7 +245,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                 if plot_gradient and res_dir is not None:
                     if not os.path.isdir(res_dir + "/gradient_flows"):
                         os.makedirs(res_dir + "/gradient_flows")
-                    plot_grad_flow(prosail_vae, 
+                    plot_grad_flow(prosail_vae,
                                    savefile=res_dir+f"/gradient_flows/grad_flow_{epoch}.svg")
             except Exception as exc:
                 logger.error(f"Error during Training at epoch {epoch} !")

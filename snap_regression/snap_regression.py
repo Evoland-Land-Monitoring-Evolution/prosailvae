@@ -606,13 +606,13 @@ def main():
               "-n", "2",
             #   "-i", 't',
               "-lr", "0.001",
-              "-f", "True"
+            #   "-f", "True"
               ]
         disable_tqdm=False
-        tg_mu = torch.tensor([0,1])
-        tg_sigma = torch.tensor([0.5,1])
-        # tg_mu = torch.tensor([0, 1, 2, 3, 4])
-        # tg_sigma = torch.tensor([0.5, 1, 2, 3])
+        # tg_mu = torch.tensor([0,1])
+        # tg_sigma = torch.tensor([0.5,1])
+        tg_mu = torch.tensor([0, 1, 2, 3, 4])
+        tg_sigma = torch.tensor([0.5, 1, 2, 3])
         parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
 
@@ -630,7 +630,7 @@ def main():
     prepare_data = True
     epochs = parser.epochs
     n_models = parser.n_model_train
-    compute_metrics = True
+    compute_metrics = False
     save_dir = parser.data_dir
     res_dir = parser.results_dir
     # weiss_dataset_lai_vs_ll(res_dir)

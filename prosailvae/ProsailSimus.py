@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import prosail
-from prosail import spectral_lib
+# from prosail import spectral_lib
 from utils.utils import gaussian_nll_loss, torch_select_unsqueeze
 from prosailvae.spectral_indices import INDEX_DICT
 
@@ -408,7 +408,7 @@ def get_prosailparams_pdf_span():
 def plot_rsr(rsr, res_dir='.'):
     import matplotlib.pyplot as plt
     from matplotlib.ticker import (AutoMinorLocator)
-    fig, (ax1, ax2, ax3) = plt.subplots(1,3,sharey=True, facecolor='w', figsize=(10,4), dpi=150)
+    fig, (ax1, ax2, ax3) = plt.subplots(1,3, sharey=True, facecolor='w', figsize=(10,4), dpi=150)
     bands = ["B01","B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8a","B09","B10", "B11", "B12"]
     lamb = np.arange(400,2501)
     for i in range(len(bands)):
@@ -479,3 +479,19 @@ def plot_rsr(rsr, res_dir='.'):
     ax3.tick_params(axis="x", which='both', bottom=True, top=True, labelbottom=True, labeltop=False)
 
     fig.savefig(res_dir+'/rsr.svg')
+
+def plot_solar_rsr(solar, res_dir):
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import AutoMinorLocator
+    fig, ax = plt.subplots(1, 1, facecolor='w', figsize=(10,4), dpi=150)
+    ax.plot(torch.arange(400,2501), solar.squeeze()/solar.max(), 'k')
+    ax.set_xlabel("Wavelength (nm)")
+    ax.set_ylabel("Normalized spectral response")
+    ax.set_xlim(400,2350)
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    ax.yaxis.set_minor_locator(AutoMinorLocator())
+    ax.tick_params(which='both', direction = 'in')
+    ax.tick_params(which='major', length=5)
+    ax.tick_params(which='minor', length=3)
+    fig.savefig(res_dir+'/solar_rsr.svg')
+    pass

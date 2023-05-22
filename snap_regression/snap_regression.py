@@ -605,12 +605,14 @@ def main():
               "-e", "3",
               "-n", "2",
             #   "-i", 't',
-              "-lr", "0.001"]
+              "-lr", "0.001",
+              "-f", "True"
+              ]
         disable_tqdm=False
-        # tg_mu = torch.tensor([0,1])
-        # tg_sigma = torch.tensor([0.5,1])
-        tg_mu = torch.tensor([0, 1, 2, 3, 4])
-        tg_sigma = torch.tensor([0.5, 1, 2, 3])
+        tg_mu = torch.tensor([0,1])
+        tg_sigma = torch.tensor([0.5,1])
+        # tg_mu = torch.tensor([0, 1, 2, 3, 4])
+        # tg_sigma = torch.tensor([0.5, 1, 2, 3])
         parser = get_parser().parse_args(args)
         s2_tensor_image_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/T31TCJ/after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"  
 
@@ -681,7 +683,7 @@ def main():
         median_metrics = torch.quantile(all_metrics,0.5,dim=1)
         if not os.path.isdir(res_dir):
             os.makedirs(res_dir)
-        x_positions = np.arange(len(fold_data_list))
+        x_positions = torch.arange(len(fold_data_list))
         get_plots(res_dir, x_positions, all_metrics, mean_metrics, median_metrics, metrics_ref,
                   metrics_names, eval_data_name, xlabel="Sub-data-set number", file_suffix="fold", 
                   xlog_scale=False)

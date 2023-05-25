@@ -88,7 +88,8 @@ def rgb_render(
 
 
 def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
-                                 bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), mode='lat_mode'):
+                                 bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), 
+                                 mode='lat_mode', padding=False):
     s2_r, s2_a = batch
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
@@ -108,12 +109,17 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
             patched_rec_image[i,j,:,:,:] = rec
             patched_sim_image[i,j,:,:,:] = sim
             patched_sigma_image[i,j,:,:,:] = dist_params[1,...]
-    sim_image = crop_s2_input(unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)], hw)
-    rec_image = crop_s2_input(unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)], hw)
-    sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)][:,hw:-hw,hw:-hw]
-    cropped_s2_a = crop_s2_input(s2_a, hw)
-    cropped_s2_r = crop_s2_input(s2_r, hw)
-    return rec_image, sim_image, cropped_s2_r, cropped_s2_a, sigma_image
+    sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)]
+    rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)]
+    sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)]
+
+    if not padding:
+        sim_image = crop_s2_input(sim_image, hw)
+        rec_image = crop_s2_input(rec_image, hw)
+        s2_a = crop_s2_input(s2_a, hw)
+        s2_r = crop_s2_input(s2_r, hw)
+        sigma_image = crop_s2_input(sigma_image,hw)
+    return rec_image, sim_image, s2_r, s2_a, sigma_image
 
 def check_is_patch(tensor:torch.Tensor):
     """

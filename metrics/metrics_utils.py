@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 from dataset.juan_datapoints import get_interpolated_validation_data
 from dataset.weiss_utils import load_weiss_dataset
+from dataset.prepare_silvia_validation import load_validation_data
+from utils.image_utils import get_encoded_image_from_batch
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
     metrics_dir = res_dir + "/metrics/"
@@ -190,3 +192,29 @@ def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_
         lai_pred = torch.cat((lai_pred, lais), axis=1)
 
     return lai_nlls, lai_pred, sim_pdfs, sim_supports
+
+def get_silvia_validation_metrics(PROSAIL_VAE, data_dir, filename,  mode='lat_mode'):
+    gdf, s2_r, s2_a = load_validation_data(data_dir, filename)
+    x_idx = torch.from_numpy(gdf["x_idx"].values) - PROSAIL_VAE.encoder.nb_enc_cropped_hw
+    y_idx = torch.from_numpy(gdf["y_idx"].values) - PROSAIL_VAE.encoder.nb_enc_cropped_hw
+    s2_r = torch.from_numpy(s2_r).unsqueeze(0).float()
+    s2_a = torch.from_numpy(s2_a).unsqueeze(0).float()
+    (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
+     sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32,
+                                                 bands=torch.arange(10),
+                                                 mode=mode)
+    lai_pred = sim_image[:,6, y_idx, x_idx]
+    cab_pred = sim_image[:,1, y_idx, x_idx]
+    ccc_pred = cab_pred * lai_pred
+
+    lai = torch.from_numpy(gdf["LAI"].values)
+    lai_uncert = torch.from_numpy(gdf["Uncertainty.1"].values)
+    lai_eff = torch.from_numpy(gdf["LAIeff"].values)
+    lai_eff_uncert = torch.from_numpy(gdf["Uncertainty"].values)
+    ccc = torch.from_numpy(gdf["CCC"].values)
+    ccc_uncert = torch.from_numpy(gdf["Uncertainty (g m-2).2"].values)
+    ccc_eff = torch.from_numpy(gdf["CCCeff"].values)
+    ccc_eff_uncert = torch.from_numpy(gdf["Uncertainty (g m-2).1"].values)
+
+
+    return

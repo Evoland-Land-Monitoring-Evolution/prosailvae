@@ -22,7 +22,9 @@ from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from utils.image_utils import rgb_render
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+from dataset.prepare_silvia_validation import load_validation_data
+import seaborn as sns
+import os
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
     fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
@@ -1306,4 +1308,111 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
                                         'PROSAIL-VAE / SNAP \n CWC difference'],
                                         vmin=None, vmax=None)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_CWC_err_prediction_vs_weiss.png')
+    return
+
+
+def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=None):
+    gdf_lai, _, _ = load_validation_data(data_dir, filename, variable="lai")
+    x_idx_lai = torch.from_numpy(gdf_lai["x_idx"].values).int()
+    y_idx_lai = torch.from_numpy(gdf_lai["y_idx"].values).int()
+    lai = torch.from_numpy(gdf_lai["lai"].values)
+    lai_uncert = torch.from_numpy(gdf_lai["uncertainty"].values)
+    lai_pred_at_site = lai_pred[:, y_idx_lai, x_idx_lai].squeeze()
+    df = pd.DataFrame({"LAI":lai.squeeze().numpy(),
+                       "Predicted LAI": lai_pred_at_site.numpy(),
+                       "Land Cover": gdf_lai["land cover"]})
+    fig, ax = plt.subplots()
+    ax = sns.scatterplot(data=df, x='LAI', y="Predicted LAI", hue="Land Cover", ax=ax)
+    xmin = 0
+    xmax = max(lai_pred_at_site.max().item(), lai.max().item())
+    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.set_aspect('equal', 'box')
+    m, b = np.polyfit(lai.numpy(), lai_pred_at_site.numpy(), 1)
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    r2 = r2_score(lai.numpy(), lai_pred_at_site.numpy())
+    rmse = (lai - lai_pred_at_site).pow(2).mean().sqrt().numpy()
+    ax.set_title(f"RMSE: {rmse} - r2 : {r2}")
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_lai.png"))
+    df["x"] = gdf_lai["x_idx"]
+    df["y"] = gdf_lai["y_idx"]
+    fig, ax = plt.subplots()
+    ax.imshow(lai_pred.squeeze())
+    sns.scatterplot(data=df, x='x', y="y", hue="Land Cover",
+                         ax=ax)
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "barrax_field_lai.png"))
+
+    gdf_lai_eff, _, _ = load_validation_data(data_dir, filename, 
+                                                   variable="lai_eff")
+    gdf_lai_eff = gdf_lai_eff.iloc[:51]
+    x_idx_lai_eff = torch.from_numpy(gdf_lai_eff["x_idx"].values).int()
+    y_idx_lai_eff = torch.from_numpy(gdf_lai_eff["y_idx"].values).int()
+    lai_eff = torch.from_numpy(gdf_lai_eff["lai_eff"].values)
+    lai_eff_uncert = torch.from_numpy(gdf_lai_eff["uncertainty"].values)
+    lai_pred_at_site = lai_pred[:, y_idx_lai_eff, x_idx_lai_eff].squeeze()
+    df_eff = pd.DataFrame({"LAIeff":lai_eff.squeeze().numpy(),
+                       "Predicted LAI": lai_pred_at_site.numpy(),
+                       "Land Cover": gdf_lai_eff["land cover"]})
+    fig, ax = plt.subplots()
+    ax = sns.scatterplot(data=df_eff, x='LAIeff', y="Predicted LAI", hue="Land Cover",
+                         ax=ax)
+    xmin = 0
+    xmax = max(lai_pred_at_site.max().item(), lai_eff.max().item())
+    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.set_aspect('equal', 'box')
+    m, b = np.polyfit(lai_eff.numpy(), lai_pred_at_site.numpy(), 1)
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    r2 = r2_score(lai_eff.numpy(), lai_pred_at_site.numpy())
+    rmse = (lai_eff - lai_pred_at_site).pow(2).mean().sqrt().numpy()
+    ax.set_title(f"RMSE: {rmse} - r2 : {r2}")
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_lai_eff.png"))
+
+    gdf_ccc, _, _ = load_validation_data(data_dir, filename, variable="ccc")
+    ccc = torch.from_numpy(gdf_ccc["ccc"].values) * 100
+    x_idx_ccc = torch.from_numpy(gdf_ccc["x_idx"].values).int()
+    y_idx_ccc = torch.from_numpy(gdf_ccc["y_idx"].values).int()
+    fig, ax = plt.subplots()
+    ccc_pred_at_site = ccc_pred[:, y_idx_ccc, x_idx_ccc].squeeze()
+    df = pd.DataFrame({"CCC":ccc.squeeze().numpy(),
+                       "Predicted CCC": ccc_pred_at_site.numpy(),
+                       "Land Cover": gdf_ccc["land cover"]})
+    # ax.scatter(ccc, ccc_pred, marker='+')
+    ax = sns.scatterplot(data=df, x='CCC', y="Predicted CCC", hue="Land Cover", ax=ax)
+    xmin = 0
+    xmax = max(ccc_pred_at_site.max().item(), ccc.max().item())
+    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.set_aspect('equal', 'box')
+    m, b = np.polyfit(ccc.numpy(), ccc_pred_at_site.numpy(), 1)
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    r2 = r2_score(ccc.numpy(), ccc_pred_at_site.numpy())
+    rmse = (ccc - ccc_pred_at_site).pow(2).mean().sqrt().numpy()
+    ax.set_title(f"RMSE: {rmse} - r2 : {r2}")
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_ccc.png"))
+
+    gdf_ccc_eff, _, _ = load_validation_data(data_dir, filename, variable="ccc_eff")
+    ccc_eff = torch.from_numpy(gdf_ccc_eff["ccc_eff"].values) * 100
+    x_idx_ccc_eff = torch.from_numpy(gdf_ccc_eff["x_idx"].values).int()
+    y_idx_ccc_eff = torch.from_numpy(gdf_ccc_eff["y_idx"].values).int()
+    ccc_pred_at_site = ccc_pred[:, y_idx_ccc_eff, x_idx_ccc_eff].squeeze()
+    fig, ax = plt.subplots()
+    df = pd.DataFrame({"CCC":ccc_eff.squeeze().numpy(),
+                       "Predicted CCC": ccc_pred_at_site.numpy(),
+                       "Land Cover": gdf_ccc_eff["land cover"]})
+    # ax.scatter(ccc, ccc_pred, marker='+')
+    ax = sns.scatterplot(data=df, x='CCC', y="Predicted CCC", hue="Land Cover", ax=ax)
+    xmin = 0
+    xmax = max(ccc_pred_at_site.max().item(), ccc_eff.max().item())
+    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.set_aspect('equal', 'box')
+    m, b = np.polyfit(ccc_eff.numpy(), ccc_pred_at_site.numpy(), 1)
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    r2 = r2_score(ccc_eff.numpy(), ccc_pred_at_site.numpy())
+    rmse = (ccc_eff - ccc_pred_at_site).pow(2).mean().sqrt().numpy()
+    ax.set_title(f"RMSE: {rmse} - r2 : {r2}")
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_ccc_eff.png"))
     return

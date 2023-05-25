@@ -18,7 +18,9 @@ from prosailvae.dist_utils import (sample_truncated_gaussian, kl_tntn, truncated
                                    numerical_kl_from_pdf, truncated_gaussian_cdf)
 from snap_nn import SnapNN, test_snap_nn
 from utils.image_utils import rgb_render
-
+from dataset.prepare_silvia_validation import load_validation_data
+import seaborn as sns
+from metrics.prosail_plots import silvia_validation_plots
 
 
 def get_parser():
@@ -306,6 +308,27 @@ def get_loaders(data:torch.Tensor, seed:int=86294692001, valid_ratio:float=0.1, 
     else:
         valid_loader = None
     return train_loader, valid_loader
+
+
+def get_silvia_validation_metrics(res_dir=None):
+    model_lai = SnapNN(ver="3A",variable="lai")
+    model_lai.set_weiss_weights()
+    model_ccc = SnapNN(ver="3A",variable="cab")
+    model_ccc.set_weiss_weights()
+    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
+    filename = "FRM_Veg_Barrax_20180605"
+
+    gdf_lai, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    s2_r = torch.from_numpy(s2_r)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+    s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
+    s2_data = torch.concat((s2_r, s2_a), 0)
+    with torch.no_grad():
+        lai_pred = model_lai.forward(s2_data, spatial_mode=True)
+        ccc_pred = model_ccc.forward(s2_data, spatial_mode=True)
+    silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=res_dir)  
+    return
+
+
 
 def get_model_metrics(test_data, model, all_valid_losses=[]):
     """
@@ -595,6 +618,7 @@ def get_metrics_ref(data_eval_list, train_data_list, ver="3A"):
     return metrics_ref, test_loader_list
 
 def main():
+    
     test_snap_nn(ver="2.1")
     test_snap_nn(ver="3A")
     test_snap_nn(ver="3B")
@@ -633,6 +657,7 @@ def main():
     compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
+    get_silvia_validation_metrics(res_dir = res_dir)
     # weiss_dataset_lai_vs_ll(res_dir)
     lr = parser.lr
     if not os.path.isdir(res_dir):

@@ -9,9 +9,11 @@ from .metrics_utils import get_metrics, save_metrics, get_juan_validation_metric
 from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                     plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
-                                    all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results)
+                                    all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results,
+                                    silvia_validation_plots)
 from dataset.loaders import  get_simloader
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
+from dataset.prepare_silvia_validation import load_validation_data
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
 from utils.utils import load_dict, save_dict
@@ -26,6 +28,7 @@ import warnings
 from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
 from torchutils.patches import patchify, unpatchify 
 import pandas as pd
+
 
 LOGGER_NAME = "PROSAIL-VAE results logger"
 
@@ -64,6 +67,7 @@ def get_prosailvae_results_parser():
 def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None):
+    rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
     image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
     device = PROSAIL_VAE.device
@@ -92,96 +96,116 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     logger.info("Computing inference metrics with test dataset...")
     # test_loss = PROSAIL_VAE.validate(loader, mmdc_dataset=True, n_samples=10)
     # pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
-    if plot_results:
-        plot_dir = res_dir + "/plots/"
-        if not os.path.isdir(plot_dir):
-            os.makedirs(plot_dir)
-        # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
-        all_rec = []
-        all_lai = []
-        all_cab = []
-        all_cw = []
-        all_vars = []
-        all_weiss_lai = []
-        all_weiss_cab = []
-        all_weiss_cw = []
-        all_s2_r = []
-        all_sigma = []
-        with torch.no_grad():
-            for i, batch in enumerate(loader):
-                rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
-                (rec_image, sim_image, cropped_s2_r, cropped_s2_a, 
-                 sigma_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
-                                                             bands=torch.arange(10),
-                                                             mode=rec_mode)
-                info = info_test_data[i,:]
-                (weiss_lai, weiss_cab,
-                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
-                                                               cropped_s2_a),
-                                                               patch_size=32, sensor=info[0])
-                
-                patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}/"
-                if not os.path.isdir(patch_plot_dir):
-                    os.makedirs(patch_plot_dir)
-                PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image, 
-                                     weiss_lai, weiss_cab,
-                                     weiss_cw, sigma_image, i, info=info)
-                all_rec.append(rec_image.reshape(10,-1))
-                all_lai.append(sim_image[6,...].reshape(-1))
-                all_cab.append(sim_image[1,...].reshape(-1))
-                all_cw.append(sim_image[4,...].reshape(-1))
-                all_vars.append(sim_image.reshape(11,-1))
-                all_weiss_lai.append(weiss_lai.reshape(-1))
-                all_weiss_cab.append(weiss_cab.reshape(-1))
-                all_weiss_cw.append(weiss_cw.reshape(-1))
-                all_s2_r.append(cropped_s2_r.reshape(10,-1))
-                all_sigma.append(sigma_image.reshape(11,-1))
-            all_rec = torch.cat(all_rec, axis=1)
-            all_lai = torch.cat(all_lai)
-            all_cab = torch.cat(all_cab)
-            all_ccc = all_lai * all_cab
-            
-            all_cw = torch.cat(all_cw)
-            all_vars = torch.cat(all_vars, axis=1)
-            all_cw_rel =  1 - all_vars[5,...] / all_cw
-            all_weiss_lai = torch.cat(all_weiss_lai)
-            all_weiss_cab = torch.cat(all_weiss_cab)
-            all_weiss_cw = torch.cat(all_weiss_cw)
-            all_s2_r = torch.cat(all_s2_r, axis=1)
-            all_sigma = torch.cat(all_sigma, axis=1)
+    if not plot_results:
+        return
+    
+    plot_dir = res_dir + "/plots/"
+    if not os.path.isdir(plot_dir):
+        os.makedirs(plot_dir)
+    
+    silvia_validation_plot_dir = plot_dir + "/silvia_validation/"
+    if not os.path.isdir(silvia_validation_plot_dir):
+        os.makedirs(silvia_validation_plot_dir)
+    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
+    filename = "FRM_Veg_Barrax_20180605"
 
-            PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                          all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel)
-            # for n, filename in enumerate(image_tensor_file_names):
-            #     image_tensor = torch.load(image_dir + "/" + filename)
-            #     patch_size=128
-            #     patches = patchify(image_tensor, patch_size=patch_size, margin=0).reshape(-1,image_tensor.size(0), patch_size, patch_size)
-            #     for i in range(n_rec_plots):
-            #         rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
-            #         rec_image, sim_image, cropped_image = get_encoded_image(patches[i,...].to(PROSAIL_VAE.device), PROSAIL_VAE, 
-            #                                                             patch_size=32, bands=torch.tensor([0,1,2,4,5,6,3,7,8,9]),
-            #                                                             mode=rec_mode)
-                
-                    # fig, axs = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
-                    #                          (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
-                    #                          title_list=['original patch', 'reconstruction', 'absolute reconstruction error'])
-                    # fig.savefig(f"{plot_dir}/patch_rec_{image_tensor_aliases[n]}_{i}.svg")
-                    # fig, axs = plot_patches((cropped_image.cpu(), sim_image[6,:,:].unsqueeze(0).cpu()),
-                    #                         title_list=['original patch', 'predicted lai'])
-                    # fig.savefig(f"{plot_dir}/patch_lai_{image_tensor_aliases[n]}_{i}.svg")
-            # for i, batch in zip(range(min(len(loader),1)),loader):
-            #     (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
-            #     s2_r = s2_r.to(PROSAIL_VAE.device)
-            #     s2_a = s2_a.to(PROSAIL_VAE.device)
-            #     if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
-            #         s2_r = s2_r[:,:,:16,:16]
-            #         s2_a = s2_a[:,:,:16,:16]
-            #     params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode') 
-            #     s2_r_pred =  rec[:,:,0].reshape(1,s2_r.size(2),s2_r.size(2),10).permute(0,3,1,2)
-            #     fig, ax = plot_patch_pairs(s2_r_pred, s2_r, idx=0)
-            #     fig.savefig(f"{plot_dir}/patch_rec_rgb_{i}.svg")
-            #     if i > n_rec_plots:
-            #         break
+    _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
+    s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
+    
+    with torch.no_grad():
+        (_, sim_image, _, _, _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
+                                                     patch_size=32, bands=torch.arange(10),
+                                                     mode=rec_mode, padding=True)
+        lai_pred = sim_image[6,...].unsqueeze(0)
+        ccc_pred = sim_image[1,...].unsqueeze(0) * lai_pred
+    silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=silvia_validation_plot_dir)
+
+    # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
+    all_rec = []
+    all_lai = []
+    all_cab = []
+    all_cw = []
+    all_vars = []
+    all_weiss_lai = []
+    all_weiss_cab = []
+    all_weiss_cw = []
+    all_s2_r = []
+    all_sigma = []
+    with torch.no_grad():
+        for i, batch in enumerate(loader):
+            (rec_image, sim_image, cropped_s2_r, cropped_s2_a, 
+                sigma_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
+                                                            bands=torch.arange(10),
+                                                            mode=rec_mode)
+            info = info_test_data[i,:]
+            (weiss_lai, weiss_cab,
+                weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
+                                                            cropped_s2_a),
+                                                            patch_size=32, sensor=info[0])
+            
+            patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}/"
+            if not os.path.isdir(patch_plot_dir):
+                os.makedirs(patch_plot_dir)
+            PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image, 
+                                    weiss_lai, weiss_cab,
+                                    weiss_cw, sigma_image, i, info=info)
+            all_rec.append(rec_image.reshape(10,-1))
+            all_lai.append(sim_image[6,...].reshape(-1))
+            all_cab.append(sim_image[1,...].reshape(-1))
+            all_cw.append(sim_image[4,...].reshape(-1))
+            all_vars.append(sim_image.reshape(11,-1))
+            all_weiss_lai.append(weiss_lai.reshape(-1))
+            all_weiss_cab.append(weiss_cab.reshape(-1))
+            all_weiss_cw.append(weiss_cw.reshape(-1))
+            all_s2_r.append(cropped_s2_r.reshape(10,-1))
+            all_sigma.append(sigma_image.reshape(11,-1))
+        all_rec = torch.cat(all_rec, axis=1)
+        all_lai = torch.cat(all_lai)
+        all_cab = torch.cat(all_cab)
+        all_ccc = all_lai * all_cab
+        
+        all_cw = torch.cat(all_cw)
+        all_vars = torch.cat(all_vars, axis=1)
+        all_cw_rel =  1 - all_vars[5,...] / all_cw
+        all_weiss_lai = torch.cat(all_weiss_lai)
+        all_weiss_cab = torch.cat(all_weiss_cab)
+        all_weiss_cw = torch.cat(all_weiss_cw)
+        all_s2_r = torch.cat(all_s2_r, axis=1)
+        all_sigma = torch.cat(all_sigma, axis=1)
+
+        PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
+                                        all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel)
+        # for n, filename in enumerate(image_tensor_file_names):
+        #     image_tensor = torch.load(image_dir + "/" + filename)
+        #     patch_size=128
+        #     patches = patchify(image_tensor, patch_size=patch_size, margin=0).reshape(-1,image_tensor.size(0), patch_size, patch_size)
+        #     for i in range(n_rec_plots):
+        #         rec_mode = 'sim_mode' if not socket.gethostname()=='CELL200973' else "random"
+        #         rec_image, sim_image, cropped_image = get_encoded_image(patches[i,...].to(PROSAIL_VAE.device), PROSAIL_VAE, 
+        #                                                             patch_size=32, bands=torch.tensor([0,1,2,4,5,6,3,7,8,9]),
+        #                                                             mode=rec_mode)
+            
+                # fig, axs = plot_patches((cropped_image.cpu(), rec_image.cpu(), 
+                #                          (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
+                #                          title_list=['original patch', 'reconstruction', 'absolute reconstruction error'])
+                # fig.savefig(f"{plot_dir}/patch_rec_{image_tensor_aliases[n]}_{i}.svg")
+                # fig, axs = plot_patches((cropped_image.cpu(), sim_image[6,:,:].unsqueeze(0).cpu()),
+                #                         title_list=['original patch', 'predicted lai'])
+                # fig.savefig(f"{plot_dir}/patch_lai_{image_tensor_aliases[n]}_{i}.svg")
+        # for i, batch in zip(range(min(len(loader),1)),loader):
+        #     (s2_r, s2_a, _, _, _, _, _) = destructure_batch(batch)
+        #     s2_r = s2_r.to(PROSAIL_VAE.device)
+        #     s2_a = s2_a.to(PROSAIL_VAE.device)
+        #     if socket.gethostname()=='CELL200973': #DEV mode with smaller patch
+        #         s2_r = s2_r[:,:,:16,:16]
+        #         s2_a = s2_a[:,:,:16,:16]
+        #     params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(s2_r, s2_a, mode='sim_mode') 
+        #     s2_r_pred =  rec[:,:,0].reshape(1,s2_r.size(2),s2_r.size(2),10).permute(0,3,1,2)
+        #     fig, ax = plot_patch_pairs(s2_r_pred, s2_r, idx=0)
+        #     fig.savefig(f"{plot_dir}/patch_rec_rgb_{i}.svg")
+        #     if i > n_rec_plots:
+        #         break
     logger.info("Metrics computed.")
     
     return 

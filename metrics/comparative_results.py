@@ -215,7 +215,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
         n_models = len(model_dict)
         fig, axs = plt.subplots(n_models)
-        gdf = load_validation_data(data_dir, filename, variable=variable)
+        gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
             patch_pred = model_results[model_name][sub_variable]

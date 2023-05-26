@@ -357,8 +357,11 @@ def setup_training():
               "-a", "False",
               "-p", "False"]
         parser = get_prosailvae_train_parser().parse_args(args)
+        silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
     else:
         parser = get_prosailvae_train_parser().parse_args()
+        silvia_data_dir = "/work/scratch/zerahy/prosailvae/data/silvia_validation"
+    silvia_filename = "FRM_Veg_Barrax_20180605"
     root_dir = TOP_PATH
     xp_array = parser.xp_array
     job_array_dir = None
@@ -411,7 +414,7 @@ def setup_training():
         params_sup_kl_model = None
         sup_norm_mean = None
         sup_norm_std = None
-    return params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, sup_norm_std
+    return params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, sup_norm_std, silvia_data_dir, silvia_filename
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_norm_mean=None, sup_norm_std=None):
@@ -571,7 +574,8 @@ def save_array_xp_path(job_array_dir, res_dir):
 
 def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
-     job_array_dir, sup_norm_mean, sup_norm_std) = setup_training()
+     job_array_dir, sup_norm_mean, sup_norm_std,
+     silvia_data_dir, silvia_filename) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
 
@@ -585,7 +589,9 @@ def main():
             info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
             save_results_2d(prosail_vae, test_loader, res_dir, 
                             all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, 
-                            plot_results=parser.plot_results, info_test_data=info_test_data)
+                            plot_results=parser.plot_results, info_test_data=info_test_data,
+                            silvia_data_dir = silvia_data_dir,
+                            silvia_filename = silvia_filename)
         else:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

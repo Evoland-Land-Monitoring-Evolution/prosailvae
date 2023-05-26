@@ -7,7 +7,7 @@ from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
-from prosail_plots import plot_patches
+from prosail_plots import plot_patches, patch_validation_reg_scatter_plot
 from prosailvae.ProsailSimus import get_bands_idx
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from tqdm import tqdm
@@ -16,8 +16,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import prosailvae
 from snap_regression.snap_nn import SnapNN
-
-
+from dataset.prepare_silvia_validation import load_validation_data
 def get_parser():
     """
     Gets arguments for terminal-based launch of script
@@ -63,6 +62,57 @@ def get_model_and_dataloader(parser):
             model_info["model"] = model
     info_test_data = np.load(os.path.join(parser.data_dir,"test_info.npy"))
     return model_dict, test_loader, info_test_data
+
+def get_model_validation_results(model_dict: dict, 
+                                 data_dir, filename, sensor):
+
+    rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
+    _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
+    s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
+    model_results = {}
+    largest_hw = 0
+    model_inference_info = {}
+    for model_name, model_info in model_dict.items():
+        hw = 0
+        model = model_info["model"]
+        if model.spatial_mode:
+            hw = model.encoder.nb_enc_cropped_hw
+        if hw > largest_hw:
+            largest_hw = hw    
+        with torch.no_grad():
+            (_, sim_image, cropped_s2_r, cropped_s2_a,
+             _) = get_encoded_image_from_batch((s2_r, s2_a), model,
+                                                patch_size=32, bands=torch.arange(10),
+                                                mode=rec_mode, padding=True)
+        lai_pred = sim_image[6,...].unsqueeze(0)
+        ccc_pred = sim_image[1,...].unsqueeze(0) * lai_pred
+        model_results[model_name] = {'lai': lai_pred,
+                                     'ccc': ccc_pred}
+        model_inference_info[model_name] = {"s2_r":cropped_s2_r, 
+                                            "s2_a":cropped_s2_a,
+                                            "hw": hw}
+
+    for model_name, _ in model_dict.items():
+        delta_hw = largest_hw - model_inference_info[model_name]['hw']
+        s2_r = model_inference_info[model_name]["s2_r"]
+        s2_a = model_inference_info[model_name]["s2_a"]
+        lai = model_results[model_name]["lai"]
+        ccc = model_results[model_name]["ccc"]        
+        if delta_hw > 0 :
+            model_results[model_name]["lai"] = crop_s2_input(lai, delta_hw)
+            model_results[model_name]["ccc"] = crop_s2_input(ccc, delta_hw)
+            model_inference_info[model_name]["s2_r"] = crop_s2_input(s2_r, delta_hw)
+            model_inference_info[model_name]["s2_a"] = crop_s2_input(s2_a, delta_hw)
+    
+    (snap_lai, snap_cab,
+        _) = get_weiss_biophyiscal_from_batch((model_inference_info[model_name]["s2_r"], 
+                                               model_inference_info[model_name]["s2_a"]),
+                                               patch_size=32, sensor=sensor)
+    model_results["SNAP"] = {'lai': snap_lai, 'ccc': snap_cab}    
+    return model_results
+
+
 
 def get_model_results(model_dict: dict, test_loader, info_test_data):
     """
@@ -161,6 +211,20 @@ def regression_pair_plot(scatter_dict, global_lim):
                 axs[j,k].plot([ax_min, ax_max], [ax_min, ax_max], 'k')
     return g.fig, g.axes 
 
+def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None):
+    for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
+        n_models = len(model_dict)
+        fig, axs = plt.subplots(n_models)
+        gdf = load_validation_data(data_dir, filename, variable=variable)
+        for i, model_name, model_info in enumerate(model_dict.items()):
+            sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
+            patch_pred = model_results[model_name][sub_variable]
+            patch_validation_reg_scatter_plot(gdf, patch_pred,
+                                                variable=variable,
+                                                fig=fig, ax=axs[i])
+            axs[i].set_title(model_info["plot_name"])
+        if res_dir is not None:
+            fig.savefig(os.path.join(res_dir, "{variable}_{filename}_validation.png"))
 
 def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, res_dir=None):
@@ -311,13 +375,19 @@ def main():
                 "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
                 "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/"]
         parser = get_parser().parse_args(args)
+        silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
     else:
         parser = get_parser().parse_args()
+        silvia_data_dir = "/work/scratch/zerahy/prosailvae/data/silvia_validation"
     res_dir = parser.res_dir
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
-
+   
+    filename = "FRM_Veg_Barrax_20180605"
+    sensor = "2A"
+    validation_results = get_model_validation_results(model_dict, silvia_data_dir, filename, sensor)
+    plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename, res_dir=res_dir)
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)

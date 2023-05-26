@@ -66,7 +66,9 @@ def get_prosailvae_results_parser():
 
 def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
-                    plot_results=False, info_test_data=None):
+                    plot_results=False, info_test_data=None,
+                    silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation",
+                    silvia_filename = "FRM_Veg_Barrax_20180605"):
     rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
     image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
@@ -106,10 +108,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     silvia_validation_plot_dir = plot_dir + "/silvia_validation/"
     if not os.path.isdir(silvia_validation_plot_dir):
         os.makedirs(silvia_validation_plot_dir)
-    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
-    filename = "FRM_Veg_Barrax_20180605"
 
-    _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+
+    _, s2_r, s2_a = load_validation_data(silvia_data_dir, silvia_filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     
@@ -119,7 +120,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                                                      mode=rec_mode, padding=True)
         lai_pred = sim_image[6,...].unsqueeze(0)
         ccc_pred = sim_image[1,...].unsqueeze(0) * lai_pred
-    silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=silvia_validation_plot_dir)
+    silvia_validation_plots(lai_pred, ccc_pred, silvia_data_dir, silvia_filename, res_dir=silvia_validation_plot_dir)
 
     # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     all_rec = []

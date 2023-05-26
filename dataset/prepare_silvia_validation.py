@@ -79,15 +79,15 @@ def compute_validation_data(data_dir, filename):
     margin = 100
     bb = get_data_point_bb(data_gdf, dataset, margin=margin)
     bands = [sentinel2.Sentinel2.B2,
-            sentinel2.Sentinel2.B3,
-            sentinel2.Sentinel2.B4,
-            sentinel2.Sentinel2.B5,
-            sentinel2.Sentinel2.B6,
-            sentinel2.Sentinel2.B7,
-            sentinel2.Sentinel2.B8,
-            sentinel2.Sentinel2.B8A,
-            sentinel2.Sentinel2.B11,
-            sentinel2.Sentinel2.B12]
+             sentinel2.Sentinel2.B3,
+             sentinel2.Sentinel2.B4,
+             sentinel2.Sentinel2.B5,
+             sentinel2.Sentinel2.B6,
+             sentinel2.Sentinel2.B7,
+             sentinel2.Sentinel2.B8,
+             sentinel2.Sentinel2.B8A,
+             sentinel2.Sentinel2.B11,
+             sentinel2.Sentinel2.B12]
 
     xmin, ymin, xmax, ymax = get_bb_array_index(bb, dataset.bounds, res=10)
 
@@ -150,6 +150,9 @@ def compute_validation_data(data_dir, filename):
                               uncertainty_col:"uncertainty",
                               "Land Cover":"land cover", 
                               "Date (dd/mm/yyyy)": "date"}, inplace = True)
+        if variable in ["ccc", "ccc_eff"]:
+            gdf[variable] = gdf[variable] * 100
+            gdf["uncertainty"] = gdf["uncertainty"] * 100
         gdf.to_file(os.path.join(data_dir, filename + f"_{variable}.geojson"), driver="GeoJSON")
 
 def load_validation_data(data_dir, filename, variable="lai"):

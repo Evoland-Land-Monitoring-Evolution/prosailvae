@@ -218,7 +218,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
-            patch_pred = model_results[model_name][sub_variable]
+            patch_pred = model_results[model_name][sub_variable].numpy()
             patch_validation_reg_scatter_plot(gdf, patch_pred,
                                                 variable=variable,
                                                 fig=fig, ax=axs[i])
@@ -239,7 +239,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_reconstructions_rgb.png"))
 
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]] 
+        fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]]
                               + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...]
                                  for _, model_info in model_dict.items()],
                               title_list = [f"Sentinel {info[0]} \n"

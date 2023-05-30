@@ -250,11 +250,11 @@ def theia_product_to_tensor(data_dir, s2_product_name):
     w = s2_r.shape[1]
     h = s2_r.shape[2]
     validity_mask = np.sum(masks, axis=0, keepdims=True).astype(bool).astype(int).astype(float)
-    tile_tensor = np.concatenate((s2_r, validity_mask, 
-                                  sun_zen.reshape(1,w,h), 
-                                  sun_az.reshape(1,w,h), 
-                                  joint_zen.reshape(1,w,h), 
-                                  joint_az.reshape(1,w,h)))
+    tile_tensor = np.concatenate((s2_r, validity_mask,
+                                  sun_zen.reshape((1,w,h)),
+                                  sun_az.reshape((1,w,h)),
+                                  joint_zen.reshape((1,w,h)),
+                                  joint_az.reshape((1,w,h))))
     return tile_tensor
 
 def main():

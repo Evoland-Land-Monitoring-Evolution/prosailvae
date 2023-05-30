@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 from typing import Tuple
-from torchutils.patches import patchify, unpatchify 
+from torchutils.patches import patchify, unpatchify
+import matplotlib.pyplot as plt
 
 def unbatchify(tensor: torch.Tensor) -> torch.Tensor:
     """
@@ -132,3 +133,12 @@ def check_is_patch(tensor:torch.Tensor):
         return False
     else:
         raise ValueError
+
+def plot_patch_distribution(s2_r, s2_a, bands_dim = 1,
+                            bands_names = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]):
+    n_bands = s2_r.size(bands_dim)
+    fig_bands, ax_bands = plt.subplots(2, n_bands//2)
+    for i in range(n_bands):
+        refl = torch.select(s2_r, bands_dim, i)
+        ax_bands.hist()
+    pass

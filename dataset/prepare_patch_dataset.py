@@ -218,7 +218,7 @@ def get_info_from_filename(filename):
     return sensor, date, tile, sensor + date + tile
 
 
-def theia_product_to_tensor(data_dir, s2_product_name):
+def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):
     path_to_theia_product = os.path.join(data_dir, s2_product_name)
     print(path_to_theia_product)
     dataset = sentinel2.Sentinel2(path_to_theia_product)
@@ -244,9 +244,32 @@ def theia_product_to_tensor(data_dir, s2_product_name):
     sun_zen, sun_az = dataset.read_solar_angles_as_numpy()
     s2_a = np.stack((sun_zen, joint_zen, sun_az - joint_az), 0).data
     print(s2_a.shape)
-    s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, crs=dataset.crs,
-                                                    band_type=dataset.SRE)
-    s2_r = s2_r.data
+    bb = dataset.bounds
+    if part_loading > 1:
+        s2_r_list = []
+        masks_list = []
+        top_bottom_range = (dataset.bounds.top - dataset.bounds.bottom) // part_loading
+        for i in range(part_loading-1):
+            bb = dataset.bounds
+            bb.bottom = dataset.bounds.bottom + i * top_bottom_range 
+            bb.top = dataset.bounds.bottom + (i+1) * top_bottom_range
+            s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
+                                                            band_type=dataset.SRE)
+            s2_r_list.append(s2_r.data)
+            masks_list.append(masks.data)
+        bb = dataset.bounds
+        bb.bottom = dataset.bounds.bottom + (part_loading-1) * top_bottom_range
+        s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
+                                                        band_type=dataset.SRE)
+        s2_r_list.append(s2_r.data)
+        masks_list.append(masks.data)
+        s2_r = np.concatenate(s2_r_list, 1)
+        masks = np.concatenate(masks_list, 1)
+    else:
+        s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
+                                                        band_type=dataset.SRE)
+        s2_r = s2_r.data    
+        masks = masks.data
     w = s2_r.shape[1]
     h = s2_r.shape[2]
     validity_mask = np.sum(masks, axis=0, keepdims=True).astype(bool).astype(int).astype(float)
@@ -279,7 +302,7 @@ def main():
         valid_files = ["SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7",
                        "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
         for i, product in enumerate(valid_files):
-            product_tensor = theia_product_to_tensor(parser.data_dir, product)
+            product_tensor = theia_product_to_tensor(parser.data_dir, product, part_loading=10)
             if not os.path.isdir(os.path.join(parser.data_dir, valid_tiles[0])):
                 os.makedirs(os.path.join(parser.data_dir, valid_tiles[0]))
             torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),

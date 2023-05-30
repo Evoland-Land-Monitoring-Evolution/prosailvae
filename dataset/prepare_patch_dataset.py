@@ -4,6 +4,7 @@ from torchutils.patches import patchify, unpatchify
 import argparse
 import socket
 import numpy as np
+from sensorsio import sentinel2
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -19,7 +20,11 @@ def get_parser():
     
     parser.add_argument("-o", dest="output_dir",
                         help="path to directory to save data into",
-                        type=str, default="")       
+                        type=str, default="")
+    
+    parser.add_argument("-t", dest="theia",
+                        help="toggle option for theia product as input",
+                        type=bool, default=False)
     return parser
 
 
@@ -212,38 +217,83 @@ def get_info_from_filename(filename):
     tile = filename_comp[4]
     return sensor, date, tile, sensor + date + tile
 
+
+def theia_product_to_tensor(data_dir, s2_product_name):
+    path_to_theia_product = os.path.join(data_dir, s2_product_name)
+    print(path_to_theia_product)
+    dataset = sentinel2.Sentinel2(path_to_theia_product)
+    bands = [sentinel2.Sentinel2.B2,
+             sentinel2.Sentinel2.B3,
+             sentinel2.Sentinel2.B4,
+             sentinel2.Sentinel2.B8,
+             sentinel2.Sentinel2.B5,
+             sentinel2.Sentinel2.B6,
+             sentinel2.Sentinel2.B7,
+             sentinel2.Sentinel2.B8A,
+             sentinel2.Sentinel2.B11,
+             sentinel2.Sentinel2.B12]
+    even_zen, odd_zen, even_az, odd_az = dataset.read_incidence_angles_as_numpy()
+    joint_zen = np.array(even_zen)
+    joint_zen[np.isnan(even_zen)] = odd_zen[np.isnan(even_zen)]
+    del even_zen
+    del odd_zen
+    joint_az = np.array(even_az)
+    joint_az[np.isnan(even_az)] = odd_az[np.isnan(even_az)]
+    del even_az
+    del odd_az
+    sun_zen, sun_az = dataset.read_solar_angles_as_numpy()
+    s2_a = np.stack((sun_zen, joint_zen, sun_az - joint_az), 0).data
+    print(s2_a.shape)
+    s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, crs=dataset.crs,
+                                                    band_type=dataset.SRE)
+    s2_r = s2_r.data
+    validity_mask = np.sum(masks, axis=0).astype(bool).astype(int).astype(float)
+    tile_tensor = np.concatenate((s2_r, validity_mask, sun_zen, sun_az, joint_zen, joint_az))
+    return tile_tensor
+
 def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/",
               "-o", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/"]
         
-        parser = get_parser().parse_args(args)    
+        parser = get_parser().parse_args(args)
     else:
         parser = get_parser().parse_args()
 
 
     if not os.path.isdir(parser.output_dir):
         os.makedirs(parser.output_dir)
+
     large_patch_size = 128
     train_patch_size = 16
     valid_size = 0.05
     test_size = 0.05
-    valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]
-    valid_files = [
-                    "after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth",
-                   "before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth",
-                   "after_SENTINEL2A_20170711-111223-375_L2A_T30TUM_D_V1-7_roi_0.pth",
-                   "after_SENTINEL2A_20180417-110822-655_L2A_T30TUM_C_V2-2_roi_0.pth",
-                   "before_SENTINEL2A_20170518-095716-529_L2A_T33TWF_D_V1-4_roi_0.pth",
-                   "before_SENTINEL2A_20170408-095711-526_L2A_T33TWF_D_V1-4_roi_0.pth",
-                   "before_SENTINEL2A_20170518-095716-529_L2A_T33TWG_D_V1-4_roi_0.pth"
-                ]
-    valid_files = None
+    if parser.theia:
+        valid_tiles = ["barrax_theia"]
+        valid_files = ["SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7",
+                       "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+        for i, product in enumerate(valid_files):
+            product_tensor = theia_product_to_tensor(parser.data_dir, product)
+            torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),
+                                            product + ".pth"))
+            valid_files[i] = product + ".pth"
+    else:
+        valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]
+        valid_files = [
+                        "after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth",
+                        "before_SENTINEL2A_20180620-105211-086_L2A_T31TCJ_C_V2-2_roi_0.pth",
+                        "after_SENTINEL2A_20170711-111223-375_L2A_T30TUM_D_V1-7_roi_0.pth",
+                        "after_SENTINEL2A_20180417-110822-655_L2A_T30TUM_C_V2-2_roi_0.pth",
+                        "before_SENTINEL2A_20170518-095716-529_L2A_T33TWF_D_V1-4_roi_0.pth",
+                        "before_SENTINEL2A_20170408-095711-526_L2A_T33TWF_D_V1-4_roi_0.pth",
+                        "before_SENTINEL2A_20170518-095716-529_L2A_T33TWG_D_V1-4_roi_0.pth"
+                    ]
+        valid_files = None
     # valid_files = ["after_SENTINEL2A_20170621-111222-373_L2A_T30TUM_D_V1-4_roi_0.pth"]
     (train_patches, valid_patches, test_patches,
      train_patch_info, valid_patch_info,
      test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 
-                                                        train_patch_size = train_patch_size, 
+                                                        train_patch_size = train_patch_size,
                                                         valid_size = valid_size, test_size = test_size,
                                                         valid_tiles=valid_tiles, valid_files=valid_files)
 

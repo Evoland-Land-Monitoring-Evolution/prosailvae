@@ -434,7 +434,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     batch_size=params["batch_size"],
                                                     data_dir=data_dir)
     else:
-        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=1, 
+        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=1,
                                                                                  num_workers=0)
 
     if params["apply_norm_rec"]:

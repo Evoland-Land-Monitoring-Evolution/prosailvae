@@ -1331,7 +1331,7 @@ def plot_silvia_validation_patch(gdf,
 
 def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray,
                                       variable:str='lai',
-                                      fig=None, ax=None):
+                                      fig=None, ax=None, legend=True):
     x_idx = gdf["x_idx"].values.astype(int)
     y_idx = gdf["y_idx"].values.astype(int)
     ref = gdf[variable].values.reshape(-1)
@@ -1341,21 +1341,29 @@ def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray,
                        f"Predicted {variable}": pred_at_site,
                        "Land Cover": gdf["land cover"]})
     if fig is None or ax is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
     xmin = min(np.min(pred_at_site), np.min(ref))
     xmax = max(np.max(pred_at_site), np.max(ref))
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
-    m, b = np.polyfit(ref, pred_at_site, 1)    
+    m, b = np.polyfit(ref, pred_at_site, 1)
     r2 = r2_score(ref, pred_at_site)
     rmse = np.sqrt(np.mean((ref - pred_at_site)**2))
-    line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r',
-            label="{:.2f} x + {:.2f} \n r2 = {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse))
+    perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
+    ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
+    line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
     
-    ax = sns.scatterplot(data=df, x=variable, y=f"Predicted {variable}",
+    g = sns.scatterplot(data=df, x=variable, y=f"Predicted {variable}",
                         hue="Land Cover", ax=ax)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(xmin, xmax)
     ax.set_aspect('equal', 'box')
-    ax.legend(ncol=2)
-    return fig, ax
+    if not legend:
+        ax.get_legend().remove()
+    else:
+        sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),ncol=len(pd.unique(gdf["land cover"]))//2,
+                        frameon=True)
+        fig.tight_layout()
+    return fig, ax, g
 
 def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=None):
     if isinstance(lai_pred, torch.Tensor):
@@ -1363,34 +1371,34 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=None
     if isinstance(ccc_pred, torch.Tensor):
         ccc_pred = ccc_pred.numpy()
     gdf_lai, _, _ = load_validation_data(data_dir, filename, variable="lai")
-    fig, ax = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
+    fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
                                                 variable='lai', fig=None, ax=None)
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_lai.png"))
+        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))
 
     lai_pred_at_site = lai_pred[:, gdf_lai["y_idx"].values.astype(int), 
                                 gdf_lai["x_idx"].values.astype(int)].reshape(-1)
     fig, ax = plot_silvia_validation_patch(gdf_lai, lai_pred, lai_pred_at_site)
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "barrax_field_lai.png"))
+        fig.savefig(os.path.join(res_dir, f"{filename}_field_lai.png"))
 
     gdf_lai_eff, _, _ = load_validation_data(data_dir, filename, 
                                                    variable="lai_eff")
     gdf_lai_eff = gdf_lai_eff.iloc[:51]
-    fig, ax = patch_validation_reg_scatter_plot(gdf_lai_eff, patch_pred=lai_pred,
+    fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai_eff, patch_pred=lai_pred,
                                                 variable='lai_eff', fig=None, ax=None)
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_lai_eff.png"))
+        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai_eff.png"))
 
     gdf_ccc, _, _ = load_validation_data(data_dir, filename, variable="ccc")
-    patch_validation_reg_scatter_plot(gdf_ccc, patch_pred=ccc_pred,
+    fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc, patch_pred=ccc_pred,
                                       variable='ccc', fig=None, ax=None)
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_ccc.png"))
+        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc.png"))
 
     gdf_ccc_eff, _, _ = load_validation_data(data_dir, filename, variable="ccc_eff")
-    patch_validation_reg_scatter_plot(gdf_ccc_eff, patch_pred=ccc_pred,
-                                      variable='ccc', fig=None, ax=None)
+    fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc_eff, patch_pred=ccc_pred,
+                                      variable='ccc_eff', fig=None, ax=None)
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "barrax_validation_scatter_ccc_eff.png"))
+        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc_eff.png"))
     return

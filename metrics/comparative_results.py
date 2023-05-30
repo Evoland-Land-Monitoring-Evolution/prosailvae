@@ -214,15 +214,16 @@ def regression_pair_plot(scatter_dict, global_lim):
 def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None):
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
         n_models = len(model_dict)
-        fig, axs = plt.subplots(n_models)
+        fig, axs = plt.subplots(1, n_models, dpi=150, figsize=(6*n_models, 6))
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
             patch_pred = model_results[model_name][sub_variable].numpy()
-            patch_validation_reg_scatter_plot(gdf, patch_pred,
+            fig, ax, g = patch_validation_reg_scatter_plot(gdf, patch_pred,
                                                 variable=variable,
-                                                fig=fig, ax=axs[i])
-            axs[i].set_title(model_info["plot_name"])
+                                                fig=fig, ax=axs[0,i], legend=True)
+            
+            axs[0, i].set_title(model_info["plot_name"])
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, "{variable}_{filename}_validation.png"))
 

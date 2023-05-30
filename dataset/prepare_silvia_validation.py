@@ -42,12 +42,16 @@ def get_prosailvae_train_parser():
     """
     parser = argparse.ArgumentParser(description='Parser for data generation')
 
-    parser.add_argument("-f", dest="filename",
+    parser.add_argument("-f", dest="data_filename",
                         help="name of data files (without extension)",
                         type=str, default="")
 
     parser.add_argument("-d", dest="data_dir",
                         help="name of data files (without extension)",
+                        type=str, default="")
+    
+    parser.add_argument("-p", dest="product_name",
+                        help="Theia product name",
                         type=str, default="")
     return parser
 
@@ -59,12 +63,12 @@ def get_variable_column_names(variable="lai"):
     if variable == "ccc":
         return "CCC (g m-2)", "Uncertainty (g m-2).2"
     if variable == "ccc_eff":
-        return "CCCeff (g m-2)", "Uncertainty (g m-2).1"   
+        return "CCCeff (g m-2)", "Uncertainty (g m-2).1"
     else:
         raise NotImplementedError
 
-def compute_validation_data(data_dir, filename):
-
+def compute_validation_data(data_dir, filename, s2_product_name):
+    output_file_name = s2_product_name[8:19] + "_" + filename
     data_file = filename + ".xlsx"
     data_df = pd.read_excel(os.path.join(data_dir, data_file), sheet_name="GroundData", skiprows=[0])
     data_df = data_df.drop(columns=['Comments'])
@@ -73,7 +77,7 @@ def compute_validation_data(data_dir, filename):
 
     # df = df.drop(columns=['Comments']).dropna()
 
-    path_to_theia_product = os.path.join(data_dir, "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8")
+    path_to_theia_product = os.path.join(data_dir, s2_product_name)
     dataset = sentinel2.Sentinel2(path_to_theia_product)
     data_gdf = data_gdf.to_crs(dataset.crs.to_epsg())
     margin = 100
@@ -123,16 +127,16 @@ def compute_validation_data(data_dir, filename):
     sun_az = sun_az[ymin:ymax, xmin:xmax]
     s2_a = np.stack((sun_zen, joint_zen, sun_az - joint_az), 0).data
     print(s2_a.shape)
-    np.save(os.path.join(data_dir, filename + "_angles.npy"), s2_a)
-    s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, region=bb,
+    np.save(os.path.join(data_dir, output_file_name + "_angles.npy"), s2_a)
+    s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, bounds=bb,
                                                                     crs=dataset.crs,
                                                                     band_type=dataset.SRE)
     s2_r = s2_r.data
     print(s2_r.shape)
-    np.save(os.path.join(data_dir, filename + "_refl.npy"), s2_r)
+    np.save(os.path.join(data_dir, output_file_name + "_refl.npy"), s2_r)
     arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2,1,0],
-                                    dmin=np.array([0., 0., 0.]),
-                                    dmax=np.array([0.2,0.2,0.2]))
+                                            dmin=np.array([0., 0., 0.]),
+                                            dmax=np.array([0.2,0.2,0.2]))
     fig, ax = plt.subplots()
     ax.imshow(arr_rgb, extent = [bb[0], bb[2], bb[1], bb[3]])
     data_gdf.plot(ax=ax)
@@ -153,7 +157,8 @@ def compute_validation_data(data_dir, filename):
         if variable in ["ccc", "ccc_eff"]:
             gdf[variable] = gdf[variable] * 100
             gdf["uncertainty"] = gdf["uncertainty"] * 100
-        gdf.to_file(os.path.join(data_dir, filename + f"_{variable}.geojson"), driver="GeoJSON")
+        gdf.to_file(os.path.join(data_dir, output_file_name + f"_{variable}.geojson"), driver="GeoJSON")
+    return output_file_name
 
 def load_validation_data(data_dir, filename, variable="lai"):
     gdf = gpd.read_file(os.path.join(data_dir, filename + f"_{variable}.geojson"),
@@ -176,12 +181,16 @@ def load_validation_data(data_dir, filename, variable="lai"):
 def main():
     if socket.gethostname()=='CELL200973':
         args=["-f", "FRM_Veg_Barrax_20180605",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"]
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation",
+              "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
+            #   "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+        # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
     # gdf, s2_r, s2_a = load_validation_data(parser.data_dir, parser.filename)
-    compute_validation_data(parser.data_dir, parser.filename)
-
+    s2_product_name = parser.product_name
+    output_file_names = compute_validation_data(parser.data_dir, parser.data_filename, s2_product_name)
+    print(output_file_names)
 if __name__ == "__main__":
     main()

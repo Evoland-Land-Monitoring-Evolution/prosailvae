@@ -5,6 +5,7 @@ import argparse
 import socket
 import numpy as np
 from sensorsio import sentinel2
+from rasterio.coords import BoundingBox
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -250,15 +251,18 @@ def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):
         masks_list = []
         top_bottom_range = (dataset.bounds.top - dataset.bounds.bottom) // part_loading
         for i in range(part_loading-1):
-            bb = dataset.bounds
-            bb.bottom = dataset.bounds.bottom + i * top_bottom_range 
-            bb.top = dataset.bounds.bottom + (i+1) * top_bottom_range
+            bb = BoundingBox(dataset.bounds.bottom, 
+                             dataset.bounds.bottom + i * top_bottom_range, 
+                             dataset.bounds.right, 
+                             dataset.bounds.bottom + (i+1) * top_bottom_range)
             s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
                                                             band_type=dataset.SRE)
             s2_r_list.append(s2_r.data)
             masks_list.append(masks.data)
-        bb = dataset.bounds
-        bb.bottom = dataset.bounds.bottom + (part_loading-1) * top_bottom_range
+        bb = BoundingBox(dataset.bounds.bottom, 
+                            dataset.bounds.bottom + (part_loading-1) * top_bottom_range, 
+                            dataset.bounds.right, 
+                            dataset.bounds.top)
         s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
                                                         band_type=dataset.SRE)
         s2_r_list.append(s2_r.data)

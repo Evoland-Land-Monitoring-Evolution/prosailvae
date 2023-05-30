@@ -258,11 +258,12 @@ def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):
             try:
                 s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
                                                                 band_type=dataset.SRE)
+                print(i)
             except Exception as exc:
                 print(i, bb, top_bottom_range)
             s2_r_list.append(s2_r.data)
             masks_list.append(masks.data)
-        bb = BoundingBox(dataset.bounds.left, 
+        bb = BoundingBox(dataset.bounds.left,
                             dataset.bounds.bottom + (part_loading-1) * top_bottom_range, 
                             dataset.bounds.right,
                             dataset.bounds.top)
@@ -285,7 +286,8 @@ def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):
                                   sun_az.reshape((1,w,h)),
                                   joint_zen.reshape((1,w,h)),
                                   joint_az.reshape((1,w,h))))
-    return tile_tensor
+    print("Tile Tensor completed")
+    return torch.from_numpy(tile_tensor)
 
 def main():
     if socket.gethostname()=='CELL200973':
@@ -312,8 +314,10 @@ def main():
             product_tensor = theia_product_to_tensor(parser.data_dir, product, part_loading=10)
             if not os.path.isdir(os.path.join(parser.data_dir, valid_tiles[0])):
                 os.makedirs(os.path.join(parser.data_dir, valid_tiles[0]))
+            print("Saving tensor file at ...")
             torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),
                                                     product + ".pth"))
+            print("Tensor file Saved!")
             valid_files[i] = product + ".pth"
     else:
         valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]

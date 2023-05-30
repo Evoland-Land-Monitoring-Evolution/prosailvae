@@ -318,7 +318,7 @@ def main():
             torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),
                                                     "theia_" + product + ".pth"))
             print("Tensor file Saved!")
-            valid_files[i] = product + ".pth"
+            valid_files[i] = "theia_" + product + ".pth"
     else:
         valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]
         valid_files = [ "after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth",

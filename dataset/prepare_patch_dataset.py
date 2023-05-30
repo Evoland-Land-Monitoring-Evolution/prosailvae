@@ -77,7 +77,8 @@ def get_valid_area_in_image(tile):
     # elif tile=="T33TWF":
     #     return 0, 1024, 1020, 2044
     else:
-        raise NotImplementedError
+        return 0, None, 0, None
+        # raise NotImplementedError
 
 def get_patches(image_tensor, patch_size):
     patches = patchify(image_tensor, patch_size=patch_size, margin=0)

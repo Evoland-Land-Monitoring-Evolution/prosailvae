@@ -77,7 +77,8 @@ def get_valid_area_in_image(tile):
     # elif tile=="T33TWF":
     #     return 0, 1024, 1020, 2044
     else:
-        return 0, None, 0, None
+        return 5000, None, 5000, None
+        # return 0, None, 0, None
         # raise NotImplementedError
 
 def get_patches(image_tensor, patch_size):
@@ -312,13 +313,13 @@ def main():
         valid_files = ["SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7",
                        "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
         for i, product in enumerate(valid_files):
-            product_tensor = theia_product_to_tensor(parser.data_dir, product, part_loading=10)
-            if not os.path.isdir(os.path.join(parser.data_dir, valid_tiles[0])):
-                os.makedirs(os.path.join(parser.data_dir, valid_tiles[0]))
-            print("Saving tensor file at ...")
-            torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),
-                                                    "theia_" + product + ".pth"))
-            print("Tensor file Saved!")
+            # product_tensor = theia_product_to_tensor(parser.data_dir, product, part_loading=10)
+            # if not os.path.isdir(os.path.join(parser.data_dir, valid_tiles[0])):
+            #     os.makedirs(os.path.join(parser.data_dir, valid_tiles[0]))
+            # print("Saving tensor file at ...")
+            # torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),
+            #                                         "theia_" + product + ".pth"))
+            # print("Tensor file Saved!")
             valid_files[i] = "theia_" + product + ".pth"
     else:
         valid_tiles = ["T31TCJ", "T30TUM", "T33TWF", "T33TWG"]

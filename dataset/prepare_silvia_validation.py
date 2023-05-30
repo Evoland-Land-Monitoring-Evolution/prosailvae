@@ -181,7 +181,7 @@ def load_validation_data(data_dir, filename, variable="lai"):
 def main():
     if socket.gethostname()=='CELL200973':
         args=["-f", "FRM_Veg_Barrax_20180605",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation/",
               "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
             #   "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
         # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"

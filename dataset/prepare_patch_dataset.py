@@ -251,7 +251,7 @@ def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):
         masks_list = []
         top_bottom_range = (dataset.bounds.top - dataset.bounds.bottom) // part_loading
         for i in range(part_loading-1):
-            bb = BoundingBox(dataset.bounds.bottom,
+            bb = BoundingBox(dataset.bounds.left,
                              dataset.bounds.bottom + i * top_bottom_range,
                              dataset.bounds.right,
                              dataset.bounds.bottom + (i+1) * top_bottom_range)
@@ -259,12 +259,12 @@ def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):
                 s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
                                                                 band_type=dataset.SRE)
             except Exception as exc:
-                print(bb, top_bottom_range)
+                print(i, bb, top_bottom_range)
             s2_r_list.append(s2_r.data)
             masks_list.append(masks.data)
-        bb = BoundingBox(dataset.bounds.bottom, 
+        bb = BoundingBox(dataset.bounds.left, 
                             dataset.bounds.bottom + (part_loading-1) * top_bottom_range, 
-                            dataset.bounds.right, 
+                            dataset.bounds.right,
                             dataset.bounds.top)
         s2_r, masks, _, _, _, _ = dataset.read_as_numpy(bands, bounds=bb, crs=dataset.crs,
                                                         band_type=dataset.SRE)

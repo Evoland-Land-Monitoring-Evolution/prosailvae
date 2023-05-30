@@ -316,7 +316,7 @@ def main():
                 os.makedirs(os.path.join(parser.data_dir, valid_tiles[0]))
             print("Saving tensor file at ...")
             torch.save(product_tensor, os.path.join(os.path.join(parser.data_dir, valid_tiles[0]),
-                                                    product + ".pth"))
+                                                    "theia_" + product + ".pth"))
             print("Tensor file Saved!")
             valid_files[i] = product + ".pth"
     else:

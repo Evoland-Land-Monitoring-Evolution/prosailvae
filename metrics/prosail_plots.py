@@ -1310,19 +1310,25 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_CWC_err_prediction_vs_weiss.png')
     return
 
+
 def plot_silvia_validation_patch(gdf, 
                                  pred_at_patch: np.ndarray, 
-                                 pred_at_site: np.ndarray, 
+                                 #pred_at_site: np.ndarray, 
                                  variable:str="lai"):
     df_sns_plot = pd.DataFrame({variable: gdf[variable].values.reshape(-1),
-                                f"Predicted {variable}": pred_at_site,
+                                #f"Predicted {variable}": pred_at_site,
                                 "Land Cover": gdf["land cover"],
                                 "x": gdf["x_idx"],
                                 "y": gdf["y_idx"],
                                 })
     fig, ax = plt.subplots()
-    im = ax.imshow(pred_at_patch.squeeze())
-    plt.colorbar(im)
+    s =  pred_at_patch.shape
+    if s[0]==1 and len(s)==3:
+        im = ax.imshow(pred_at_patch.squeeze())
+        plt.colorbar(im)
+    elif s[0]>=3 and len(s)==3:
+        tensor_visu, _, _ = rgb_render(pred_at_patch)
+        im = ax.imshow(tensor_visu)
     sns.scatterplot(data=df_sns_plot, x='x', y="y", hue="Land Cover", ax=ax)
     ax.set_xlabel('')
     ax.set_ylabel('')
@@ -1365,7 +1371,8 @@ def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray,
         fig.tight_layout()
     return fig, ax, g
 
-def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=None):
+def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, res_dir=None):
+
     if isinstance(lai_pred, torch.Tensor):
         lai_pred = lai_pred.numpy()
     if isinstance(ccc_pred, torch.Tensor):
@@ -1373,6 +1380,12 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=None
     gdf_lai, _, _ = load_validation_data(data_dir, filename, variable="lai")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
                                                 variable='lai', fig=None, ax=None)
+    if s2_r is not None:
+        if isinstance(s2_r, torch.Tensor):
+            s2_r = s2_r.numpy()
+        fig, ax = plot_silvia_validation_patch(gdf_lai, s2_r, None)
+        if res_dir is not None:
+            fig.savefig(os.path.join(res_dir, f"{filename}_field_rgb.png"))
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))
 

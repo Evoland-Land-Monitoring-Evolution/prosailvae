@@ -469,10 +469,12 @@ def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3
         s2_r_patches = s2_r_patches[:max_samples,...]
         s2_a_patches = s2_a_patches[:max_samples,...]
     if concat:
-        dataset = TensorDataset(torch.cat((s2_r_patches, s2_a_patches), axis=1))
+        dataset = TensorDataset(torch.cat((s2_r_patches.float(), 
+                                           s2_a_patches.float()), axis=1))
         loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=num_workers, shuffle=shuffle)
     else:
-        dataset = TensorDataset(s2_r_patches, s2_a_patches)
+        dataset = TensorDataset(s2_r_patches.float(), 
+                                s2_a_patches.float())
         loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=num_workers, shuffle=shuffle)
     return loader
 

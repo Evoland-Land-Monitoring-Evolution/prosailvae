@@ -115,12 +115,13 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     
     with torch.no_grad():
-        (_, sim_image, _, _, _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
+        (_, sim_image, cropped_s2_r, _, _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
                                                      patch_size=32, bands=torch.arange(10),
                                                      mode=rec_mode, padding=True)
         lai_pred = sim_image[6,...].unsqueeze(0)
         ccc_pred = sim_image[1,...].unsqueeze(0) * lai_pred
-    silvia_validation_plots(lai_pred, ccc_pred, silvia_data_dir, silvia_filename, res_dir=silvia_validation_plot_dir)
+    silvia_validation_plots(lai_pred, ccc_pred, silvia_data_dir, silvia_filename, 
+                            s2_r=cropped_s2_r, res_dir=silvia_validation_plot_dir)
 
     # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     all_rec = []
@@ -135,7 +136,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     all_sigma = []
     with torch.no_grad():
         for i, batch in enumerate(loader):
-            (rec_image, sim_image, cropped_s2_r, cropped_s2_a, 
+            (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 sigma_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                                                             bands=torch.arange(10),
                                                             mode=rec_mode)

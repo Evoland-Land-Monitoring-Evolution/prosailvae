@@ -1383,7 +1383,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
     if s2_r is not None:
         if isinstance(s2_r, torch.Tensor):
             s2_r = s2_r.numpy()
-        fig, ax = plot_silvia_validation_patch(gdf_lai, s2_r, None)
+        fig, ax = plot_silvia_validation_patch(gdf_lai, s2_r)
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{filename}_field_rgb.png"))
     if res_dir is not None:

@@ -1321,7 +1321,7 @@ def plot_silvia_validation_patch(gdf,
                                 "x": gdf["x_idx"],
                                 "y": gdf["y_idx"],
                                 })
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(tight_layout=True)
     s = pred_at_patch.shape
     
     if s[0]==1 and len(s)==3:

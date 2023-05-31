@@ -358,10 +358,12 @@ def setup_training():
               "-p", "False"]
         parser = get_prosailvae_train_parser().parse_args(args)
         silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
+        silvia_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+        
     else:
         parser = get_prosailvae_train_parser().parse_args()
         silvia_data_dir = "/work/scratch/zerahy/prosailvae/data/silvia_validation"
-    silvia_filename = "FRM_Veg_Barrax_20180605"
+        silvia_filename = "FRM_Veg_Barrax_20180605"
     root_dir = TOP_PATH
     xp_array = parser.xp_array
     job_array_dir = None

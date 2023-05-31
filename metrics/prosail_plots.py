@@ -1322,12 +1322,13 @@ def plot_silvia_validation_patch(gdf,
                                 "y": gdf["y_idx"],
                                 })
     fig, ax = plt.subplots()
-    s =  pred_at_patch.shape
+    s = pred_at_patch.shape
+    
     if s[0]==1 and len(s)==3:
         im = ax.imshow(pred_at_patch.squeeze())
         plt.colorbar(im)
-    elif s[0]>=3 and len(s)==3:
-        tensor_visu, _, _ = rgb_render(pred_at_patch)
+    elif (s[0] >= 3 and len(s)==3) or (s[1] >= 3 and len(s)==4):
+        tensor_visu, _, _ = rgb_render(pred_at_patch.squeeze())
         im = ax.imshow(tensor_visu)
     sns.scatterplot(data=df_sns_plot, x='x', y="y", hue="Land Cover", ax=ax)
     ax.set_xlabel('')

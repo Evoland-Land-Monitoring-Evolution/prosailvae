@@ -1391,7 +1391,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
 
     lai_pred_at_site = lai_pred[:, gdf_lai["y_idx"].values.astype(int), 
                                 gdf_lai["x_idx"].values.astype(int)].reshape(-1)
-    fig, ax = plot_silvia_validation_patch(gdf_lai, lai_pred, lai_pred_at_site)
+    fig, ax = plot_silvia_validation_patch(gdf_lai, lai_pred)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_field_lai.png"))
 

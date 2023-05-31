@@ -68,7 +68,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None,
                     silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation",
-                    silvia_filename = "FRM_Veg_Barrax_20180605"):
+                    silvia_filename = "FRM_Veg_Barrax_20180605", max_test_patch=50):
     rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
     image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
@@ -162,6 +162,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             all_weiss_cw.append(weiss_cw.reshape(-1))
             all_s2_r.append(cropped_s2_r.reshape(10,-1))
             all_sigma.append(sigma_image.reshape(11,-1))
+            if i == max_test_patch-1:
+                break
         all_rec = torch.cat(all_rec, axis=1)
         all_lai = torch.cat(all_lai)
         all_cab = torch.cat(all_cab)

@@ -225,7 +225,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
             
             axs[i].set_title(model_info["plot_name"])
         if res_dir is not None:
-            fig.savefig(os.path.join(res_dir, "{variable}_{filename}_validation.png"))
+            fig.savefig(os.path.join(res_dir, f"{variable}_{filename}_validation.png"))
 
 def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, res_dir=None):

@@ -2,5 +2,9 @@
     "rcnn_pvae_hyperparams": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rcnn_pvae_hyperprior/",
     		"type":"simvae",
     		"plot_name":"Spatial PROSAIL-VAE \n with hyperprior"
+    },
+    "rcnn_pvae_hyperparams_2": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/rcnn_pvae_hyperprior/",
+    		"type":"simvae",
+    		"plot_name":"Spatial PROSAIL-VAE \n with hyperprior 2"
     }
 }

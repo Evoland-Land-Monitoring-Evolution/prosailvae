@@ -44,11 +44,11 @@ def get_prosailvae_train_parser():
 
     parser.add_argument("-f", dest="data_filename",
                         help="name of data files (without extension)",
-                        type=str, default="")
+                        type=str, default="FRM_Veg_Barrax_20180605")
 
     parser.add_argument("-d", dest="data_dir",
                         help="name of data files (without extension)",
-                        type=str, default="")
+                        type=str, default="/home/uz/zerahy/scratch/prosailvae/data/silvia_validation/")
     
     parser.add_argument("-p", dest="product_name",
                         help="Theia product name",

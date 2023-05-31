@@ -66,7 +66,7 @@ def get_model_and_dataloader(parser):
 def get_model_validation_results(model_dict: dict, 
                                  data_dir, filename, sensor):
 
-    rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
+    rec_mode = 'lat_mode' #if not socket.gethostname()=='CELL200973' else "random"
     _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
@@ -214,16 +214,16 @@ def regression_pair_plot(scatter_dict, global_lim):
 def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None):
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
         n_models = len(model_dict)
-        fig, axs = plt.subplots(1, n_models, dpi=150, figsize=(6*n_models, 6))
+        fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
             patch_pred = model_results[model_name][sub_variable].numpy()
             fig, ax, g = patch_validation_reg_scatter_plot(gdf, patch_pred,
                                                 variable=variable,
-                                                fig=fig, ax=axs[0,i], legend=True)
+                                                fig=fig, ax=axs[i], legend=True)
             
-            axs[0, i].set_title(model_info["plot_name"])
+            axs[i].set_title(model_info["plot_name"])
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, "{variable}_{filename}_validation.png"))
 
@@ -385,7 +385,7 @@ def main():
         os.makedirs(res_dir)
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
    
-    filename = "FRM_Veg_Barrax_20180605"
+    filename = "2A_20180613_FRM_Veg_Barrax_20180605"
     sensor = "2A"
     validation_results = get_model_validation_results(model_dict, silvia_data_dir, filename, sensor)
     plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename, res_dir=res_dir)

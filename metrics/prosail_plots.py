@@ -930,13 +930,58 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
     plt.show()
     return fig, ax
 
+def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf, model_patch_pred,
+                                snap_patch_pred, variable='lai', legend=True):
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b = np.polyfit(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy(), 1)
+    r2 = r2_score(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy())
+    rmse = (all_snap_lai - all_model_lai).pow(2).mean().sqrt().cpu().numpy()
+    ax.scatter(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy(), s=0.5)
+
+    x_idx = gdf["x_idx"].values.astype(int)
+    y_idx = gdf["y_idx"].values.astype(int)
+    ref = gdf[variable].values.reshape(-1)
+    ref_uncert = gdf["uncertainty"].values
+    model_pred_at_site = model_patch_pred[:, y_idx, x_idx].reshape(-1)
+    snap_pred_at_site = snap_patch_pred[:, y_idx, x_idx].reshape(-1)
+    df = pd.DataFrame({variable:ref,
+                       f"Predicted {variable}": model_pred_at_site,
+                       f"SNAP {variable}": snap_pred_at_site,
+                       "Land Cover": gdf["land cover"]})
+    g = sns.scatterplot(data=df, x=variable, y=f"Predicted {variable}",
+                        hue="Land Cover", ax=ax)
+    # ax.set_xlim(xmin, xmax)
+    # ax.set_ylim(xmin, xmax)
+    ax.set_aspect('equal', 'box')
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1], ylim[1]), ],'k--')
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+        [m * min(xlim[0],ylim[0]) + b, m * max(xlim[1],ylim[1]) + b],'r')
+    ax.set_xlim(min(xlim[0],ylim[0]), max(xlim[1],ylim[1]))
+    ax.set_ylim(min(xlim[0],ylim[0]), max(xlim[1],ylim[1]))
+    perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
+    ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
+    if not legend:
+        ax.get_legend().remove()
+    else:
+        sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.13), ncol=len(pd.unique(gdf["land cover"]))//2,
+                        frameon=True)
+        fig.tight_layout()
+    return fig, ax
+
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
-                                  all_cw_rel, max_sigma=1.4):
+                                  all_cw_rel, gdf_lai, model_patch_pred, snap_patch_pred, max_sigma=1.4):
 
+    fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
+                                          snap_patch_pred, variable='lai', legend=True)
+    fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
     fig, ax = plt.subplots()
-    ax.scatter((all_lai - all_weiss_lai).abs(), all_sigma[6,:], s=0.5)
-    ax.set_xlabel('LAI absolute difference (SNAP LAI - predicted LAI)')
+    ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
+    ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
     ax.set_ylabel('LAI latent sigma')
     fig.savefig(f"{plot_dir}/lai_err_vs_sigma.png")
     fig, ax = plt.subplots()
@@ -1381,14 +1426,15 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
     gdf_lai, _, _ = load_validation_data(data_dir, filename, variable="lai")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
                                                 variable='lai', fig=None, ax=None)
+    
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))    
     if s2_r is not None:
         if isinstance(s2_r, torch.Tensor):
             s2_r = s2_r.numpy()
         fig, ax = plot_silvia_validation_patch(gdf_lai, s2_r)
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{filename}_field_rgb.png"))
-    if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))
 
     lai_pred_at_site = lai_pred[:, gdf_lai["y_idx"].values.astype(int), 
                                 gdf_lai["x_idx"].values.astype(int)].reshape(-1)
@@ -1406,7 +1452,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
 
     gdf_ccc, _, _ = load_validation_data(data_dir, filename, variable="ccc")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc, patch_pred=ccc_pred,
-                                      variable='ccc', fig=None, ax=None)
+                                                    variable='ccc', fig=None, ax=None)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc.png"))
 

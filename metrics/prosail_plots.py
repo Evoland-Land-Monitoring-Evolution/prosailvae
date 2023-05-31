@@ -1270,9 +1270,9 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
                                         vmin=vmin, vmax=vmax)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_LAI_prediction_vs_weiss.png')
 
-    for i, varname in enumerate(PROSAILVARS):
-        fig, _ = plot_patches((cropped_image.cpu(), sim_image[i,...].unsqueeze(0).cpu(),
-                                                    sigma_image[i,...].unsqueeze(0).cpu()),
+    for j, varname in enumerate(PROSAILVARS):
+        fig, _ = plot_patches((cropped_image.cpu(), sim_image[j,...].unsqueeze(0).cpu(),
+                                                    sigma_image[j,...].unsqueeze(0).cpu()),
                                 title_list=[f'original patch \n {info[1]} {info[2]}',
                                             f'PROSAIL-VAE {varname}',
                                             f"{varname} sigma"])

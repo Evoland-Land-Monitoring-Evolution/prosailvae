@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import datetime
 import argparse
 import socket
 from utils.utils import load_dict, save_dict
@@ -17,6 +18,7 @@ import seaborn as sns
 import prosailvae
 from snap_regression.snap_nn import SnapNN
 from dataset.prepare_silvia_validation import load_validation_data
+from tqdm import trange, tqdm
 def get_parser():
     """
     Gets arguments for terminal-based launch of script
@@ -67,13 +69,18 @@ def get_model_validation_results(model_dict: dict,
                                  data_dir, filename, sensor):
 
     rec_mode = 'lat_mode' #if not socket.gethostname()=='CELL200973' else "random"
-    _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    idx_dict = {}
+    for variable in ['lai', 'lai_eff', 'ccc', 'ccc_eff']:
+        gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
+        idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
+                              "y_idx" : torch.from_numpy(gdf["y_idx"].values).int()}
+    gdf, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     model_results = {}
     largest_hw = 0
     model_inference_info = {}
-    for model_name, model_info in model_dict.items():
+    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         hw = 0
         model = model_info["model"]
         if model.spatial_mode:
@@ -85,13 +92,21 @@ def get_model_validation_results(model_dict: dict,
              _) = get_encoded_image_from_batch((s2_r, s2_a), model,
                                                 patch_size=32, bands=torch.arange(10),
                                                 mode=rec_mode, padding=True)
-        lai_pred = sim_image[6,...].unsqueeze(0)
-        ccc_pred = sim_image[1,...].unsqueeze(0) * lai_pred
+        model_inference_info[model_name] = {"s2_r":cropped_s2_r,
+                                    "s2_a":cropped_s2_a,
+                                    "hw": hw}
+    
+        lai_pred = sim_image[6,...].unsqueeze(0)[:, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
+        lai_eff_pred = sim_image[6,...].unsqueeze(0)[:, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
+        ccc_pred = (sim_image[1,...].unsqueeze(0)[:, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']] 
+                    * sim_image[6,...].unsqueeze(0)[:, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']])
+        ccc_eff_pred = (sim_image[1,...].unsqueeze(0)[:, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']] 
+                        * sim_image[6,...].unsqueeze(0)[:, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']])
         model_results[model_name] = {'lai': lai_pred,
-                                     'ccc': ccc_pred}
-        model_inference_info[model_name] = {"s2_r":cropped_s2_r, 
-                                            "s2_a":cropped_s2_a,
-                                            "hw": hw}
+                                     'lai_eff': lai_eff_pred,
+                                     'ccc': ccc_pred,
+                                     'ccc_eff': ccc_eff_pred}
+
 
     for model_name, _ in model_dict.items():
         delta_hw = largest_hw - model_inference_info[model_name]['hw']
@@ -109,7 +124,10 @@ def get_model_validation_results(model_dict: dict,
         _) = get_weiss_biophyiscal_from_batch((model_inference_info[model_name]["s2_r"], 
                                                model_inference_info[model_name]["s2_a"]),
                                                patch_size=32, sensor=sensor)
-    model_results["SNAP"] = {'lai': snap_lai, 'ccc': snap_cab}
+    model_results["SNAP"] = {'lai': snap_lai[..., idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']],
+                             'lai_eff': snap_lai[..., idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']],
+                             'ccc': snap_cab[..., idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']],
+                             'ccc_eff': snap_cab[..., idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']]}
     return model_results
 
 
@@ -217,15 +235,15 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
         fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
-            sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
-            patch_pred = model_results[model_name][sub_variable].numpy()
-            fig, ax, g = patch_validation_reg_scatter_plot(gdf, patch_pred,
-                                                variable=variable,
-                                                fig=fig, ax=axs[i], legend=True)
+            # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
+            pred_at_site = model_results[model_name][variable].numpy()
+            fig, ax, g = patch_validation_reg_scatter_plot(gdf, pred_at_site=pred_at_site,
+                                                            variable=variable,
+                                                            fig=fig, ax=axs[i], legend=True)
             
             axs[i].set_title(model_info["plot_name"])
-        patch_pred = model_results["SNAP"][sub_variable].numpy()
-        fig, ax, g = patch_validation_reg_scatter_plot(gdf, patch_pred,
+        pred_at_site = model_results["SNAP"][variable].numpy()
+        fig, ax, g = patch_validation_reg_scatter_plot(gdf, pred_at_site=pred_at_site,
                                                         variable=variable,
                                                         fig=fig, ax=axs[-1], legend=True)
             
@@ -373,6 +391,26 @@ def compare_snap_versions_on_weiss_data(res_dir):
     fig, _ = regression_pair_plot(snap_lai_dict, global_lai_lim)
     fig.savefig(os.path.join(res_dir, "scatter_lai_snap_versions_weiss.png"))
 
+def interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor):
+    d0 = datetime.date.fromisoformat('2018-05-15')
+    d1 = datetime.date.fromisoformat('2018-06-13')
+    dt_image = (d1 - d0).days
+    gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable="lai")
+    t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
+    validation_results_1 = get_model_validation_results(model_dict, silvia_data_dir, filename[0], sensor)
+    validation_results_2 = get_model_validation_results(model_dict, silvia_data_dir, filename[1], sensor)
+    validation_results = {}
+    for model_name, _ in validation_results_1.items():
+        model_results = {}
+        for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
+            gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable=variable)
+            t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
+            m = (validation_results_1[model_name][variable] - validation_results_2[model_name][variable]) / dt_image
+            b = validation_results_2[model_name][variable] - m * d1.day
+            model_results[variable] = (m * t_sample + b).reshape(-1)
+        validation_results[model_name] = model_results
+    return validation_results
+
 def main():
     """
     main.
@@ -391,10 +429,13 @@ def main():
         os.makedirs(res_dir)
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
    
-    filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+    filename = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
     sensor = "2B"
-    validation_results = get_model_validation_results(model_dict, silvia_data_dir, filename, sensor)
-    plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename, res_dir=res_dir)
+    if isinstance(filename, list):
+        validation_results = interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor)
+    else:
+        validation_results = get_model_validation_results(model_dict, silvia_data_dir, filename, sensor)
+    plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename[0], res_dir=res_dir)
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)

@@ -1380,14 +1380,19 @@ def plot_silvia_validation_patch(gdf,
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
     return fig, ax
 
-def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray,
+def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None, 
+                                      pred_at_site:np.ndarray|None=None,
                                       variable:str='lai',
                                       fig=None, ax=None, legend=True):
-    x_idx = gdf["x_idx"].values.astype(int)
-    y_idx = gdf["y_idx"].values.astype(int)
+
     ref = gdf[variable].values.reshape(-1)
     ref_uncert = gdf["uncertainty"].values
-    pred_at_site = patch_pred[:, y_idx, x_idx].reshape(-1)
+    if pred_at_site is None:
+        if patch_pred is None:
+            raise ValueError
+        x_idx = gdf["x_idx"].values.astype(int)
+        y_idx = gdf["y_idx"].values.astype(int)
+        pred_at_site = patch_pred[:, y_idx, x_idx].reshape(-1)
     df = pd.DataFrame({variable:ref,
                        f"Predicted {variable}": pred_at_site,
                        "Land Cover": gdf["land cover"]})

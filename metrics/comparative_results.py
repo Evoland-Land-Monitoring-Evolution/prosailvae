@@ -109,7 +109,7 @@ def get_model_validation_results(model_dict: dict,
         _) = get_weiss_biophyiscal_from_batch((model_inference_info[model_name]["s2_r"], 
                                                model_inference_info[model_name]["s2_a"]),
                                                patch_size=32, sensor=sensor)
-    model_results["SNAP"] = {'lai': snap_lai, 'ccc': snap_cab}    
+    model_results["SNAP"] = {'lai': snap_lai, 'ccc': snap_cab}
     return model_results
 
 
@@ -213,7 +213,7 @@ def regression_pair_plot(scatter_dict, global_lim):
 
 def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None):
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
-        n_models = len(model_dict)
+        n_models = len(model_dict) + 1
         fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
@@ -224,6 +224,12 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
                                                 fig=fig, ax=axs[i], legend=True)
             
             axs[i].set_title(model_info["plot_name"])
+        patch_pred = model_results["SNAP"][sub_variable].numpy()
+        fig, ax, g = patch_validation_reg_scatter_plot(gdf, patch_pred,
+                                                        variable=variable,
+                                                        fig=fig, ax=axs[i], legend=True)
+            
+        axs[i].set_title("SNAP")
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{variable}_{filename}_validation.png"))
 

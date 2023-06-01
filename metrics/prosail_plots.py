@@ -944,11 +944,10 @@ def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf, model_patch_pr
     ref_uncert = gdf["uncertainty"].values
     model_pred_at_site = model_patch_pred[:, y_idx, x_idx].reshape(-1)
     snap_pred_at_site = snap_patch_pred[:, y_idx, x_idx].reshape(-1)
-    df = pd.DataFrame({variable:ref,
-                       f"Predicted {variable}": model_pred_at_site,
+    df = pd.DataFrame({f"Predicted {variable}": model_pred_at_site,
                        f"SNAP {variable}": snap_pred_at_site,
                        "Land Cover": gdf["land cover"]})
-    g = sns.scatterplot(data=df, x=variable, y=f"Predicted {variable}",
+    g = sns.scatterplot(data=df, x=f"SNAP {variable}", y=f"Predicted {variable}",
                         hue="Land Cover", ax=ax)
     # ax.set_xlim(xmin, xmax)
     # ax.set_ylim(xmin, xmax)

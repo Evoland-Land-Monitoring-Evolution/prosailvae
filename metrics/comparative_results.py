@@ -244,7 +244,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
                                                             fig=fig, ax=axs[i], legend=True)
             
             axs[i].set_title(model_info["plot_name"])
-        pred_at_site = model_results["SNAP"][variable].numpy()
+        pred_at_site = model_results["SNAP"][variable].squeeze().numpy()
         fig, ax, g = patch_validation_reg_scatter_plot(gdf, pred_at_site=pred_at_site,
                                                         variable=variable,
                                                         fig=fig, ax=axs[-1], legend=True)
@@ -438,12 +438,12 @@ def main():
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
-   
+
     filename = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
     sensor = ["2B", "2A"]
     # if isinstance(filename, list):
     validation_results = interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor)
-    plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename[0], 
+    plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename[0],
                                            res_dir=res_dir, prefix='interp_')
     # else:
     filename = "2B_20180516_FRM_Veg_Barrax_20180605"

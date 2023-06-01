@@ -112,11 +112,11 @@ def get_model_validation_results(model_dict: dict,
         delta_hw = largest_hw - model_inference_info[model_name]['hw']
         s2_r = model_inference_info[model_name]["s2_r"]
         s2_a = model_inference_info[model_name]["s2_a"]
-        lai = model_results[model_name]["lai"]
-        ccc = model_results[model_name]["ccc"]        
+        # lai = model_results[model_name]["lai"]
+        # ccc = model_results[model_name]["ccc"]
         if delta_hw > 0 :
-            model_results[model_name]["lai"] = crop_s2_input(lai, delta_hw)
-            model_results[model_name]["ccc"] = crop_s2_input(ccc, delta_hw)
+            # model_results[model_name]["lai"] = crop_s2_input(lai, delta_hw)
+            # model_results[model_name]["ccc"] = crop_s2_input(ccc, delta_hw)
             model_inference_info[model_name]["s2_r"] = crop_s2_input(s2_r, delta_hw)
             model_inference_info[model_name]["s2_a"] = crop_s2_input(s2_a, delta_hw)
     

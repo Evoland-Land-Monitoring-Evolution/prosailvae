@@ -93,15 +93,15 @@ def get_model_validation_results(model_dict: dict,
                                                 patch_size=32, bands=torch.arange(10),
                                                 mode=rec_mode, padding=True, no_rec=True)
         model_inference_info[model_name] = {"s2_r":cropped_s2_r,
-                                    "s2_a":cropped_s2_a,
-                                    "hw": hw}
+                                            "s2_a":cropped_s2_a,
+                                            "hw": hw}
     
-        lai_pred = sim_image[6,...].unsqueeze(0)[:, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
-        lai_eff_pred = sim_image[6,...].unsqueeze(0)[:, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
-        ccc_pred = (sim_image[1,...].unsqueeze(0)[:, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']] 
-                    * sim_image[6,...].unsqueeze(0)[:, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']])
-        ccc_eff_pred = (sim_image[1,...].unsqueeze(0)[:, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']] 
-                        * sim_image[6,...].unsqueeze(0)[:, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']])
+        lai_pred = sim_image[6, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
+        lai_eff_pred = sim_image[6, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
+        ccc_pred = (sim_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']] 
+                    * sim_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']])
+        ccc_eff_pred = (sim_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']] 
+                        * sim_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']])
         model_results[model_name] = {'lai': lai_pred,
                                      'lai_eff': lai_eff_pred,
                                      'ccc': ccc_pred,
@@ -397,8 +397,8 @@ def interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor):
     dt_image = (d1 - d0).days
     gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable="lai")
     t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
-    validation_results_1 = get_model_validation_results(model_dict, silvia_data_dir, filename[0], sensor)
-    validation_results_2 = get_model_validation_results(model_dict, silvia_data_dir, filename[1], sensor)
+    validation_results_1 = get_model_validation_results(model_dict, silvia_data_dir, filename[0], sensor[0])
+    validation_results_2 = get_model_validation_results(model_dict, silvia_data_dir, filename[1], sensor[0])
     validation_results = {}
     for model_name, _ in validation_results_1.items():
         model_results = {}
@@ -436,7 +436,7 @@ def main():
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
    
     filename = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
-    sensor = "2B"
+    sensor = ["2B", "2A"]
     if isinstance(filename, list):
         validation_results = interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor)
     else:

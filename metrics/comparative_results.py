@@ -72,6 +72,7 @@ def get_model_validation_results(model_dict: dict,
     idx_dict = {}
     for variable in ['lai', 'lai_eff', 'ccc', 'ccc_eff']:
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
+        gdf = gdf.iloc[:51]
         idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
                               "y_idx" : torch.from_numpy(gdf["y_idx"].values).int()}
     gdf, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")

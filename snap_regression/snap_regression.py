@@ -317,6 +317,7 @@ def get_silvia_validation_metrics(res_dir=None):
     model_ccc.set_weiss_weights()
     data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
     filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+    filename = "2A_20180613_FRM_Veg_Barrax_20180605"
 
     gdf_lai, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
     s2_r = torch.from_numpy(s2_r)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()

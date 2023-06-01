@@ -246,7 +246,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
         fig, ax, g = patch_validation_reg_scatter_plot(gdf, pred_at_site=pred_at_site,
                                                         variable=variable,
                                                         fig=fig, ax=axs[-1], legend=True)
-            
+        
         axs[-1].set_title("SNAP")
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{variable}_{filename}_validation.png"))

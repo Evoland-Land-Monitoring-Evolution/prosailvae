@@ -235,6 +235,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
         n_models = len(model_dict) + 1
         fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
         gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
+        gdf=gdf.iloc[:51]
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
             pred_at_site = model_results[model_name][variable].numpy()

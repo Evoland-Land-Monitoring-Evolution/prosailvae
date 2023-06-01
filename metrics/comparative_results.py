@@ -406,6 +406,7 @@ def interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor):
         model_results = {}
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
             gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable=variable)
+            gdf = gdf.iloc[:51]
             t_sample = torch.from_numpy(gdf["date"].apply(lambda x: (x.date()-d0).days).values)
             m = (validation_results_1[model_name][variable].squeeze() 
                  - validation_results_2[model_name][variable].squeeze()) / dt_image

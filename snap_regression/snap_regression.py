@@ -317,16 +317,16 @@ def get_silvia_validation_metrics(res_dir=None):
     model_ccc.set_weiss_weights()
     data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
     filename = "2B_20180516_FRM_Veg_Barrax_20180605"
-    filename = "2A_20180613_FRM_Veg_Barrax_20180605"
+    # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
 
-    gdf_lai, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
-    s2_r = torch.from_numpy(s2_r)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+    gdf_lai, s2_r_image, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
     s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
     s2_data = torch.concat((s2_r, s2_a), 0)
     with torch.no_grad():
         lai_pred = model_lai.forward(s2_data, spatial_mode=True)
         ccc_pred = model_ccc.forward(s2_data, spatial_mode=True)
-    silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=res_dir)
+    silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=res_dir, s2_r=s2_r_image)
     return
 
 

@@ -1429,7 +1429,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
         ccc_pred = ccc_pred.numpy()
     gdf_lai, _, _ = load_validation_data(data_dir, filename, variable="lai")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
-                                                variable='lai', fig=None, ax=None)
+                                                    variable='lai', fig=None, ax=None)
     
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))    

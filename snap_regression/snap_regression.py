@@ -311,9 +311,9 @@ def get_loaders(data:torch.Tensor, seed:int=86294692001, valid_ratio:float=0.1, 
 
 
 def get_silvia_validation_metrics(res_dir=None):
-    model_lai = SnapNN(ver="3A",variable="lai")
+    model_lai = SnapNN(ver="3B",variable="lai")
     model_lai.set_weiss_weights()
-    model_ccc = SnapNN(ver="3A",variable="cab")
+    model_ccc = SnapNN(ver="3B",variable="cab")
     model_ccc.set_weiss_weights()
     data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
     filename = "2B_20180516_FRM_Veg_Barrax_20180605"

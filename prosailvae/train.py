@@ -586,7 +586,7 @@ def main():
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
-        if params['encoder_type'] in spatial_encoder_types:
+        if params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                             batch_size=1, num_workers=0)
             info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
@@ -595,7 +595,7 @@ def main():
                             plot_results=parser.plot_results, info_test_data=info_test_data,
                             silvia_data_dir = silvia_data_dir,
                             silvia_filename = silvia_filename)
-        else:
+        if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
                          plot_results=parser.plot_results, weiss_mode=parser.weiss_mode, n_samples=params["n_samples"])

@@ -1365,7 +1365,7 @@ def plot_silvia_validation_patch(gdf,
                                 "x": gdf["x_idx"],
                                 "y": gdf["y_idx"],
                                 })
-    fig, ax = plt.subplots(tight_layout=True)
+    fig, ax = plt.subplots(tight_layout=True, dpi=150, figsize=(5,5))
     s = pred_at_patch.shape
     
     if s[0]==1 and len(s)==3:
@@ -1374,10 +1374,14 @@ def plot_silvia_validation_patch(gdf,
     elif (s[0] >= 3 and len(s)==3) or (s[1] >= 3 and len(s)==4):
         tensor_visu, _, _ = rgb_render(pred_at_patch.squeeze())
         im = ax.imshow(tensor_visu)
-    sns.scatterplot(data=df_sns_plot, x='x', y="y", hue="Land Cover", ax=ax)
+    g = sns.scatterplot(data=df_sns_plot, x='x', y="y", hue="Land Cover", ax=ax)
+    ax.set_xticks([])
+    ax.set_yticks([])
     ax.set_xlabel('')
     ax.set_ylabel('')
-    sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+    sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.03), ncol=len(pd.unique(gdf["land cover"]))//2,
+                        frameon=True)
+    # fig.tight_layout()
     return fig, ax
 
 def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None, 
@@ -1432,7 +1436,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
                                                     variable='lai', fig=None, ax=None)
     
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))    
+        fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai.png"))
     if s2_r is not None:
         if isinstance(s2_r, torch.Tensor):
             s2_r = s2_r.numpy()
@@ -1440,7 +1444,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{filename}_field_rgb.png"))
 
-    lai_pred_at_site = lai_pred[:, gdf_lai["y_idx"].values.astype(int), 
+    lai_pred_at_site = lai_pred[:, gdf_lai["y_idx"].values.astype(int),
                                 gdf_lai["x_idx"].values.astype(int)].reshape(-1)
     fig, ax = plot_silvia_validation_patch(gdf_lai, lai_pred)
     if res_dir is not None:

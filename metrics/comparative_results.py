@@ -75,7 +75,7 @@ def get_model_validation_results(model_dict: dict,
         gdf = gdf.iloc[:51]
         idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
                               "y_idx" : torch.from_numpy(gdf["y_idx"].values).int()}
-    gdf, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     model_results = {}
@@ -397,6 +397,7 @@ def interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor):
     d1 = datetime.date.fromisoformat('2018-06-13')
     dt_image = (d1 - d0).days
     gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable="lai")
+    gdf = gdf.iloc[:51]
     t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
     validation_results_1 = get_model_validation_results(model_dict, silvia_data_dir, filename[0], sensor[0])
     validation_results_2 = get_model_validation_results(model_dict, silvia_data_dir, filename[1], sensor[0])

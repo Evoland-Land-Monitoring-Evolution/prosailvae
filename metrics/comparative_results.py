@@ -391,8 +391,8 @@ def main():
         os.makedirs(res_dir)
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
    
-    filename = "2A_20180613_FRM_Veg_Barrax_20180605"
-    sensor = "2A"
+    filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+    sensor = "2B"
     validation_results = get_model_validation_results(model_dict, silvia_data_dir, filename, sensor)
     plot_validation_results_comparison(model_dict, validation_results, silvia_data_dir, filename, res_dir=res_dir)
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,

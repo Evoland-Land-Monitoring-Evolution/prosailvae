@@ -117,7 +117,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     with torch.no_grad():
         (_, sim_image, cropped_s2_r, cropped_s2_a, _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
                                                      patch_size=32, bands=torch.arange(10),
-                                                     mode=rec_mode, padding=True)
+                                                     mode=rec_mode, padding=True, no_rec=True)
         
         lai_validation_pred = sim_image[6,...].unsqueeze(0)
         ccc_validation_pred = sim_image[1,...].unsqueeze(0) * lai_validation_pred

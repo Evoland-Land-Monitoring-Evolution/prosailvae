@@ -90,7 +90,7 @@ def rgb_render(
 
 def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                                  bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), 
-                                 mode='lat_mode', padding=False):
+                                 mode='lat_mode', padding=False, no_rec=False):
     s2_r, s2_a = batch
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
@@ -106,8 +106,11 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
             x = patched_s2_r[i, j, ...].unsqueeze(0)
             angles = patched_s2_a[i, j, ...].unsqueeze(0)
             with torch.no_grad():
-                dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
-            patched_rec_image[i,j,:,:,:] = rec
+                if no_rec:
+                    dist_params, z, sim = PROSAIL_VAE.point_estimate_sim(x, angles, mode=mode)
+                else:
+                    dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
+                    patched_rec_image[i,j,:,:,:] = rec
             patched_sim_image[i,j,:,:,:] = sim
             patched_sigma_image[i,j,:,:,:] = dist_params[1,...]
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)]

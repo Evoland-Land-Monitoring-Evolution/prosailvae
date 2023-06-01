@@ -225,6 +225,65 @@ class SimVAE(nn.Module):
                 return unbatchify(dist_params), z, sim, rec
             return unbatchify(dist_params), z, unbatchify(sim), unbatchify(rec)
         return dist_params, z, sim, rec
+    
+    def point_estimate_sim(self, x, angles, mode='random'):
+        is_patch = check_is_patch(x)
+        if mode == 'random':
+            if angles is None:
+                angles = x[:,-3:]
+                x = x[:,:-3]
+
+            y, angles = self.encode(x, angles)
+            dist_params = self.lat_space.get_params_from_encoder(y)
+            if self.inference_mode:
+                return dist_params, None, None, None
+            # latent sampling
+            z = self.sample_latent_from_params(dist_params, n_samples=1)
+
+            # transfer to simulator variable
+            sim = self.transfer_latent(z)
+
+        elif mode == 'lat_mode':
+            y, angles = self.encode(x, angles)
+            dist_params = self.lat_space.get_params_from_encoder(y)
+            # latent mode
+            z = self.lat_space.mode(dist_params)
+            # transfer to simulator variable
+            sim = self.transfer_latent(z.unsqueeze(2))
+
+        elif mode == "sim_mode":
+            y, angles = self.encode(x, angles)
+            dist_params = self.lat_space.get_params_from_encoder(y)
+            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
+            sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
+            z = self.sim_space.sim2z(sim)
+            # Quickfix for angle dimension:
+            if len(angles.size())==4:
+                angles = angles.permute(0,2,3,1)
+                angles = angles.reshape(-1, 3)
+
+        elif mode == "sim_median":
+            y = self.encode(x, angles)
+            dist_params = self.lat_space.get_params_from_encoder(y)
+            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
+            sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
+            z = self.sim_space.sim2z(sim)
+
+        elif mode == "sim_expectation":
+            y, angles = self.encode(x, angles)
+            dist_params = self.lat_space.get_params_from_encoder(y)
+            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
+            sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
+            z = self.sim_space.sim2z(sim)
+
+        else:
+            raise NotImplementedError()
+
+        if is_patch:# and mode != 'random':
+            if mode == 'random':
+                return unbatchify(dist_params), z, sim
+            return unbatchify(dist_params), z, unbatchify(sim)
+        return dist_params, z, sim
 
     def unsupervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1,
                                 n_samples=1):

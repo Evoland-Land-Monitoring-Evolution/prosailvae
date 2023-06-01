@@ -91,7 +91,7 @@ def get_model_validation_results(model_dict: dict,
             (_, sim_image, cropped_s2_r, cropped_s2_a,
              _) = get_encoded_image_from_batch((s2_r, s2_a), model,
                                                 patch_size=32, bands=torch.arange(10),
-                                                mode=rec_mode, padding=True)
+                                                mode=rec_mode, padding=True, no_rec=True)
         model_inference_info[model_name] = {"s2_r":cropped_s2_r,
                                     "s2_a":cropped_s2_a,
                                     "hw": hw}

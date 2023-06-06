@@ -74,11 +74,11 @@ def get_model_validation_results(model_dict: dict,
     rec_mode = 'lat_mode' #if not socket.gethostname()=='CELL200973' else "random"
     idx_dict = {}
     for variable in ['lai', 'lai_eff', 'ccc', 'ccc_eff']:
-        gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
+        gdf, _, _, _, _ = load_validation_data(data_dir, filename, variable=variable)
         gdf = gdf.iloc[:51]
         idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
                               "y_idx" : torch.from_numpy(gdf["y_idx"].values).int()}
-    _, s2_r, s2_a = load_validation_data(data_dir, filename, variable="lai")
+    _, s2_r, s2_a, xcoords, ycoords = load_validation_data(data_dir, filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     model_results = {}
@@ -232,12 +232,20 @@ def regression_pair_plot(scatter_dict, global_lim):
                 axs[j,k].plot([ax_min, ax_max], [ax_min, ax_max], 'k')
     return g.fig, g.axes
 
-def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None, prefix=""):
+def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None, prefix="", margin = 0.02):
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
         n_models = len(model_dict) + 1
         fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
-        gdf, _, _ = load_validation_data(data_dir, filename, variable=variable)
+        gdf, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable=variable)
         gdf=gdf.iloc[:51]
+        xmin = min(np.min(gdf[variable].values), np.min(model_results["SNAP"][variable].squeeze().numpy()))
+        xmax = max(np.max(gdf[variable].values), np.max(model_results["SNAP"][variable].squeeze().numpy()))
+        for i, (model_name, model_info) in enumerate(model_dict.items()):
+            pred_at_site = model_results[model_name][variable].numpy()
+            xmax = max(np.max(pred_at_site), xmax)
+            xmin = min(np.min(pred_at_site), xmin)
+        xmin = xmin - margin * (xmax - xmin)
+        xmax = xmax + margin * (xmax - xmin)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
             pred_at_site = model_results[model_name][variable].numpy()
@@ -268,13 +276,13 @@ def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method=
 def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir=None, suffix="", margin=0.02):
     n_models = len(model_dict) + 1
     
-    xmin = 100
-    xmax = -10
+    xmin = min(np.min(model_results["SNAP"]['parcel_lai_mean']), np.min(model_results["SNAP"]['lai_mean']))
+    xmax = max(np.max(model_results["SNAP"]['parcel_lai_mean']), np.max(model_results["SNAP"]['lai_mean']))
     for i, (model_name, model_info) in enumerate(model_dict.items()):
         # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
         metrics = model_results[model_name]
-        xmin = min(xmin, min(np.min(metrics['parcel_lai_mean'].values), np.min(metrics['lai_mean'])))
-        xmax = max(xmax, max(np.max(metrics['parcel_lai_mean'].values), np.max(metrics['lai_mean'])))
+        xmin = min(xmin, np.min(metrics['parcel_lai_mean'].values))
+        xmax = max(xmax, np.max(metrics['parcel_lai_mean'].values))
     xmin = xmin - margin * (xmax - xmin)
     xmax = xmax + margin * (xmax - xmin)
     fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
@@ -442,7 +450,7 @@ def interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor):
     d0 = datetime.date.fromisoformat('2018-05-15')
     d1 = datetime.date.fromisoformat('2018-06-13')
     dt_image = (d1 - d0).days
-    gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable="lai")
+    gdf, _, _ , xcoords, ycoords = load_validation_data(silvia_data_dir, filename[0], variable="lai")
     gdf = gdf.iloc[:51]
     t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
     validation_results_1 = get_model_validation_results(model_dict, silvia_data_dir, filename[0], sensor[0])
@@ -451,7 +459,7 @@ def interpolate_validation_pred(model_dict, silvia_data_dir, filename, sensor):
     for model_name, _ in validation_results_1.items():
         model_results = {}
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
-            gdf, _, _ = load_validation_data(silvia_data_dir, filename[0], variable=variable)
+            gdf, _, _, xcoords, ycoords = load_validation_data(silvia_data_dir, filename[0], variable=variable)
             gdf = gdf.iloc[:51]
             t_sample = torch.from_numpy(gdf["date"].apply(lambda x: (x.date()-d0).days).values)
             m = (validation_results_1[model_name][variable].squeeze() 

@@ -1387,7 +1387,8 @@ def plot_silvia_validation_patch(gdf,
 def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None, 
                                       pred_at_site:np.ndarray|None=None,
                                       variable:str='lai',
-                                      fig=None, ax=None, legend=True):
+                                      fig=None, ax=None, legend=True,
+                                      xmin=None, xmax=None):
 
     ref = gdf[variable].values.reshape(-1)
     ref_uncert = gdf["uncertainty"].values
@@ -1402,8 +1403,10 @@ def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None,
                        "Land Cover": gdf["land cover"]})
     if fig is None or ax is None:
         fig, ax = plt.subplots(dpi=150, figsize=(6,6))
-    xmin = min(np.min(pred_at_site), np.min(ref))
-    xmax = max(np.max(pred_at_site), np.max(ref))
+    if xmin is None:
+        xmin = min(np.min(pred_at_site), np.min(ref))
+    if xmax is None:
+        xmax = max(np.max(pred_at_site), np.max(ref))
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
     m, b = np.polyfit(ref, pred_at_site, 1)
     r2 = r2_score(ref, pred_at_site)

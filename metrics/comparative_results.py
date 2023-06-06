@@ -265,16 +265,26 @@ def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method=
     model_results["SNAP"] = metrics
     return model_results
 
-def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir=None, suffix=""):
+def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir=None, suffix="", margin=0.02):
     n_models = len(model_dict) + 1
+    
+    xmin = 100
+    xmax = -10
+    for i, (model_name, model_info) in enumerate(model_dict.items()):
+        # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
+        metrics = model_results[model_name]
+        xmin = min(xmin, min(np.min(metrics['parcel_lai_mean'].values), np.min(metrics['lai_mean'])))
+        xmax = max(xmax, max(np.max(metrics['parcel_lai_mean'].values), np.max(metrics['lai_mean'])))
+    xmin = xmin - margin * (xmax - xmin)
+    xmax = xmax + margin * (xmax - xmin)
     fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
     for i, (model_name, model_info) in enumerate(model_dict.items()):
         # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
         metrics = model_results[model_name]
-        fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[i])
+        fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[i], xmin=xmin, xmax=xmax)
         axs[i].set_title(model_info["plot_name"])
     metrics = model_results["SNAP"]
-    fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[-1])
+    fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[-1], xmin=xmin, xmax=xmax)
     axs[-1].set_title("SNAP")
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"lai_belsar_validation{suffix}.png"))
@@ -484,6 +494,7 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
+
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
         save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)

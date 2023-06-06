@@ -194,7 +194,7 @@ def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_
     return lai_nlls, lai_pred, sim_pdfs, sim_supports
 
 def get_silvia_validation_metrics(PROSAIL_VAE, data_dir, filename,  mode='lat_mode'):
-    gdf, s2_r, s2_a = load_validation_data(data_dir, filename)
+    gdf, s2_r, s2_a, xcoords, ycoords = load_validation_data(data_dir, filename)
     x_idx = torch.from_numpy(gdf["x_idx"].values) - PROSAIL_VAE.encoder.nb_enc_cropped_hw
     y_idx = torch.from_numpy(gdf["y_idx"].values) - PROSAIL_VAE.encoder.nb_enc_cropped_hw
     s2_r = torch.from_numpy(s2_r).unsqueeze(0).float()

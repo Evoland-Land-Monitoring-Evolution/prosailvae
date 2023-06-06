@@ -10,10 +10,11 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                     all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results,
-                                    silvia_validation_plots)
+                                    silvia_validation_plots, plot_belsar_metrics)
 from dataset.loaders import  get_simloader
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from dataset.prepare_silvia_validation import load_validation_data
+from metrics.belsar_metrics import compute_metrics_at_date
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
 from utils.utils import load_dict, save_dict
@@ -28,7 +29,10 @@ import warnings
 from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
 from torchutils.patches import patchify, unpatchify 
 import pandas as pd
-
+import numpy as np
+from dataset.prepare_belSAR_validation import load_belsar_validation_data
+from utils.image_utils import tensor_to_raster
+from snap_regression.snap_nn import SnapNN
 
 LOGGER_NAME = "PROSAIL-VAE results logger"
 
@@ -68,7 +72,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None,
                     silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation",
-                    silvia_filename = "FRM_Veg_Barrax_20180605", max_test_patch=50):
+                    silvia_filename = "FRM_Veg_Barrax_20180605", max_test_patch=50,
+                    belsar_dir="",
+                    list_belsar_filenames=[]):
     rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
     image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
@@ -108,9 +114,28 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     silvia_validation_plot_dir = plot_dir + "/silvia_validation/"
     if not os.path.isdir(silvia_validation_plot_dir):
         os.makedirs(silvia_validation_plot_dir)
+    
+    belsar_res_dir = plot_dir + "belsar_validation"
+    if not os.path.isdir(belsar_res_dir):
+        os.makedirs(belsar_res_dir)
+    save_belsar_predictions(belsar_dir, PROSAIL_VAE, belsar_res_dir, list_filenames=list_belsar_filenames)
+    metrics = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="closest", file_suffix="_pvae")
+    fig, ax = plot_belsar_metrics(metrics)
+    fig.savefig(belsar_res_dir+"/belsar_regression_crop.png")
+    fig, ax = plot_belsar_metrics(metrics, hue='date')
+    fig.savefig(belsar_res_dir+"/belsar_regression_date.png")
+    fig, ax = plot_belsar_metrics(metrics, hue='delta')
+    fig.savefig(belsar_res_dir+"/belsar_regression_delta.png")
+    metrics_inter = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="interpolated", file_suffix="_pvae")
+    fig, ax = plot_belsar_metrics(metrics_inter)
+    fig.savefig(belsar_res_dir+"/belsar_regression_interpolated_crop.png")
+    fig, ax = plot_belsar_metrics(metrics_inter, hue='date')
+    fig.savefig(belsar_res_dir+"/belsar_regression_interpolated_date.png")
+    fig, ax = plot_belsar_metrics(metrics_inter, hue='delta')
+    fig.savefig(belsar_res_dir+"/belsar_regression_interpolated_delta.png")
 
 
-    _, s2_r, s2_a = load_validation_data(silvia_data_dir, silvia_filename, variable="lai")
+    _, s2_r, s2_a, xcoords, ycoords = load_validation_data(silvia_data_dir, silvia_filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     
@@ -191,7 +216,79 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     
     return 
 
-def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None, 
+
+def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
+    NO_DATA = -10000
+    # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
+    for filename in list_belsar_filename: 
+        ver = "3A" if filename[:2] == "2A" else "3B"
+        model_lai = SnapNN(ver=ver, variable="lai")
+        model_lai.set_weiss_weights()
+
+        df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
+        s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+        mask[mask==1.] = np.nan
+        mask[mask==0.] = 1.
+        if np.isnan(mask).all():
+            print(f"No valid pixels in {filename}!")
+        s2_r = s2_r * torch.from_numpy(mask).float()
+        s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
+        s2_data = torch.concat((s2_r, s2_a), 0)
+        with torch.no_grad():
+            lai_pred = model_lai.forward(s2_data, spatial_mode=True)
+        dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
+        tensor = torch.cat((lai_pred, dummy_tensor), 0)
+        tensor[tensor.isnan()] = NO_DATA
+        resolution = 10
+        file_path = res_dir + f"/{filename}_SNAP.tif"
+        tensor_to_raster(tensor, file_path,
+                         crs=crs,
+                         resolution=resolution,
+                         dtype=np.float32,
+                         bounds=None,
+                         xcoords=xcoords,
+                         ycoords=ycoords,
+                         nodata=NO_DATA,
+                         hw = 0, 
+                         half_res_coords=True)
+
+def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, suffix="_pvae"):
+    NO_DATA = -10000
+    for filename in list_filenames:
+        df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
+        s2_r = torch.from_numpy(s2_r).float()
+        mask[mask==1.] = np.nan
+        mask[mask==0.] = 1.
+        if np.isnan(mask).all():
+            print(f"No valid pixels in {filename}!")
+        s2_r = (s2_r * torch.from_numpy(mask).float()).unsqueeze(0)
+        s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
+        
+        with torch.no_grad():
+            (_, sim_image, _, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
+                                                        patch_size=32, bands=torch.arange(10),
+                                                        mode="lat_mode", padding=True, no_rec=True)
+        
+        # lai_validation_pred = sim_image[6,...].unsqueeze(0)
+        # cm_validation_pred = sim_image[5,...].unsqueeze(0)
+        tensor = torch.cat((sim_image[6,...].unsqueeze(0),
+                            sim_image[5,...].unsqueeze(0),
+                            sigma_image[6,...].unsqueeze(0), 
+                            sigma_image[5,...].unsqueeze(0)), 0)
+        tensor[tensor.isnan()] = NO_DATA
+        tensor_to_raster(tensor, res_dir + f"/{filename}{suffix}.tif",
+                         crs=crs,
+                            resolution=10,
+                            dtype=np.float32,
+                            bounds=None,
+                            xcoords=xcoords,
+                            ycoords=ycoords,
+                            nodata= NO_DATA,
+                            hw = 0,
+                            half_res_coords=True)
+    return
+
+def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,
                  juan_validation=True, weiss_mode=False, n_samples=1):
     bands_name = BANDS

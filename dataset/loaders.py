@@ -469,7 +469,7 @@ def get_loader_from_patches(path_to_patches, bands = torch.tensor([0,1,2,4,5,6,3
         s2_r_patches = s2_r_patches[:max_samples,...]
         s2_a_patches = s2_a_patches[:max_samples,...]
     if concat:
-        dataset = TensorDataset(torch.cat((s2_r_patches.float(), 
+        dataset = TensorDataset(torch.cat((s2_r_patches.float(),
                                            s2_a_patches.float()), axis=1))
         loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=num_workers, shuffle=shuffle)
     else:
@@ -499,8 +499,6 @@ def get_bands_norm_factors_from_loaders(loader, bands_dim=1, max_samples=10000, 
             norm_mean = torch.quantile(s2_r_samples, q=torch.tensor(0.5), dim=1)
             norm_std = torch.quantile(s2_r_samples, q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples, q=torch.tensor(0.05), dim=1)
     return norm_mean, norm_std
-
-
 
 if __name__ == "__main__":
     parser = get_S2_id_split_parser().parse_args()

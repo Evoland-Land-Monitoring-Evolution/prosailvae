@@ -359,12 +359,23 @@ def setup_training():
         parser = get_prosailvae_train_parser().parse_args(args)
         silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
         silvia_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+        belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
         
     else:
         parser = get_prosailvae_train_parser().parse_args()
         silvia_data_dir = "/work/scratch/zerahy/prosailvae/data/silvia_validation"
+        belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
         # silvia_filename = "FRM_Veg_Barrax_20180605"
         silvia_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+    list_belsar_filenames = ["2A_20180508_both_BelSAR_agriculture_database",
+                            "2A_20180518_both_BelSAR_agriculture_database",
+                            "2A_20180528_both_BelSAR_agriculture_database",
+                            "2A_20180620_both_BelSAR_agriculture_database",
+                            "2A_20180627_both_BelSAR_agriculture_database",
+                            "2B_20180715_both_BelSAR_agriculture_database",
+                            "2B_20180722_both_BelSAR_agriculture_database",
+                            "2A_20180727_both_BelSAR_agriculture_database",
+                            "2B_20180804_both_BelSAR_agriculture_database"]    
     root_dir = TOP_PATH
     xp_array = parser.xp_array
     job_array_dir = None
@@ -417,7 +428,8 @@ def setup_training():
         params_sup_kl_model = None
         sup_norm_mean = None
         sup_norm_std = None
-    return params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, sup_norm_std, silvia_data_dir, silvia_filename
+    return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, 
+            sup_norm_std, silvia_data_dir, silvia_filename, belsar_dir, list_belsar_filenames)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_norm_mean=None, sup_norm_std=None):
@@ -578,10 +590,10 @@ def save_array_xp_path(job_array_dir, res_dir):
 def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
      job_array_dir, sup_norm_mean, sup_norm_std,
-     silvia_data_dir, silvia_filename) = setup_training()
+     silvia_data_dir, silvia_filename,
+     belsar_dir, list_belsar_filenames) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
-
     try:
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
@@ -590,11 +602,13 @@ def main():
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                             batch_size=1, num_workers=0)
             info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
-            save_results_2d(prosail_vae, test_loader, res_dir, 
-                            all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME, 
+            save_results_2d(prosail_vae, test_loader, res_dir,
+                            all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
                             plot_results=parser.plot_results, info_test_data=info_test_data,
                             silvia_data_dir = silvia_data_dir,
-                            silvia_filename = silvia_filename)
+                            silvia_filename = silvia_filename,
+                            belsar_dir=belsar_dir,
+                            list_belsar_filenames=list_belsar_filenames)
         if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

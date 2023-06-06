@@ -1431,7 +1431,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
         lai_pred = lai_pred.numpy()
     if isinstance(ccc_pred, torch.Tensor):
         ccc_pred = ccc_pred.numpy()
-    gdf_lai, _, _ = load_validation_data(data_dir, filename, variable="lai")
+    gdf_lai, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable="lai")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
                                                     variable='lai', fig=None, ax=None)
     
@@ -1450,7 +1450,7 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_field_lai.png"))
 
-    gdf_lai_eff, _, _ = load_validation_data(data_dir, filename, 
+    gdf_lai_eff, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, 
                                                    variable="lai_eff")
     gdf_lai_eff = gdf_lai_eff.iloc[:51]
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai_eff, patch_pred=lai_pred,
@@ -1458,15 +1458,46 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai_eff.png"))
 
-    gdf_ccc, _, _ = load_validation_data(data_dir, filename, variable="ccc")
+    gdf_ccc, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable="ccc")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc, patch_pred=ccc_pred,
                                                     variable='ccc', fig=None, ax=None)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc.png"))
 
-    gdf_ccc_eff, _, _ = load_validation_data(data_dir, filename, variable="ccc_eff")
+    gdf_ccc_eff, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable="ccc_eff")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc_eff, patch_pred=ccc_pred,
                                       variable='ccc_eff', fig=None, ax=None)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc_eff.png"))
     return
+
+def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop", variable='lai', legend=True):
+    belsar_metrics['crop'] = belsar_metrics["name"].apply(lambda x: "wheat" if x[0]=="W" else "maize")
+    pred_at_site = belsar_metrics[f"parcel_{variable}_mean"].values
+    ref = belsar_metrics[f"{variable}_mean"].values
+    belsar_metrics[f"Predicted {variable}"] = pred_at_site
+    belsar_metrics[variable] = ref
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+    xmin = min(np.min(pred_at_site), np.min(ref))
+    xmax = max(np.max(pred_at_site), np.max(ref))
+    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    m, b = np.polyfit(ref, pred_at_site, 1)
+    r2 = r2_score(ref, pred_at_site)
+    rmse = np.sqrt(np.mean((ref - pred_at_site)**2))
+    perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
+    ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
+    line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    
+    g = sns.scatterplot(data=belsar_metrics, x=variable, y=f"Predicted {variable}",
+                        hue=hue, ax=ax)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(xmin, xmax)
+    ax.set_aspect('equal', 'box')
+    if not legend:
+        ax.get_legend().remove()
+    else:
+        sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),ncol=len(pd.unique(belsar_metrics[hue]))//2,
+                        frameon=True)
+        fig.tight_layout()
+    return fig, ax

@@ -8,7 +8,7 @@ from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
-from prosail_plots import plot_patches, patch_validation_reg_scatter_plot
+from prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics
 from prosailvae.ProsailSimus import get_bands_idx
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from tqdm import tqdm
@@ -19,6 +19,9 @@ import prosailvae
 from snap_regression.snap_nn import SnapNN
 from dataset.prepare_silvia_validation import load_validation_data
 from tqdm import trange, tqdm
+from metrics.results import save_belsar_predictions, get_snap_belsar_predictions
+from metrics.belsar_metrics import compute_metrics_at_date
+
 def get_parser():
     """
     Gets arguments for terminal-based launch of script
@@ -132,7 +135,6 @@ def get_model_validation_results(model_dict: dict,
     return model_results
 
 
-
 def get_model_results(model_dict: dict, test_loader, info_test_data):
     """
     Compute results for all models
@@ -228,7 +230,7 @@ def regression_pair_plot(scatter_dict, global_lim):
                 ax_min = min(global_lim[0], global_lim[0])
                 ax_max = max(global_lim[1], global_lim[1])
                 axs[j,k].plot([ax_min, ax_max], [ax_min, ax_max], 'k')
-    return g.fig, g.axes 
+    return g.fig, g.axes
 
 def plot_validation_results_comparison(model_dict, model_results, data_dir, filename, res_dir=None, prefix=""):
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
@@ -252,6 +254,39 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
         axs[-1].set_title("SNAP")
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{prefix}{variable}_{filename}_validation.png"))
+
+
+def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest"):
+    model_results = {}
+    for _, (model_name, model_info) in enumerate(model_dict.items()):
+        metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix=model_name, method=method)
+        model_results[model_name] = metrics
+    metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP", method=method)
+    model_results["SNAP"] = metrics
+    return model_results
+
+def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir=None, suffix=""):
+    n_models = len(model_dict) + 1
+    fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
+    for i, (model_name, model_info) in enumerate(model_dict.items()):
+        # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
+        metrics = model_results[model_name]
+        fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[i])
+        axs[i].set_title(model_info["plot_name"])
+    metrics = model_results["SNAP"]
+    fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[-1])
+    axs[-1].set_title("SNAP")
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, f"lai_belsar_validation{suffix}.png"))
+
+    fig, axs = plt.subplots(nrows=1, ncols=n_models-1, dpi=150, figsize=(6*n_models, 6))
+    for i, (model_name, model_info) in enumerate(model_dict.items()):
+        # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
+        metrics = model_results[model_name]
+        fig, _ = plot_belsar_metrics(metrics, fig=fig, ax=axs[i], variable="cm")
+        axs[i].set_title(model_info["plot_name"])
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, f"cm_belsar_validation{suffix}.png"))
 
 def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, res_dir=None):
@@ -431,14 +466,32 @@ def main():
                 "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/"]
         parser = get_parser().parse_args(args)
         silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
+        belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
     else:
         parser = get_parser().parse_args()
         silvia_data_dir = "/work/scratch/zerahy/prosailvae/data/silvia_validation"
+        belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
     res_dir = parser.res_dir
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
+    list_belsar_filenames = ["2A_20180508_both_BelSAR_agriculture_database",
+                            "2A_20180518_both_BelSAR_agriculture_database",
+                            "2A_20180528_both_BelSAR_agriculture_database",
+                            "2A_20180620_both_BelSAR_agriculture_database",
+                            "2A_20180627_both_BelSAR_agriculture_database",
+                            "2B_20180715_both_BelSAR_agriculture_database",
+                            "2B_20180722_both_BelSAR_agriculture_database",
+                            "2A_20180727_both_BelSAR_agriculture_database",
+                            "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
-
+    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+        model = model_info["model"]
+        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix=model_name)
+    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+    model_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='closest')
+    plot_belsar_validation_results_comparison(model_dict, model_results, res_dir, suffix="_closest")
+    model_results_interp = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='interpolate')
+    plot_belsar_validation_results_comparison(model_dict, model_results_interp, res_dir, suffix="_interpolated")
     filename = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
     sensor = ["2B", "2A"]
     # if isinstance(filename, list):

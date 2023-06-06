@@ -3,6 +3,8 @@ import numpy as np
 from typing import Tuple
 from torchutils.patches import patchify, unpatchify
 import matplotlib.pyplot as plt
+import rasterio as rio
+from affine import Affine
 
 def unbatchify(tensor: torch.Tensor) -> torch.Tensor:
     """
@@ -145,3 +147,46 @@ def plot_patch_distribution(s2_r, s2_a, bands_dim = 1,
         refl = torch.select(s2_r, bands_dim, i)
         ax_bands.hist()
     pass
+
+def tensor_to_raster(tensor: torch.Tensor,
+                     file_path: str,
+                     crs: str,
+                     resolution: float,
+                     dtype=np.float32,
+                     bounds: rio.coords.BoundingBox|None=None,
+                     xcoords:np.ndarray|None = None,
+                     ycoords:np.ndarray|None = None,
+                     nodata: int = -10000,
+                     hw:int = 0, 
+                     half_res_coords:bool=True):
+    assert len(tensor.size())==3
+    if bounds is None:
+        assert not (xcoords is None or ycoords is None)
+        bounds = [xcoords[0], ycoords[-1], xcoords[-1], ycoords[0]]
+    assert len(xcoords) == tensor.size(2) - 2 * hw
+    assert len(ycoords) == tensor.size(1) - 2 * hw
+    half_res = 0
+    if half_res_coords:
+        half_res = 0.5
+    geotransform = (bounds[0] + (hw - half_res) * resolution, resolution, 0.0, bounds[3] - (hw - half_res) * resolution, 0.0, -resolution)
+    transform = Affine.from_gdal(*geotransform)
+    count = tensor.size(0)
+    profile = {
+        'driver': 'GTiff',
+        'count': count,
+        'height': tensor.size(1),
+        'width': tensor.size(2),
+        'dtype': dtype,
+        'crs': crs,
+        'transform': transform,
+        'nodata': nodata,
+        'tiled': True,
+        'blockxsize': 256,
+        'blockysize': 256,
+        'compress': 'lzw',
+        'predictor': 2,
+    }
+
+    with rio.open(file_path, 'w', **profile) as ds:
+        ds.write(tensor.detach().cpu().numpy())
+

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import socket
 import argparse
+from utils.image_utils import tensor_to_raster
 
 def get_data_point_bb(gdf, dataset, margin=100, res=10):
     left, right, bottom, top = (dataset.bounds.left, dataset.bounds.right, dataset.bounds.bottom, dataset.bounds.top)
@@ -94,6 +95,9 @@ def compute_validation_data(data_dir, filename, s2_product_name):
              sentinel2.Sentinel2.B12]
 
     xmin, ymin, xmax, ymax = get_bb_array_index(bb, dataset.bounds, res=10)
+    s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, bounds=bb,
+                                                                    crs=dataset.crs,
+                                                                    band_type=dataset.SRE)
 
     if socket.gethostname()=='CELL200973':
         even_zen, odd_zen = dataset.read_zenith_angles_as_numpy()
@@ -134,6 +138,8 @@ def compute_validation_data(data_dir, filename, s2_product_name):
     s2_r = s2_r.data
     print(s2_r.shape)
     np.save(os.path.join(data_dir, output_file_name + "_refl.npy"), s2_r)
+    np.save(os.path.join(data_dir, output_file_name + "_xcoords.npy"), xcoords)
+    np.save(os.path.join(data_dir, output_file_name + "_ycoords.npy"), ycoords)
     arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2,1,0],
                                             dmin=np.array([0., 0., 0.]),
                                             dmax=np.array([0.2,0.2,0.2]))
@@ -168,22 +174,16 @@ def load_validation_data(data_dir, filename, variable="lai"):
     arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2, 1, 0],
                                     dmin=np.array([0., 0., 0.]),
                                     dmax=np.array([0.2,0.2,0.2]))
-    # fig, ax = plt.subplots()
-    # ax.imshow(arr_rgb)
-    # ax.scatter(gdf["x_idx"], gdf['y_idx'])
-    # plt.show()
-    # fig, ax = plt.subplots()
-    # im = ax.imshow(s2_a[2,...])
-    # fig.colorbar(im)
-    # plt.show()
-    return gdf, s2_r, s2_a
+    xcoords = np.load(os.path.join(data_dir, filename + "_xcoords.npy"))
+    ycoords = np.load(os.path.join(data_dir, filename + "_ycoords.npy"))
+    return gdf, s2_r, s2_a, xcoords, ycoords
 
 def main():
     if socket.gethostname()=='CELL200973':
         args=["-f", "FRM_Veg_Barrax_20180605",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation/",
-              "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
-            #   "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+            #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
+              "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
         # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"
         parser = get_prosailvae_train_parser().parse_args(args)
     else:

@@ -267,7 +267,7 @@ def plot_validation_results_comparison(model_dict, model_results, data_dir, file
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest"):
     model_results = {}
     for _, (model_name, model_info) in enumerate(model_dict.items()):
-        metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix=model_name, method=method)
+        metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_"+model_name, method=method)
         model_results[model_name] = metrics
     metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP", method=method)
     model_results["SNAP"] = metrics

@@ -100,12 +100,12 @@ def get_sites_bb(tiles_bb, tiles=None, in_crs="epsg:3857", size=5120):
         bb_list.append(bb)
     return tiles_list, bb_list
 
-def write_s3_id_invalid_file(invalid_s3_id_file_path, s3_id):
+def write_s3_id_file(invalid_s3_id_file_path, s3_id):
     file = open(invalid_s3_id_file_path,"a")
     invalid_s3 = file.writelines(s3_id)
     file.close()
 
-def get_invalid_s3(invalid_s3_id_file_path):
+def get_checked_s3(invalid_s3_id_file_path):
     if not os.path.isfile(invalid_s3_id_file_path):
         return []
     file = open(invalid_s3_id_file_path,"r")
@@ -114,7 +114,8 @@ def get_invalid_s3(invalid_s3_id_file_path):
     return invalid_s3
 
 def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, 
-              max_percentage=0.05, max_trials=5, delay=1, invalid_s3_id_file_path=""):
+              max_percentage=0.05, max_trials=5, delay=1, invalid_s3_id_file_path="", 
+              valid_s3_id_file_path=""):
     #if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
     #    os.remove(os.path.join(ROOT, ".s3_auth"))
     s3utils.s3_enroll()
@@ -131,7 +132,7 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None,
     print(pd.unique(df_tile_at_date['acquisition_date']))
     for s3_id in df_tile_at_date["s3_id"].values:
         if len(invalid_s3_id_file_path):
-            invalid_s3 = get_invalid_s3(invalid_s3_id_file_path)
+            invalid_s3 = get_checked_s3(invalid_s3_id_file_path)
             if s3_id in invalid_s3:
                 print(f"s3_id has already been checked as invalid, skipping it: {s3_id}")
                 continue
@@ -147,10 +148,12 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None,
                             ds.B7, ds.B8, ds.B8A, ds.B11, ds.B12,]
                 np_arr, np_arr_msk, np_arr_atm, xcoords, ycoords, out_crs = ds.read_as_numpy(bands = ALL_BANDS, bounds=bb, band_type=ds.SRE)
                 if check_mask(np_arr_msk, max_percentage=max_percentage):
+                    if len(valid_s3_id_file_path):
+                        write_s3_id_file(valid_s3_id_file_path, s3_id)
                     return s3_id
                 else:
                     if len(invalid_s3_id_file_path):
-                        write_s3_id_invalid_file(invalid_s3_id_file_path, s3_id)
+                        write_s3_id_file(invalid_s3_id_file_path, s3_id)
                 break
             except Exception as exc:
                 if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
@@ -213,12 +216,14 @@ def main():
     bb = bb_list[0]
     list_s3_id = []
     invalid_s3_id_file = f"{tile}_invalid_s3_id.txt"
+    valid_s3_id_file = f"{tile}_valid_s3_id.txt"
     for i, date in enumerate(MONTHS_TO_RETRIEVE):
         max_date = None
         if i < len(MONTHS_TO_RETRIEVE) - 1:
             max_date = MONTHS_TO_RETRIEVE[i+1]
         s3_id = get_s3_id(tile, bb, date, max_date, max_percentage=parser.mask_max_percentage, 
-                          invalid_s3_id_file_path=os.path.join(parser.output_dir, invalid_s3_id_file))
+                          invalid_s3_id_file_path = os.path.join(parser.output_dir, invalid_s3_id_file),
+                          valid_s3_id_file_path = os.path.join(parser.output_dir, valid_s3_id_file))
         if s3_id is None:
             print(f"Warning: No sample found for tile {tile} between {date} and {max_date}.")
         else:

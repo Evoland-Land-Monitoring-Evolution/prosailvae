@@ -118,6 +118,7 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percent
         element = datetime.datetime.strptime(max_date,"%Y-%m-%d")
         df_tile_at_date = df_tile_at_date[pd.to_datetime(df_tile_at_date['acquisition_date']) < element]
     for s3_id in df_tile_at_date["s3_id"].values:
+        print(f"Attempting to open zip : {s3_id}")
         ds = sentinel2.Sentinel2(s3_id, s3_context=s3_context)
         ALL_BANDS = [ds.B2, ds.B3,ds.B4, ds.B5, ds.B6,
                     ds.B7, ds.B8, ds.B8A, ds.B11, ds.B12,]
@@ -135,6 +136,16 @@ def check_mask(mask, max_percentage=0.05):
     return True
 
 def download_s3_id(s3_id, output_dir):
+    s3utils.s3_enroll()
+    client = s3utils.get_s3_client()
+    # Retrieved from csv
+    s3utils.s3_download(s3_client=client,
+                        s3_bucket='muscate',
+                        local_folder = output_dir,
+                        s3_object_id = s3_id,
+                        unzip=False,
+                        show_progress=True)
+
     print(f"Downloaded: {s3_id}")
 
 def main():

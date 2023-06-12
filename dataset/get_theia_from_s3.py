@@ -100,7 +100,7 @@ def get_sites_bb(tiles_bb, tiles=None, in_crs="epsg:3857", size=5120):
     return tiles_list, bb_list
 
 
-def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percentage=0.05):
+def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percentage=0.05, max_trials=5):
     if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
         os.remove(os.path.join(ROOT, ".s3_auth"))
     s3utils.s3_enroll()
@@ -119,10 +119,26 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percent
         df_tile_at_date = df_tile_at_date[pd.to_datetime(df_tile_at_date['acquisition_date']) < element]
     for s3_id in df_tile_at_date["s3_id"].values:
         print(f"Attempting to open zip : {s3_id}")
-        ds = sentinel2.Sentinel2(s3_id, s3_context=s3_context)
-        ALL_BANDS = [ds.B2, ds.B3,ds.B4, ds.B5, ds.B6,
-                    ds.B7, ds.B8, ds.B8A, ds.B11, ds.B12,]
-        np_arr, np_arr_msk, np_arr_atm, xcoords, ycoords, out_crs = ds.read_as_numpy(bands = ALL_BANDS, bounds=bb)
+        trials=0
+        while trials < max_trials:
+            try:
+                if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
+                    os.remove(os.path.join(ROOT, ".s3_auth"))
+                s3utils.s3_enroll()
+                s3_resource = s3utils.get_s3_resource()
+                # Build s3 context for sensorsio
+                s3_context = storage.S3Context(resource = s3_resource, bucket = 'muscate')
+                ds = sentinel2.Sentinel2(s3_id, s3_context=s3_context)
+                ALL_BANDS = [ds.B2, ds.B3,ds.B4, ds.B5, ds.B6,
+                            ds.B7, ds.B8, ds.B8A, ds.B11, ds.B12,]
+                np_arr, np_arr_msk, np_arr_atm, xcoords, ycoords, out_crs = ds.read_as_numpy(bands = ALL_BANDS, bounds=bb)
+                break
+            except Exception as exc:
+                trials+=1
+                if trials == max_trials-1:
+                    print(exc)
+                    raise RuntimeError
+
         if check_mask(np_arr_msk, max_percentage=max_percentage):
             return s3_id
     return None

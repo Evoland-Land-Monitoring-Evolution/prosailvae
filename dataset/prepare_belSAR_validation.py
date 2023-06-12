@@ -23,6 +23,31 @@ class MeasurementDates:
     maize_names = ["M1", "M2", "M3", "M4", "M5", "M6"]
     maize_dates = ["2018-05-31", "2018-06-01", "2018-06-22", "2018-06-21", "2018-08-02", "2018-08-29"]
 
+def plot_sampling_dates(s2_dates=None):
+
+    # Create figure and plot a stem plot with the date
+    fig, ax = plt.subplots(figsize=(8.8, 4), layout="constrained", dpi=150)
+    ax.set(title="Image dates in data-set")
+    if s2_dates is not None:
+        s2_dates = [datetime.strptime(d, "%Y-%m-%d") for d in s2_dates]
+        s2_levels = np.tile([ 2, 2, 2, 2, 2, 2],
+                int(np.ceil(len(s2_dates)/6)))[:len(s2_dates)]
+        ax.vlines(s2_dates, 0, s2_levels, color="tab:green")  # The vertical stems.
+        ax.plot(s2_dates, np.zeros_like(s2_dates), "-o",
+                color="k", markerfacecolor="w")  # Baseline and markers on it.
+
+    # format x-axis with 1-week intervals
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
+    # ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y "))
+    plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+
+    # remove y-axis and spines
+    ax.yaxis.set_visible(False)
+    ax.spines[["left", "top", "right"]].set_visible(False)
+
+    ax.margins(y=0.1)
+    return fig, ax
+
 
 def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
     meas_dates = MeasurementDates()
@@ -36,7 +61,7 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
     maize_levels = np.tile([3, -3, 3, -3, 3, -3],
                 int(np.ceil(len(maize_dates)/6)))[:len(maize_dates)]
     # Create figure and plot a stem plot with the date
-    fig, ax = plt.subplots(figsize=(8.8, 4), layout="constrained")
+    fig, ax = plt.subplots(figsize=(8.8, 4), layout="constrained", dpi=150)
     ax.set(title="Measurement dates in BelSAR campaign")
 
     ax.vlines(wheat_dates, 0, wheat_levels, color="tab:red")  # The vertical stems.
@@ -62,7 +87,7 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
                     verticalalignment="bottom" if l > 0 else "top")
     if s2_dates is not None and s2_names is not None:
         s2_dates = [datetime.strptime(d, "%Y-%m-%d") for d in s2_dates]
-        s2_levels = np.tile([ -2, 2, -2, 2, -2, 2],
+        s2_levels = np.tile([ 2, 2, 2, 2, 2, 2],
                 int(np.ceil(len(s2_dates)/6)))[:len(s2_dates)]
         ax.vlines(s2_dates, 0, s2_levels, color="tab:green")  # The vertical stems.
         ax.plot(s2_dates, np.zeros_like(s2_dates), "-o",
@@ -332,11 +357,28 @@ def main():
     else:
         parser = get_prosailvae_train_parser().parse_args()
     # gdf, s2_r, s2_a = load_validation_data(parser.data_dir, parser.filename)
-    # fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-18", "2018-05-28", "2018-06-20", "2018-06-27",
-    #                                                    "2018-07-15", "2018-07-22", "2018-08-01",
-    #                                                    "2018-08-04"], 
-    #                                          s2_names=["2A", "2A", "2A", "2A", "2B", "2B", "2B", "2B"])
-    # s2_product_name = parser.product_name
+
+
+    months_to_get = ["2016-02-01",
+                    "2016-06-01",
+                    "2016-10-01",
+                    "2018-04-01",
+                    "2018-08-01",
+                    "2018-10-01",
+                    "2017-03-01",
+                    "2017-07-01",
+                    "2017-11-01",
+                    "2019-01-01",
+                    "2019-05-01",
+                    "2019-09-01"]
+    fig, ax = plot_sampling_dates(months_to_get)
+
+    fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", "2018-05-18", "2018-05-28", "2018-06-20", "2018-06-27",
+                                                       "2018-07-15", "2018-07-22", "2018-07-27",
+                                                       "2018-08-04"], 
+                                             s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"])
+    fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/dates.svg")
+    s2_product_name = parser.product_name
 
 
     list_output_filenames = ["2A_20180518_both_BelSAR_agriculture_database",
@@ -353,16 +395,16 @@ def main():
         plot_belsar_site(parser.data_dir, output_filename)
 
 
-    # list_s2_products = ["SENTINEL2A_20180508-104025-460_L2A_T31UFS_D_V2-2.zip",
-    #                     'SENTINEL2A_20180528-104613-414_L2A_T31UFS_D_V2-2.zip',
-    #                     'SENTINEL2A_20180620-105211-086_L2A_T31UFS_D_V2-2.zip',
-    #                     'SENTINEL2B_20180801-104018-457_L2A_T31UFS_D_V2-2.zip',
-    #                     'SENTINEL2A_20180518-104024-461_L2A_T31UFS_D_V2-2.zip',
-    #                     'SENTINEL2B_20180804-105022-459_L2A_T31UFS_D_V2-2.zip',
-    #                     "SENTINEL2B_20180722-104020-458_L2A_T31UFS_D_V2-2.zip",
-    #                     "SENTINEL2A_20180627-104023-457_L2A_T31UFS_D_V2-2.zip",
-    #                     "SENTINEL2B_20180715-105300-591_L2A_T31UFS_D_V1-8.zip"]
-    list_s2_products = ["SENTINEL2A_20180727-104023-458_L2A_T31UFS_D_V2-2.zip"]
+    list_s2_products = ["SENTINEL2A_20180508-104025-460_L2A_T31UFS_D_V2-2.zip",
+                        'SENTINEL2A_20180528-104613-414_L2A_T31UFS_D_V2-2.zip',
+                        'SENTINEL2A_20180620-105211-086_L2A_T31UFS_D_V2-2.zip',
+                        'SENTINEL2B_20180801-104018-457_L2A_T31UFS_D_V2-2.zip',
+                        'SENTINEL2A_20180518-104024-461_L2A_T31UFS_D_V2-2.zip',
+                        'SENTINEL2B_20180804-105022-459_L2A_T31UFS_D_V2-2.zip',
+                        "SENTINEL2B_20180722-104020-458_L2A_T31UFS_D_V2-2.zip",
+                        "SENTINEL2A_20180627-104023-457_L2A_T31UFS_D_V2-2.zip",
+                        "SENTINEL2B_20180715-105300-591_L2A_T31UFS_D_V1-8.zip",
+                        "SENTINEL2A_20180727-104023-458_L2A_T31UFS_D_V2-2.zip"]
     for s2_product in list_s2_products:
         if s2_product[-4:]=='.zip':
             with zipfile.ZipFile(os.path.join(parser.data_dir, s2_product), 'r') as zip_ref:

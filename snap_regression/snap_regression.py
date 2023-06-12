@@ -23,7 +23,7 @@ from dataset.prepare_belSAR_validation import load_belsar_validation_data, get_s
 import seaborn as sns
 from metrics.prosail_plots import silvia_validation_plots, plot_belsar_metrics
 from metrics.belsar_metrics import compute_metrics_at_date
-from metrics.results import get_snap_belsar_predictions
+# from metrics.results import get_snap_belsar_predictions
 
 def get_parser():
     """
@@ -58,6 +58,42 @@ def get_parser():
     parser.add_argument("-t", dest="third_layer",
                         type=bool, default=False)
     return parser
+
+
+def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
+    NO_DATA = -10000
+    # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
+    for filename in list_belsar_filename: 
+        ver = "3A" if filename[:2] == "2A" else "3B"
+        model_lai = SnapNN(ver=ver, variable="lai")
+        model_lai.set_weiss_weights()
+
+        df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
+        s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+        mask[mask==1.] = np.nan
+        mask[mask==0.] = 1.
+        if np.isnan(mask).all():
+            print(f"No valid pixels in {filename}!")
+        s2_r = s2_r * torch.from_numpy(mask).float()
+        s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
+        s2_data = torch.concat((s2_r, s2_a), 0)
+        with torch.no_grad():
+            lai_pred = model_lai.forward(s2_data, spatial_mode=True)
+        dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
+        tensor = torch.cat((lai_pred, dummy_tensor), 0)
+        tensor[tensor.isnan()] = NO_DATA
+        resolution = 10
+        file_path = res_dir + f"/{filename}_SNAP.tif"
+        tensor_to_raster(tensor, file_path,
+                         crs=crs,
+                         resolution=resolution,
+                         dtype=np.float32,
+                         bounds=None,
+                         xcoords=xcoords,
+                         ycoords=ycoords,
+                         nodata=NO_DATA,
+                         hw = 0, 
+                         half_res_coords=True)
 
 def load_refl_angles(path_to_data_dir: str):
     """
@@ -673,7 +709,7 @@ def main():
     compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
-    belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
+    belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/"
     list_belsar_filename = ["2A_20180508_both_BelSAR_agriculture_database",
                             "2A_20180518_both_BelSAR_agriculture_database",
                             "2A_20180528_both_BelSAR_agriculture_database",
@@ -684,10 +720,13 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]
     get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename)
-    belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
+    # belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
     metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP")
     metrics_inter = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP",method='interpolate')
     fig, ax = plot_belsar_metrics(metrics)
+    fig.savefig(res_dir + "/snap_belsar_lai_pred.png", transparent=True)
+    fig, ax = plot_belsar_metrics(metrics_inter)
+    fig.savefig(res_dir + "/snap_belsar_lai_pred_interpolated.png", transparent=True)
     get_silvia_validation_metrics(res_dir = res_dir)
     
     # weiss_dataset_lai_vs_ll(res_dir)

@@ -100,7 +100,7 @@ def get_sites_bb(tiles_bb, tiles=None, in_crs="epsg:3857", size=5120):
     return tiles_list, bb_list
 
 
-def get_s3_id(tile, bb:BoundingBox, date:str, max_date:str|None=None, orbit=None, max_percentage=0.05):
+def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percentage=0.05):
     if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
         os.remove(os.path.join(ROOT, ".s3_auth"))
     s3utils.s3_enroll()
@@ -134,9 +134,12 @@ def check_mask(mask, max_percentage=0.05):
         return False
     return True
 
+def download_s3_id(s3_id, output_dir):
+    print(f"Downloaded: {s3_id}")
+
 def main():
     if socket.gethostname()=='CELL200973':
-        args=["-t", "30TUM", 
+        args=["-t", "30TUM",
               "-m", "0.01"]
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
@@ -159,6 +162,8 @@ def main():
         else:
             list_s3_id.append(s3_id)
             print(s3_id)
+    for s3_id in list_s3_id:
+        download_s3_id(s3_id, parser.output_dir)
 
 
 if __name__ == "__main__":

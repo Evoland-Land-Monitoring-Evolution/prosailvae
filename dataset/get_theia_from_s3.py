@@ -147,21 +147,32 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percent
 def check_mask(mask, max_percentage=0.05):
     mask_sum = mask.sum(0).astype(bool).astype(int)
     max_unvalid_pixels = max_percentage * mask.shape[1] * mask.shape[2]
+    print(f"Unvalid_pixels on ROI : {mask_sum.sum()} / {mask.shape[1] * mask.shape[2]} ({mask_sum.sum() / (mask.shape[1] * mask.shape[2]) * 100} %)")
     if mask_sum.sum() >= max_unvalid_pixels:
-        print(f"Unvalid_pixels on ROI : {mask_sum.sum()} / {mask.shape[1] * mask.shape[2]} ({mask_sum.sum() / (mask.shape[1] * mask.shape[2]) * 100} %)")
         return False
     return True
 
-def download_s3_id(s3_id, output_dir):
-    s3utils.s3_enroll()
-    client = s3utils.get_s3_client()
-    # Retrieved from csv
-    s3utils.s3_download(s3_client=client,
-                        s3_bucket='muscate',
-                        local_folder = output_dir,
-                        s3_object_id = s3_id,
-                        unzip=False,
-                        show_progress=True)
+def download_s3_id(s3_id, output_dir, max_trials=10, delay=1):
+    trials=0
+    while trials < max_trials:
+        try:
+            client = s3utils.get_s3_client()
+            # Retrieved from csv
+            s3utils.s3_download(s3_client=client,
+                                s3_bucket='muscate',
+                                local_folder = output_dir,
+                                s3_object_id = s3_id,
+                                unzip=False,
+                                show_progress=True)
+        except Exception as exc:
+            if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
+                os.remove(os.path.join(ROOT, ".s3_auth"))
+            s3utils.s3_enroll()
+            print(trials, exc)
+            trials+=1
+            time.sleep(delay)
+            if trials == max_trials-1:
+                print(exc)
 
     print(f"Downloaded: {s3_id}")
 

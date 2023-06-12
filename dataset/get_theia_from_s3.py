@@ -10,6 +10,7 @@ import argparse
 import socket
 import pandas as pd
 import datetime
+import time
 
 def get_prosailvae_train_parser():
     """
@@ -100,15 +101,12 @@ def get_sites_bb(tiles_bb, tiles=None, in_crs="epsg:3857", size=5120):
     return tiles_list, bb_list
 
 
-def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percentage=0.05, max_trials=5):
+def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percentage=0.05, max_trials=5, delay=1):
     if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
         os.remove(os.path.join(ROOT, ".s3_auth"))
     s3utils.s3_enroll()
     sentinel2_index = s3utils.load_database(s3utils.SupportedMuscateCollections.SENTINEL2)
-    # tile = "30TUM"
-    # s3_id = 'SENTINEL2/2015/11/29/SENTINEL2A_20151129-112140-218_L2A_T30TUM_D_V1-4/SENTINEL2A_20151129-112140-218_L2A_T30TUM_D_V1-4.zip'
     s3_resource = s3utils.get_s3_resource()
-    # Build s3 context for sensorsio
     s3_context = storage.S3Context(resource = s3_resource,
                                     bucket = 'muscate')
     element = datetime.datetime.strptime(date,"%Y-%m-%d")
@@ -117,6 +115,7 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percent
     if max_date is not None:
         element = datetime.datetime.strptime(max_date,"%Y-%m-%d")
         df_tile_at_date = df_tile_at_date[pd.to_datetime(df_tile_at_date['acquisition_date']) < element]
+    print(pd.unique(df_tile_at_date['acquisition_date']))
     for s3_id in df_tile_at_date["s3_id"].values:
         print(f"Attempting to open zip : {s3_id}")
         trials=0
@@ -131,16 +130,17 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, max_percent
                 ds = sentinel2.Sentinel2(s3_id, s3_context=s3_context)
                 ALL_BANDS = [ds.B2, ds.B3,ds.B4, ds.B5, ds.B6,
                             ds.B7, ds.B8, ds.B8A, ds.B11, ds.B12,]
-                np_arr, np_arr_msk, np_arr_atm, xcoords, ycoords, out_crs = ds.read_as_numpy(bands = ALL_BANDS, bounds=bb)
+                np_arr, np_arr_msk, np_arr_atm, xcoords, ycoords, out_crs = ds.read_as_numpy(bands = ALL_BANDS, bounds=bb, band_type=ds.SRE)
+                if check_mask(np_arr_msk, max_percentage=max_percentage):
+                    return s3_id
                 break
             except Exception as exc:
+                print(trials, exc)
                 trials+=1
+                time.sleep(delay)
                 if trials == max_trials-1:
                     print(exc)
-                    raise RuntimeError
-
-        if check_mask(np_arr_msk, max_percentage=max_percentage):
-            return s3_id
+                    # raise RuntimeError
     return None
     
 
@@ -148,6 +148,7 @@ def check_mask(mask, max_percentage=0.05):
     mask_sum = mask.sum(0).astype(bool).astype(int)
     max_unvalid_pixels = max_percentage * mask.shape[1] * mask.shape[2]
     if mask_sum.sum() >= max_unvalid_pixels:
+        print(f"Unvalid_pixels on ROI : {mask_sum.sum()} / {mask.shape[1] * mask.shape[2]} ({mask_sum.sum() / (mask.shape[1] * mask.shape[2]) * 100} %)")
         return False
     return True
 

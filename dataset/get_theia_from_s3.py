@@ -230,8 +230,8 @@ def main():
         else:
             list_s3_id.append(s3_id)
             print(s3_id)
-    for s3_id in list_s3_id:
-        download_s3_id(s3_id, parser.output_dir)
+    # for s3_id in list_s3_id:
+    #     download_s3_id(s3_id, parser.output_dir)
 
 
 if __name__ == "__main__":

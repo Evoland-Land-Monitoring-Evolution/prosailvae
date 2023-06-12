@@ -100,18 +100,15 @@ def get_sites_bb(tiles_bb, tiles=None, in_crs="epsg:3857", size=5120):
         bb_list.append(bb)
     return tiles_list, bb_list
 
-def write_s3_id_file(invalid_s3_id_file_path, s3_id):
-    file = open(invalid_s3_id_file_path,"a")
-    invalid_s3 = file.writelines(s3_id)
-    file.close()
+def write_s3_id_file(s3_id_file_path, s3_id):
+    df = pd.DataFrame(data={"s3_id":[s3_id]})
+    df.to_csv(s3_id_file_path, mode='a', index=False, header=False)
 
-def get_checked_s3(invalid_s3_id_file_path):
-    if not os.path.isfile(invalid_s3_id_file_path):
-        return []
-    file = open(invalid_s3_id_file_path,"r")
-    invalid_s3 = file.readlines()
-    file.close()
-    return invalid_s3
+def get_checked_s3(s3_id_file_path):
+    if os.path.isfile(s3_id_file_path):
+        df = pd.read_csv(s3_id_file_path, header=None)
+        return df.values.reshape(-1).tolist()
+    return []
 
 def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, 
               max_percentage=0.05, max_trials=5, delay=1, invalid_s3_id_file_path="", 

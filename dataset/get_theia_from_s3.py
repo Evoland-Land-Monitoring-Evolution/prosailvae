@@ -214,9 +214,9 @@ def main():
     tile = tiles[0]
     bb = bb_list[0]
     list_s3_id = []
-    invalid_s3_id_file = f"{tile}_invalid_s3_id.txt"
-    valid_s3_id_file = f"{tile}_valid_s3_id.txt"
-    unchecked_s3_id_file = f"{tile}_unchecked_s3_id.txt"
+    invalid_s3_id_file = f"{tile}_invalid_s3_id.csv"
+    valid_s3_id_file = f"{tile}_valid_s3_id.csv"
+    unchecked_s3_id_file = f"{tile}_unchecked_s3_id.csv"
     for i, date in enumerate(MONTHS_TO_RETRIEVE):
         max_date = None
         if i < len(MONTHS_TO_RETRIEVE) - 1:

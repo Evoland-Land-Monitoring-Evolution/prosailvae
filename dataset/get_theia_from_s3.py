@@ -112,7 +112,7 @@ def get_checked_s3(s3_id_file_path):
 
 def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None, 
               max_percentage=0.05, max_trials=5, delay=1, invalid_s3_id_file_path="", 
-              valid_s3_id_file_path=""):
+              valid_s3_id_file_path="", unchecked_s3_id_file_path=""):
     #if os.path.isfile(os.path.join(ROOT, ".s3_auth")):
     #    os.remove(os.path.join(ROOT, ".s3_auth"))
     s3utils.s3_enroll()
@@ -161,6 +161,8 @@ def get_s3_id(tile, bb:BoundingBox, date, max_date=None, orbit=None,
                 time.sleep(delay)
                 if trials == max_trials-1:
                     print(exc)
+                    if len(unchecked_s3_id_file_path):
+                        write_s3_id_file(unchecked_s3_id_file_path, s3_id)
                     # raise RuntimeError
     return None
     
@@ -214,13 +216,15 @@ def main():
     list_s3_id = []
     invalid_s3_id_file = f"{tile}_invalid_s3_id.txt"
     valid_s3_id_file = f"{tile}_valid_s3_id.txt"
+    unchecked_s3_id_file = f"{tile}_unchecked_s3_id.txt"
     for i, date in enumerate(MONTHS_TO_RETRIEVE):
         max_date = None
         if i < len(MONTHS_TO_RETRIEVE) - 1:
             max_date = MONTHS_TO_RETRIEVE[i+1]
         s3_id = get_s3_id(tile, bb, date, max_date, max_percentage=parser.mask_max_percentage, 
                           invalid_s3_id_file_path = os.path.join(parser.output_dir, invalid_s3_id_file),
-                          valid_s3_id_file_path = os.path.join(parser.output_dir, valid_s3_id_file))
+                          valid_s3_id_file_path = os.path.join(parser.output_dir, valid_s3_id_file), 
+                          unchecked_s3_id_file_path = os.path.join(parser.output_dir, unchecked_s3_id_file))
         if s3_id is None:
             print(f"Warning: No sample found for tile {tile} between {date} and {max_date}.")
         else:

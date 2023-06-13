@@ -5,6 +5,8 @@ import argparse
 import socket
 import numpy as np
 from sensorsio import sentinel2
+from utils.image_utils import rgb_render
+import matplotlib.pyplot as plt
 from rasterio.coords import BoundingBox
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
@@ -77,8 +79,8 @@ def get_valid_area_in_image(tile):
     # elif tile=="T33TWF":
     #     return 0, 1024, 1020, 2044
     else:
-        return 5000, None, 5000, None
-        # return 0, None, 0, None
+        # return 5000, None, 5000, None
+        return 0, None, 0, None
         # raise NotImplementedError
 
 def get_patches(image_tensor, patch_size):
@@ -174,6 +176,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     test_clean_patches = torch.cat(test_clean_patches, dim=0)
     test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu)
     test_clean_patches = test_clean_patches[test_perms,...]
+
     test_patch_info = np.array(test_patch_info)[test_perms,:]
     print(f"Train patches : {train_clean_patches.size()}")
     print(f"Validation patches : {valid_clean_patches.size()}")
@@ -342,7 +345,15 @@ def main():
                                                            train_patch_size=train_patch_size,
                                                            valid_size=valid_size, test_size=test_size,
                                                            valid_tiles=valid_tiles, valid_files=valid_files)
-
+    plot_test = True
+    if plot_test:
+        for i in range(test_patches.size(0)):
+            info = test_patch_info[i]
+            test_patch_i = test_patches[i,...].detach().cpu().numpy()
+            fig, ax = plt.subplots(dpi=150)
+            ax.imshow(rgb_render(test_patch_i)[0])
+            fig.savefig(os.path.join(parser.output_dir, f"test_{info[0]}_{info[1]}_{info[2]}.pt"))
+        pass
     norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='mean')
     print(f"mean {norm_std}, std {norm_std}")
     norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='quantile')

@@ -362,7 +362,7 @@ def main():
             test_patch_i = test_patches[i,...].detach().cpu().numpy()
             fig, ax = plt.subplots(dpi=150)
             ax.imshow(rgb_render(test_patch_i)[0])
-            fig.savefig(os.path.join(parser.output_dir, f"test_{info[0]}_{info[1]}_{info[2]}.pt"))
+            fig.savefig(os.path.join(parser.output_dir, f"test_{info[0]}_{info[1]}_{info[2]}.png"))
         pass
     norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='mean')
     print(f"mean {norm_std}, std {norm_std}")

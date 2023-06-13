@@ -211,16 +211,19 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
             norm_std = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
     return norm_mean, norm_std
 
-def get_info_from_filename(filename):
+def get_info_from_filename(filename, prefix=False):
+    if prefix:
+        filename_comp = filename.split("_")
+        filename = "_".join(filename_comp[1:])
     filename_comp = filename.split("_")
-    if filename_comp[1] == "SENTINEL2A":
+    if filename_comp[0] == "SENTINEL2A":
         sensor = "2A"
-    elif filename_comp[1] == "SENTINEL2B":
+    elif filename_comp[0] == "SENTINEL2B":
         sensor = "2B"
     else:
         raise ValueError("Sensor name not found!")
-    date = filename_comp[2].split("-")[0]
-    tile = filename_comp[4]
+    date = filename_comp[1].split("-")[0]
+    tile = filename_comp[3]
     return sensor, date, tile, sensor + date + tile
 
 

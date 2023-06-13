@@ -334,13 +334,14 @@ def main():
                         # "theia_SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8.pth"
                     ]
         valid_files = None
+        valid_tiles = None
     # valid_files = ["after_SENTINEL2A_20170621-111222-373_L2A_T30TUM_D_V1-4_roi_0.pth"]
     (train_patches, valid_patches, test_patches,
      train_patch_info, valid_patch_info,
-     test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size = large_patch_size, 
-                                                        train_patch_size = train_patch_size,
-                                                        valid_size = valid_size, test_size = test_size,
-                                                        valid_tiles=valid_tiles, valid_files=valid_files)
+     test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size=large_patch_size,
+                                                           train_patch_size=train_patch_size,
+                                                           valid_size=valid_size, test_size=test_size,
+                                                           valid_tiles=valid_tiles, valid_files=valid_files)
 
     norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='mean')
     print(f"mean {norm_std}, std {norm_std}")

@@ -337,7 +337,7 @@ def main():
                         # "theia_SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8.pth"
                     ]
         valid_files = None
-        valid_tiles = None
+        valid_tiles = ['theia_tensor']
     # valid_files = ["after_SENTINEL2A_20170621-111222-373_L2A_T30TUM_D_V1-4_roi_0.pth"]
     (train_patches, valid_patches, test_patches,
      train_patch_info, valid_patch_info,

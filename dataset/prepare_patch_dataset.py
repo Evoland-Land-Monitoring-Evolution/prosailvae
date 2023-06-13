@@ -136,8 +136,8 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         image_tensor = torch.load(tensor_file)
         print(image_tensor.size())
         min_x, max_x, min_y, max_y = get_valid_area_in_image(info[2])
-        if max_x is not None and max_y is not None:
-            image_tensor = image_tensor[:,min_x: max_x, min_y: max_y]
+        # if max_x is not None and max_y is not None:
+        #     image_tensor = image_tensor[:,min_x: max_x, min_y: max_y]
         patches = get_patches(image_tensor, large_patch_size)
         n_valid = max(int(patches.size(0) * valid_size), 1)
         n_test = max(int(patches.size(0) * test_size), 1)

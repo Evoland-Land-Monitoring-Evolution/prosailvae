@@ -86,7 +86,7 @@ def get_valid_area_in_image(tile):
 def get_patches(image_tensor, patch_size):
     try:
         patches = patchify(image_tensor, patch_size=patch_size, margin=0)
-    except exception as exc:
+    except Exception as exc:
         print(exc)
         print(image_tensor.size())
         raise ValueError

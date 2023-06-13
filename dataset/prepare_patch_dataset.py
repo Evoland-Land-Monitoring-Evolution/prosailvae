@@ -84,7 +84,12 @@ def get_valid_area_in_image(tile):
         # raise NotImplementedError
 
 def get_patches(image_tensor, patch_size):
-    patches = patchify(image_tensor, patch_size=patch_size, margin=0)
+    try:
+        patches = patchify(image_tensor, patch_size=patch_size, margin=0)
+    except exception as exc:
+        print(exc)
+        print(image_tensor.size())
+        raise ValueError
     if image_tensor.size(1) % patch_size != 0:
         patches = patches[:-1,...]
     if image_tensor.size(2) % patch_size != 0:
@@ -130,7 +135,8 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         print(tensor_file)
         image_tensor = torch.load(tensor_file)
         min_x, max_x, min_y, max_y = get_valid_area_in_image(info[2])
-        image_tensor = image_tensor[:,min_x: max_x, min_y: max_y]
+        if max_x is not None and max_y is not None:
+            image_tensor = image_tensor[:,min_x: max_x, min_y: max_y]
         patches = get_patches(image_tensor, large_patch_size)
         n_valid = max(int(patches.size(0) * valid_size), 1)
         n_test = max(int(patches.size(0) * test_size), 1)

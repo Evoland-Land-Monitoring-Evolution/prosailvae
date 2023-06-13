@@ -372,6 +372,9 @@ def main():
     
     torch.save(norm_mean, os.path.join(parser.output_dir, "norm_mean.pt"))
     torch.save(norm_std, os.path.join(parser.output_dir, "norm_std.pt"))
+    print(f"Train patches : {train_patches.size(0)}")
+    print(f"Valid patches : {valid_patches.size(0)}")
+    print(f"Test patches : {test_patches.size(0)}")
     torch.save(train_patches, os.path.join(parser.output_dir, "train_patches.pth"))
     torch.save(valid_patches, os.path.join(parser.output_dir, "valid_patches.pth"))
     torch.save(test_patches, os.path.join(parser.output_dir, "test_patches.pth"))

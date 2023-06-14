@@ -144,9 +144,12 @@ def compute_frm4veg_data(data_dir, filename, s2_product_name):
     arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2,1,0],
                                             dmin=np.array([0., 0., 0.]),
                                             dmax=np.array([0.2,0.2,0.2]))
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(dpi=150, tight_layout=True)
     ax.imshow(arr_rgb, extent = [bb[0], bb[2], bb[1], bb[3]])
     data_gdf.plot(ax=ax)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    fig.savefig('wytham.png')
     plt.show()
     get_data_idx_in_image(data_gdf, dataset.bounds[0], dataset.bounds[3], xmin, ymin, res=10)
     fig, ax = plt.subplots()

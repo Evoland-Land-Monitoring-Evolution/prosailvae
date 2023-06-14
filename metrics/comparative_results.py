@@ -300,7 +300,7 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
                             legend_col=3, xmin=xmin, xmax=xmax)
     axs[-1].set_title("SNAP")
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=True)
+        fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)
 
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest"):
     model_results = {}

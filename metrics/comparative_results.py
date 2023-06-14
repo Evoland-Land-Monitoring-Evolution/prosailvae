@@ -518,7 +518,7 @@ def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results,
     metrics = {}
     for model_name, _ in belsar_results.items():
         ref_lai_list = [belsar_results[model_name]['lai_mean'].values.reshape(-1),
-                        barrax_results[model_name]['ref_lai'].reshape(-1)]
+                        barrax_results[model_name][f'ref_{frm4veg_lai}'].reshape(-1)]
         
         pred_lai_list = [belsar_results[model_name]['Predicted lai'].values.reshape(-1),
                          barrax_results[model_name][frm4veg_lai].reshape(-1)]
@@ -583,8 +583,8 @@ def main():
                                    res_dir=res_dir, prefix="lai", margin = 0.02)
 
     validation_lai_eff_results_interpolated = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_interp,
-                                                                        barrax_results_interp, wytham_results=None,
-                                                                        frm4veg_lai="lai_eff")
+                                                                                barrax_results_interp, wytham_results=None,
+                                                                                frm4veg_lai="lai_eff")
     plot_lai_validation_comparison(model_dict, validation_lai_eff_results_interpolated,
                                    res_dir=res_dir, prefix="lai_eff", margin = 0.02)
     # else:

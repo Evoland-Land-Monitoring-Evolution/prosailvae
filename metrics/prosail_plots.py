@@ -22,13 +22,13 @@ from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from utils.image_utils import rgb_render
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from dataset.prepare_silvia_validation import load_validation_data
+from dataset.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 import os
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
     fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
-    minvisu = None 
+    minvisu = None
     maxvisu = None
     for i, patch in enumerate(patch_list):
         # patch = patch.squeeze()
@@ -930,24 +930,24 @@ def plot_lai_vs_ndvi(lais, ndvi, time_delta=None, site=''):
     plt.show()
     return fig, ax
 
-def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf, model_patch_pred,
-                                snap_patch_pred, variable='lai', legend=True):
+def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf, 
+                                model_pred_at_site, snap_pred_at_site,
+                                variable='lai', legend=True):
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     m, b = np.polyfit(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy(), 1)
     r2 = r2_score(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy())
     rmse = (all_snap_lai - all_model_lai).pow(2).mean().sqrt().cpu().numpy()
     ax.scatter(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy(), s=0.5)
 
-    x_idx = gdf["x_idx"].values.astype(int)
-    y_idx = gdf["y_idx"].values.astype(int)
-    ref = gdf[variable].values.reshape(-1)
-    ref_uncert = gdf["uncertainty"].values
-    model_pred_at_site = model_patch_pred[:, y_idx, x_idx].reshape(-1)
-    snap_pred_at_site = snap_patch_pred[:, y_idx, x_idx].reshape(-1)
+    # x_idx = gdf["x_idx"].values.astype(int)
+    # y_idx = gdf["y_idx"].values.astype(int)
+    # model_pred_at_site = model_patch_pred[:, y_idx, x_idx].reshape(-1)
+    # snap_pred_at_site = snap_patch_pred[:, y_idx, x_idx].reshape(-1)
     df = pd.DataFrame({f"Predicted {variable}": model_pred_at_site,
                        f"SNAP {variable}": snap_pred_at_site,
                        "Land Cover": gdf["land cover"]})
-    g = sns.scatterplot(data=df, x=f"SNAP {variable}", y=f"Predicted {variable}",
+    g = sns.scatterplot(data=df, x=f"SNAP {variable}",
+                        y=f"Predicted {variable}",
                         hue="Land Cover", ax=ax)
     # ax.set_xlim(xmin, xmax)
     # ax.set_ylim(xmin, xmax)
@@ -973,10 +973,12 @@ def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf, model_patch_pr
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
-                                  all_cw_rel, gdf_lai, model_patch_pred, snap_patch_pred, max_sigma=1.4):
+                                  all_cw_rel, 
+                                #   gdf_lai, model_patch_pred, snap_patch_pred, 
+                                  max_sigma=1.4):
 
-    fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
-                                          snap_patch_pred, variable='lai', legend=True)
+    # fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
+    #                                       snap_patch_pred, variable='lai', legend=True)
     fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
@@ -1355,10 +1357,9 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
     return
 
 
-def plot_silvia_validation_patch(gdf, 
-                                 pred_at_patch: np.ndarray, 
-                                 #pred_at_site: np.ndarray, 
-                                 variable:str="lai"):
+def plot_frm4veg_validation_patch(gdf, pred_at_patch: np.ndarray,
+                                  #pred_at_site: np.ndarray,
+                                  variable:str="lai"):
     df_sns_plot = pd.DataFrame({variable: gdf[variable].values.reshape(-1),
                                 #f"Predicted {variable}": pred_at_site,
                                 "Land Cover": gdf["land cover"],
@@ -1384,7 +1385,7 @@ def plot_silvia_validation_patch(gdf,
     # fig.tight_layout()
     return fig, ax
 
-def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None, 
+def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None,
                                       pred_at_site:np.ndarray|None=None,
                                       variable:str='lai',
                                       fig=None, ax=None, legend=True,
@@ -1428,13 +1429,13 @@ def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None,
         fig.tight_layout()
     return fig, ax, g
 
-def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, res_dir=None):
+def frm4veg_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, res_dir=None):
 
     if isinstance(lai_pred, torch.Tensor):
         lai_pred = lai_pred.numpy()
     if isinstance(ccc_pred, torch.Tensor):
         ccc_pred = ccc_pred.numpy()
-    gdf_lai, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable="lai")
+    gdf_lai, _, _, xcoords, ycoords = load_frm4veg_data(data_dir, filename, variable="lai")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai, patch_pred=lai_pred,
                                                     variable='lai', fig=None, ax=None)
     
@@ -1443,38 +1444,39 @@ def silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, s2_r=None, r
     if s2_r is not None:
         if isinstance(s2_r, torch.Tensor):
             s2_r = s2_r.numpy()
-        fig, ax = plot_silvia_validation_patch(gdf_lai, s2_r)
+        fig, ax = plot_frm4veg_validation_patch(gdf_lai, s2_r)
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{filename}_field_rgb.png"))
 
     lai_pred_at_site = lai_pred[:, gdf_lai["y_idx"].values.astype(int),
                                 gdf_lai["x_idx"].values.astype(int)].reshape(-1)
-    fig, ax = plot_silvia_validation_patch(gdf_lai, lai_pred)
+    fig, ax = plot_frm4veg_validation_patch(gdf_lai, lai_pred)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_field_lai.png"))
 
-    gdf_lai_eff, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, 
+    gdf_lai_eff, _, _, xcoords, ycoords = load_frm4veg_data(data_dir, filename, 
                                                    variable="lai_eff")
     gdf_lai_eff = gdf_lai_eff.iloc[:51]
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_lai_eff, patch_pred=lai_pred,
-                                                variable='lai_eff', fig=None, ax=None)
+                                                   variable='lai_eff', fig=None, ax=None)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_lai_eff.png"))
 
-    gdf_ccc, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable="ccc")
+    gdf_ccc, _, _, xcoords, ycoords = load_frm4veg_data(data_dir, filename, variable="ccc")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc, patch_pred=ccc_pred,
                                                     variable='ccc', fig=None, ax=None)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc.png"))
 
-    gdf_ccc_eff, _, _, xcoords, ycoords = load_validation_data(data_dir, filename, variable="ccc_eff")
+    gdf_ccc_eff, _, _, xcoords, ycoords = load_frm4veg_data(data_dir, filename, variable="ccc_eff")
     fig, ax, g = patch_validation_reg_scatter_plot(gdf_ccc_eff, patch_pred=ccc_pred,
-                                      variable='ccc_eff', fig=None, ax=None)
+                                                   variable='ccc_eff', fig=None, ax=None)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{filename}_scatter_ccc_eff.png"))
     return
 
-def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop", variable='lai', legend=True, xmin=None, xmax=None):
+def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop", 
+                        variable='lai', legend=True, xmin=None, xmax=None, ):
     belsar_metrics['crop'] = belsar_metrics["name"].apply(lambda x: "wheat" if x[0]=="W" else "maize")
     pred_at_site = belsar_metrics[f"parcel_{variable}_mean"].values
     ref = belsar_metrics[f"{variable}_mean"].values
@@ -1504,5 +1506,38 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop", variable=
     else:
         sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),ncol=len(pd.unique(belsar_metrics[hue]))//2,
                         frameon=True)
+        fig.tight_layout()
+    return fig, ax
+
+
+
+def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site", 
+                    legend_col=2, xmin=None, xmax=None):
+    pred = df_metrics[y]
+    ref = df_metrics[x]
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+    if xmin is None:
+        xmin = min(np.min(pred), np.min(ref))
+    if xmax is None:
+        xmax = max(np.max(pred), np.max(ref))
+    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    m, b = np.polyfit(ref, pred, 1)
+    r2 = r2_score(ref, pred)
+    rmse = np.sqrt(np.mean((ref - pred)**2))
+    perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
+    ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
+    line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    
+    g = sns.scatterplot(data=df_metrics, x=x, y=y,
+                        hue=hue, ax=ax)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(xmin, xmax)
+    ax.set_aspect('equal', 'box')
+    if not legend_col:
+        ax.get_legend().remove()
+    else:
+        sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),
+                        ncol=legend_col, frameon=True)
         fig.tight_layout()
     return fig, ax

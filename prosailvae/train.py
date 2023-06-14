@@ -357,16 +357,18 @@ def setup_training():
               "-a", "False",
               "-p", "False"]
         parser = get_prosailvae_train_parser().parse_args(args)
-        silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
-        silvia_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+        frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
+        frm4veg_barrax_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+        frm4veg_wytham_filename = None #"2A_20180629_FRM_Veg_Wytham_20180703"
         belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
         
     else:
         parser = get_prosailvae_train_parser().parse_args()
-        silvia_data_dir = "/work/scratch/zerahy/prosailvae/data/silvia_validation"
+        frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
         # silvia_filename = "FRM_Veg_Barrax_20180605"
-        silvia_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+        frm4veg_barrax_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+        frm4veg_wytham_filename = None #"2A_20180629_FRM_Veg_Wytham_20180703"
     list_belsar_filenames = ["2A_20180508_both_BelSAR_agriculture_database",
                             "2A_20180518_both_BelSAR_agriculture_database",
                             "2A_20180528_both_BelSAR_agriculture_database",
@@ -429,7 +431,8 @@ def setup_training():
         sup_norm_mean = None
         sup_norm_std = None
     return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, 
-            sup_norm_std, silvia_data_dir, silvia_filename, belsar_dir, list_belsar_filenames)
+            sup_norm_std, frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename, 
+            belsar_dir, list_belsar_filenames)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_norm_mean=None, sup_norm_std=None):
@@ -590,7 +593,7 @@ def save_array_xp_path(job_array_dir, res_dir):
 def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
      job_array_dir, sup_norm_mean, sup_norm_std,
-     silvia_data_dir, silvia_filename,
+     frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename,
      belsar_dir, list_belsar_filenames) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
@@ -605,8 +608,9 @@ def main():
             save_results_2d(prosail_vae, test_loader, res_dir,
                             all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
                             plot_results=parser.plot_results, info_test_data=info_test_data,
-                            silvia_data_dir = silvia_data_dir,
-                            silvia_filename = silvia_filename,
+                            frm4veg_data_dir = frm4veg_data_dir,
+                            frm4veg_barrax_filename=frm4veg_barrax_filename,
+                            frm4veg_wytham_filename=frm4veg_wytham_filename,
                             belsar_dir=belsar_dir,
                             list_belsar_filenames=list_belsar_filenames)
         if not params['encoder_type'] in spatial_encoder_types:

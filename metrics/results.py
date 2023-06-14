@@ -10,10 +10,10 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                     all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_aggregated_results,
-                                    silvia_validation_plots, plot_belsar_metrics)
+                                    frm4veg_plots, plot_belsar_metrics, regression_plot)
 from dataset.loaders import  get_simloader
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
-from dataset.prepare_silvia_validation import load_validation_data
+from dataset.frm4veg_validation import load_frm4veg_data
 from metrics.belsar_metrics import compute_metrics_at_date
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
@@ -30,7 +30,7 @@ from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
 from torchutils.patches import patchify, unpatchify 
 import pandas as pd
 import numpy as np
-from dataset.prepare_belSAR_validation import load_belsar_validation_data
+from dataset.belsar_validation import load_belsar_validation_data
 from utils.image_utils import tensor_to_raster
 from snap_regression.snap_nn import SnapNN
 
@@ -68,14 +68,55 @@ def get_prosailvae_results_parser():
     return parser
 
 
+def get_belsar_x_frm4veg_lai_metrics(belsar_metrics, frm4veg_data_dir, frm4veg_barrax_lai_pred, frm4veg_barrax_filename,
+                                     frm4veg_wytham_lai_pred=None, frm4veg_wytham_filename=None,  lai_eff=False):
+    # belsar_metrics['crop'] = belsar_metrics["name"].apply(lambda x: "wheat" if x[0]=="W" else "maize")
+    belsar_pred_at_site = belsar_metrics[f"parcel_{'lai'}_mean"].values
+    belsar_ref = belsar_metrics[f"{'lai'}_mean"].values
+    site = ["Belgium"] * len(belsar_ref)
+    variable = "lai"
+    if lai_eff:
+        variable = "lai_eff"
+
+    if isinstance(frm4veg_barrax_lai_pred, torch.Tensor):
+        frm4veg_barrax_lai_pred = frm4veg_barrax_lai_pred.numpy()
+    gdf_barrax_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable=variable)
+    barrax_ref = gdf_barrax_lai[variable].values.reshape(-1)
+    # ref_uncert = gdf_barrax_lai["uncertainty"].values
+    x_idx = gdf_barrax_lai["x_idx"].values.astype(int)
+    y_idx = gdf_barrax_lai["y_idx"].values.astype(int)
+    barrax_pred_at_site = frm4veg_barrax_lai_pred[:, y_idx, x_idx].reshape(-1)
+    site = site + ["Spain"] * len(barrax_ref)
+
+    pred_at_site = np.concatenate((belsar_pred_at_site, barrax_pred_at_site))
+    ref = np.concatenate((belsar_ref, barrax_ref))
+    if frm4veg_wytham_lai_pred is not None and frm4veg_wytham_filename is not None:
+        if isinstance(frm4veg_wytham_lai_pred, torch.Tensor):
+            frm4veg_wytham_lai_pred = frm4veg_wytham_lai_pred.numpy()
+        gdf_wytham_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable=variable)
+        wytham_ref = gdf_wytham_lai[variable].values.reshape(-1)
+        # ref_uncert = gdf_wytham_lai["uncertainty"].values
+        x_idx = gdf_wytham_lai["x_idx"].values.astype(int)
+        y_idx = gdf_wytham_lai["y_idx"].values.astype(int)
+        wytham_pred_at_site = frm4veg_wytham_lai_pred[:, y_idx, x_idx].reshape(-1)
+        pred_at_site = np.concatenate((pred_at_site, wytham_pred_at_site))
+        ref = np.concatenate((ref, wytham_ref))
+        site = site + ["England"] * len(wytham_ref)
+    site = np.array(site)
+    validation_metrics = pd.DataFrame(data={"Predicted LAI":pred_at_site, "LAI": ref, "Site":site})
+    return validation_metrics
+
+
 def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None,
-                    silvia_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation",
-                    silvia_filename = "FRM_Veg_Barrax_20180605", max_test_patch=50,
+                    frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation",
+                    frm4veg_barrax_filename = "FRM_Veg_Barrax_20180605", 
+                    frm4veg_wytham_filename = None, 
+                    max_test_patch=50,
                     belsar_dir="",
                     list_belsar_filenames=[]):
-    rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
+    rec_mode = 'lat_mode' # if not socket.gethostname()=='CELL200973' else "random"
     image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
     image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
     device = PROSAIL_VAE.device
@@ -111,49 +152,74 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
     
-    silvia_validation_plot_dir = plot_dir + "/silvia_validation/"
-    if not os.path.isdir(silvia_validation_plot_dir):
-        os.makedirs(silvia_validation_plot_dir)
+    rm4veg_validation_plot_dir = plot_dir + "/frm4veg_validation/"
+    if not os.path.isdir(rm4veg_validation_plot_dir):
+        os.makedirs(rm4veg_validation_plot_dir)
     
     belsar_res_dir = plot_dir + "belsar_validation"
     if not os.path.isdir(belsar_res_dir):
         os.makedirs(belsar_res_dir)
-    save_belsar_predictions(belsar_dir, PROSAIL_VAE, belsar_res_dir, list_filenames=list_belsar_filenames)
-    metrics = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="closest", file_suffix="_pvae")
-    fig, ax = plot_belsar_metrics(metrics)
-    fig.savefig(belsar_res_dir+"/belsar_regression_crop.png")
-    fig, ax = plot_belsar_metrics(metrics, hue='date')
-    fig.savefig(belsar_res_dir+"/belsar_regression_date.png")
-    fig, ax = plot_belsar_metrics(metrics, hue='delta')
-    fig.savefig(belsar_res_dir+"/belsar_regression_delta.png")
-    metrics_inter = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="interpolated", file_suffix="_pvae")
-    fig, ax = plot_belsar_metrics(metrics_inter)
-    fig.savefig(belsar_res_dir+"/belsar_regression_interpolated_crop.png")
-    fig, ax = plot_belsar_metrics(metrics_inter, hue='date')
-    fig.savefig(belsar_res_dir+"/belsar_regression_interpolated_date.png")
-    fig, ax = plot_belsar_metrics(metrics_inter, hue='delta')
-    fig.savefig(belsar_res_dir+"/belsar_regression_interpolated_delta.png")
 
-
-    _, s2_r, s2_a, xcoords, ycoords = load_validation_data(silvia_data_dir, silvia_filename, variable="lai")
+    _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
-    
     with torch.no_grad():
-        (_, sim_image, cropped_s2_r, cropped_s2_a, _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
-                                                     patch_size=32, bands=torch.arange(10),
-                                                     mode=rec_mode, padding=True, no_rec=True)
+        (_, sim_image, cropped_s2_r, cropped_s2_a, 
+         _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32, bands=torch.arange(10),
+                                            mode=rec_mode, padding=True, no_rec=True)
         
-        lai_validation_pred = sim_image[6,...].unsqueeze(0)
-        ccc_validation_pred = sim_image[1,...].unsqueeze(0) * lai_validation_pred
-        # info = info_test_data[i,:]
-        (snap_validation_lai, _,
-            _) = get_weiss_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
-                                                            patch_size=32, sensor="2A")
-        gdf_lai, _, _ = load_validation_data(silvia_data_dir, silvia_filename, variable="lai")
-    silvia_validation_plots(lai_validation_pred, ccc_validation_pred, silvia_data_dir, silvia_filename, 
-                            s2_r=cropped_s2_r, res_dir=silvia_validation_plot_dir)
+        frm4veg_barrax_lai_pred = sim_image[6,...].unsqueeze(0)
+        frm4veg_barrax_ccc_pred = sim_image[1,...].unsqueeze(0) * frm4veg_barrax_lai_pred
+        # (snap_validation_lai, _,
+        #     _) = get_weiss_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
+        #                                                     patch_size=32, sensor="2A")
+        # gdf_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
+    
+    frm4veg_plots(frm4veg_barrax_lai_pred, frm4veg_barrax_ccc_pred, frm4veg_data_dir, frm4veg_barrax_filename,
+                  s2_r=cropped_s2_r, res_dir=rm4veg_validation_plot_dir)
+    
+    frm4veg_wytham_lai_pred = None
+    if frm4veg_wytham_filename is not None:
+        _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable="lai")
+        s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
+        s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
+        with torch.no_grad():
+            (_, sim_image, cropped_s2_r, cropped_s2_a, 
+             _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32, 
+                                               bands=torch.arange(10), mode=rec_mode, padding=True, no_rec=True)
+            
+            frm4veg_wytham_lai_pred = sim_image[6,...].unsqueeze(0)
+            frm4veg_wytham_ccc_pred = sim_image[1,...].unsqueeze(0) * frm4veg_wytham_lai_pred
+        frm4veg_plots(frm4veg_wytham_lai_pred, frm4veg_wytham_ccc_pred, frm4veg_data_dir, frm4veg_wytham_filename,
+                      s2_r=cropped_s2_r, res_dir=rm4veg_validation_plot_dir)
 
+
+    save_belsar_predictions(belsar_dir, PROSAIL_VAE, belsar_res_dir, list_filenames=list_belsar_filenames)
+    belsar_metrics = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="closest", file_suffix="_pvae")
+    fig, ax = plot_belsar_metrics(belsar_metrics)
+    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_crop.png"))
+    fig, ax = plot_belsar_metrics(belsar_metrics, hue='date')
+    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_date.png"))
+    fig, ax = plot_belsar_metrics(belsar_metrics, hue='delta')
+    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_delta.png"))
+    belsar_metrics_inter = compute_metrics_at_date(belsar_dir, belsar_res_dir, 
+                                                   method="interpolate", file_suffix="_pvae")
+    fig, ax = plot_belsar_metrics(belsar_metrics_inter)
+    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_crop.png"))
+    fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='date')
+    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_date.png"))
+    # fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='delta')
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_delta.png"))
+
+    metrics_df = get_belsar_x_frm4veg_lai_metrics(belsar_metrics, frm4veg_data_dir,
+                                                  frm4veg_barrax_lai_pred, frm4veg_barrax_filename,
+                                                  frm4veg_wytham_lai_pred=frm4veg_wytham_lai_pred, 
+                                                  frm4veg_wytham_filename=frm4veg_wytham_filename,  
+                                                  lai_eff=False)
+    
+    fig, ax = regression_plot(metrics_df, x="LAI", y="Predicted LAI", 
+                              fig=None, ax=None, hue="Site", legend_col=True, xmin=None, xmax=None)
+    fig.savefig(os.path.join(belsar_res_dir, "belsar_x_frm4veg_regression.png"))
     # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     all_rec = []
     all_lai = []
@@ -180,7 +246,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}/"
             if not os.path.isdir(patch_plot_dir):
                 os.makedirs(patch_plot_dir)
-            PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image, 
+            PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,
                                  weiss_lai, weiss_cab, weiss_cw, sigma_image, i, info=info)
             all_rec.append(rec_image.reshape(10,-1))
             all_lai.append(sim_image[6,...].reshape(-1))
@@ -209,8 +275,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         all_sigma = torch.cat(all_sigma, axis=1)
 
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                        all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel, 
-                                        gdf_lai, lai_validation_pred, snap_validation_lai)
+                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel,
+                                    #   gdf_lai, lai_validation_pred, snap_validation_lai
+                                      )
 
     logger.info("Metrics computed.")
     

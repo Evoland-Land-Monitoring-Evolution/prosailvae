@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import socket
 import argparse
-from utils.image_utils import tensor_to_raster
+# from utils.image_utils import tensor_to_raster
 
 def get_data_point_bb(gdf, dataset, margin=100, res=10):
-    left, right, bottom, top = (dataset.bounds.left, dataset.bounds.right, dataset.bounds.bottom, dataset.bounds.top)
+    left, right, bottom, top = (dataset.bounds.left, dataset.bounds.right, 
+                                dataset.bounds.bottom, dataset.bounds.top)
     x_data_point = np.round(gdf["geometry"].x.values / res) * res
     y_data_point = np.round(gdf["geometry"].y.values / res) * res
     assert all(x_data_point > left) and all(x_data_point < right)
@@ -49,7 +50,7 @@ def get_prosailvae_train_parser():
 
     parser.add_argument("-d", dest="data_dir",
                         help="name of data files (without extension)",
-                        type=str, default="/home/uz/zerahy/scratch/prosailvae/data/silvia_validation/")
+                        type=str, default="/home/uz/zerahy/scratch/prosailvae/data/frm4veg_validation/")
     
     parser.add_argument("-p", dest="product_name",
                         help="Theia product name",
@@ -68,7 +69,7 @@ def get_variable_column_names(variable="lai"):
     else:
         raise NotImplementedError
 
-def compute_validation_data(data_dir, filename, s2_product_name):
+def compute_frm4veg_data(data_dir, filename, s2_product_name):
     output_file_name = s2_product_name[8:19] + "_" + filename
     data_file = filename + ".xlsx"
     data_df = pd.read_excel(os.path.join(data_dir, data_file), sheet_name="GroundData", skiprows=[0])
@@ -166,7 +167,7 @@ def compute_validation_data(data_dir, filename, s2_product_name):
         gdf.to_file(os.path.join(data_dir, output_file_name + f"_{variable}.geojson"), driver="GeoJSON")
     return output_file_name
 
-def load_validation_data(data_dir, filename, variable="lai"):
+def load_frm4veg_data(data_dir, filename, variable="lai"):
     gdf = gpd.read_file(os.path.join(data_dir, filename + f"_{variable}.geojson"),
                         driver="GeoJSON")
     s2_r = np.load(os.path.join(data_dir, filename + "_refl.npy"))
@@ -180,17 +181,17 @@ def load_validation_data(data_dir, filename, variable="lai"):
 
 def main():
     if socket.gethostname()=='CELL200973':
-        args=["-f", "FRM_Veg_Barrax_20180605",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation/",
+        args=["-f", "FRM_Veg_Wytham_20180703",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
             #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
-              "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+              "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
         # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
     # gdf, s2_r, s2_a = load_validation_data(parser.data_dir, parser.filename)
     s2_product_name = parser.product_name
-    output_file_names = compute_validation_data(parser.data_dir, parser.data_filename, s2_product_name)
+    output_file_names = compute_frm4veg_data(parser.data_dir, parser.data_filename, s2_product_name)
     print(output_file_names)
 if __name__ == "__main__":
     main()

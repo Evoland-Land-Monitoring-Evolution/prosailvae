@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import os
-from dataset.prepare_belSAR_validation import load_belsar_validation_data, get_sites_geometry
+from dataset.belsar_validation import load_belsar_validation_data, get_sites_geometry
 import rasterio
 from rasterio.mask import mask
 import pandas as pd

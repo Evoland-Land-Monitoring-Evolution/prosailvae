@@ -549,7 +549,7 @@ def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results,
         ref_lai_list = [belsar_results[model_name]['lai_mean'].values.reshape(-1),
                         barrax_results[model_name][f'ref_{frm4veg_lai}'].reshape(-1)]
         
-        pred_lai_list = [belsar_results[model_name]['Predicted lai'].values.reshape(-1),
+        pred_lai_list = [belsar_results[model_name]['parcel_lai_mean'].values.reshape(-1),
                          barrax_results[model_name][frm4veg_lai].reshape(-1)]
         site_list = ['Belgium'] * len(ref_lai_list[0]) + ['Spain'] * len(ref_lai_list[1])
         if wytham_results is not None:
@@ -619,15 +619,15 @@ def main():
             validation_lai_results[method] = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results[method],
                                                                                 barrax_results[method], 
                                                                                 wytham_results=wytham_results[method],
-                                                                                frm4veg_lai="lai_eff")
+                                                                                frm4veg_lai=variable)
             plot_lai_validation_comparison(model_dict, validation_lai_results[method],
-                                           res_dir=res_dir, prefix=method + "_" + variable + "_", 
+                                           res_dir=res_dir, prefix=method + "_" + variable + "_",
                                            margin = 0.02)
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"
     # barrax_results_before = get_model_frm4veg_results(model_dict, frm4veg_data_dir, barrax_filename_before, sensor)
-    # plot_frm4veg_results_comparison(model_dict, barrax_results_before, frm4veg_data_dir, barrax_filename_before, 
+    # plot_frm4veg_results_comparison(model_dict, barrax_results_before, frm4veg_data_dir, barrax_filename_before,
     #                                    res_dir=res_dir)
 
     # barrax_filename_after = "2A_20180613_FRM_Veg_Barrax_20180605"

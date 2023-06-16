@@ -85,6 +85,9 @@ class SimVAE(nn.Module):
         self.hyper_prior = None
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
+        self.disabled_latent = torch.tensor([8]).to(self.device) # Disabling hotspot
+        print(f"WARNING: disabling latent variable {self.disabled_latent.item()}")
+        self.disabled_latent_value = torch.tensor([0]).float().to(self.device)
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
@@ -100,6 +103,7 @@ class SimVAE(nn.Module):
         self.decoder.change_device(device)
         if self.hyper_prior is not None:
             self.hyper_prior.change_device(device)
+        self.disabled_latent_value.to(device)
 
     def encode(self, s2_r, s2_a):
         """
@@ -160,7 +164,8 @@ class SimVAE(nn.Module):
             return dist_params, None, None, None
         # latent sampling
         z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
-
+        # if len(self.disabled_latent):
+        #     z[...,self.disabled_latent] = self.disabled_latent_value
         # transfer to simulator variable
         sim = self.transfer_latent(z)
 

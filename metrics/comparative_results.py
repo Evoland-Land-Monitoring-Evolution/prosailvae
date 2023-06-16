@@ -586,20 +586,20 @@ def main():
 
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
-    #     save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
-    # get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
-    # belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='closest')
-    # plot_belsar_validation_results_comparison(model_dict, belsar_results, res_dir, suffix="_closest")
-    # belsar_results_interp = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='interpolate')
-    # plot_belsar_validation_results_comparison(model_dict, belsar_results_interp, res_dir, suffix="_interpolated")
-    # belsar_results_best = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='best')
-    # belsar_results_worst = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='worst')
+        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
+    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+    belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='closest')
+    plot_belsar_validation_results_comparison(model_dict, belsar_results, res_dir, suffix="_closest")
+    belsar_results_interp = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='interpolate')
+    plot_belsar_validation_results_comparison(model_dict, belsar_results_interp, res_dir, suffix="_interpolated")
+    belsar_results_best = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='best')
+    belsar_results_worst = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='worst')
     barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
     sensor = ["2B", "2A"]
-    # # if isinstance(filename, list):
-    # barrax_results_interp = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor)
-    # plot_frm4veg_results_comparison(model_dict, barrax_results_interp, frm4veg_data_dir, barrax_filenames[0],
-    #                                        res_dir=res_dir, prefix='interp_')
+    # if isinstance(filename, list):
+    barrax_results_interp = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor)
+    plot_frm4veg_results_comparison(model_dict, barrax_results_interp, frm4veg_data_dir, barrax_filenames[0],
+                                           res_dir=res_dir, prefix='interp_')
     barrax_results_best = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor, method="best")
     barrax_results_worst = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor, method="worst")
 

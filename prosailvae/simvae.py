@@ -228,13 +228,12 @@ class SimVAE(nn.Module):
     
     def point_estimate_sim(self, x, angles, mode='random'):
         is_patch = check_is_patch(x)
+        if angles is None:
+            angles = x[:,-3:]
+            x = x[:,:-3]
+        y, angles = self.encode(x, angles)
+        dist_params = self.lat_space.get_params_from_encoder(y)
         if mode == 'random':
-            if angles is None:
-                angles = x[:,-3:]
-                x = x[:,:-3]
-
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
             if self.inference_mode:
                 return dist_params, None, None, None
             # latent sampling
@@ -244,16 +243,13 @@ class SimVAE(nn.Module):
             sim = self.transfer_latent(z)
 
         elif mode == 'lat_mode':
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
             # latent mode
             z = self.lat_space.mode(dist_params)
             # transfer to simulator variable
             sim = self.transfer_latent(z.unsqueeze(2))
-
+        elif mode == "sim_tg_mean":
+            pass
         elif mode == "sim_mode":
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
             z = self.sim_space.sim2z(sim)
@@ -263,15 +259,11 @@ class SimVAE(nn.Module):
                 angles = angles.reshape(-1, 3)
 
         elif mode == "sim_median":
-            y = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)
 
         elif mode == "sim_expectation":
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
             z = self.sim_space.sim2z(sim)

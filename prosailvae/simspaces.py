@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from .dist_utils import convolve_pdfs, pdfs2cdfs, cdfs2quantiles
+from utils.TruncatedNormal import TruncatedNormal
 
 class SimVarSpace(nn.Module):
     def lat2sim(self):
@@ -40,7 +41,22 @@ class LinearVarSpace(SimVarSpace):
         self.sim_pdf_support_span = self.sim_pdf_support_span .to(device)
         self.inv_z2sim_mat = self.inv_z2sim_mat.to(device)
 
-
+    def get_distribution_from_lat_params(self,lat_params, distribution_type="tn"):
+        if distribution_type == "tn":
+            lat_mu = lat_params[..., 0]
+            sim_mu = self.z2sim(lat_mu)
+            lat_sigma = lat_params[..., 1]
+            lat_sigma2 = lat_sigma.pow(2)
+            sim_sigma2 = None
+            sim_sigma = sim_sigma2.sqrt()
+            distribution = TruncatedNormal(loc=sim_mu, scale=sim_sigma,
+                                           low=torch.zeros_like(sim_mu),
+                                           high=torch.ones_like(sim_mu))
+            pass
+        else:
+            raise NotImplementedError
+        return distribution
+    
     def z2sim(self, z):
         sim = torch.matmul(self.z2sim_mat, z) + self.z2sim_offset
         return sim

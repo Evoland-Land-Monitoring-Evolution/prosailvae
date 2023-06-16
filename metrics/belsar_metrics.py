@@ -168,7 +168,7 @@ def simple_interpolate(y_after, y_before, dt_after, dt_before):
 
 def compute_metrics_at_date(belsar_dir, res_dir, method="closest", file_suffix=""):
     
-    if method == "interpolate":
+    if method == "simple_interpolate":
         before_metrics = get_belsar_image_metrics_df(belsar_dir, before_filename_dict, res_dir, file_suffix)
         after_metrics = get_belsar_image_metrics_df(belsar_dir, after_filename_dict, res_dir, file_suffix)
         metrics = before_metrics.copy()

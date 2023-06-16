@@ -589,67 +589,47 @@ def main():
         model = model_info["model"]
         save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
     get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
-    belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='closest')
-    plot_belsar_validation_results_comparison(model_dict, belsar_results, res_dir, suffix="_closest")
-    belsar_results_interp = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='interpolate')
-    plot_belsar_validation_results_comparison(model_dict, belsar_results_interp, res_dir, suffix="_interpolated")
-    belsar_results_best = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='best')
-    belsar_results_worst = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='worst')
-    barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
-    sensor = ["2B", "2A"]
-    # if isinstance(filename, list):
-    barrax_results_interp = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor)
-    plot_frm4veg_results_comparison(model_dict, barrax_results_interp, frm4veg_data_dir, barrax_filenames[0],
-                                           res_dir=res_dir, prefix='interp_')
-    barrax_results_best = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor, method="best")
-    barrax_results_worst = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor, method="worst")
 
-    
-    validation_lai_results_best = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_best,
-                                                                    barrax_results_best, wytham_results=None,
-                                                                    frm4veg_lai="lai")
-    plot_lai_validation_comparison(model_dict, validation_lai_results_best,
-                                   res_dir=res_dir, prefix="best_lai", margin = 0.02)
-    validation_lai_results_worst = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_worst,
-                                                                    barrax_results_worst, wytham_results=None,
-                                                                    frm4veg_lai="lai")
-    plot_lai_validation_comparison(model_dict, validation_lai_results_worst,
-                                   res_dir=res_dir, prefix="worst_lai", margin = 0.02)
-    
-    validation_lai_eff_results_best = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_best,
-                                                                    barrax_results_best, wytham_results=None,
-                                                                    frm4veg_lai="lai_eff")
-    plot_lai_validation_comparison(model_dict, validation_lai_eff_results_best,
-                                   res_dir=res_dir, prefix="best_lai_eff", margin = 0.02)
-    validation_lai_eff_results_worst = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_worst,
-                                                                    barrax_results_worst, wytham_results=None,
-                                                                    frm4veg_lai="lai_eff")
-    plot_lai_validation_comparison(model_dict, validation_lai_eff_results_worst,
-                                   res_dir=res_dir, prefix="worst_lai_eff", margin = 0.02)
-        
-    validation_lai_results_interpolated = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_interp,
-                                                                            barrax_results_interp, wytham_results=None,
-                                                                            frm4veg_lai="lai")
-    plot_lai_validation_comparison(model_dict, validation_lai_results_interpolated,
-                                   res_dir=res_dir, prefix="lai", margin = 0.02)
+    belsar_results = {}
+    barrax_results = {}
+    wytham_results = {}
+    validation_lai_results = {}
+    for method in ['closest', "simple_interpolate", "best", "worst"]:
+        belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method)
+        plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix=method)
 
-    validation_lai_eff_results_interpolated = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_interp,
-                                                                                barrax_results_interp, wytham_results=None,
+        barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
+        barrax_sensor = ["2B", "2A"]
+        barrax_results['method'] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
+                                                         method=method)
+        plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
+                                        res_dir=res_dir, prefix= "barrax_"+method+"_")
+        wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
+        wytham_sensor = ["2A", "2A"]
+        wytham_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, wytham_filenames, wytham_sensor,
+                                                          method=method)
+        plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
+                                        res_dir=res_dir, prefix= "barrax_"+method+"_")
+        for variable in ['lai', "lai_eff"]:
+            validation_lai_results[method] = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results[method],
+                                                                                barrax_results[method], 
+                                                                                wytham_results=wytham_results[method],
                                                                                 frm4veg_lai="lai_eff")
-    plot_lai_validation_comparison(model_dict, validation_lai_eff_results_interpolated,
-                                   res_dir=res_dir, prefix="lai_eff", margin = 0.02)
+            plot_lai_validation_comparison(model_dict, validation_lai_results[method],
+                                           res_dir=res_dir, prefix=method + "_" + variable + "_", 
+                                           margin = 0.02)
     # else:
-    barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
-    sensor = "2B"
-    barrax_results_before = get_model_frm4veg_results(model_dict, frm4veg_data_dir, barrax_filename_before, sensor)
-    plot_frm4veg_results_comparison(model_dict, barrax_results_before, frm4veg_data_dir, barrax_filename_before, 
-                                       res_dir=res_dir)
+    # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
+    # sensor = "2B"
+    # barrax_results_before = get_model_frm4veg_results(model_dict, frm4veg_data_dir, barrax_filename_before, sensor)
+    # plot_frm4veg_results_comparison(model_dict, barrax_results_before, frm4veg_data_dir, barrax_filename_before, 
+    #                                    res_dir=res_dir)
 
-    barrax_filename_after = "2A_20180613_FRM_Veg_Barrax_20180605"
-    sensor = "2A"
-    barrax_results_after = get_model_frm4veg_results(model_dict, frm4veg_data_dir, barrax_filename_after, sensor)
-    plot_frm4veg_results_comparison(model_dict, barrax_results_after, frm4veg_data_dir, barrax_filename_after, 
-                                       res_dir=res_dir)
+    # barrax_filename_after = "2A_20180613_FRM_Veg_Barrax_20180605"
+    # sensor = "2A"
+    # barrax_results_after = get_model_frm4veg_results(model_dict, frm4veg_data_dir, barrax_filename_after, sensor)
+    # plot_frm4veg_results_comparison(model_dict, barrax_results_after, frm4veg_data_dir, barrax_filename_after, 
+    #                                    res_dir=res_dir)
 
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data)

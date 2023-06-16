@@ -249,23 +249,23 @@ def plot_frm4veg_results_comparison(model_dict, model_results, data_dir, filenam
         fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
         gdf, _, _, xcoords, ycoords = load_frm4veg_data(data_dir, filename, variable=variable)
         gdf=gdf.iloc[:51]
-        xmin = min(np.min(gdf[variable].values), np.min(model_results["SNAP"][variable].squeeze().numpy()))
-        xmax = max(np.max(gdf[variable].values), np.max(model_results["SNAP"][variable].squeeze().numpy()))
+        xmin = min(np.min(gdf[variable].values), np.min(model_results["SNAP"][variable].reshape(-1)))
+        xmax = max(np.max(gdf[variable].values), np.max(model_results["SNAP"][variable].reshape(-1)))
         for i, (model_name, model_info) in enumerate(model_dict.items()):
-            pred_at_site = model_results[model_name][variable].numpy()
+            pred_at_site = model_results[model_name][variable]
             xmax = max(np.max(pred_at_site), xmax)
             xmin = min(np.min(pred_at_site), xmin)
         xmin = xmin - margin * (xmax - xmin)
         xmax = xmax + margin * (xmax - xmin)
         for i, (model_name, model_info) in enumerate(model_dict.items()):
             # sub_variable = "lai" if variable in ["lai", "lai_eff"] else "ccc"
-            pred_at_site = model_results[model_name][variable].numpy()
+            pred_at_site = model_results[model_name][variable]
             fig, ax, g = patch_validation_reg_scatter_plot(gdf, pred_at_site=pred_at_site,
                                                             variable=variable,
                                                             fig=fig, ax=axs[i], legend=True)
             
             axs[i].set_title(model_info["plot_name"])
-        pred_at_site = model_results["SNAP"][variable].squeeze().numpy()
+        pred_at_site = model_results["SNAP"][variable].reshape(-1)
         fig, ax, g = patch_validation_reg_scatter_plot(gdf, pred_at_site=pred_at_site,
                                                         variable=variable,
                                                         fig=fig, ax=axs[-1], legend=True)

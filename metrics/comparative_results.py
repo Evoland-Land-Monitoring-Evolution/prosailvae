@@ -484,7 +484,7 @@ def compare_snap_versions_on_weiss_data(res_dir):
     fig, _ = regression_pair_plot(snap_lai_dict, global_lai_lim)
     fig.savefig(os.path.join(res_dir, "scatter_lai_snap_versions_weiss.png"))
 
-def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor):
+def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, method="simple_interpolate"):
     d0 = datetime.date.fromisoformat('2018-05-15')
     d1 = datetime.date.fromisoformat('2018-06-13')
     dt_image = (d1 - d0).days
@@ -497,18 +497,40 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor):
     for model_name, _ in validation_results_1.items():
         model_results = {}
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
-            gdf, _, _, xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
-            gdf = gdf.iloc[:51]
-            t_sample = torch.from_numpy(gdf["date"].apply(lambda x: (x.date()-d0).days).values)
-            m = (validation_results_1[model_name][variable].squeeze() 
-                 - validation_results_2[model_name][variable].squeeze()) / dt_image
-            b = validation_results_2[model_name][variable].squeeze() - m * d1.day
-            try:
-                model_results[variable] = (m * t_sample + b).reshape(-1)
-            except Exception as exc:
-                # print(exc)
-                print(model_name, variable, m.size(), t_sample.size(), b.size())
-                print(validation_results_1[model_name][variable].size(), validation_results_2[model_name][variable].size(), dt_image)
+            if method=="simple_interpolate":
+                gdf, _, _, xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
+                gdf = gdf.iloc[:51]
+                t_sample = torch.from_numpy(gdf["date"].apply(lambda x: (x.date()-d0).days).values)
+                m = (validation_results_1[model_name][variable].squeeze() 
+                    - validation_results_2[model_name][variable].squeeze()) / dt_image
+                b = validation_results_2[model_name][variable].squeeze() - m * d1.day
+                try:
+                    model_results[variable] = (m * t_sample + b).reshape(-1)
+                except Exception as exc:
+                    # print(exc)
+                    print(model_name, variable, m.size(), t_sample.size(), b.size())
+                    print(validation_results_1[model_name][variable].size(), validation_results_2[model_name][variable].size(), dt_image)
+            elif method == "best":
+                ref = validation_results_1[model_name][f"ref_{variable}"]
+                err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
+                err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
+                results = np.zeros_like(ref)
+                results[err_1 <= err_2] = validation_results_1[model_name][f"{variable}"]
+                results[err_1 > err_2] = validation_results_2[model_name][f"{variable}"]
+                model_results[variable] = results
+                
+            elif method == "worst":
+                ref = validation_results_1[model_name][f"ref_{variable}"]
+                err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
+                err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
+                results = np.zeros_like(ref)
+                results[err_1 <= err_2] = validation_results_2[model_name][f"{variable}"]
+                results[err_1 > err_2] = validation_results_1[model_name][f"{variable}"]
+                model_results[variable] = results
+            elif method == "dist_interpolate":
+                raise NotImplementedError
+            else:
+                raise ValueError
         validation_results[model_name] = model_results
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
             validation_results[model_name][f'ref_{variable}'] = validation_results_1[model_name][f'ref_{variable}']
@@ -569,17 +591,44 @@ def main():
     plot_belsar_validation_results_comparison(model_dict, belsar_results, res_dir, suffix="_closest")
     belsar_results_interp = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='interpolate')
     plot_belsar_validation_results_comparison(model_dict, belsar_results_interp, res_dir, suffix="_interpolated")
+    belsar_results_best = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='best')
+    belsar_results_worst = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='worst')
     barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
     sensor = ["2B", "2A"]
     # if isinstance(filename, list):
     barrax_results_interp = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor)
     plot_frm4veg_results_comparison(model_dict, barrax_results_interp, frm4veg_data_dir, barrax_filenames[0],
                                            res_dir=res_dir, prefix='interp_')
+    barrax_results_best = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor, method="best")
+    barrax_results_worst = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, sensor, method="worst")
 
+    
+    validation_lai_results_best = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_best,
+                                                                    barrax_results_best, wytham_results=None,
+                                                                    frm4veg_lai="lai")
+    plot_lai_validation_comparison(model_dict, validation_lai_results_best,
+                                   res_dir=res_dir, prefix="best_lai", margin = 0.02)
+    validation_lai_results_worst = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_worst,
+                                                                    barrax_results_worst, wytham_results=None,
+                                                                    frm4veg_lai="lai")
+    plot_lai_validation_comparison(model_dict, validation_lai_results_worst,
+                                   res_dir=res_dir, prefix="worst_lai", margin = 0.02)
+    
+    validation_lai_eff_results_best = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_best,
+                                                                    barrax_results_best, wytham_results=None,
+                                                                    frm4veg_lai="lai_eff")
+    plot_lai_validation_comparison(model_dict, validation_lai_eff_results_best,
+                                   res_dir=res_dir, prefix="best_lai_eff", margin = 0.02)
+    validation_lai_eff_results_worst = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_worst,
+                                                                    barrax_results_worst, wytham_results=None,
+                                                                    frm4veg_lai="lai_eff")
+    plot_lai_validation_comparison(model_dict, validation_lai_eff_results_worst,
+                                   res_dir=res_dir, prefix="worst_lai_eff", margin = 0.02)
+        
     validation_lai_results_interpolated = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_interp,
                                                                             barrax_results_interp, wytham_results=None,
                                                                             frm4veg_lai="lai")
-    plot_lai_validation_comparison(model_dict, validation_lai_results_interpolated, 
+    plot_lai_validation_comparison(model_dict, validation_lai_results_interpolated,
                                    res_dir=res_dir, prefix="lai", margin = 0.02)
 
     validation_lai_eff_results_interpolated = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results_interp,

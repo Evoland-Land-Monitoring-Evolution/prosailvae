@@ -184,10 +184,11 @@ def load_frm4veg_data(data_dir, filename, variable="lai"):
 
 def main():
     if socket.gethostname()=='CELL200973':
-        args=["-f", "FRM_Veg_Wytham_20180703",
+        # args=["-f", "FRM_Veg_Wytham_20180703",
+        args=["-f", "FRM_Veg_Barrax_20180605",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
-            #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
-              "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
+              "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
+            #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
         # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"
         parser = get_prosailvae_train_parser().parse_args(args)
     else:

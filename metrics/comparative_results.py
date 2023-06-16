@@ -605,7 +605,7 @@ def main():
 
         barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
         barrax_sensor = ["2B", "2A"]
-        barrax_results['method'] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
+        barrax_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
                                                          method=method)
         plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
                                         res_dir=res_dir, prefix= "barrax_"+method+"_")

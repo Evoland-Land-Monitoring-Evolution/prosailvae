@@ -69,6 +69,12 @@ def get_variable_column_names(variable="lai"):
     else:
         raise NotImplementedError
 
+def get_bb_equivalent_polygon(bb, in_crs, out_crs):
+    from shapely import Polygon
+    coords = ((bb.left, bb.bottom), (bb.left, bb.top), (bb.right, bb.top), (bb.right, bb.bottom), (bb.left, bb.bottom))
+    polygon = Polygon(coords)
+    return gpd.GeoDataFrame(data={"geometry":[polygon]}).set_crs(in_crs).to_crs(out_crs)
+
 def compute_frm4veg_data(data_dir, filename, s2_product_name):
     output_file_name = s2_product_name[8:19] + "_" + filename
     data_file = filename + ".xlsx"
@@ -84,6 +90,8 @@ def compute_frm4veg_data(data_dir, filename, s2_product_name):
     data_gdf = data_gdf.to_crs(dataset.crs.to_epsg())
     margin = 100
     bb = get_data_point_bb(data_gdf, dataset, margin=margin)
+    gdf = get_bb_equivalent_polygon(bb, dataset.crs.to_epsg(), 'epsg:4326')
+    gdf.to_file("rois_to_download.geojson", driver="GeoJSON") 
     bands = [sentinel2.Sentinel2.B2,
              sentinel2.Sentinel2.B3,
              sentinel2.Sentinel2.B4,
@@ -184,11 +192,11 @@ def load_frm4veg_data(data_dir, filename, variable="lai"):
 
 def main():
     if socket.gethostname()=='CELL200973':
-        # args=["-f", "FRM_Veg_Wytham_20180703",
-        args=["-f", "FRM_Veg_Barrax_20180605",
+        args=["-f", "FRM_Veg_Wytham_20180703",
+        # args=["-f", "FRM_Veg_Barrax_20180605",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
-              "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
-            #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
+            #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
+              "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
         # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"
         parser = get_prosailvae_train_parser().parse_args(args)
     else:

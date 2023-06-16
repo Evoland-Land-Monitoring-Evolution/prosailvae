@@ -180,8 +180,8 @@ def compute_metrics_at_date(belsar_dir, res_dir, method="closest", file_suffix="
         metrics['delta_before'] = before_metrics['delta']
         metrics['after_before'] = after_metrics['delta']
     elif method == "closest":
-        closest_delta_dict = get_delta_dict(closest_filename_dict)
-        metrics = get_belsar_image_metrics_df(belsar_dir, closest_delta_dict, res_dir, file_suffix)
+        # closest_delta_dict = get_delta_dict()
+        metrics = get_belsar_image_metrics_df(belsar_dir, closest_filename_dict, res_dir, file_suffix)
     elif method == 'best':
         before_metrics = get_belsar_image_metrics_df(belsar_dir, before_filename_dict, res_dir, file_suffix)
         after_metrics = get_belsar_image_metrics_df(belsar_dir, after_filename_dict, res_dir, file_suffix)

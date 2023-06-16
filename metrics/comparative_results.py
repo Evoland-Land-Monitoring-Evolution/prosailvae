@@ -583,10 +583,10 @@ def main():
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
 
-    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
-        model = model_info["model"]
-        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
-    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+    # for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+    #     model = model_info["model"]
+    #     save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
+    # get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
     belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='closest')
     plot_belsar_validation_results_comparison(model_dict, belsar_results, res_dir, suffix="_closest")
     belsar_results_interp = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method='interpolate')

@@ -500,14 +500,14 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
             if method=="simple_interpolate":
                 gdf, _, _, xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
                 gdf = gdf.iloc[:51]
-                t_sample = torch.from_numpy(gdf["date"].apply(lambda x: (x.date()-d0).days).values)
+                t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
                 m = (validation_results_1[model_name][variable].squeeze() 
                     - validation_results_2[model_name][variable].squeeze()) / dt_image
                 b = validation_results_2[model_name][variable].squeeze() - m * d1.day
                 try:
                     model_results[variable] = (m * t_sample + b).reshape(-1)
                 except Exception as exc:
-                    # print(exc)
+                    print(exc)
                     print(model_name, variable, m.size(), t_sample.size(), b.size())
                     print(validation_results_1[model_name][variable].size(), 
                           validation_results_2[model_name][variable].size(), dt_image)

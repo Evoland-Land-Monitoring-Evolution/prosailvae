@@ -509,7 +509,8 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 except Exception as exc:
                     # print(exc)
                     print(model_name, variable, m.size(), t_sample.size(), b.size())
-                    print(validation_results_1[model_name][variable].size(), validation_results_2[model_name][variable].size(), dt_image)
+                    print(validation_results_1[model_name][variable].size(), 
+                          validation_results_2[model_name][variable].size(), dt_image)
             elif method == "best":
                 ref = validation_results_1[model_name][f"ref_{variable}"]
                 err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)

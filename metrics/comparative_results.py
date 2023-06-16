@@ -537,7 +537,7 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
             elif method == "dist_interpolate":
                 raise NotImplementedError
             else:
-                raise ValueError
+                raise ValueError(method)
         validation_results[model_name] = model_results
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
             validation_results[model_name][f'ref_{variable}'] = validation_results_1[model_name][f'ref_{variable}']
@@ -599,9 +599,9 @@ def main():
     barrax_results = {}
     wytham_results = {}
     validation_lai_results = {}
-    for method in ['closest', "simple_interpolate", "best", "worst"]:
+    for method in ["simple_interpolate", "best", "worst"]: #'closest', 
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method)
-        plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix=method)
+        plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
         barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
         barrax_sensor = ["2B", "2A"]

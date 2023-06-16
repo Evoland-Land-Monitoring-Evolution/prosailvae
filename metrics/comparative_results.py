@@ -516,8 +516,9 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
                 err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
                 results = np.zeros_like(ref)
-                results[err_1 <= err_2] = validation_results_1[model_name][f"{variable}"][err_1 <= err_2]
-                results[err_1 > err_2] = validation_results_2[model_name][f"{variable}"][err_1 > err_2]
+
+                results[err_1 <= err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1 <= err_2]
+                results[err_1 > err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1 > err_2]
                 model_results[variable] = results
                 
             elif method == "worst":
@@ -525,8 +526,8 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
                 err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
                 results = np.zeros_like(ref)
-                results[err_1 <= err_2] = validation_results_2[model_name][f"{variable}"][err_1 <= err_2]
-                results[err_1 > err_2] = validation_results_1[model_name][f"{variable}"][err_1 > err_2]
+                results[err_1 <= err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1 <= err_2]
+                results[err_1 > err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1 > err_2]
                 model_results[variable] = results
             elif method == "dist_interpolate":
                 raise NotImplementedError

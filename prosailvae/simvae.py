@@ -164,8 +164,8 @@ class SimVAE(nn.Module):
             return dist_params, None, None, None
         # latent sampling
         z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
-        # if len(self.disabled_latent):
-        #     z[...,self.disabled_latent] = self.disabled_latent_value
+        if len(self.disabled_latent):
+            z[...,self.disabled_latent] = self.disabled_latent_value
         # transfer to simulator variable
         sim = self.transfer_latent(z)
 

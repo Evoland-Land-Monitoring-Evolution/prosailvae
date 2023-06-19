@@ -183,7 +183,8 @@ def initialize_by_training(n_models:int,
                                                 lr_recompute=None,
                                                 exp_lr_decay=-1,
                                                 plot_gradient=False,#parser.plot_results,
-                                                lr_recompute_mode=False)
+                                                lr_recompute_mode=False,
+                                                cycle_training = False)
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
             prosail_vae.save_ae(n_epochs, optimizer, model_min_loss, pv_config.vae_save_file_path)
@@ -194,7 +195,7 @@ def initialize_by_training(n_models:int,
 
 def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
-                  plot_gradient=False, lr_recompute_mode=True):
+                  plot_gradient=False, lr_recompute_mode=True, cycle_training=False):
     logger = logging.getLogger(LOGGER_NAME)
     if prosail_vae.decoder.loss_type=='mse':
         n_samples=1
@@ -224,8 +225,12 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             t0=time.time()
             if optimizer.param_groups[0]['lr'] < 5e-8:
-                break #stop training if lr too low
-
+                if not cycle_training:
+                    break #stop training if lr too low
+                for g in optimizer.param_groups:
+                    g['lr'] = 1e-4
+                lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer,
+                                                                      gamma=exp_lr_decay)
             switch_loss(epoch, n_epoch, prosail_vae, swith_ratio=0.75)
             if lr_recompute_mode:
                 raise NotImplementedError
@@ -343,6 +348,8 @@ def load_params(config_dir, config_file, parser=None):
         params["disabled_latent"] = []
     if "disabled_latent_values" not in params.keys():
         params["disabled_latent_values"] = []
+    if "cycle_training" not in params.keys():
+        params["cycle_training"] = False
     return params
 
 def setup_training():
@@ -567,7 +574,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                          lr_recompute=params['lr_recompute'],
                                                          exp_lr_decay=params["exp_lr_decay"],
                                                          plot_gradient=False,#parser.plot_results,
-                                                         lr_recompute_mode=lr_recompute_mode)
+                                                         lr_recompute_mode=lr_recompute_mode,
+                                                         cycle_training=params["cycle_training"])
     logger.info("Training Completed !")
 
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df

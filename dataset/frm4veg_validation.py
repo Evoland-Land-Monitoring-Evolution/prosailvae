@@ -57,10 +57,14 @@ def get_prosailvae_train_parser():
                         type=str, default="")
     return parser
 
-def get_variable_column_names(variable="lai"):
+def get_variable_column_names(variable="lai", wytham=False):
     if variable == "lai":
+        if wytham:
+            return "LAI", "Uncertainty.5"
         return "LAI", "Uncertainty.1"
     if variable == "lai_eff":
+        if wytham:
+            return "LAIeff", "Uncertainty.2"
         return "LAIeff", "Uncertainty"
     if variable == "ccc":
         return "CCC (g m-2)", "Uncertainty (g m-2).2"
@@ -107,56 +111,57 @@ def compute_frm4veg_data(data_dir, filename, s2_product_name, no_angle_data=Fals
     # s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, bounds=bb,
     #                                                                 crs=dataset.crs,
     #                                                                 band_type=dataset.SRE)
-    if no_angle_data:
-        cn_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/iris_data/openEO_0_clip.nc"
-        _, s2_a = load_iris_data(cn_path, date=date)
-    else:
-        if socket.gethostname()=='CELL200973':
-            even_zen, odd_zen = dataset.read_zenith_angles_as_numpy()
-            even_zen = even_zen[ymin:ymax, xmin:xmax]
-            odd_zen = odd_zen[ymin:ymax, xmin:xmax]
-            joint_zen = np.array(even_zen)
-            joint_zen[np.isnan(even_zen)] = odd_zen[np.isnan(even_zen)]
-            del even_zen
-            del odd_zen
+    # if no_angle_data:
+    #     cn_path = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/iris_data/openEO_0_clip.nc"
+    #     _, s2_a = load_iris_data(cn_path, date=date)
+    # else:
+    #     if socket.gethostname()=='CELL200973':
+    #         even_zen, odd_zen = dataset.read_zenith_angles_as_numpy()
+    #         even_zen = even_zen[ymin:ymax, xmin:xmax]
+    #         odd_zen = odd_zen[ymin:ymax, xmin:xmax]
+    #         joint_zen = np.array(even_zen)
+    #         joint_zen[np.isnan(even_zen)] = odd_zen[np.isnan(even_zen)]
+    #         del even_zen
+    #         del odd_zen
 
-            even_az, odd_az = dataset.read_azimuth_angles_as_numpy()
-            even_az = even_az[ymin:ymax, xmin:xmax]
-            odd_az = odd_az[ymin:ymax, xmin:xmax]
-            joint_az = np.array(even_az)
-            joint_az[np.isnan(even_az)] = odd_az[np.isnan(even_az)]
-            del even_az
-            del odd_az
+    #         even_az, odd_az = dataset.read_azimuth_angles_as_numpy()
+    #         even_az = even_az[ymin:ymax, xmin:xmax]
+    #         odd_az = odd_az[ymin:ymax, xmin:xmax]
+    #         joint_az = np.array(even_az)
+    #         joint_az[np.isnan(even_az)] = odd_az[np.isnan(even_az)]
+    #         del even_az
+    #         del odd_az
 
-        else:
-            even_zen, odd_zen, even_az, odd_az = dataset.read_incidence_angles_as_numpy()
-            joint_zen = np.array(even_zen)
-            joint_zen[np.isnan(even_zen)]=odd_zen[np.isnan(even_zen)]
-            del even_zen
-            del odd_zen
-            joint_az = np.array(even_az)
-            joint_az[np.isnan(even_az)]=odd_az[np.isnan(even_az)]
-            del even_az
-            del odd_az
-        sun_zen, sun_az = dataset.read_solar_angles_as_numpy()
-        sun_zen = sun_zen[ymin:ymax, xmin:xmax]
-        sun_az = sun_az[ymin:ymax, xmin:xmax]
-        s2_a = np.stack((sun_zen, joint_zen, sun_az - joint_az), 0).data
-    print(s2_a.shape)
-    np.save(os.path.join(data_dir, output_file_name + "_angles.npy"), s2_a)
-    s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, bounds=bb,
-                                                                    crs=dataset.crs,
-                                                                    band_type=dataset.SRE)
-    if masks.sum()>0:
-        raise ValueError
-    s2_r = s2_r.data
-    print(s2_r.shape)
-    np.save(os.path.join(data_dir, output_file_name + "_refl.npy"), s2_r)
-    np.save(os.path.join(data_dir, output_file_name + "_xcoords.npy"), xcoords)
-    np.save(os.path.join(data_dir, output_file_name + "_ycoords.npy"), ycoords)
-    arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2,1,0],
-                                            dmin=np.array([0., 0., 0.]),
-                                            dmax=np.array([0.2,0.2,0.2]))
+    #     else:
+    #         even_zen, odd_zen, even_az, odd_az = dataset.read_incidence_angles_as_numpy()
+    #         joint_zen = np.array(even_zen)
+    #         joint_zen[np.isnan(even_zen)]=odd_zen[np.isnan(even_zen)]
+    #         del even_zen
+    #         del odd_zen
+    #         joint_az = np.array(even_az)
+    #         joint_az[np.isnan(even_az)]=odd_az[np.isnan(even_az)]
+    #         del even_az
+    #         del odd_az
+    #     sun_zen, sun_az = dataset.read_solar_angles_as_numpy()
+    #     sun_zen = sun_zen[ymin:ymax, xmin:xmax]
+    #     sun_az = sun_az[ymin:ymax, xmin:xmax]
+    #     s2_a = np.stack((sun_zen, joint_zen, sun_az - joint_az), 0).data
+    # print(s2_a.shape)
+    # np.save(os.path.join(data_dir, output_file_name + "_angles.npy"), s2_a)
+    # s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, bounds=bb,
+    #                                                                 crs=dataset.crs,
+    #                                                                 band_type=dataset.SRE)
+    # if masks.sum()>0:
+    #     raise ValueError
+    # s2_r = s2_r.data
+    # print(s2_r.shape)
+    # np.save(os.path.join(data_dir, output_file_name + "_refl.npy"), s2_r)
+    # np.save(os.path.join(data_dir, output_file_name + "_xcoords.npy"), xcoords)
+    # np.save(os.path.join(data_dir, output_file_name + "_ycoords.npy"), ycoords)
+
+    # arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2,1,0],
+    #                                         dmin=np.array([0., 0., 0.]),
+    #                                         dmax=np.array([0.2,0.2,0.2]))
     # fig, ax = plt.subplots(dpi=150, tight_layout=True)
     # ax.imshow(arr_rgb, extent = [bb[0], bb[2], bb[1], bb[3]])
     # data_gdf.plot(ax=ax)
@@ -170,9 +175,9 @@ def compute_frm4veg_data(data_dir, filename, s2_product_name, no_angle_data=Fals
     # ax.scatter(data_gdf["x_idx"], data_gdf['y_idx'])
     # plt.show()
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
-        variable_col, uncertainty_col = get_variable_column_names(variable=variable)
+        variable_col, uncertainty_col = get_variable_column_names(variable=variable, wytham=no_angle_data)
         gdf = data_gdf[[variable_col, uncertainty_col, "Land Cover", "x_idx", "y_idx",
-                        "geometry", "Date (dd/mm/yyyy)"]].dropna()
+                        "geometry", "Date (dd/mm/yyyy)"]].dropna().reset_index(drop=True)
         gdf.rename(columns = {variable_col:variable,
                               uncertainty_col:"uncertainty",
                               "Land Cover":"land cover", 
@@ -188,9 +193,9 @@ def load_frm4veg_data(data_dir, filename, variable="lai"):
                         driver="GeoJSON")
     s2_r = np.load(os.path.join(data_dir, filename + "_refl.npy"))
     s2_a = np.load(os.path.join(data_dir, filename + "_angles.npy"))
-    arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2, 1, 0],
-                                    dmin=np.array([0., 0., 0.]),
-                                    dmax=np.array([0.2,0.2,0.2]))
+    # arr_rgb, dmin, dmax = utils.rgb_render(s2_r, bands=[2, 1, 0],
+    #                                 dmin=np.array([0., 0., 0.]),
+    #                                 dmax=np.array([0.2,0.2,0.2]))
     xcoords = np.load(os.path.join(data_dir, filename + "_xcoords.npy"))
     ycoords = np.load(os.path.join(data_dir, filename + "_ycoords.npy"))
     return gdf, s2_r, s2_a, xcoords, ycoords
@@ -216,13 +221,13 @@ def load_iris_data(file_path, date = "2018-06-29"):
 
 def main():
     if socket.gethostname()=='CELL200973':
-        args=["-f", "FRM_Veg_Wytham_20180703",
-        # args=["-f", "FRM_Veg_Barrax_20180605",
+        # args=["-f", "FRM_Veg_Wytham_20180703",
+        args=["-f", "FRM_Veg_Barrax_20180605",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
-            #   "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
+              "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
             #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
-              "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
-        # "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"
+            #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
+        # "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()

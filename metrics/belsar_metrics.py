@@ -138,6 +138,7 @@ def get_belsar_image_metrics_df(belsar_dir, filename_dict, res_dir, file_suffix)
                 parcel_cm_sigma_std = np.nanstd(masked_array[3,...])
 
             d = {"name" : site_name,
+                 "land_cover":"Wheat" if site_name[0]=="W" else "Maize",
                 "date" : date,
                 "delta": delta,
                 "lai_mean" : lai_mean,

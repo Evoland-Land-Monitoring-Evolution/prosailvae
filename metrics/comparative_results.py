@@ -275,7 +275,7 @@ def plot_frm4veg_results_comparison(model_dict, model_results, data_dir, filenam
             fig.savefig(os.path.join(res_dir, f"{prefix}{variable}_{filename}_validation.png"))
 
 
-def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, prefix="", margin = 0.02):
+def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, prefix="", margin = 0.02, hue="Site", legend_col=3):
     n_models = len(model_dict) + 1
     xmin = np.min(model_results["SNAP"]["Predicted LAI"])
     xmax = np.max(model_results["SNAP"]["Predicted LAI"])
@@ -291,13 +291,13 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
 
     fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
     for i, (model_name, model_info) in enumerate(model_dict.items()):
-        df_metrics = pd.DataFrame(data = model_results[model_name])
-        fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue="Site",
-                                legend_col=3, xmin=xmin, xmax=xmax)
+        df_metrics = model_results[model_name]
+        fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
+                                legend_col=legend_col, xmin=xmin, xmax=xmax)
         ax.set_title(model_info["plot_name"])
-    df_metrics = pd.DataFrame(data = model_results["SNAP"])
-    fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue="Site", 
-                            legend_col=3, xmin=xmin, xmax=xmax)
+    df_metrics = model_results["SNAP"]
+    fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
+                            legend_col=legend_col, xmin=xmin, xmax=xmax)
     axs[-1].set_title("SNAP")
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)
@@ -305,10 +305,11 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest"):
     model_results = {}
     for _, (model_name, model_info) in enumerate(model_dict.items()):
-        metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_"+model_name, method=method)
-        model_results[model_name] = metrics
-    metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP", method=method)
-    model_results["SNAP"] = metrics
+        model_results[model_name] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, 
+                                                            file_suffix="_"+model_name, method=method)
+
+    model_results["SNAP"] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
+                                                    file_suffix="_SNAP", method=method)
     return model_results
 
 def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir=None, suffix="", margin=0.02):
@@ -541,9 +542,13 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
         validation_results[model_name] = model_results
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
             validation_results[model_name][f'ref_{variable}'] = validation_results_1[model_name][f'ref_{variable}']
+            gdf, _, _ , xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
+            gdf = gdf.iloc[:51]
+            validation_results[model_name][f"{variable}_land_cover"] = gdf["land cover"].values
     return validation_results
 
-def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results, wytham_results=None, frm4veg_lai="lai"):
+def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results, wytham_results=None, 
+                                     frm4veg_lai="lai"):
     metrics = {}
     for model_name, _ in belsar_results.items():
         ref_lai_list = [belsar_results[model_name]['lai_mean'].values.reshape(-1),
@@ -552,13 +557,17 @@ def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results,
         pred_lai_list = [belsar_results[model_name]['parcel_lai_mean'].values.reshape(-1),
                          barrax_results[model_name][frm4veg_lai].reshape(-1)]
         site_list = ['Belgium'] * len(ref_lai_list[0]) + ['Spain'] * len(ref_lai_list[1])
+        land_cover_list = [belsar_results[model_name]['land_cover'].values.reshape(-1),
+                           barrax_results[model_name][f'{frm4veg_lai}_land_cover'].reshape(-1)]
         if wytham_results is not None:
             ref_lai_list.append(wytham_results[model_name]['ref_lai'].reshape(-1))
             pred_lai_list.append(wytham_results[model_name][frm4veg_lai].reshape(-1))
             site_list = site_list + ['England'] * len(ref_lai_list[2])
-        metrics[model_name] = {'LAI': np.concatenate(ref_lai_list),
-                               'Predicted LAI': np.concatenate(pred_lai_list),
-                               "Site": np.array(site_list)}
+            land_cover_list.append(wytham_results[model_name][f'{frm4veg_lai}_land_cover'].reshape(-1))
+        metrics[model_name] = pd.DataFrame(data={'LAI': np.concatenate(ref_lai_list),
+                                                 'Predicted LAI': np.concatenate(pred_lai_list),
+                                                 "Site": np.array(site_list),
+                                                 "Land cover": np.concatenate(land_cover_list)})
     return metrics
 
 def main():
@@ -592,8 +601,8 @@ def main():
 
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
-        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
-    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+    #     save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
+    # get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
 
     belsar_results = {}
     barrax_results = {}
@@ -601,28 +610,36 @@ def main():
     validation_lai_results = {}
     for method in ["simple_interpolate", "best", "worst"]: #'closest', 
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method)
-        plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
+        # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
         barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
         barrax_sensor = ["2B", "2A"]
         barrax_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
                                                          method=method)
-        plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
-                                        res_dir=res_dir, prefix= "barrax_"+method+"_")
+        # plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
+        #                                 res_dir=res_dir, prefix= "barrax_"+method+"_")
         wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
         wytham_sensor = ["2A", "2A"]
         wytham_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, wytham_filenames, wytham_sensor,
                                                           method=method)
-        plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
-                                        res_dir=res_dir, prefix= "barrax_"+method+"_")
+        # plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
+        #                                 res_dir=res_dir, prefix= "wytham_"+method+"_")
+        validation_lai_results[method] = {}
         for variable in ['lai', "lai_eff"]:
-            validation_lai_results[method] = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results[method],
-                                                                                barrax_results[method], 
-                                                                                wytham_results=wytham_results[method],
-                                                                                frm4veg_lai=variable)
-            plot_lai_validation_comparison(model_dict, validation_lai_results[method],
+            validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results[method],
+                                                                                        barrax_results[method],
+                                                                                        wytham_results=wytham_results[method],
+                                                                                        frm4veg_lai=variable)
+            
+            for model, df_results in validation_lai_results[method][variable].items():
+                df_results.to_csv(os.path.join(res_dir, f"{method}_{variable}_{model}.csv"))
+            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=method + "_" + variable + "_",
                                            margin = 0.02)
+            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                           res_dir=res_dir, prefix=method + "_" + variable + "_Land_cover_",
+                                           margin = 0.02, hue="Land cover")
+            
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"

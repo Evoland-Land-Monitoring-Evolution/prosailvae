@@ -607,8 +607,8 @@ def main():
 
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
-    #     save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
-    # get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
+    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
 
     belsar_results = {}
     barrax_results = {}

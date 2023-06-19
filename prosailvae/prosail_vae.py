@@ -33,6 +33,8 @@ class ProsailVAEConfig:
     apply_norm_rec:bool = True
     inference_mode:bool = False
     prosail_bands:list[int] = field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12])
+    disabled_latent:list[int] = field(default_factory=lambda: [])
+    disabled_latent_values:list[int] = field(default_factory=lambda: [])
 
 def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                            inference_mode, prosail_bands, rsr_dir):
@@ -73,7 +75,9 @@ def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                             load_vae=params["load_model"],
                             apply_norm_rec=params["apply_norm_rec"],
                             inference_mode=inference_mode,
-                            prosail_bands=prosail_bands)
+                            prosail_bands=prosail_bands,
+                            disabled_latent=params["disabled_latent"],
+                            disabled_latent_values=params["disabled_latent_values"])
 
 
 def get_prosail_vae(pv_config:ProsailVAEConfig,

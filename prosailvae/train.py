@@ -339,6 +339,10 @@ def load_params(config_dir, config_file, parser=None):
         params["supervised_config_file"] = None
     if "supervised_weight_file" not in params.keys():
         params["supervised_weight_file"] = None
+    if "disabled_latent" not in params.keys():
+        params["disabled_latent"] = []
+    if "disabled_latent_values" not in params.keys():
+        params["disabled_latent_values"] = []
     return params
 
 def setup_training():

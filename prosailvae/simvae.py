@@ -64,7 +64,7 @@ class SimVAE(nn.Module):
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
                  inference_mode:bool=False,
-                 lat_nll:str=""):
+                 lat_nll:str="", disabled_latent=[], disabled_latent_values=[]):
         super(SimVAE, self).__init__()
         # encoder
         self.config = config
@@ -85,9 +85,10 @@ class SimVAE(nn.Module):
         self.hyper_prior = None
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
-        self.disabled_latent = torch.tensor([8]).to(self.device) # Disabling hotspot
-        print(f"WARNING: disabling latent variable {self.disabled_latent.item()}")
-        self.disabled_latent_value = torch.tensor([0]).float().to(self.device)
+        self.disabled_latent = torch.tensor(disabled_latent).to(self.device) # Disabling hotspot
+        if len(self.disabled_latent):
+            print(f"WARNING: disabling latent variable {self.disabled_latent}")
+        self.disabled_latent_value = torch.tensor(disabled_latent_values).float().to(self.device)
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior

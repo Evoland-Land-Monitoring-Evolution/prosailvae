@@ -59,6 +59,10 @@ def get_model_and_dataloader(parser):
             params_path = os.path.join(model_info["dir_path"], "prosailvae_weights.tar")
             config["load_model"] = True
             config["vae_load_file_path"] = params_path
+            if "disabled_latent" not in config.keys():
+                config["disabled_latent"] = []
+            if "disabled_latent_values" not in config.keys():
+                config["disabled_latent_values"] = []
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
                                                 norm_mean = norm_mean, norm_std=norm_std)
@@ -518,8 +522,9 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
                 results = np.zeros_like(ref)
                 try:
-                    results[err_1 <= err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1 <= err_2]
-                    results[err_1 > err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1 > err_2]
+                    err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
+                    results[err_1_le_err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1_le_err_2]
+                    results[np.logical_not(err_1_le_err_2)] = validation_results_2[model_name][f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
                 except:
                     print(validation_results_1[model_name][f"{variable}"].shape)
                     print(validation_results_1[model_name][f"{variable}"].reshape(-1).shape)
@@ -532,8 +537,9 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
                 err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
                 results = np.zeros_like(ref)
-                results[err_1 <= err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1 <= err_2]
-                results[err_1 > err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1 > err_2]
+                err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
+                results[err_1_le_err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1_le_err_2]
+                results[np.logical_not(err_1_le_err_2)] = validation_results_1[model_name][f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
                 model_results[variable] = results
             elif method == "dist_interpolate":
                 raise NotImplementedError
@@ -601,8 +607,8 @@ def main():
 
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
-        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
-    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+    #     save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
+    # get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
 
     belsar_results = {}
     barrax_results = {}
@@ -626,6 +632,7 @@ def main():
         #                                 res_dir=res_dir, prefix= "wytham_"+method+"_")
         validation_lai_results[method] = {}
         for variable in ['lai', "lai_eff"]:
+            print(method, variable)
             validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results[method],
                                                                                         barrax_results[method],
                                                                                         wytham_results=wytham_results[method],
@@ -634,10 +641,10 @@ def main():
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{method}_{variable}_{model}.csv"))
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=method + "_" + variable + "_",
+                                           res_dir=res_dir, prefix=method + "_" + variable,
                                            margin = 0.02)
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=method + "_" + variable + "_Land_cover_",
+                                           res_dir=res_dir, prefix=method + "_" + variable + "_Land_cover",
                                            margin = 0.02, hue="Land cover")
             
     # else:

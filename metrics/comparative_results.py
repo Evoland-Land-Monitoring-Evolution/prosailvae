@@ -63,6 +63,8 @@ def get_model_and_dataloader(parser):
                 config["disabled_latent"] = []
             if "disabled_latent_values" not in config.keys():
                 config["disabled_latent_values"] = []
+            if "R_down" not in params.keys():
+                params["R_down"] = 1
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
                                                 norm_mean = norm_mean, norm_std=norm_std)

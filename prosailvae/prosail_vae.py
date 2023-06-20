@@ -35,6 +35,7 @@ class ProsailVAEConfig:
     prosail_bands:list[int] = field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12])
     disabled_latent:list[int] = field(default_factory=lambda: [])
     disabled_latent_values:list[int] = field(default_factory=lambda: [])
+    R_down:int=1
 
 def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                            inference_mode, prosail_bands, rsr_dir):
@@ -77,7 +78,8 @@ def get_prosail_vae_config(params, bands, norm_mean, norm_std,
                             inference_mode=inference_mode,
                             prosail_bands=prosail_bands,
                             disabled_latent=params["disabled_latent"],
-                            disabled_latent_values=params["disabled_latent_values"])
+                            disabled_latent_values=params["disabled_latent_values"],
+                            R_down=params["R_down"])
 
 
 def get_prosail_vae(pv_config:ProsailVAEConfig,
@@ -107,19 +109,19 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                      z2sim_offset=z2sim_offset,
                                      sim_pdf_support_span=sim_pdf_support_span,
                                      device='cpu')
-    psimulator = ProsailSimulator(device='cpu')
+    psimulator = ProsailSimulator(device='cpu', R_down=pv_config.R_down)
     if load_simulator:
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
                                     norm_mean=pv_config.encoder_config.norm_mean,
                                     norm_std=pv_config.encoder_config.norm_std,
                                     apply_norm=pv_config.apply_norm_rec,
-                                    bands=pv_config.prosail_bands)
+                                    bands=pv_config.prosail_bands, R_down=pv_config.R_down)
     else:
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
                                     norm_mean=None,
                                     norm_std=None,
                                     apply_norm=pv_config.apply_norm_rec,
-                                    bands=pv_config.prosail_bands)
+                                    bands=pv_config.prosail_bands, R_down=pv_config.R_down)
     
     decoder = ProsailSimulatorDecoder(prosailsimulator=psimulator,
                                       ssimulator=ssimulator,

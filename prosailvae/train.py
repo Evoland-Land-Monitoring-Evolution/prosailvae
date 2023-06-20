@@ -350,6 +350,8 @@ def load_params(config_dir, config_file, parser=None):
         params["disabled_latent_values"] = []
     if "cycle_training" not in params.keys():
         params["cycle_training"] = False
+    if "R_down" not in params.keys():
+        params["R_down"] = 1
     return params
 
 def setup_training():

@@ -347,6 +347,20 @@ def main():
                         # "theia_SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8.pth"
                     ]
         valid_files = None
+        tiles = ["32ULV", # Vosges
+                 "31UFS", # Belgique
+                 "31UDP", # Ile de France
+                 "30UWU", # Bretagne
+                 "30TXQ", # Gironde
+                 "31TFJ", # Provence
+                 "33TWF", # Italie Sud
+                 "32TPQ", # Italie Nord
+                 "30TUM", # Espagne Nord
+                 "30SVJ", # Espagne Centre (Barrax)
+                 "30SVG", # Andalousie
+                 "30STE", # Maroc
+                 "33SVB", # Sicille
+                 "31UCS"] # Angleterre
         valid_tiles = ['theia_tensor']
     # valid_files = ["after_SENTINEL2A_20170621-111222-373_L2A_T30TUM_D_V1-4_roi_0.pth"]
     (train_patches, valid_patches, test_patches,

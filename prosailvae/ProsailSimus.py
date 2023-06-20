@@ -52,9 +52,11 @@ RSR of the sensor.
                  device='cpu',
                  norm_mean=None,
                  norm_std=None,
-                 apply_norm=True):
+                 apply_norm=True,
+                 R_down=1):
           
         super().__init__()
+        self.R_down = R_down
         self.bands=bands
         self.device=device
         self.prospect_range = prospect_range
@@ -63,11 +65,14 @@ RSR of the sensor.
         self.rsr_range = (int(self.rsr[0, 0].item() * 1000),
                           int(self.rsr[0, -1].item() * 1000))
         self.nb_lambdas = prospect_range[1] - prospect_range[0] + 1
+        # if self.R_down > 1:
+        #     self.nb_lambdas = (prospect_range[1] - prospect_range[0]) // self.R_down
         self.rsr_prospect = torch.zeros([self.rsr.shape[0], self.nb_lambdas]).to(device)
         self.rsr_prospect[0, :] = torch.linspace(prospect_range[0],
                                                  prospect_range[1],
                                                  self.nb_lambdas).to(device)
-        self.rsr_prospect[1:, :-(self.prospect_range[1] -
+        self.rsr_prospect[1:, 
+                          :-(self.prospect_range[1] -
                                  self.rsr_range[1])] = self.rsr[1:, (
                                      self.prospect_range[0] -
                                      self.rsr_range[0]):]
@@ -75,7 +80,9 @@ RSR of the sensor.
         self.solar = self.rsr_prospect[1, :].unsqueeze(0)
         self.rsr = self.rsr_prospect[2:, :].unsqueeze(0)
         self.rsr = self.rsr[:,bands,:]
-
+        # if self.R_down > 1:
+        #     self.solar = self.solar[:,:-1].reshape(1, -1, R_down).mean(2)
+        #     self.rsr = self.rsr[:,:,:-1].reshape(1, len(bands), -1, R_down).mean(3)
         if norm_mean is None:
             norm_mean = torch.zeros((1, len(bands)))
         else:
@@ -95,8 +102,12 @@ RSR of the sensor.
         self.norm_mean = norm_mean.float().to(device)
         self.norm_std = norm_std.float().to(device)
         self.apply_norm = apply_norm
+        
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
+        if self.R_down > 1:
+            self.s2norm_factor_n = self.s2norm_factor_n[:,:,:-1].reshape(1, len(bands), -1, R_down).mean(3)
+            
         
     def change_device(self, device):
         self.device = device
@@ -160,11 +171,12 @@ RSR of the sensor.
         return loss
 
 class ProsailSimulator():
-    def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu'):
+    def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu', R_down=10):
         super().__init__()
         self.factor = factor
         self.typelidf = typelidf
         self.device=device
+        self.R_down=R_down
     def __call__(self, params):
         return self.forward(params)
 
@@ -182,7 +194,8 @@ class ProsailSimulator():
             params,
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
-            device=self.device
+            device=self.device,
+            R_down=self.R_down
         ).float()
         
         return prosail_refl

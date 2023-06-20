@@ -132,7 +132,7 @@ RSR of the sensor.
         elif len(x.shape) == 2:
             x = x.unsqueeze(1)
         simu = (self.s2norm_factor_n * x).sum(
-            axis=2) / self.s2norm_factor_d  
+            axis=2) / self.s2norm_factor_d * self.R_down
         return simu
     
     def normalize(self, s2_r, bands_dim=1):

@@ -158,7 +158,7 @@ class SimVAE(nn.Module):
         if angles is None:
             angles = x[:,-3:]
             x = x[:,:-3]
-
+        batch_size = x.size(0)
         y, angles = self.encode(x, angles)
         dist_params = self.lat_space.get_params_from_encoder(y)
         if self.inference_mode:
@@ -173,7 +173,7 @@ class SimVAE(nn.Module):
         # decoding
         rec = self.decode(sim, angles, apply_norm=apply_norm)
         if is_patch:
-            return dist_params, z, unbatchify(sim), unbatchify(rec)
+            return dist_params, z, unbatchify(sim, batch_size=batch_size), unbatchify(rec, batch_size=batch_size)
         else:
             return dist_params, z, sim, rec
 

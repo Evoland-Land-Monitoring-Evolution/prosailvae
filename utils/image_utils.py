@@ -6,17 +6,17 @@ import matplotlib.pyplot as plt
 import rasterio as rio
 from affine import Affine
 
-def unbatchify(tensor: torch.Tensor) -> torch.Tensor:
+def unbatchify(tensor: torch.Tensor, batch_size=1) -> torch.Tensor:
     """
     Reshapes tensor into a patch-like tensor.
     Assumes that the patch spatial dimensions were put into the batch dimension.
     """
     n_tensor_dim = len(tensor.size())
     if n_tensor_dim == 3:
-        patch_size = torch.sqrt(torch.tensor(tensor.size(0))).int().item()
+        patch_size = torch.sqrt(torch.tensor(tensor.size(0)/batch_size)).int().item()
         n_feat = tensor.size(1)
         n_samples = tensor.size(2)
-        return tensor.reshape(patch_size, patch_size, n_feat, n_samples).permute(3,2,0,1)
+        return tensor.reshape(batch_size, patch_size, patch_size, n_feat, n_samples).permute(0,4,3,1,2)
 
     raise NotImplementedError
 
@@ -91,7 +91,7 @@ def rgb_render(
 
 
 def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
-                                 bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]), 
+                                 bands=torch.tensor([0,1,2,3,4,5,6,7,8,9]),
                                  mode='lat_mode', padding=False, no_rec=False):
     s2_r, s2_a = batch
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
@@ -113,8 +113,8 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                 else:
                     dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
                     patched_rec_image[i,j,:,:,:] = rec
-            patched_sim_image[i,j,:,:,:] = sim
-            patched_sigma_image[i,j,:,:,:] = dist_params[1,...]
+            patched_sim_image[i,j,:,:,:] = sim.squeeze(0)
+            patched_sigma_image[i,j,:,:,:] = dist_params.squeeze(0)[1,...]
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)]
     rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)]
     sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)]
@@ -132,7 +132,9 @@ def check_is_patch(tensor:torch.Tensor):
     """
     Checks if a tensor (reflectances or angles) is a patch or a pixellic batch
     """
-    if len(tensor.size()) == 4: # B x F x H x W
+    if len(tensor.size()) == 4: # (B x S) x F x H x W
+        return True
+    if len(tensor.size()) == 5: # B x S x F x H x W
         return True
     elif len(tensor.size()) == 2: # B x F
         return False

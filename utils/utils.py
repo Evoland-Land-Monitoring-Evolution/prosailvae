@@ -19,7 +19,7 @@ def select_rec_loss_fn(loss_type):
     if loss_type in simple_losses_1d:
         rec_loss_fn = NLLLoss(2,1)
     elif loss_type == "spatial_nll":
-        rec_loss_fn = NLLLoss(0,1)
+        rec_loss_fn = NLLLoss(1,2) 
     elif loss_type == "full_nll":
         rec_loss_fn = full_gaussian_nll_loss
     elif loss_type =='mse':
@@ -86,12 +86,12 @@ def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1):
         rec_err_var=torch.tensor([[0.0001]]).to(tgt.device) # constant variance, enabling computation even with 1 sample
         rec_mu = recs
     else:
-        rec_err_var = torch.var(recs, sample_dim)#.unsqueeze(sample_dim)
-        rec_mu = recs.mean(sample_dim)#.unsqueeze(sample_dim)
-        if feature_dim > sample_dim: # if feature dimension is after sample dimension, 
-            # reducing it because sample dimension disappeared
-            feature_dim = feature_dim - 1
-    return gaussian_nll(tgt, rec_mu, rec_err_var, sum_dim=feature_dim).mean()
+        rec_err_var = recs.var(sample_dim, keepdim=True)#.unsqueeze(sample_dim)
+        rec_mu = recs.mean(sample_dim, keepdim=True)#.unsqueeze(sample_dim)
+        # if feature_dim > sample_dim: # if feature dimension is after sample dimension, 
+        #     # reducing it because sample dimension disappeared
+        #     feature_dim = feature_dim - 1
+    return gaussian_nll(tgt.unsqueeze(sample_dim), rec_mu, rec_err_var, sum_dim=feature_dim).mean()
 
 def full_gaussian_nll_loss(tgt, recs):
     err = recs # - tgt.unsqueeze(2)

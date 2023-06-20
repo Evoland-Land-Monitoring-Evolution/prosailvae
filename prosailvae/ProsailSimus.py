@@ -106,7 +106,7 @@ RSR of the sensor.
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
         if self.R_down > 1:
-            self.s2norm_factor_n = self.s2norm_factor_n[:,:,:-1].reshape(1, len(bands), -1, R_down).mean(3)
+            self.s2norm_factor_n = self.s2norm_factor_n[:,:,:-1].reshape(1, len(bands), -1, R_down).mean(3) * self.R_down
             
         
     def change_device(self, device):
@@ -132,7 +132,7 @@ RSR of the sensor.
         elif len(x.shape) == 2:
             x = x.unsqueeze(1)
         simu = (self.s2norm_factor_n * x).sum(
-            axis=2) / self.s2norm_factor_d * self.R_down
+            axis=2) / self.s2norm_factor_d 
         return simu
     
     def normalize(self, s2_r, bands_dim=1):

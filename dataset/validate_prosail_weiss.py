@@ -7,7 +7,7 @@ import os
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, PROSAILVARS
 from tqdm import trange
 from metrics.prosail_plots import plot_param_compare_dist
-from weiss_utils import load_weiss_dataset
+from dataset.weiss_utils import load_weiss_dataset
 
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
 

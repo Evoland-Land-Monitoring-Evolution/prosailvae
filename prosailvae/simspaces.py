@@ -10,6 +10,9 @@ import torch.nn as nn
 import numpy as np
 from .dist_utils import convolve_pdfs, pdfs2cdfs, cdfs2quantiles
 from utils.TruncatedNormal import TruncatedNormal
+from utils.image_utils import batchify_batch_latent, unbatchify
+from utils.utils import torch_select_unsqueeze
+from ProsailSimus import get_z2prosailparams_bound
 
 class SimVarSpace(nn.Module):
     def lat2sim(self):
@@ -41,17 +44,19 @@ class LinearVarSpace(SimVarSpace):
         self.sim_pdf_support_span = self.sim_pdf_support_span .to(device)
         self.inv_z2sim_mat = self.inv_z2sim_mat.to(device)
 
-    def get_distribution_from_lat_params(self,lat_params, distribution_type="tn"):
+    def get_distribution_from_lat_params(self, lat_params, distribution_type="tn", dist_idx=1, ):
         if distribution_type == "tn":
-            lat_mu = lat_params[..., 0]
-            sim_mu = self.z2sim(lat_mu)
-            lat_sigma = lat_params[..., 1]
+            lat_mu = lat_params.select(dist_idx, 0)
+            sim_mu = unbatchify(self.z2sim(batchify_batch_latent(lat_mu).unsqueeze(2))).squeeze(0)
+            lat_sigma = lat_params.select(dist_idx, 1)
             lat_sigma2 = lat_sigma.pow(2)
-            sim_sigma2 = None
+            sim_sigma2 = torch_select_unsqueeze(torch.diag(self.z2sim_mat).pow(2), 1, len(lat_sigma2.size())) * lat_sigma2
             sim_sigma = sim_sigma2.sqrt()
+            high = torch_select_unsqueeze(get_z2prosailparams_bound("high"), 1, len(lat_sigma2.size()))
+            low = torch_select_unsqueeze(get_z2prosailparams_bound("low"), 1, len(lat_sigma2.size()))
             distribution = TruncatedNormal(loc=sim_mu, scale=sim_sigma,
-                                           low=torch.zeros_like(sim_mu),
-                                           high=torch.ones_like(sim_mu))
+                                           low=low,
+                                           high=high)
             pass
         else:
             raise NotImplementedError

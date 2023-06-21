@@ -20,10 +20,10 @@ from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path
 from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
-from ProsailSimus import get_bands_idx
+from ProsailSimus import get_bands_idx, BANDS
 import argparse
 import pandas as pd
-
+from dataset.generate_dataset import np_simulate_prosail_dataset
 
 import socket
 import os
@@ -349,25 +349,29 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     pv_config_1 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
                                        inference_mode = False, rsr_dir=parser.rsr_dir,
                                        norm_mean = norm_mean, norm_std=norm_std)
-    params["R_down"]=5
-    pv_config_2 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
-                                       inference_mode = False, rsr_dir=parser.rsr_dir,
-                                       norm_mean = norm_mean, norm_std=norm_std)
     pv_config_hyper=None
     if params_sup_kl_model is not None:
         bands_hyper, prosail_bands_hyper = get_bands_idx(params_sup_kl_model["weiss_bands"])
         pv_config_hyper = get_prosail_vae_config(params_sup_kl_model, bands=bands_hyper,
-                                                 prosail_bands=prosail_bands_hyper,
-                                                 inference_mode=True, rsr_dir=parser.rsr_dir,
-                                                 norm_mean=sup_norm_mean, norm_std=sup_norm_std)
-
+                                                prosail_bands=prosail_bands_hyper,
+                                                inference_mode=True, rsr_dir=parser.rsr_dir,
+                                                norm_mean=sup_norm_mean, norm_std=sup_norm_std)
     prosail_vae_1 = load_prosail_vae_with_hyperprior(pv_config=pv_config_1,
                                                      pv_config_hyper=pv_config_hyper,
                                                      logger_name=LOGGER_NAME)
-    prosail_vae_2 = load_prosail_vae_with_hyperprior(pv_config=pv_config_2,
-                                                    pv_config_hyper=pv_config_hyper,
-                                                    logger_name=LOGGER_NAME)
-    # Training
+    pvae_down = {}
+    for R_down in [2,4,5,10]:
+        params["R_down"]=R_down
+        pv_config_2 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
+                                        inference_mode = False, rsr_dir=parser.rsr_dir,
+                                        norm_mean = norm_mean, norm_std=norm_std)
+
+
+
+        prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config_2,
+                                                        pv_config_hyper=pv_config_hyper,
+                                                        logger_name=LOGGER_NAME)
+        pvae_down[str(R_down)] = prosail_vae
     x, angles = train_loader.dataset[0]
     x = x.unsqueeze(0)
     angles = angles.unsqueeze(0)
@@ -377,20 +381,44 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     z = prosail_vae_1.lat_space.mode(dist_params)
     # transfer to simulator variable
     sim = prosail_vae_1.transfer_latent(z.unsqueeze(2))
+
+    p_vars, p_s2r = np_simulate_prosail_dataset(nb_simus=1024, noise=0, psimulator=prosail_vae_1.decoder.prosailsimulator,
+                                                ssimulator=prosail_vae_1.decoder.ssimulator,
+                                                n_samples_per_batch=1024, uniform_mode=False, lai_corr=True)
+
     # decoding
-    idx_band = 4
+    sim = torch.from_numpy(p_vars[:,:11]).unsqueeze(2).float()
+    angles = torch.from_numpy(p_vars[:,11:]).float()
+    p_s2r = torch.from_numpy(p_s2r).float()
+
     rec_1 = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
-    rec_2 = prosail_vae_2.decode(sim, angles, apply_norm=False).detach()
-    n_samples = sim.size(2)
-    batch_size = sim.size(0)
-    sim_input = torch.concat((sim, angles.unsqueeze(2).repeat(1,1,n_samples)), 
-                                axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
-    prosail_output_1 = prosail_vae_1.decoder.prosailsimulator(sim_input).detach()
-    prosail_output_2 = prosail_vae_2.decoder.prosailsimulator(sim_input).detach()
+    recs_rdown = {}
+    for key, pvae in pvae_down.items():
+        recs_rdown[key] = pvae.decode(sim, angles, apply_norm=False).detach()
     import matplotlib.pyplot as plt
-    fix, ax = plt.subplots(dpi=150)
-    ax.plot(np.arange(400,2501), prosail_output_1[0,:])
-    ax.plot(np.arange(400,2500, 10), prosail_output_2[0,:])
+    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True)
+    for i in range(10):
+        row = i % 2
+        col = i//2
+        for j, (key, rec) in enumerate(recs_rdown.items()):
+            err = (rec_1[:,i,:] - rec[:,i,:]).abs().squeeze()
+            axs[row, col].boxplot(err,positions=[j], showfliers=False)
+        axs[row, col].set_xlabel("Down-sampling")
+        axs[row, col].set_xticklabels(recs_rdown.keys())
+        axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
+        axs[row, col].set_title(BANDS[i])
+    axs[0, 0].set_ylabel('Absolute Error')
+    axs[1, 0].set_ylabel('Absolute Error')
+    # n_samples = sim.size(2)
+    # batch_size = sim.size(0)
+    # sim_input = torch.concat((sim, angles.unsqueeze(2).repeat(1,1,n_samples)), 
+    #                             axis=1).transpose(1,2).reshape(n_samples*batch_size, -1)
+    # prosail_output_1 = prosail_vae_1.decoder.prosailsimulator(sim_input).detach()
+    # prosail_output_2 = prosail_vae_2.decoder.prosailsimulator(sim_input).detach()
+    
+    # fix, ax = plt.subplots(dpi=150)
+    # ax.plot(np.arange(400,2501), prosail_output_1[0,:])
+    # ax.plot(np.arange(400,2500, 10), prosail_output_2[0,:])
     fig, ax = plt.subplots(10,1, dpi=150)
     for idx_band in range(10):
         xmin = min(rec_1[:,idx_band, :].min(), rec_2[:,idx_band, :].min())

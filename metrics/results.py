@@ -207,7 +207,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     fig, ax = plot_belsar_metrics(belsar_metrics, hue='delta')
     fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_delta.png"))
     belsar_metrics_inter = compute_metrics_at_date(belsar_dir, belsar_res_dir, 
-                                                   method="interpolate", file_suffix="_pvae")
+                                                   method="simple_interpolate", file_suffix="_pvae")
     fig, ax = plot_belsar_metrics(belsar_metrics_inter)
     fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_crop.png"))
     fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='date')
@@ -323,7 +323,7 @@ def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
                          hw = 0, 
                          half_res_coords=True)
 
-def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, suffix="_pvae"):
+def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, suffix="_pvae", mode="lat_mode"):
     NO_DATA = -10000
     for filename in list_filenames:
         df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
@@ -338,7 +338,7 @@ def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, su
         with torch.no_grad():
             (_, sim_image, _, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
                                                         patch_size=32, bands=torch.arange(10),
-                                                        mode="lat_mode", padding=True, no_rec=True)
+                                                        mode=mode, padding=True, no_rec=True)
         
         # lai_validation_pred = sim_image[6,...].unsqueeze(0)
         # cm_validation_pred = sim_image[5,...].unsqueeze(0)

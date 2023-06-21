@@ -54,7 +54,7 @@ class TruncatedNormal(Distribution):
         self._log_scale = scale.log()
         self._lpbb_m_lpaa_d_Z = (self.little_phi_b * self.scaled_high - self.little_phi_a * self.scaled_low) / self.Z
         self._mean = -(self.little_phi_b - self.little_phi_a) / self.Z * self.scale + self.loc
-        self._variance = 1 - self._lpbb_m_lpaa_d_Z - ((self.little_phi_b - self.little_phi_a) / self.Z) ** 2 * self.scale ** 2
+        self._variance = (1 - self._lpbb_m_lpaa_d_Z - ((self.little_phi_b - self.little_phi_a) / self.Z) ** 2) * self.scale ** 2
         self._entropy = CONST_LOG_SQRT_2PI_E + self._logZ - 0.5 * self._lpbb_m_lpaa_d_Z + self._log_scale
 
     @constraints.dependent_property

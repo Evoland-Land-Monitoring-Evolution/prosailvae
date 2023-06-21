@@ -113,8 +113,10 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                 else:
                     dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
                     patched_rec_image[i,j,:,:,:] = rec
+            
             patched_sim_image[i,j,:,:,:] = sim.squeeze(0)
-            patched_sigma_image[i,j,:,:,:] = dist_params.squeeze(0)[1,...]
+            sigma_sim = PROSAIL_VAE.sim_space.get_distribution_from_lat_params(dist_params).variance.sqrt()
+            patched_sigma_image[i,j,:,:,:] = sigma_sim# dist_params.squeeze(0)[1,...]
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)]
     rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)]
     sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)]

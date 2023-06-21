@@ -253,8 +253,12 @@ class SimVAE(nn.Module):
             z = self.lat_space.mode(dist_params)
             # transfer to simulator variable
             sim = self.transfer_latent(z.unsqueeze(2))
+            
         elif mode == "sim_tg_mean":
-            pass
+            z = self.lat_space.expectation(dist_params)
+            # transfer to simulator variable
+            sim = self.transfer_latent(z.unsqueeze(2))
+
         elif mode == "sim_mode":
             lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
             sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)

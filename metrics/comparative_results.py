@@ -63,8 +63,8 @@ def get_model_and_dataloader(parser):
                 config["disabled_latent"] = []
             if "disabled_latent_values" not in config.keys():
                 config["disabled_latent_values"] = []
-            if "R_down" not in params.keys():
-                params["R_down"] = 1
+            if "R_down" not in config.keys():
+                config["R_down"] = 1
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
                                                 norm_mean = norm_mean, norm_std=norm_std)
@@ -311,8 +311,8 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest"):
     model_results = {}
     for _, (model_name, model_info) in enumerate(model_dict.items()):
-        model_results[model_name] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, 
-                                                            file_suffix="_"+model_name, method=method)
+        model_results[model_name] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
+                                                            file_suffix="_" + model_name, method=method)
 
     model_results["SNAP"] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
                                                     file_suffix="_SNAP", method=method)
@@ -616,7 +616,7 @@ def main():
     barrax_results = {}
     wytham_results = {}
     validation_lai_results = {}
-    for method in ["simple_interpolate", "best", "worst"]: #'closest', 
+    for method in ["simple_interpolate", "best", "worst", "mean_interpolate"]: #'closest', 
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 

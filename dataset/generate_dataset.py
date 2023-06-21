@@ -178,20 +178,21 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
 
     for i in range(n_full_batch):
         prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=n_samples_per_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
-        sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())).numpy()
+        prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())
+        sim_s2_r = ssimulator(prosail_r).numpy()
         if noise>0:
             sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)
             add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
             sim_s2_r += add_noise
         prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
-
-    prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
-    sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
-    if noise>0:
-        sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
-        add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
-        sim_s2_r += add_noise
-    prosail_s2_sim[n_full_batch*n_samples_per_batch:,:] = sim_s2_r
+    if last_batch > 0:
+        prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(ProsailVarsDist, n_samples=last_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
+        sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
+        if noise>0:
+            sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
+            add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
+            sim_s2_r += add_noise
+        prosail_s2_sim[n_full_batch*n_samples_per_batch:,:] = sim_s2_r
     return prosail_vars, prosail_s2_sim
 
 

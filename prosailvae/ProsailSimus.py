@@ -389,6 +389,28 @@ def get_z2prosailparams_mat():
     z2prosailparams_mat[10,10] = bounds.rsoil[1] - bounds.rsoil[0]
     return z2prosailparams_mat
 
+def get_z2prosailparams_bound(which='high'):
+    if which =="high":
+        idx = 1
+    elif which == "low":
+        idx = 0
+    else:
+        raise ValueError
+    bounds = ProsailVarsDist()
+    z2prosailparams_mat = torch.zeros((11))
+    z2prosailparams_mat[0] = bounds.N[idx]
+    z2prosailparams_mat[1] = bounds.cab[idx]
+    z2prosailparams_mat[2] = bounds.car[idx] 
+    z2prosailparams_mat[3] = bounds.cbrown[idx]
+    z2prosailparams_mat[4] = bounds.caw[idx] 
+    z2prosailparams_mat[5] = bounds.cm[idx] 
+    z2prosailparams_mat[6] = bounds.lai[idx] 
+    z2prosailparams_mat[7] = bounds.lidfa[idx] 
+    z2prosailparams_mat[8] = bounds.hspot[idx] 
+    z2prosailparams_mat[9] = bounds.psoil[idx] 
+    z2prosailparams_mat[10] = bounds.rsoil[idx]
+    return z2prosailparams_mat
+
 def get_z2prosailparams_offset():
     bounds = ProsailVarsDist()
     z2prosailparams_offset = torch.tensor([bounds.N[0],

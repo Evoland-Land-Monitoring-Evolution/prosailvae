@@ -596,26 +596,34 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
                 err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
                 results = np.zeros_like(ref)
+                results_std = np.zeros_like(ref)
                 try:
                     err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
                     results[err_1_le_err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1_le_err_2]
                     results[np.logical_not(err_1_le_err_2)] = validation_results_2[model_name][f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+                    results_std[err_1_le_err_2] = validation_results_1[model_name][f"{variable}_std"].reshape(-1)[err_1_le_err_2]
+                    results_std[np.logical_not(err_1_le_err_2)] = validation_results_2[model_name][f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+ 
                 except:
                     print(validation_results_1[model_name][f"{variable}"].shape)
                     print(validation_results_1[model_name][f"{variable}"].reshape(-1).shape)
                     print((err_1 <= err_2).shape)
                     raise ValueError
                 model_results[variable] = results
-                
+                model_results[variable + "_std"] = results_std
             elif method == "worst":
                 ref = validation_results_1[model_name][f"ref_{variable}"]
                 err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
                 err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
                 results = np.zeros_like(ref)
+                results_std = np.zeros_like(ref)
                 err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
                 results[err_1_le_err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1_le_err_2]
                 results[np.logical_not(err_1_le_err_2)] = validation_results_1[model_name][f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+                results_std[err_1_le_err_2] = validation_results_2[model_name][f"{variable}_std"].reshape(-1)[err_1_le_err_2]
+                results_std[np.logical_not(err_1_le_err_2)] = validation_results_1[model_name][f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
                 model_results[variable] = results
+                model_results[variable + "_std"] = results_std
             elif method == "dist_interpolate":
                 raise NotImplementedError
             else:
@@ -699,10 +707,10 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{method}_{variable}_{model}.csv"))
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=method + "_" + variable,
+                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
                                            margin = 0.02)
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=method + "_" + variable + "_Land_cover",
+                                           res_dir=res_dir, prefix=f"{mode}_{variable}_Land_cover",
                                            margin = 0.02, hue="Land cover")
             plt.close('all')
     # else:

@@ -372,15 +372,15 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                         pv_config_hyper=pv_config_hyper,
                                                         logger_name=LOGGER_NAME)
         pvae_down[str(R_down)] = prosail_vae
-    x, angles = train_loader.dataset[0]
-    x = x.unsqueeze(0)
-    angles = angles.unsqueeze(0)
-    y, angles = prosail_vae_1.encode(x, angles)
-    dist_params = prosail_vae_1.lat_space.get_params_from_encoder(y)
-    # latent mode
-    z = prosail_vae_1.lat_space.mode(dist_params)
-    # transfer to simulator variable
-    sim = prosail_vae_1.transfer_latent(z.unsqueeze(2))
+    # x, angles = train_loader.dataset[0]
+    # x = x.unsqueeze(0)
+    # angles = angles.unsqueeze(0)
+    # y, angles = prosail_vae_1.encode(x, angles)
+    # dist_params = prosail_vae_1.lat_space.get_params_from_encoder(y)
+    # # latent mode
+    # z = prosail_vae_1.lat_space.mode(dist_params)
+    # # transfer to simulator variable
+    # sim = prosail_vae_1.transfer_latent(z.unsqueeze(2))
 
     p_vars, p_s2r = np_simulate_prosail_dataset(nb_simus=1024, noise=0, psimulator=prosail_vae_1.decoder.prosailsimulator,
                                                 ssimulator=prosail_vae_1.decoder.ssimulator,
@@ -396,14 +396,14 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     for key, pvae in pvae_down.items():
         recs_rdown[key] = pvae.decode(sim, angles, apply_norm=False).detach()
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True)
+    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
     for i in range(10):
         row = i % 2
         col = i//2
         for j, (key, rec) in enumerate(recs_rdown.items()):
             err = (rec_1[:,i,:] - rec[:,i,:]).abs().squeeze()
             axs[row, col].boxplot(err,positions=[j], showfliers=False)
-        axs[row, col].set_xlabel("Down-sampling")
+        axs[1, col].set_xlabel("Down-sampling")
         axs[row, col].set_xticklabels(recs_rdown.keys())
         axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
         axs[row, col].set_title(BANDS[i])

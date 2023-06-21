@@ -647,7 +647,7 @@ def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results,
                             barrax_results[model_name][f'ref_{frm4veg_lai}_std'].reshape(-1)]
         pred_lai_list = [belsar_results[model_name]['parcel_lai_mean'].values.reshape(-1),
                          barrax_results[model_name][frm4veg_lai].reshape(-1)]
-        pred_lai_std_list = [belsar_results[model_name]['parcel_lai_std'].values.reshape(-1),
+        pred_lai_std_list = [belsar_results[model_name]['parcel_lai_sigma_mean'].values.reshape(-1),
                              barrax_results[model_name][frm4veg_lai + "_std"].reshape(-1)]
         site_list = ['Belgium'] * len(ref_lai_list[0]) + ['Spain'] * len(ref_lai_list[1])
         land_cover_list = [belsar_results[model_name]['land_cover'].values.reshape(-1),
@@ -666,6 +666,21 @@ def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results,
                                                  "Site": np.array(site_list),
                                                  "Land cover": np.concatenate(land_cover_list)})
     return metrics
+
+def get_models_global_metrics(results_dict, sites, variable = 'lai', n_models = 2, n_sigma=3):
+    methods = results_dict.keys()
+    rmse = np.zeros((len(methods), n_models, len(sites)+1))
+    picp = np.zeros((len(methods), n_models-1, len(sites)+1))
+    for i, method in enumerate(methods):
+        for j, model in enumerate(results_dict[method][variable].keys()):
+            results = results_dict[method][variable][model]
+            for k, site in enumerate(sites):
+                site_results = results[results['Site']==site]
+                rmse[i,j,k] = np.sqrt((site_results['Predicted LAI'] - site_results['LAI']).pow(2).mean())
+                picp[i,j,k] = np.logical_and(site_results['LAI'] < site_results['Predicted LAI'] + n_sigma * site_results['Predicted LAI std'],
+                                             site_results['LAI'] > site_results['Predicted LAI'] - n_sigma * site_results['Predicted LAI std']).astype(int).mean()
+            rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
+    return rmse, picp
 
 def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                    recompute=True, mode ="lat_mode"):
@@ -687,7 +702,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
         barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
         barrax_sensor = ["2B", "2A"]
         barrax_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
-                                                         method=method)
+                                                          method=method)
         # plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
         #                                 res_dir=res_dir, prefix= "barrax_"+method+"_")
         wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
@@ -713,6 +728,10 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
                                            res_dir=res_dir, prefix=f"{mode}_{variable}_Land_cover",
                                            margin = 0.02, hue="Land cover")
             plt.close('all')
+            rmse, picp = get_models_global_metrics(validation_lai_results, sites=["Spain", "England", "Belgium"], 
+                                                   variable=variable, n_models=len(model_dict)+1, n_sigma=3)
+            np.save(rmse, os.path.join(res_dir, f"{mode}_{variable}_Land_cover_rmse.npy"))
+            np.save(picp, os.path.join(res_dir, f"{mode}_{variable}_Land_cover_picp.npy"))
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"

@@ -409,6 +409,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
         axs[row, col].set_title(BANDS[i])
     axs[0, 0].set_ylabel('Absolute Error')
     axs[1, 0].set_ylabel('Absolute Error')
+    fig.savefig("Prosail_down_sampling_error_boxplot.png")
     # n_samples = sim.size(2)
     # batch_size = sim.size(0)
     # sim_input = torch.concat((sim, angles.unsqueeze(2).repeat(1,1,n_samples)), 

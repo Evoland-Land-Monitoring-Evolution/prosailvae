@@ -9,7 +9,7 @@ from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
 from prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics, regression_plot
-from prosailvae.ProsailSimus import get_bands_idx
+from prosailvae.ProsailSimus import get_bands_idx, BANDS
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from tqdm import tqdm
 import pandas as pd
@@ -152,7 +152,7 @@ def get_model_frm4veg_results(model_dict: dict,
     return model_results
 
 
-def get_model_results(model_dict: dict, test_loader, info_test_data):
+def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50):
     """
     Compute results for all models
     """
@@ -167,6 +167,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data):
     all_snap_cw = []
     with torch.no_grad():
         for i, batch in enumerate(tqdm(test_loader)):
+            if i>=max_patch:
+                break
             current_patch_results = {}
             largest_hw = 0
             for model_name, model_info in model_dict.items():
@@ -410,10 +412,13 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
 
     err_scatter_dict = {}
+    err_boxplot_dict = {}
     global_lim = [10, 0]
     for _, model_info in model_dict.items():
-        err_scatter_dict[model_info["plot_name"]] = (model_info["reconstruction"][:,:10,...]
-                                                     - all_s2_r[:,:10,...]).pow(2).mean(1).sqrt().reshape(-1)
+        err_boxplot_dict[model_info["plot_name"]] = (model_info["reconstruction"][:,:10,...]
+                                                     - all_s2_r[:,:10,...])
+        err_scatter_dict[model_info["plot_name"]] = err_boxplot_dict[model_info["plot_name"]].pow(2).mean(1).sqrt().reshape(-1)
+        
         global_lim[0] = min(global_lim[0], err_scatter_dict[model_info["plot_name"]].min().item())
         global_lim[1] = max(global_lim[1], err_scatter_dict[model_info["plot_name"]].max().item())
     fig, _ = regression_pair_plot(err_scatter_dict, global_lim)
@@ -427,6 +432,29 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         axs[i].set_title(model_info["plot_name"])
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_err_hist.png"))
+
+    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True)
+    for i in range(10):
+        row = i % 2
+        col = i//2
+        for j, (_, model_info) in enumerate(model_dict.items()):
+            err = err_boxplot_dict[model_info["plot_name"]][:,i,...].abs()
+            axs[row, col].boxplot(err, positions=[j], showfliers=False)
+        # axs[row, col].set_xticklabels(recs_rdown.keys())
+        axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
+        axs[row, col].set_title(BANDS[i])
+        axs[row, 0].set_ylabel('Absolute Error')
+        axs[1, col].set_xlabel('Model')
+        
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "model_err_boxplot.png"))
+    fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
+    for i, (_, model_info) in enumerate(model_dict.items()):
+        axs[i].hist(err_boxplot_dict[model_info["plot_name"]][:,], bins=200, range=global_lim)
+        axs[i].plot(global_lim, global_lim, 'k--')
+        axs[i].set_title(model_info["plot_name"])
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "model_err_boxplot.png"))
 
 def compare_snap_versions_on_real_data(test_loader, res_dir):
     snap_ver = ["2.1", "3A", "3B"]
@@ -648,7 +676,7 @@ def main():
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=method + "_" + variable + "_Land_cover",
                                            margin = 0.02, hue="Land cover")
-            
+            plt.close('all')
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"
@@ -665,8 +693,8 @@ def main():
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)
-    compare_snap_versions_on_real_data(test_loader, res_dir)
-    compare_snap_versions_on_weiss_data(res_dir)
+    # compare_snap_versions_on_real_data(test_loader, res_dir)
+    # compare_snap_versions_on_weiss_data(res_dir)
     
 if __name__=="__main__":
     main()

@@ -85,10 +85,6 @@ class SimVAE(nn.Module):
         self.hyper_prior = None
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
-        self.disabled_latent = torch.tensor(disabled_latent).to(self.device) # Disabling hotspot
-        if len(self.disabled_latent):
-            print(f"WARNING: disabling latent variable {self.disabled_latent}")
-        self.disabled_latent_value = torch.tensor(disabled_latent_values).float().to(self.device)
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
@@ -104,7 +100,7 @@ class SimVAE(nn.Module):
         self.decoder.change_device(device)
         if self.hyper_prior is not None:
             self.hyper_prior.change_device(device)
-        self.disabled_latent_value.to(device)
+        
 
     def encode(self, s2_r, s2_a):
         """
@@ -165,8 +161,6 @@ class SimVAE(nn.Module):
             return dist_params, None, None, None
         # latent sampling
         z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
-        if len(self.disabled_latent):
-            z[...,self.disabled_latent] = self.disabled_latent_value
         # transfer to simulator variable
         sim = self.transfer_latent(z)
 
@@ -182,54 +176,10 @@ class SimVAE(nn.Module):
         Forward pass with point estimate of latent distribution
         """
         is_patch = check_is_patch(x)
-        if mode == 'random':
-            dist_params, z, sim, rec = self.forward(x, angles, n_samples=1, apply_norm=apply_norm)
-
-        elif mode == 'lat_mode':
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
-            # latent mode
-            z = self.lat_space.mode(dist_params)
-            # transfer to simulator variable
-            sim = self.transfer_latent(z.unsqueeze(2))
-            # decoding
-            rec = self.decode(sim, angles, apply_norm=apply_norm)
-
-        elif mode == "sim_mode":
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
-            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
-            sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
-            z = self.sim_space.sim2z(sim)
-            # Quickfix for angle dimension:
-            if len(angles.size())==4:
-                angles = angles.permute(0,2,3,1)
-                angles = angles.reshape(-1, 3)
-            rec = self.decode(sim, angles, apply_norm=apply_norm)
-
-        elif mode == "sim_median":
-            y = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
-            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
-            sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
-            z = self.sim_space.sim2z(sim)
-            rec = self.decode(sim, angles, apply_norm=apply_norm)
-
-        elif mode == "sim_expectation":
-            y, angles = self.encode(x, angles)
-            dist_params = self.lat_space.get_params_from_encoder(y)
-            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
-            sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
-            z = self.sim_space.sim2z(sim)
-            rec = self.decode(sim, angles, apply_norm=apply_norm)
-
-        else:
-            raise NotImplementedError()
-
+        dist_params, z, sim = self.point_estimate_sim(x, angles, mode=mode)
+        rec = self.decode(sim, angles, apply_norm=apply_norm)
         if is_patch:# and mode != 'random':
-            if mode == 'random':
-                return unbatchify(dist_params), z, sim, rec
-            return unbatchify(dist_params), z, unbatchify(sim), unbatchify(rec)
+            return dist_params, z, sim, unbatchify(rec)
         return dist_params, z, sim, rec
     
     def point_estimate_sim(self, x, angles, mode='random'):

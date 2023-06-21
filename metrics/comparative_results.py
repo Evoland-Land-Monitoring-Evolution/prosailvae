@@ -74,16 +74,20 @@ def get_model_and_dataloader(parser):
     info_test_data = np.load(os.path.join(parser.data_dir,"test_info.npy"))
     return model_dict, test_loader, info_test_data
 
-def get_model_frm4veg_results(model_dict: dict,
-                              data_dir, filename, sensor):
+def var_of_product(var_1, var_2, mean_1, mean_2):
+    return (var_1 - mean_1.pow(2)) * (var_2 - mean_2.pow(2)) -  (mean_1 * mean_2).pow(2)
 
-    rec_mode = 'lat_mode' #if not socket.gethostname()=='CELL200973' else "random"
+def get_model_frm4veg_results(model_dict: dict,
+                              data_dir, filename, sensor, mode="lat_mode"):
+
+    #if not socket.gethostname()=='CELL200973' else "random"
     idx_dict = {}
     ref_dict = {}
     for variable in ['lai', 'lai_eff', 'ccc', 'ccc_eff']:
         gdf, _, _, _, _ = load_frm4veg_data(data_dir, filename, variable=variable)
         gdf = gdf.iloc[:51]
         ref_dict[variable] = gdf[variable].values.reshape(-1)
+        ref_dict[variable+"_std"] = gdf["uncertainty"].values.reshape(-1)
         idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
                               "y_idx" : torch.from_numpy(gdf["y_idx"].values).int()}
     _, s2_r, s2_a, xcoords, ycoords = load_frm4veg_data(data_dir, filename, variable="lai")
@@ -101,28 +105,53 @@ def get_model_frm4veg_results(model_dict: dict,
             largest_hw = hw    
         with torch.no_grad():
             (_, sim_image, cropped_s2_r, cropped_s2_a,
-             _) = get_encoded_image_from_batch((s2_r, s2_a), model,
+             sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
                                                 patch_size=32, bands=torch.arange(10),
-                                                mode=rec_mode, padding=True, no_rec=True)
+                                                mode=mode, padding=True, no_rec=True)
         model_inference_info[model_name] = {"s2_r":cropped_s2_r,
                                             "s2_a":cropped_s2_a,
                                             "hw": hw}
     
         lai_pred = sim_image[6, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
+        lai_std_pred = sigma_image[6, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
+
         lai_eff_pred = sim_image[6, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
+        lai_eff_std_pred = sigma_image[6, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
+
         ccc_pred = (sim_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']] 
                     * sim_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']])
+        m_1 = sim_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']]
+        m_2 = sim_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']]
+        v_1 = sigma_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']].pow(2)
+        v_2 = sigma_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']].pow(2)
+        ccc_std_pred = var_of_product(v_1, v_2, m_1, m_2).sqrt()
+        
         ccc_eff_pred = (sim_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']] 
                         * sim_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']])
+
+        m_1 = sim_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']]
+        m_2 = sim_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']]
+        v_1 = sigma_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']].pow(2)
+        v_2 = sigma_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']].pow(2)
+        ccc_eff_std_pred = var_of_product(v_1, v_2, m_1, m_2).sqrt()
+        
         model_results[model_name] = {'lai': lai_pred.numpy(),
+                                     'lai_std': lai_std_pred.numpy(),
                                      'lai_eff': lai_eff_pred.numpy(),
+                                     'lai_eff_std': lai_eff_std_pred.numpy(),
                                      'ccc': ccc_pred.numpy(),
+                                     'ccc_std': ccc_std_pred.numpy(),
                                      'ccc_eff': ccc_eff_pred.numpy(),
+                                     'ccc_eff_std': ccc_eff_std_pred.numpy(),
 
                                      'ref_lai': ref_dict['lai'],
+                                     'ref_lai_std': ref_dict["lai_std"],
                                      'ref_lai_eff': ref_dict['lai_eff'],
+                                     'ref_lai_eff_std': ref_dict["lai_eff_std"],
                                      'ref_ccc': ref_dict['ccc'],
-                                     'ref_ccc_eff': ref_dict['ccc_eff']}
+                                     'ref_ccc_std': ref_dict['ccc_std'],
+                                     'ref_ccc_eff': ref_dict['ccc_eff'],
+                                     'ref_ccc_eff_std': ref_dict['ccc_eff_std']}
 
 
     for model_name, _ in model_dict.items():
@@ -142,21 +171,29 @@ def get_model_frm4veg_results(model_dict: dict,
                                                model_inference_info[model_name]["s2_a"]),
                                                patch_size=32, sensor=sensor)
     model_results["SNAP"] = {'lai': snap_lai[..., idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']].numpy(),
+                             'lai_std':np.zeros_like(ref_dict['lai']),
                              'lai_eff': snap_lai[..., idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']].numpy(),
+                             'lai_eff_std':np.zeros_like(ref_dict['lai_eff']),
                              'ccc': snap_cab[..., idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']].numpy(),
+                             'ccc_std':np.zeros_like(ref_dict['ccc']),
                              'ccc_eff': snap_cab[..., idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']].numpy(),
+                             'ccc_eff_std':np.zeros_like(ref_dict['ccc_eff']),
                              'ref_lai': ref_dict['lai'],
-                            'ref_lai_eff': ref_dict['lai_eff'],
-                            'ref_ccc': ref_dict['ccc'],
-                            'ref_ccc_eff': ref_dict['ccc_eff']}
+                             'ref_lai_std': ref_dict['lai_std'],
+                             'ref_lai_eff': ref_dict['lai_eff'],
+                             'ref_lai_eff_std': ref_dict['lai_eff_std'],
+                             'ref_ccc': ref_dict['ccc'],
+                             'ref_ccc_std': ref_dict['ccc_std'],
+                             'ref_ccc_eff': ref_dict['ccc_eff'],
+                             'ref_ccc_eff_std': ref_dict['ccc_eff_std']}
     return model_results
 
 
-def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50):
+def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50, mode = 'lat_mode'):
     """
     Compute results for all models
     """
-    rec_mode = 'lat_mode' if not socket.gethostname()=='CELL200973' else "random"
+     #if not socket.gethostname()=='CELL200973' else "random"
     for model_name, model_info in model_dict.items():
         model_info["reconstruction"] = []
         model_info["prosail_vars"] = []
@@ -181,7 +218,7 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
                 (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 sigma_image) = get_encoded_image_from_batch(batch, model, patch_size=32,
                                                             bands=torch.arange(10),
-                                                            mode=rec_mode)
+                                                            mode=mode)
                 current_patch_results[model_name] = {"reconstruction": rec_image,
                                                        "prosail_vars": sim_image, 
                                                        "latent_sigma": sigma_image,
@@ -301,11 +338,11 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
     for i, (model_name, model_info) in enumerate(model_dict.items()):
         df_metrics = model_results[model_name]
         fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
-                                legend_col=legend_col, xmin=xmin, xmax=xmax)
+                                legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", error_y="Predicted LAI std")
         ax.set_title(model_info["plot_name"])
     df_metrics = model_results["SNAP"]
     fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
-                            legend_col=legend_col, xmin=xmin, xmax=xmax)
+                            legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std")
     axs[-1].set_title("SNAP")
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)
@@ -445,7 +482,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         axs[row, col].set_title(BANDS[i])
         axs[row, 0].set_ylabel('Absolute Error')
         axs[1, col].set_xlabel('Model')
-        
+
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_err_boxplot.png"))
     fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
@@ -520,10 +557,13 @@ def compare_snap_versions_on_weiss_data(res_dir):
     fig.savefig(os.path.join(res_dir, "scatter_lai_snap_versions_weiss.png"))
 
 def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, method="simple_interpolate"):
-    d0 = datetime.date.fromisoformat('2018-05-15')
-    d1 = datetime.date.fromisoformat('2018-06-13')
+    date_str = filename[0].split("_")[1]
+    d0 = datetime.datetime.strptime(filename[0].split("_")[1], '%Y%m%d').date()
+    d1 = datetime.datetime.strptime(filename[1].split("_")[1], '%Y%m%d').date()
+    # d0 = datetime.date.fromisoformat('2018-05-15')
+    # d1 = datetime.date.fromisoformat('2018-06-13')
     dt_image = (d1 - d0).days
-    gdf, _, _ , xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable="lai")
+    gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename[0], variable="lai")
     gdf = gdf.iloc[:51]
     t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
     validation_results_1 = get_model_frm4veg_results(model_dict, frm4veg_data_dir, filename[0], sensor[0])
@@ -533,18 +573,23 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
         model_results = {}
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
             if method=="simple_interpolate":
-                gdf, _, _, xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
+                gdf, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
                 gdf = gdf.iloc[:51]
                 t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
-                m = (validation_results_1[model_name][variable].squeeze() 
-                    - validation_results_2[model_name][variable].squeeze()) / dt_image
-                b = validation_results_2[model_name][variable].squeeze() - m * d1.day
+                # m = (validation_results_1[model_name][variable].squeeze() 
+                #     - validation_results_2[model_name][variable].squeeze()) / dt_image
+                # b = validation_results_2[model_name][variable].squeeze() - m * d1.day
+                v = t_sample / dt_image
+                u = (dt_image - t_sample) / dt_image
                 try:
-                    model_results[variable] = (m * t_sample + b).reshape(-1)
+                    model_results[variable] = (u * validation_results_1[model_name][variable]
+                                               + v * validation_results_2[model_name][variable]).squeeze() # (m * t_sample + b).reshape(-1)
+                    model_results[variable + "_std"] = (u * validation_results_1[model_name][variable + "_std"]
+                                               + v * validation_results_2[model_name][variable + "_std"]).squeeze()
                 except Exception as exc:
                     print(exc)
-                    print(model_name, variable, m.size(), t_sample.size(), b.size())
-                    print(validation_results_1[model_name][variable].size(), 
+                    print(model_name, variable, u.size(), t_sample.size(), v.size())
+                    print(validation_results_1[model_name][variable].size(),
                           validation_results_2[model_name][variable].size(), dt_image)
             elif method == "best":
                 ref = validation_results_1[model_name][f"ref_{variable}"]
@@ -578,67 +623,50 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
         validation_results[model_name] = model_results
         for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
             validation_results[model_name][f'ref_{variable}'] = validation_results_1[model_name][f'ref_{variable}']
-            gdf, _, _ , xcoords, ycoords = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
+            validation_results[model_name][f'ref_{variable}_std'] = validation_results_1[model_name][f'ref_{variable}_std']
+            gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
             gdf = gdf.iloc[:51]
             validation_results[model_name][f"{variable}_land_cover"] = gdf["land cover"].values
     return validation_results
 
-def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results, wytham_results=None, 
+def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results, wytham_results=None,
                                      frm4veg_lai="lai"):
     metrics = {}
     for model_name, _ in belsar_results.items():
         ref_lai_list = [belsar_results[model_name]['lai_mean'].values.reshape(-1),
                         barrax_results[model_name][f'ref_{frm4veg_lai}'].reshape(-1)]
-        
+        ref_lai_std_list = [belsar_results[model_name]['lai_std'].values.reshape(-1),
+                            barrax_results[model_name][f'ref_{frm4veg_lai}_std'].reshape(-1)]
         pred_lai_list = [belsar_results[model_name]['parcel_lai_mean'].values.reshape(-1),
                          barrax_results[model_name][frm4veg_lai].reshape(-1)]
+        pred_lai_std_list = [belsar_results[model_name]['parcel_lai_std'].values.reshape(-1),
+                             barrax_results[model_name][frm4veg_lai + "_std"].reshape(-1)]
         site_list = ['Belgium'] * len(ref_lai_list[0]) + ['Spain'] * len(ref_lai_list[1])
         land_cover_list = [belsar_results[model_name]['land_cover'].values.reshape(-1),
                            barrax_results[model_name][f'{frm4veg_lai}_land_cover'].reshape(-1)]
         if wytham_results is not None:
-            ref_lai_list.append(wytham_results[model_name]['ref_lai'].reshape(-1))
+            ref_lai_list.append(wytham_results[model_name][f'ref_{frm4veg_lai}'].reshape(-1))
+            ref_lai_std_list.append(wytham_results[model_name][f'ref_{frm4veg_lai}_std'].reshape(-1))
             pred_lai_list.append(wytham_results[model_name][frm4veg_lai].reshape(-1))
+            pred_lai_std_list.append(wytham_results[model_name][frm4veg_lai+"_std"].reshape(-1))
             site_list = site_list + ['England'] * len(ref_lai_list[2])
             land_cover_list.append(wytham_results[model_name][f'{frm4veg_lai}_land_cover'].reshape(-1))
         metrics[model_name] = pd.DataFrame(data={'LAI': np.concatenate(ref_lai_list),
+                                                 'LAI std':np.concatenate(ref_lai_std_list),
                                                  'Predicted LAI': np.concatenate(pred_lai_list),
+                                                 'Predicted LAI std':np.concatenate(pred_lai_std_list),
                                                  "Site": np.array(site_list),
                                                  "Land cover": np.concatenate(land_cover_list)})
     return metrics
 
-def main():
-    """
-    main.
-    """
-    if socket.gethostname()=='CELL200973':
-        args = ["-m","/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config/model_dict_dev.json",
-                "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
-                "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/"]
-        parser = get_parser().parse_args(args)
-        frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
-        belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
-    else:
-        parser = get_parser().parse_args()
-        frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
-        belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
-    res_dir = parser.res_dir
-    if not os.path.isdir(res_dir):
-        os.makedirs(res_dir)
-    list_belsar_filenames = ["2A_20180508_both_BelSAR_agriculture_database",
-                            "2A_20180518_both_BelSAR_agriculture_database",
-                            "2A_20180528_both_BelSAR_agriculture_database",
-                            "2A_20180620_both_BelSAR_agriculture_database",
-                            "2A_20180627_both_BelSAR_agriculture_database",
-                            "2B_20180715_both_BelSAR_agriculture_database",
-                            "2B_20180722_both_BelSAR_agriculture_database",
-                            "2A_20180727_both_BelSAR_agriculture_database",
-                            "2B_20180804_both_BelSAR_agriculture_database"]  
-    model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
-
+def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
+                                   recompute=True, mode ="lat_mode"):
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
-        save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix="_"+model_name)
-    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+        if recompute:
+            save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix=f"_{model_name}_{mode}", mode=mode)
+    if recompute:
+        get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
 
     belsar_results = {}
     barrax_results = {}
@@ -690,6 +718,38 @@ def main():
     # plot_frm4veg_results_comparison(model_dict, barrax_results_after, frm4veg_data_dir, barrax_filename_after, 
     #                                    res_dir=res_dir)
 
+def main():
+    """
+    main.
+    """
+    if socket.gethostname()=='CELL200973':
+        args = ["-m","/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config/model_dict_dev.json",
+                "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+                "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/"]
+        parser = get_parser().parse_args(args)
+        frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
+        belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
+    else:
+        parser = get_parser().parse_args()
+        frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
+        belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
+    res_dir = parser.res_dir
+    if not os.path.isdir(res_dir):
+        os.makedirs(res_dir)
+    list_belsar_filenames = ["2A_20180508_both_BelSAR_agriculture_database",
+                            "2A_20180518_both_BelSAR_agriculture_database",
+                            "2A_20180528_both_BelSAR_agriculture_database",
+                            "2A_20180620_both_BelSAR_agriculture_database",
+                            "2A_20180627_both_BelSAR_agriculture_database",
+                            "2B_20180715_both_BelSAR_agriculture_database",
+                            "2B_20180722_both_BelSAR_agriculture_database",
+                            "2A_20180727_both_BelSAR_agriculture_database",
+                            "2B_20180804_both_BelSAR_agriculture_database"]  
+    model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
+    for mode in ["sim_tg_mean", "lat_mode"]:
+        recompute = True if not socket.gethostname()=='CELL200973' else False
+        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
+                                       recompute=recompute, mode=mode)
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)

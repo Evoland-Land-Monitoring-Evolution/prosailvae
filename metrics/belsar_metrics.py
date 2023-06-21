@@ -162,9 +162,13 @@ def simple_interpolate(y_after, y_before, dt_after, dt_before):
     res[dt_before==0] = y_before[dt_before==0]
     res[dt_after==0] = y_after[dt_after==0]
     idx = np.logical_and(dt_after!=0, dt_before!=0)
-    m = (y_after[idx] - y_before[idx]) / (np.abs(dt_after[idx]) + np.abs(dt_before[idx]))
-    b = y_after[idx] - m * (np.abs(dt_after[idx]) + np.abs(dt_before[idx]))
-    res[idx] = m * np.abs(dt_before[idx]) + b
+    # m = (y_after[idx] - y_before[idx]) / (np.abs(dt_after[idx]) + np.abs(dt_before[idx]))
+    # b = y_after[idx] - m * (np.abs(dt_after[idx]) + np.abs(dt_before[idx]))
+    # res[idx] = m * np.abs(dt_before[idx]) + b
+    dt = np.abs(dt_after[idx]) + np.abs(dt_before[idx])
+    v = np.abs(dt_after[idx]) / dt
+    u = np.abs(dt_before[idx])  / dt
+    res[idx] = u[idx] * y_before[idx] + v[idx] * y_after[idx]
     return res
 
 def compute_metrics_at_date(belsar_dir, res_dir, method="closest", file_suffix=""):

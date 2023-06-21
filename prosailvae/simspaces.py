@@ -12,7 +12,7 @@ from .dist_utils import convolve_pdfs, pdfs2cdfs, cdfs2quantiles
 from utils.TruncatedNormal import TruncatedNormal
 from utils.image_utils import batchify_batch_latent, unbatchify
 from utils.utils import torch_select_unsqueeze
-from ProsailSimus import get_z2prosailparams_bound
+from .ProsailSimus import get_z2prosailparams_bound
 
 class SimVarSpace(nn.Module):
     def lat2sim(self):

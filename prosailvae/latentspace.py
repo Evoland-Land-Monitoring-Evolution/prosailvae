@@ -44,7 +44,7 @@ class TruncatedNormalLatent(LatentSpace):
     Assumes all variables are in the [0,1] interval.
     """
     def __init__(self, latent_dim:int=10, min_sigma:float=5e-4, max_sigma:float=1.4,
-                 device:str='cpu', kl_type:str="tnu"):
+                 device:str='cpu', kl_type:str="tnu", disabled_latent=[], disabled_latent_values=[]):
         super().__init__()
         self.device=device
         self.latent_dim = latent_dim
@@ -53,6 +53,10 @@ class TruncatedNormalLatent(LatentSpace):
         self.min_sigma = torch.tensor(min_sigma).to(device)
         self.log_min_sigma = torch.log(self.min_sigma).to(device)
         self.kl_type=kl_type
+        self.disabled_latent = torch.tensor(disabled_latent).to(self.device) # Disabling hotspot
+        if len(self.disabled_latent):
+            print(f"WARNING: disabling latent variable {self.disabled_latent}")
+        self.disabled_latent_value = torch.tensor(disabled_latent_values).float().to(self.device)
 
     def change_device(self, device:str):
         """
@@ -63,6 +67,7 @@ class TruncatedNormalLatent(LatentSpace):
         self.log_max_sigma = self.log_max_sigma.to(self.device)
         self.min_sigma = self.min_sigma.to(device)
         self.log_min_sigma = self.log_min_sigma.to(device)
+        self.disabled_latent_value.to(device)
         pass
 
     def get_params_from_encoder(self, encoder_output:torch.Tensor):
@@ -108,6 +113,8 @@ class TruncatedNormalLatent(LatentSpace):
         sigma = params[..., 1]
         tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
         z = tn_dist.rsample([n_samples]).permute(1, 2, 0) # Batch x Latent x Sample
+        if len(self.disabled_latent):
+            z[...,self.disabled_latent,:] = self.disabled_latent_value
         return z
 
     def latent_pdf(self, params, support_sampling:float=0.001):
@@ -149,7 +156,7 @@ class TruncatedNormalLatent(LatentSpace):
         mu = params[:, :, 0]
         sigma = params[:, :, 1]
         tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
-        return tn_dist.mean()
+        return tn_dist.mean
     
     def supervised_loss(self, z, params, reduction="mean", reduction_nll="sum"):
         """

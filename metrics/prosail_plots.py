@@ -1512,7 +1512,7 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
 
 
 def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site", 
-                    legend_col=2, xmin=None, xmax=None):
+                    legend_col=2, xmin=None, xmax=None, error_x=None, error_y=None):
     pred = df_metrics[y]
     ref = df_metrics[x]
     if fig is None or ax is None:
@@ -1528,9 +1528,20 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
     perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
     line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
-    
-    g = sns.scatterplot(data=df_metrics, x=x, y=y,
-                        hue=hue, ax=ax)
+
+    if error_x is not None and error_y is None:
+        ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
+                    ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,
+                    elinewidth=0.5, zorder=0)
+    elif error_y is not None and error_x is None:
+        ax.errorbar(df_metrics[x].values, df_metrics[y].values, yerr=df_metrics[error_y].values,
+                    ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,
+                    elinewidth=0.5, zorder=0)
+    elif error_y is not None and error_x is not None:
+        ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
+                    yerr=df_metrics[error_y].values, ecolor='k', fmt='o', linestyle='', markersize=0.1, 
+                    elinewidth=0.5, zorder=0)
+    g = sns.scatterplot(data=df_metrics, x=x, y=y, hue=hue, ax=ax, s=20,zorder=10)
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(xmin, xmax)
     ax.set_aspect('equal', 'box')

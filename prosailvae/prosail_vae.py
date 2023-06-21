@@ -99,7 +99,9 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
         kl_type = "tnu"
     lat_space = TruncatedNormalLatent(device='cpu',
                                       latent_dim=pv_config.encoder_config.output_size,
-                                      kl_type=kl_type)
+                                      kl_type=kl_type,
+                                      disabled_latent=pv_config.disabled_latent,
+                                      disabled_latent_values = pv_config.disabled_latent_values)
 
     z2sim_mat = get_z2prosailparams_mat()
     z2sim_offset = get_z2prosailparams_offset()

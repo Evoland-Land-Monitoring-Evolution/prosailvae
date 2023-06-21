@@ -347,11 +347,11 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)
 
-def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest"):
+def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest", mode=None):
     model_results = {}
     for _, (model_name, model_info) in enumerate(model_dict.items()):
         model_results[model_name] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
-                                                            file_suffix="_" + model_name, method=method)
+                                                            file_suffix=f"_{model_name}_{mode}", method=method)
 
     model_results["SNAP"] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
                                                     file_suffix="_SNAP", method=method)
@@ -664,7 +664,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
         if recompute:
-            save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, suffix=f"_{model_name}_{mode}", mode=mode)
+            save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, model_name=model_name, mode=mode)
     if recompute:
         get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
 
@@ -673,7 +673,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
     wytham_results = {}
     validation_lai_results = {}
     for method in ["simple_interpolate", "best", "worst", "mean_interpolate"]: #'closest', 
-        belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method)
+        belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
         barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]

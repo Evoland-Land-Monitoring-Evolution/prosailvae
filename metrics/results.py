@@ -323,7 +323,7 @@ def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
                          hw = 0, 
                          half_res_coords=True)
 
-def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, suffix="_pvae", mode="lat_mode"):
+def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, model_name="pvae", mode="lat_mode"):
     NO_DATA = -10000
     for filename in list_filenames:
         df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
@@ -347,7 +347,7 @@ def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, su
                             sigma_image[6,...].unsqueeze(0), 
                             sigma_image[5,...].unsqueeze(0)), 0)
         tensor[tensor.isnan()] = NO_DATA
-        tensor_to_raster(tensor, res_dir + f"/{filename}{suffix}_{mode}.tif",
+        tensor_to_raster(tensor, res_dir + f"/{filename}_{model_name}_{mode}.tif",
                          crs=crs,
                             resolution=10,
                             dtype=np.float32,

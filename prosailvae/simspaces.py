@@ -52,11 +52,9 @@ class LinearVarSpace(SimVarSpace):
             lat_sigma2 = lat_sigma.pow(2)
             sim_sigma2 = torch_select_unsqueeze(torch.diag(self.z2sim_mat).pow(2), 1, len(lat_sigma2.size())) * lat_sigma2
             sim_sigma = sim_sigma2.sqrt()
-            high = torch_select_unsqueeze(get_z2prosailparams_bound("high"), 1, len(lat_sigma2.size()))
-            low = torch_select_unsqueeze(get_z2prosailparams_bound("low"), 1, len(lat_sigma2.size()))
-            distribution = TruncatedNormal(loc=sim_mu, scale=sim_sigma,
-                                           low=low,
-                                           high=high)
+            high = torch_select_unsqueeze(get_z2prosailparams_bound("high"), 1, len(lat_sigma2.size())).to(sim_mu.device)
+            low = torch_select_unsqueeze(get_z2prosailparams_bound("low"), 1, len(lat_sigma2.size())).to(sim_mu.device)
+            distribution = TruncatedNormal(loc=sim_mu, scale=sim_sigma, low=low, high=high)
             pass
         else:
             raise NotImplementedError

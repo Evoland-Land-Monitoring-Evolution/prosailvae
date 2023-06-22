@@ -135,9 +135,11 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         print(tensor_file)
         image_tensor = torch.load(tensor_file)
         if res_dir is not None:
+            mask = image_tensor[10]
+            mask[mask==0.] = np.nan
             fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize=(6,6))
             ax.imshow(rgb_render(image_tensor)[0])
-            ax.imshow(image_tensor[10].squeeze(), cmap='YlOrRd')
+            ax.imshow(mask.squeeze(), cmap='YlOrRd')
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{info[2]} {info[1]}")

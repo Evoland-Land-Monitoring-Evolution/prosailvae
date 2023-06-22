@@ -176,13 +176,61 @@ class SimVAE(nn.Module):
         Forward pass with point estimate of latent distribution
         """
         is_patch = check_is_patch(x)
-        dist_params, z, sim = self.point_estimate_sim(x, angles, mode=mode)
+        if angles is None:
+            angles = x[:,-3:]
+            x = x[:,:-3]
+        y, angles = self.encode(x, angles)
+        dist_params = self.lat_space.get_params_from_encoder(y)
+        if mode == 'random':
+            if self.inference_mode:
+                return dist_params, None, None, None
+            # latent sampling
+            z = self.sample_latent_from_params(dist_params, n_samples=1)
+
+            # transfer to simulator variable
+            sim = self.transfer_latent(z)
+
+        elif mode == 'lat_mode':
+            # latent mode
+            z = self.lat_space.mode(dist_params)
+            # transfer to simulator variable
+            sim = self.transfer_latent(z.unsqueeze(2))
+            
+        elif mode == "sim_tg_mean":
+            z = self.lat_space.expectation(dist_params)
+            # transfer to simulator variable
+            sim = self.transfer_latent(z.unsqueeze(2))
+
+        elif mode == "sim_mode":
+            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
+            sim = self.sim_space.sim_mode(lat_pdfs, lat_supports, n_pdf_sample_points=5001)
+            z = self.sim_space.sim2z(sim)
+            # Quickfix for angle dimension:
+            if len(angles.size())==4:
+                angles = angles.permute(0,2,3,1)
+                angles = angles.reshape(-1, 3)
+
+        elif mode == "sim_median":
+            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
+            sim = self.sim_space.sim_median(lat_pdfs, lat_supports, n_samples=5001)
+            z = self.sim_space.sim2z(sim)
+
+        elif mode == "sim_expectation":
+            lat_pdfs, lat_supports = self.lat_space.latent_pdf(dist_params)
+            sim = self.sim_space.sim_expectation(lat_pdfs, lat_supports, n_samples=5001)
+            z = self.sim_space.sim2z(sim)
+
+        else:
+            raise NotImplementedError()
         rec = self.decode(sim, angles, apply_norm=apply_norm)
         if is_patch:# and mode != 'random':
-            return dist_params, z, sim, unbatchify(rec)
+            rec = unbatchify(rec)
+            sim = unbatchify(sim)
+            if not mode=='random':
+                dist_params = unbatchify(dist_params)
         return dist_params, z, sim, rec
     
-    def point_estimate_sim(self, x, angles, mode='random'):
+    def point_estimate_sim(self, x, angles, mode='random', unbatch=True):
         is_patch = check_is_patch(x)
         if angles is None:
             angles = x[:,-3:]
@@ -231,7 +279,7 @@ class SimVAE(nn.Module):
         else:
             raise NotImplementedError()
 
-        if is_patch:# and mode != 'random':
+        if is_patch and unbatch:# and mode != 'random':
             if mode == 'random':
                 return unbatchify(dist_params), z, sim
             return unbatchify(dist_params), z, unbatchify(sim)

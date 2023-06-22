@@ -703,7 +703,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
     barrax_results = {}
     wytham_results = {}
     validation_lai_results = {}
-    for method in ["simple_interpolate", "best", "worst", "mean_interpolate"]: #'closest', 
+    for method in ["simple_interpolate", "best", "worst"]: #'closest', 
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
@@ -728,7 +728,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
                                                                                         frm4veg_lai=variable)
             
             for model, df_results in validation_lai_results[method][variable].items():
-                df_results.to_csv(os.path.join(res_dir, f"{method}_{variable}_{model}.csv"))
+                df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
                                            margin = 0.02)

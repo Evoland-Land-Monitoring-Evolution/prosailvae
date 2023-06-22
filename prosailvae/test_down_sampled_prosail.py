@@ -34,7 +34,7 @@ from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 torch.autograd.set_detect_anomaly(True)
-
+import matplotlib.pyplot as plt
 
 CUDA_LAUNCH_BLOCKING=1
 LOGGER_NAME = 'PROSAIL-VAE logger'
@@ -388,14 +388,32 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
 
     # decoding
     sim = torch.from_numpy(p_vars[:,:11]).unsqueeze(2).float()
+
     angles = torch.from_numpy(p_vars[:,11:]).float()
     p_s2r = torch.from_numpy(p_s2r).float()
 
     rec_1 = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
+    sim_zero_hspot = sim
+    sim_zero_hspot[:,8,:] = 0
+    rec_1_0_hspot = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
+    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
+    for i in range(10):
+        row = i % 2
+        col = i//2
+        err = (rec_1[:,i,:] - rec_1_0_hspot[:,i,:]).abs().squeeze()
+        axs[row, col].boxplot(err, showfliers=False)
+        # axs[1, col].set_xlabel("Down-sampling")
+        axs[row, col].set_xticks([])
+        axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
+        axs[row, col].set_title(BANDS[i])
+    axs[0, 0].set_ylabel('Absolute Error')
+    axs[1, 0].set_ylabel('Absolute Error')
+    fig.savefig("hspot_boxplots_bands_error.png")
+    fig, axs = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
     recs_rdown = {}
     for key, pvae in pvae_down.items():
         recs_rdown[key] = pvae.decode(sim, angles, apply_norm=False).detach()
-    import matplotlib.pyplot as plt
+    
     fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
     for i in range(10):
         row = i % 2
@@ -420,23 +438,23 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     # fix, ax = plt.subplots(dpi=150)
     # ax.plot(np.arange(400,2501), prosail_output_1[0,:])
     # ax.plot(np.arange(400,2500, 10), prosail_output_2[0,:])
-    fig, ax = plt.subplots(10,1, dpi=150)
-    for idx_band in range(10):
-        xmin = min(rec_1[:,idx_band, :].min(), rec_2[:,idx_band, :].min())
-        xmax = max(rec_1[:,idx_band, :].max(), rec_2[:,idx_band, :].max())
-        ax[idx_band].scatter(rec_1[:,idx_band, :], rec_2[:,idx_band, :], s=1)
-        ax[idx_band].set_title(idx_band)
-        ax[idx_band].plot([xmin, xmax], [xmin, xmax], "k--")
+    # fig, ax = plt.subplots(10,1, dpi=150)
+    # for idx_band in range(10):
+    #     xmin = min(rec_1[:,idx_band, :].min(), rec_2[:,idx_band, :].min())
+    #     xmax = max(rec_1[:,idx_band, :].max(), rec_2[:,idx_band, :].max())
+    #     ax[idx_band].scatter(rec_1[:,idx_band, :], rec_2[:,idx_band, :], s=1)
+    #     ax[idx_band].set_title(idx_band)
+    #     ax[idx_band].plot([xmin, xmax], [xmin, xmax], "k--")
     
-    for idx_band in range(10):
-        fig, ax = plt.subplots(dpi=150)
-        xmin = min(rec_1[:,idx_band, :].min(), rec_2[:,idx_band, :].min())
-        xmax = max(rec_1[:,idx_band, :].max(), rec_2[:,idx_band, :].max())
-        ax.scatter(rec_1[:,idx_band, :], rec_2[:,idx_band, :], s=1)
-        ax.set_title(idx_band)
-        ax.plot([xmin, xmax], [xmin, xmax], "k--")
-        ax.set_xlabel("R_down = 1")
-        ax.set_ylabel("R_down = 10")
+    # for idx_band in range(10):
+    #     fig, ax = plt.subplots(dpi=150)
+    #     xmin = min(rec_1[:,idx_band, :].min(), rec_2[:,idx_band, :].min())
+    #     xmax = max(rec_1[:,idx_band, :].max(), rec_2[:,idx_band, :].max())
+    #     ax.scatter(rec_1[:,idx_band, :], rec_2[:,idx_band, :], s=1)
+    #     ax.set_title(idx_band)
+    #     ax.plot([xmin, xmax], [xmin, xmax], "k--")
+    #     ax.set_xlabel("R_down = 1")
+    #     ax.set_ylabel("R_down = 10")
 def configureEmissionTracker(parser):
     logger = logging.getLogger(LOGGER_NAME)
     try:

@@ -156,74 +156,74 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
     
-    rm4veg_validation_plot_dir = plot_dir + "/frm4veg_validation/"
-    if not os.path.isdir(rm4veg_validation_plot_dir):
-        os.makedirs(rm4veg_validation_plot_dir)
+    # rm4veg_validation_plot_dir = plot_dir + "/frm4veg_validation/"
+    # if not os.path.isdir(rm4veg_validation_plot_dir):
+    #     os.makedirs(rm4veg_validation_plot_dir)
     
-    belsar_res_dir = plot_dir + "belsar_validation"
-    if not os.path.isdir(belsar_res_dir):
-        os.makedirs(belsar_res_dir)
+    # belsar_res_dir = plot_dir + "belsar_validation"
+    # if not os.path.isdir(belsar_res_dir):
+    #     os.makedirs(belsar_res_dir)
 
-    _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
-    s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
-    s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
-    with torch.no_grad():
-        (_, sim_image, cropped_s2_r, cropped_s2_a, 
-         _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32, bands=torch.arange(10),
-                                            mode=rec_mode, padding=True, no_rec=True)
+    # _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
+    # s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
+    # s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
+    # with torch.no_grad():
+    #     (_, sim_image, cropped_s2_r, cropped_s2_a, 
+    #      _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32, bands=torch.arange(10),
+    #                                         mode=rec_mode, padding=True, no_rec=True)
         
-        frm4veg_barrax_lai_pred = sim_image[6,...].unsqueeze(0)
-        frm4veg_barrax_ccc_pred = sim_image[1,...].unsqueeze(0) * frm4veg_barrax_lai_pred
-        # (snap_validation_lai, _,
-        #     _) = get_weiss_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
-        #                                                     patch_size=32, sensor="2A")
-        # gdf_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
+    #     frm4veg_barrax_lai_pred = sim_image[6,...].unsqueeze(0)
+    #     frm4veg_barrax_ccc_pred = sim_image[1,...].unsqueeze(0) * frm4veg_barrax_lai_pred
+    #     # (snap_validation_lai, _,
+    #     #     _) = get_weiss_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
+    #     #                                                     patch_size=32, sensor="2A")
+    #     # gdf_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
     
-    frm4veg_plots(frm4veg_barrax_lai_pred, frm4veg_barrax_ccc_pred, frm4veg_data_dir, frm4veg_barrax_filename,
-                  s2_r=cropped_s2_r, res_dir=rm4veg_validation_plot_dir)
+    # frm4veg_plots(frm4veg_barrax_lai_pred, frm4veg_barrax_ccc_pred, frm4veg_data_dir, frm4veg_barrax_filename,
+    #               s2_r=cropped_s2_r, res_dir=rm4veg_validation_plot_dir)
     
-    frm4veg_wytham_lai_pred = None
-    if frm4veg_wytham_filename is not None:
-        _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable="lai")
-        s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
-        s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
-        with torch.no_grad():
-            (_, sim_image, cropped_s2_r, cropped_s2_a, 
-             _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32, 
-                                               bands=torch.arange(10), mode=rec_mode, padding=True, no_rec=True)
+    # frm4veg_wytham_lai_pred = None
+    # if frm4veg_wytham_filename is not None:
+    #     _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable="lai")
+    #     s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
+    #     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
+    #     with torch.no_grad():
+    #         (_, sim_image, cropped_s2_r, cropped_s2_a, 
+    #          _) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE, patch_size=32, 
+    #                                            bands=torch.arange(10), mode=rec_mode, padding=True, no_rec=True)
             
-            frm4veg_wytham_lai_pred = sim_image[6,...].unsqueeze(0)
-            frm4veg_wytham_ccc_pred = sim_image[1,...].unsqueeze(0) * frm4veg_wytham_lai_pred
-        frm4veg_plots(frm4veg_wytham_lai_pred, frm4veg_wytham_ccc_pred, frm4veg_data_dir, frm4veg_wytham_filename,
-                      s2_r=cropped_s2_r, res_dir=rm4veg_validation_plot_dir)
+    #         frm4veg_wytham_lai_pred = sim_image[6,...].unsqueeze(0)
+    #         frm4veg_wytham_ccc_pred = sim_image[1,...].unsqueeze(0) * frm4veg_wytham_lai_pred
+    #     frm4veg_plots(frm4veg_wytham_lai_pred, frm4veg_wytham_ccc_pred, frm4veg_data_dir, frm4veg_wytham_filename,
+    #                   s2_r=cropped_s2_r, res_dir=rm4veg_validation_plot_dir)
 
 
-    save_belsar_predictions(belsar_dir, PROSAIL_VAE, belsar_res_dir, list_filenames=list_belsar_filenames)
-    belsar_metrics = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="closest", file_suffix="_pvae")
-    fig, ax = plot_belsar_metrics(belsar_metrics)
-    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_crop.png"))
-    fig, ax = plot_belsar_metrics(belsar_metrics, hue='date')
-    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_date.png"))
-    fig, ax = plot_belsar_metrics(belsar_metrics, hue='delta')
-    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_delta.png"))
-    belsar_metrics_inter = compute_metrics_at_date(belsar_dir, belsar_res_dir, 
-                                                   method="simple_interpolate", file_suffix="_pvae")
-    fig, ax = plot_belsar_metrics(belsar_metrics_inter)
-    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_crop.png"))
-    fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='date')
-    fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_date.png"))
-    # fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='delta')
-    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_delta.png"))
+    # save_belsar_predictions(belsar_dir, PROSAIL_VAE, belsar_res_dir, list_filenames=list_belsar_filenames)
+    # belsar_metrics = compute_metrics_at_date(belsar_dir, belsar_res_dir, method="closest", file_suffix="_pvae")
+    # fig, ax = plot_belsar_metrics(belsar_metrics)
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_crop.png"))
+    # fig, ax = plot_belsar_metrics(belsar_metrics, hue='date')
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_date.png"))
+    # fig, ax = plot_belsar_metrics(belsar_metrics, hue='delta')
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_delta.png"))
+    # belsar_metrics_inter = compute_metrics_at_date(belsar_dir, belsar_res_dir, 
+    #                                                method="simple_interpolate", file_suffix="_pvae")
+    # fig, ax = plot_belsar_metrics(belsar_metrics_inter)
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_crop.png"))
+    # fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='date')
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_date.png"))
+    # # fig, ax = plot_belsar_metrics(belsar_metrics_inter, hue='delta')
+    # # fig.savefig(os.path.join(belsar_res_dir, "belsar_regression_interpolated_delta.png"))
 
-    metrics_df = get_belsar_x_frm4veg_lai_metrics(belsar_metrics, frm4veg_data_dir,
-                                                  frm4veg_barrax_lai_pred, frm4veg_barrax_filename,
-                                                  frm4veg_wytham_lai_pred=frm4veg_wytham_lai_pred, 
-                                                  frm4veg_wytham_filename=frm4veg_wytham_filename,  
-                                                  lai_eff=False)
+    # metrics_df = get_belsar_x_frm4veg_lai_metrics(belsar_metrics, frm4veg_data_dir,
+    #                                               frm4veg_barrax_lai_pred, frm4veg_barrax_filename,
+    #                                               frm4veg_wytham_lai_pred=frm4veg_wytham_lai_pred, 
+    #                                               frm4veg_wytham_filename=frm4veg_wytham_filename,  
+    #                                               lai_eff=False)
     
-    fig, ax = regression_plot(metrics_df, x="LAI", y="Predicted LAI", 
-                              fig=None, ax=None, hue="Site", legend_col=True, xmin=None, xmax=None)
-    fig.savefig(os.path.join(belsar_res_dir, "belsar_x_frm4veg_regression.png"))
+    # fig, ax = regression_plot(metrics_df, x="LAI", y="Predicted LAI", 
+    #                           fig=None, ax=None, hue="Site", legend_col=True, xmin=None, xmax=None)
+    # fig.savefig(os.path.join(belsar_res_dir, "belsar_x_frm4veg_regression.png"))
     # plot_rec_hist2D(PROSAIL_VAE, loader, res_dir, nbin=50)
     all_rec = []
     all_lai = []

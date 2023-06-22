@@ -157,7 +157,7 @@ def get_belsar_image_metrics_df(belsar_dir, filename_dict, res_dir, file_suffix)
             metrics = pd.concat((metrics, pd.DataFrame(d, index=[0])))
     return metrics.reset_index(drop=True)
 
-def simple_interpolate(y_after, y_before, dt_after, dt_before):
+def simple_interpolate(y_after, y_before, dt_after, dt_before, is_std=False):
     res = np.zeros_like(y_after)
     res[dt_before==0] = y_before[dt_before==0]
     res[dt_after==0] = y_after[dt_after==0]
@@ -168,7 +168,10 @@ def simple_interpolate(y_after, y_before, dt_after, dt_before):
     dt = np.abs(dt_after[idx]) + np.abs(dt_before[idx])
     v = np.abs(dt_after[idx]) / dt
     u = np.abs(dt_before[idx])  / dt
-    res[idx] = u[idx] * y_before[idx] + v[idx] * y_after[idx]
+    if is_std:
+        res[idx] = np.sqrt((u[idx] * y_before[idx])**2 + (v[idx] * y_after[idx])**2)
+    else:    
+        res[idx] = u[idx] * y_before[idx] + v[idx] * y_after[idx]
     return res
 
 def compute_metrics_at_date(belsar_dir, res_dir, method="closest", file_suffix=""):
@@ -180,8 +183,9 @@ def compute_metrics_at_date(belsar_dir, res_dir, method="closest", file_suffix="
         metrics.drop(columns=["delta"], inplace=True)
         for variable in ['parcel_lai_mean', 'parcel_cm_mean', 'parcel_lai_std', 'parcel_cm_std',
                          'parcel_lai_sigma_mean', 'parcel_cm_sigma_mean', 'parcel_lai_sigma_std', 'parcel_cm_sigma_std']:
+            is_std = variable[-3:] == 'std'
             metrics[variable] = simple_interpolate(after_metrics[variable], before_metrics[variable], 
-                                                        after_metrics['delta'], before_metrics['delta'])
+                                                        after_metrics['delta'], before_metrics['delta'], is_std=is_std)
         metrics['delta_before'] = before_metrics['delta']
         metrics['after_before'] = after_metrics['delta']
     

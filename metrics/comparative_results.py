@@ -584,8 +584,8 @@ def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, met
                 try:
                     model_results[variable] = (u * validation_results_1[model_name][variable]
                                                + v * validation_results_2[model_name][variable]).squeeze() # (m * t_sample + b).reshape(-1)
-                    model_results[variable + "_std"] = (u * validation_results_1[model_name][variable + "_std"]
-                                               + v * validation_results_2[model_name][variable + "_std"]).squeeze()
+                    model_results[variable + "_std"] = np.sqrt((u * validation_results_1[model_name][variable + "_std"])**2
+                                                             + (v * validation_results_2[model_name][variable + "_std"])**2).squeeze()
                 except Exception as exc:
                     print(exc)
                     print(model_name, variable, u.size(), t_sample.size(), v.size())
@@ -738,8 +738,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
             plt.close('all')
             rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
                                                    variable=variable, n_models=len(model_dict)+1, n_sigma=3)
-            np.save(rmse, os.path.join(res_dir, f"{mode}_{variable}_Land_cover_rmse.npy"))
-            np.save(picp, os.path.join(res_dir, f"{mode}_{variable}_Land_cover_picp.npy"))
+            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Land_cover_rmse.npy"), rmse)
+            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Land_cover_picp.npy"), picp)
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"

@@ -137,6 +137,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         if res_dir is not None:
             fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize=(6,6))
             ax.imshow(rgb_render(image_tensor)[0])
+            ax.imshow(image_tensor[10].squeeze(), cmap='YlOrRd')
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{info[2]} {info[1]}")
@@ -153,7 +154,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         g_cpu.manual_seed(seed)
         perms = torch.randperm(patches.size(0), generator=g_cpu) # For image tensor with identical sizes (i.e. the same sites) permutation will always be the same
         train_patches, nan_flag_1 = get_clean_patch_tensor(patches[perms[:n_train],...], 
-                                                         cloud_mask_idx=10, reject_mode='all')
+                                                           cloud_mask_idx=10, reject_mode='all')
         valid_patches, nan_flag_2 = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid] ,...],
                                                          cloud_mask_idx=10, reject_mode='all')
         test_patches, nan_flag_3 = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...],

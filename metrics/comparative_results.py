@@ -667,7 +667,7 @@ def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results,
                                                  "Land cover": np.concatenate(land_cover_list)})
     return metrics
 
-def get_models_global_metrics(results_dict, sites, variable = 'lai', n_models = 2, n_sigma=3):
+def get_models_global_metrics(models_dict, results_dict, sites, variable = 'lai', n_models = 2, n_sigma=3):
     methods = results_dict.keys()
     rmse = np.zeros((len(methods), n_models, len(sites)+1))
     picp = np.zeros((len(methods), n_models-1, len(sites)+1))
@@ -677,9 +677,17 @@ def get_models_global_metrics(results_dict, sites, variable = 'lai', n_models = 
             for k, site in enumerate(sites):
                 site_results = results[results['Site']==site]
                 rmse[i,j,k] = np.sqrt((site_results['Predicted LAI'] - site_results['LAI']).pow(2).mean())
+            rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
+    for i, method in enumerate(methods):
+        for j, model in enumerate(models_dict.keys()):
+            results = results_dict[method][variable][model]
+            for k, site in enumerate(sites):
+                site_results = results[results['Site']==site]
                 picp[i,j,k] = np.logical_and(site_results['LAI'] < site_results['Predicted LAI'] + n_sigma * site_results['Predicted LAI std'],
                                              site_results['LAI'] > site_results['Predicted LAI'] - n_sigma * site_results['Predicted LAI std']).astype(int).mean()
-            rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
+            picp[i,j,-1] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma * results['Predicted LAI std'],
+                                             results['LAI'] > results['Predicted LAI'] - n_sigma * results['Predicted LAI std']).astype(int).mean()
+    
     return rmse, picp
 
 def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
@@ -728,7 +736,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
                                            res_dir=res_dir, prefix=f"{mode}_{variable}_Land_cover",
                                            margin = 0.02, hue="Land cover")
             plt.close('all')
-            rmse, picp = get_models_global_metrics(validation_lai_results, sites=["Spain", "England", "Belgium"], 
+            rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
                                                    variable=variable, n_models=len(model_dict)+1, n_sigma=3)
             np.save(rmse, os.path.join(res_dir, f"{mode}_{variable}_Land_cover_rmse.npy"))
             np.save(picp, os.path.join(res_dir, f"{mode}_{variable}_Land_cover_picp.npy"))

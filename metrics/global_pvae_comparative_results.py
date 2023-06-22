@@ -11,7 +11,7 @@ def main():
     for metric in ["rmse", "picp"]:
         print(metric)
         data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparison_global/dev"
-        filename = f"sim_tg_mean_simple_interpolate_lai_Land_cover_{metric}.npy"
+        filename = f"v4_sim_tg_mean_simple_interpolate_lai_Land_cover_{metric}.npy"
         results = np.load(os.path.join(data_dir, filename))
         
         model_names = ["pvae", "pvae spatial", "SNAP"]

@@ -118,7 +118,7 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
     return clean_patches, nan_flag
 
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
-                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None):
+                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None, res_dir=None):
     assert large_patch_size % train_patch_size == 0
     tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files)
     train_clean_patches = []
@@ -134,6 +134,13 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         info = file_info[i]
         print(tensor_file)
         image_tensor = torch.load(tensor_file)
+        if res_dir is not None:
+            fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize=(6,6))
+            ax.imshow(rgb_render(image_tensor)[0])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title(f"{info[2]} {info[1]}")
+            fig.savefig(os.path.join(res_dir, f"full_roi_{info[2]} {info[1]}.png"))
         print(image_tensor.size())
         min_x, max_x, min_y, max_y = get_valid_area_in_image(info[2])
         # if max_x is not None and max_y is not None:
@@ -368,7 +375,8 @@ def main():
      test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size=large_patch_size,
                                                            train_patch_size=train_patch_size,
                                                            valid_size=valid_size, test_size=test_size,
-                                                           valid_tiles=valid_tiles, valid_files=valid_files)
+                                                           valid_tiles=valid_tiles, valid_files=valid_files, 
+                                                           res_dir=parser.output_dir)
     plot_test = True
     if plot_test:
         for i in range(test_patches.size(0)):

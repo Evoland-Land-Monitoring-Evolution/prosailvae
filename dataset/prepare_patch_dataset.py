@@ -33,7 +33,7 @@ def get_parser():
 
 
 
-def get_images_path(data_dir, valid_tiles=None, valid_files=None):
+def get_images_path(data_dir, valid_tiles=None, valid_files=None, invalid_files=None):
     list_files = []
     id_list = []
     file_info = []
@@ -49,6 +49,9 @@ def get_images_path(data_dir, valid_tiles=None, valid_files=None):
             for tile_file in tile_files:
                 if valid_files is not None:
                     if tile_file not in valid_files:
+                        continue
+                if invalid_files is not None:
+                    if tile_file in invalid_files:
                         continue
                 tile_file_path = os.path.join(tile_dir, tile_file)
                 if tile_file[-4:] == ".pth":
@@ -126,9 +129,9 @@ def get_all_images_norm_factor(tensor_files):
     _, dmin, dmax= rgb_render(all_tensors)
     return dmin, dmax
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
-                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None, res_dir=None):
+                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None, invalid_files=None,res_dir=None):
     assert large_patch_size % train_patch_size == 0
-    tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files)
+    tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files, invalid_files=invalid_files)
     train_clean_patches = []
     valid_clean_patches = []
     test_clean_patches = []
@@ -141,8 +144,8 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     if res_dir is not None:
         for i, tensor_file in enumerate(tensor_files):
             date = datetime.datetime.strptime(file_info[i][1], '%Y%m%d').date()
-    if res_dir is not None:
-        dmin, dmax = get_all_images_norm_factor(tensor_files)
+    # if res_dir is not None:
+    #     dmin, dmax = get_all_images_norm_factor(tensor_files)
     for i, tensor_file in enumerate(tensor_files):
         info = file_info[i]
         print(tensor_file)
@@ -151,7 +154,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             mask = image_tensor[10]
             mask[mask==0.] = np.nan
             fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize=(6,6))
-            ax.imshow(rgb_render(image_tensor, dmin=dmin, dmax=dmax)[0])
+            ax.imshow(rgb_render(image_tensor)[0])
             ax.imshow(mask.squeeze(), cmap='YlOrRd')
             ax.set_xticks([])
             ax.set_yticks([])
@@ -370,6 +373,7 @@ def main():
                         # "theia_SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8.pth"
                     ]
         valid_files = None
+        invalid_files = []
         tiles = ["32ULV", # Vosges
                  "31UFS", # Belgique
                  "31UDP", # Ile de France
@@ -392,7 +396,7 @@ def main():
      test_patch_info) = get_train_valid_test_patch_tensors(data_dir=parser.data_dir, large_patch_size=large_patch_size,
                                                            train_patch_size=train_patch_size,
                                                            valid_size=valid_size, test_size=test_size,
-                                                           valid_tiles=valid_tiles, valid_files=valid_files, 
+                                                           valid_tiles=valid_tiles, valid_files=valid_files, invalid_files=invalid_files,
                                                            res_dir=parser.output_dir)
     plot_test = True
     if plot_test:

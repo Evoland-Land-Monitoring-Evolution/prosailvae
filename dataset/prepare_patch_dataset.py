@@ -8,6 +8,7 @@ from sensorsio import sentinel2
 from utils.image_utils import rgb_render
 import matplotlib.pyplot as plt
 from rasterio.coords import BoundingBox
+import datetime
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -117,6 +118,13 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
         print("WARNING: patches with nan values were detected in this data !")
     return clean_patches, nan_flag
 
+def get_all_images_norm_factor(tensor_files):
+    all_tensors = []
+    for _, tensor_file in enumerate(tensor_files):
+        all_tensors.append(torch.load(tensor_file))
+    all_tensors = torch.cat(all_tensors, 2)
+    _, dmin, dmax= rgb_render(all_tensors)
+    return dmin, dmax
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
                                        valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None, res_dir=None):
     assert large_patch_size % train_patch_size == 0
@@ -130,6 +138,11 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     test_patch_info = []
     list_valid_image_files = []
     list_invalid_image_files = []
+    if res_dir is not None:
+        for i, tensor_file in enumerate(tensor_files):
+            date = datetime.datetime.strptime(file_info[i][1], '%Y%m%d').date()
+    if res_dir is not None:
+        dmin, dmax = get_all_images_norm_factor(tensor_files)
     for i, tensor_file in enumerate(tensor_files):
         info = file_info[i]
         print(tensor_file)
@@ -138,7 +151,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             mask = image_tensor[10]
             mask[mask==0.] = np.nan
             fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize=(6,6))
-            ax.imshow(rgb_render(image_tensor)[0])
+            ax.imshow(rgb_render(image_tensor, dmin=dmin, dmax=dmax)[0])
             ax.imshow(mask.squeeze(), cmap='YlOrRd')
             ax.set_xticks([])
             ax.set_yticks([])
@@ -175,7 +188,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         if len(test_patches) > 0:
             test_clean_patches.append(test_patches)
             test_patch_info += [info] * n_test
-
+    raise NotImplementedError
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), 
                                    patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
@@ -363,6 +376,7 @@ def main():
                  "30UWU", # Bretagne
                  "30TXQ", # Gironde
                  "31TFJ", # Provence
+                 "31TCJ", # Toulouse
                  "33TWF", # Italie Sud
                  "32TPQ", # Italie Nord
                  "30TUM", # Espagne Nord

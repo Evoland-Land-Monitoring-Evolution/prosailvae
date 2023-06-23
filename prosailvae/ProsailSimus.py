@@ -400,14 +400,14 @@ def get_z2prosailparams_bound(which='high'):
     z2prosailparams_mat = torch.zeros((11))
     z2prosailparams_mat[0] = bounds.N[idx]
     z2prosailparams_mat[1] = bounds.cab[idx]
-    z2prosailparams_mat[2] = bounds.car[idx] 
+    z2prosailparams_mat[2] = bounds.car[idx]
     z2prosailparams_mat[3] = bounds.cbrown[idx]
-    z2prosailparams_mat[4] = bounds.caw[idx] 
-    z2prosailparams_mat[5] = bounds.cm[idx] 
-    z2prosailparams_mat[6] = bounds.lai[idx] 
-    z2prosailparams_mat[7] = bounds.lidfa[idx] 
-    z2prosailparams_mat[8] = bounds.hspot[idx] 
-    z2prosailparams_mat[9] = bounds.psoil[idx] 
+    z2prosailparams_mat[4] = bounds.caw[idx]
+    z2prosailparams_mat[5] = bounds.cm[idx]
+    z2prosailparams_mat[6] = bounds.lai[idx]
+    z2prosailparams_mat[7] = bounds.lidfa[idx]
+    z2prosailparams_mat[8] = bounds.hspot[idx]
+    z2prosailparams_mat[9] = bounds.psoil[idx]
     z2prosailparams_mat[10] = bounds.rsoil[idx]
     return z2prosailparams_mat
 

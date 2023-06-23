@@ -52,6 +52,7 @@ def get_images_path(data_dir, valid_tiles=None, valid_files=None, invalid_files=
                         continue
                 if invalid_files is not None:
                     if tile_file in invalid_files:
+                        print(f"Excluding {tile_file}")
                         continue
                 tile_file_path = os.path.join(tile_dir, tile_file)
                 if tile_file[-4:] == ".pth":
@@ -191,7 +192,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         if len(test_patches) > 0:
             test_clean_patches.append(test_patches)
             test_patch_info += [info] * n_test
-    raise NotImplementedError
+    # raise NotImplementedError
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), 
                                    patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
@@ -373,7 +374,19 @@ def main():
                         # "theia_SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8.pth"
                     ]
         valid_files = None
-        invalid_files = []
+        invalid_files = ["SENTINEL2A_20161001-110717-761_L2A_T30SVJ_D_V1-4.pth",
+                         "SENTINEL2B_20190904-111941-270_L2A_T30TUM_C_V2-2.pth",
+                         "SENTINEL2A_20161011-110223-381_L2A_T30TXQ_D_V1-1.pth",
+                         "SENTINEL2B_20190203-110848-004_L2A_T30TXQ_C_V2-2.pth",
+                         "SENTINEL2A_20161103-111224-460_L2A_T30UWU_D_V1-1.pth",
+                         "SENTINEL2A_20170313-111212-752_L2A_T30UWU_D_V1-4.pth",
+                         "SENTINEL2A_20171109-104505-159_L2A_T31TFJ_C_V2-2.pth",
+                         "SENTINEL2A_20160312-105037-460_L2A_T31UDP_D_V1-1.pth",
+                         "SENTINEL2A_20161115-101301-462_L2A_T32TPQ_D_V1-4.pth",
+                         "SENTINEL2A_20170219-103333-413_L2A_T32ULV_D_V1-4.pth",
+                         "SENTINEL2A_20160304-095843-370_L2A_T33SVB_D_V1-4.pth",
+                         "SENTINEL2A_20160622-095030-459_L2A_T33TWF_D_V1-4.pth",
+                         "SENTINEL2A_20180801-095403-317_L2A_T33TWF_C_V2-2.pth"]
         tiles = ["32ULV", # Vosges
                  "31UFS", # Belgique
                  "31UDP", # Ile de France

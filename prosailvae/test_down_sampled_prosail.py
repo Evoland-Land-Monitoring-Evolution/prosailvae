@@ -360,7 +360,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                      pv_config_hyper=pv_config_hyper,
                                                      logger_name=LOGGER_NAME)
     pvae_down = {}
-    for R_down in [2,4,5,10]:
+    for R_down in [2,3,4,5,6,7,10,12,14,15,20]:
         params["R_down"]=R_down
         pv_config_2 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
                                         inference_mode = False, rsr_dir=parser.rsr_dir,
@@ -392,32 +392,57 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     angles = torch.from_numpy(p_vars[:,11:]).float()
     p_s2r = torch.from_numpy(p_s2r).float()
 
-    rec_1 = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
-    sim_zero_hspot = sim
-    sim_zero_hspot[:,8,:] = 0
-    rec_1_0_hspot = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
-    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
-    for i in range(10):
-        row = i % 2
-        col = i//2
-        err = (rec_1[:,i,:] - rec_1_0_hspot[:,i,:]).abs().squeeze()
-        axs[row, col].boxplot(err, showfliers=False)
-        # axs[1, col].set_xlabel("Down-sampling")
-        axs[row, col].set_xticks([])
-        axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
-        axs[row, col].set_title(BANDS[i])
-    axs[0, 0].set_ylabel('Absolute Error')
-    axs[1, 0].set_ylabel('Absolute Error')
-    fig.savefig("hspot_boxplots_bands_error.png")
-    fig, axs = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+
+    # sim_zero_hspot = sim
+    # sim_zero_hspot[:,8,:] = 0
+    # rec_1_0_hspot = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
+    # fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
+    # for i in range(10):
+    #     row = i % 2
+    #     col = i//2
+    #     err = (rec_1[:,i,:] - rec_1_0_hspot[:,i,:]).abs().squeeze()
+    #     axs[row, col].boxplot(err, showfliers=False)
+    #     # axs[1, col].set_xlabel("Down-sampling")
+    #     axs[row, col].set_xticks([])
+    #     axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
+    #     axs[row, col].set_title(BANDS[i])
+    # axs[0, 0].set_ylabel('Absolute Error')
+    # axs[1, 0].set_ylabel('Absolute Error')
+    # fig.savefig("hspot_boxplots_bands_error.png")
+    # fig, axs = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
     recs_rdown = {}
+    soil_spectrums = {}
+    lambdas = {}
+    n_s2 = {}
     for key, pvae in pvae_down.items():
+        R_down = pvae.decoder.prosailsimulator.R_down
+        soil_spectrums[key] = pvae.decoder.prosailsimulator.soil_spectrum1
+        lambdas[key] = pvae.decoder.prosailsimulator.lambdas
+        n_s2[key] = pvae.decoder.ssimulator.s2norm_factor_n
         recs_rdown[key] = pvae.decode(sim, angles, apply_norm=False).detach()
-    
+    rec_1 = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
+    soil_spectrum1 = prosail_vae_1.decoder.prosailsimulator.soil_spectrum1
+    lambda1 = prosail_vae_1.decoder.prosailsimulator.lambdas
+    fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+    ax.plot(lambda1, soil_spectrum1, label = f"R_down = 1")
+    for j, (key, pvae) in enumerate(pvae_down.items()):
+        ax.plot(lambdas[key], soil_spectrums[key], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
+    ax.legend()
+    fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+    ax.plot(lambda1, prosail_vae_1.decoder.ssimulator.s2norm_factor_n[0,0,:], label = f"R_down = 1")
+    for j, (key, pvae) in enumerate(pvae_down.items()):
+        ax.plot(lambdas[key], n_s2[key][0,0,:], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
+    ax.legend()
+    fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+    ax.plot(rec_1[0,:,0], label = f"R_down = 1")
+    for j, (key, pvae) in enumerate(pvae_down.items()):
+        ax.plot(recs_rdown[key][0,:,0], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
+    ax.legend()
+
     fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
     for i in range(10):
         row = i % 2
-        col = i//2
+        col = i // 2
         for j, (key, rec) in enumerate(recs_rdown.items()):
             err = (rec_1[:,i,:] - rec[:,i,:]).abs().squeeze()
             axs[row, col].boxplot(err,positions=[j], showfliers=False)

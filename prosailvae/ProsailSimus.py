@@ -10,9 +10,32 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import prosail
+from prosail.sail_model import init_prosail_spectra
 # from prosail import spectral_lib
 from utils.utils import gaussian_nll_loss, torch_select_unsqueeze
 from prosailvae.spectral_indices import INDEX_DICT
+from scipy.signal import decimate
+from scipy.interpolate import interp1d
+
+def subsample_spectra(tensor, R_down=1, axis=0, method="interp"):
+    if R_down > 1 :
+        assert 2100 % R_down == 0
+        if method=='block_mean':
+            if tensor.size(0)==2101:
+                tensor = tensor[:-1].reshape(-1, R_down).mean(1)
+        elif method=="decimate":
+            device = tensor.device
+            decimated_array = decimate(tensor.detach().cpu().numpy(), R_down).copy()
+            tensor = torch.from_numpy(decimated_array).to(device)
+        elif method == "interp":
+            device = tensor.device
+            f = interp1d(np.arange(400,2501), tensor.detach().cpu().numpy())
+            sampling = np.arange(400, 2501, R_down)
+            array = np.apply_along_axis(f, 0, sampling)
+            tensor = torch.from_numpy(array).float().to(device)
+        else:
+            raise NotImplementedError
+    return tensor
 
 PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm",
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
@@ -30,6 +53,40 @@ def get_bands_idx(weiss_bands=False):
         bands = torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]) # removing b2 and b8
         prosail_bands = [2, 3, 4, 5, 6, 8, 11, 12]
     return bands, prosail_bands
+
+def apply_along_axis(function, x, fn_arg, axis: int = 0):
+    return torch.stack([
+        function(x_i, fn_arg) for x_i in torch.unbind(x, dim=axis)
+    ], dim=axis)
+
+def decimate_1Dtensor(tensor, R_down=1):
+    device=tensor.device
+    decimated_array = decimate(tensor.detach().cpu().numpy(), R_down).copy()
+    return torch.from_numpy(decimated_array).to(device)
+
+# def subsample_tensor(tensor, R_down=1, axis=0, method='block_mean'):
+#     if R_down > 1 :
+#         assert 2100 % R_down == 0
+#         if method=='block_mean':
+#             size = torch.as_tensor(tensor.size())
+#             axis_len = size[axis]
+#             if axis_len == 2101:
+#                 tensor = tensor.gather(axis, torch.arange(2100))
+#                 size = torch.as_tensor(tensor.size())
+#             resized = torch.zeros(len(size)+1)
+#             resized[axis] = 2100//R_down
+#             resized[axis+1] = R_down
+#             resized[axis+2:] = size[axis+1:]
+#             tensor = tensor.reshape(resized.int().numpy().tolist()).mean(axis)
+#         else:
+#             if len(tensor.size())==1:
+#                 tensor = decimate_1Dtensor(tensor, R_down=R_down)
+#             elif len(tensor.size())==2:
+#                 axis = 0 if axis == 1 else 1
+#                 tensor = apply_along_axis(decimate_1Dtensor, tensor, R_down, axis=axis)
+#             else:
+#                 raise NotImplementedError
+#     return tensor
 
 class SensorSimulator():
     """Simulates the reflectances of a sensor from a full spectrum and the
@@ -106,8 +163,11 @@ RSR of the sensor.
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
         if self.R_down > 1:
+            # self.s2norm_factor_n = subsample_spectra(self.s2norm_factor_n.reshape(len(bands), -1), axis=1,
+            #                                          R_down=R_down, method="decimate").reshape(1, len(bands), -1) * self.R_down
+        
             self.s2norm_factor_n = self.s2norm_factor_n[:,:,:-1].reshape(1, len(bands), -1, R_down).mean(3) * self.R_down
-            
+            # self.s2norm_factor_n = subsample_spectra(self.s2norm_factor_n, R_down=R_down, axis=2) * self.R_down
         
     def change_device(self, device):
         self.device = device
@@ -177,6 +237,16 @@ class ProsailSimulator():
         self.typelidf = typelidf
         self.device=device
         self.R_down=R_down
+        [self.soil_spectrum1, 
+         self.soil_spectrum2, 
+         self.nr, 
+         self.kab, 
+         self.kcar, 
+         self.kbrown, 
+         self.kw,
+         self.km,
+         self.lambdas] = init_prosail_spectra(R_down=self.R_down, device=self.device)
+        
     def __call__(self, params):
         return self.forward(params)
 
@@ -195,7 +265,16 @@ class ProsailSimulator():
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
             device=self.device,
-            R_down=self.R_down
+            soil_spectrum1=self.soil_spectrum1,
+            soil_spectrum2=self.soil_spectrum2,
+            nr=self.nr,
+            kab=self.kab,
+            kcar=self.kcar,
+            kbrown=self.kbrown,
+            kw=self.kw,
+            km=self.km,
+            lambdas=self.lambdas,
+            R_down=1#self.R_down
         ).float()
         
         return prosail_refl

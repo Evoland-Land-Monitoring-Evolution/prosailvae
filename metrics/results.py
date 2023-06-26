@@ -257,6 +257,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             all_cab.append(sim_image[1,...].reshape(-1))
             all_cw.append(sim_image[4,...].reshape(-1))
             all_vars.append(sim_image.reshape(11,-1))
+            pair_plot(sim_image.reshape(11,-1).squeeze(), tensor_2=None, features = PROSAILVARS,
+                      res_dir=patch_plot_dir, filename='sim_prosail_pair_plot.png')
             all_weiss_lai.append(weiss_lai.reshape(-1))
             all_weiss_cab.append(weiss_cab.reshape(-1))
             all_weiss_cw.append(weiss_cw.reshape(-1))

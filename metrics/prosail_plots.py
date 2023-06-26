@@ -979,7 +979,9 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     # fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
     #                                       snap_patch_pred, variable='lai', legend=True)
-    fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
+    # fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
+    pair_plot(all_vars.squeeze(), tensor_2=None, features = PROSAILVARS,
+              res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
     ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')

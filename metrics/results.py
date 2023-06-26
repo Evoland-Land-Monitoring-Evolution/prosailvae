@@ -131,12 +131,12 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         all_train_loss_df.to_csv(loss_dir + "train_loss.csv")
         if plot_results:
             loss_curve(all_train_loss_df, save_file=loss_dir+"train_loss.svg")
-            loss_curve(all_train_loss_df[["epoch", "loss_sum"]], save_file=loss_dir+"train_loss_sum.svg")
+            loss_curve(all_train_loss_df[["epoch", "loss_sum"]], save_file=loss_dir + "train_loss_sum.svg")
     if all_valid_loss_df is not None:
         all_valid_loss_df.to_csv(loss_dir + "valid_loss.csv")
         if plot_results:
             loss_curve(all_valid_loss_df, save_file=loss_dir+"valid_loss.svg")
-            loss_curve(all_valid_loss_df[["epoch", "loss_sum"]], save_file=loss_dir+"train_loss_sum.svg")
+            loss_curve(all_valid_loss_df[["epoch", "loss_sum"]], save_file=loss_dir + "train_loss_sum.svg")
     if info_df is not None:
         if plot_results:
             loss_curve(info_df, save_file=loss_dir+"lr.svg")

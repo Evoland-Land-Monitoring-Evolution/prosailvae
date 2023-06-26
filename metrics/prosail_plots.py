@@ -337,7 +337,6 @@ def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=F
     loss_names.remove("epoch")
     epochs = train_loss_df["epoch"]
     fig, axs = plt.subplots(3,1, dpi=150, sharex=True)
-
     for i in range(len(loss_names)):
         train_loss = train_loss_df[loss_names[i]].values
         valid_loss = valid_loss_df[loss_names[i]].values
@@ -353,12 +352,12 @@ def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=F
     if train_loss_sum_min>0:
         axs[0].set_yscale('log')
     else:
-        axs[0].set_yscale('symlog', linthresh=1e-5)
+        axs[0].set_yscale('symlog', linthresh=1e-2)
         axs[0].set_ylim(bottom=min(0, train_loss_sum_min))
     if valid_loss_sum_min>0:
         axs[1].set_yscale('log')
     else:
-        axs[1].set_yscale('symlog', linthresh=1e-5)
+        axs[1].set_yscale('symlog', linthresh=1e-2)
         axs[1].set_ylim(bottom=min(0, valid_loss_sum_min))
     axs[2].set_yscale('log')
     for i in range(3):

@@ -402,7 +402,7 @@ class ProsailVarsDist:
                     'law': 'gaussian'},
             'lidfa': {'min': 30.0, 'max': 80.0, 'mean': 60.0, 'std': 20.0, 'lai_conv': 10,
                     'law': 'gaussian'},
-            'hspot': {'min': 0.1, 'max': 0.5, 'mean': 0.25, 'std': 0.5, 'lai_conv': None,
+            'hspot': {'min': 0.0, 'max': 0.5, 'mean': 0.25, 'std': 0.5, 'lai_conv': None,
                     'law': 'gaussian'},
             # 'hspot': {'min': 0.001, 'max': 0.5, 'mean': 0.001, 'std': 0.1, 'lai_conv': 10,
             #         'law': 'gaussian'},

@@ -114,9 +114,11 @@ def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
                     clean_patches.append(patch.unsqueeze(0))
                 else:
                     nan_flag=True
+            else:
+                print(f"Non-valid pixels in patch {i}: {validity.sum()}")
         else:
             raise NotImplementedError
-    if len(clean_patches)>0:
+    if len(clean_patches) > 0:
         clean_patches = torch.cat(clean_patches, dim=0)
     if nan_flag:
         print("WARNING: patches with nan values were detected in this data !")

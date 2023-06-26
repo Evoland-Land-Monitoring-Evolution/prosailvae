@@ -197,9 +197,15 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         if len(test_patches) > 0:
             test_clean_patches.append(test_patches)
             test_patch_info += [info] * n_test
-            
+
     # raise NotImplementedError
-    train_clean_patches = torch.cat(train_clean_patches, dim=0)
+    try:
+        train_clean_patches = torch.cat(train_clean_patches, dim=0)
+    except Exception as exc:
+        print(exc),
+        print(len(train_clean_patches))
+        print(train_clean_patches)
+        raise ValueError
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), 
                                    patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
                                                                         train_patch_size, train_patch_size)

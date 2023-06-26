@@ -235,14 +235,14 @@ class ProsailSimulator():
         super().__init__()
         self.factor = factor
         self.typelidf = typelidf
-        self.device=device
-        self.R_down=R_down
-        [self.soil_spectrum1, 
-         self.soil_spectrum2, 
-         self.nr, 
-         self.kab, 
-         self.kcar, 
-         self.kbrown, 
+        self.device = device
+        self.R_down = R_down
+        [self.soil_spectrum1,
+         self.soil_spectrum2,
+         self.nr,
+         self.kab,
+         self.kcar,
+         self.kbrown,
          self.kw,
          self.km,
          self.lambdas] = init_prosail_spectra(R_down=self.R_down, device=self.device)
@@ -252,6 +252,15 @@ class ProsailSimulator():
 
     def change_device(self, device):
         self.device=device
+        self.soil_spectrum1 = self.soil_spectrum1.to(device)
+        self.soil_spectrum2 = self.soil_spectrum2.to(device)
+        self.nr = self.nr.to(device)
+        self.kab = self.kab.to(device)
+        self.kcar = self.kcar.to(device)
+        self.kbrown = self.kbrown.to(device)
+        self.kw = self.kw.to(device)
+        self.km = self.km.to(device)
+        self.lambdas = self.lambdas.to(device)
         pass
 
     def forward(self, params):

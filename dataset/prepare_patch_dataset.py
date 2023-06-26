@@ -161,6 +161,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             ax.set_yticks([])
             ax.set_title(f"{info[2]} {info[1]}")
             fig.savefig(os.path.join(res_dir, f"full_roi_{info[2]} {info[1]}.png"))
+            plt.close('all')
         print(image_tensor.size())
         min_x, max_x, min_y, max_y = get_valid_area_in_image(info[2])
         # if max_x is not None and max_y is not None:
@@ -172,26 +173,31 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         g_cpu = torch.Generator()
         g_cpu.manual_seed(seed)
         perms = torch.randperm(patches.size(0), generator=g_cpu) # For image tensor with identical sizes (i.e. the same sites) permutation will always be the same
-        train_patches, nan_flag_1 = get_clean_patch_tensor(patches[perms[:n_train],...], 
+        train_patches, nan_flag_1 = get_clean_patch_tensor(patches[perms[:n_train], ...],
                                                            cloud_mask_idx=10, reject_mode='all')
-        valid_patches, nan_flag_2 = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid] ,...],
+        valid_patches, nan_flag_2 = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid], ...],
                                                          cloud_mask_idx=10, reject_mode='all')
-        test_patches, nan_flag_3 = get_clean_patch_tensor(patches[perms[n_train + n_valid:],...],
+        test_patches, nan_flag_3 = get_clean_patch_tensor(patches[perms[n_train + n_valid:], ...],
                                                         cloud_mask_idx=10, reject_mode='all')
         if nan_flag_1 or nan_flag_2 or nan_flag_3:
             list_invalid_image_files.append(tensor_file)
+            print(f"{tensor_file} is NaN!")
         else:
             list_valid_image_files.append(tensor_file)
+            print(f"{tensor_file} is OK!")
 
         if len(train_patches) > 0:
             train_clean_patches.append(train_patches)
             train_patch_info += [info] * n_train * (large_patch_size // train_patch_size)**2
+
         if len(valid_patches) > 0:
             valid_clean_patches.append(valid_patches)
             valid_patch_info += [info] * n_valid * (large_patch_size // train_patch_size)**2
+
         if len(test_patches) > 0:
             test_clean_patches.append(test_patches)
             test_patch_info += [info] * n_test
+            
     # raise NotImplementedError
     train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), 
@@ -218,7 +224,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     swap_bands(train_clean_patches)
     swap_bands(valid_clean_patches)
     swap_bands(test_clean_patches)
-    if len(list_invalid_image_files) >0:
+    if len(list_invalid_image_files) > 0:
         print("invalid files :")
         for file in list_invalid_image_files:
             print(file)
@@ -398,7 +404,7 @@ def main():
                  "32TPQ", # Italie Nord
                  "30TUM", # Espagne Nord
                  "30SVJ", # Espagne Centre (Barrax)
-                 "30SVG", # Andalousie
+                 # "30SVG", # Andalousie
                  "30STE", # Maroc
                  "33SVB", # Sicille
                  "31UCS"] # Angleterre

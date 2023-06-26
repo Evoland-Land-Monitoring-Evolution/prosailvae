@@ -781,7 +781,7 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
-    for mode in ["sim_tg_mean", "lat_mode"]:
+    for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
         compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                        recompute=recompute, mode=mode)

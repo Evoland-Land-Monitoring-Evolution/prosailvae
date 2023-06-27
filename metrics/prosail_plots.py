@@ -648,7 +648,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
     
         feature_count = len(features)
         # Create a matplot subplot area with the size of [feature count x feature count]
-        fig, axis = plt.subplots(nrows=feature_count, ncols=feature_count)
+        fig, axis = plt.subplots(nrows=feature_count, ncols=feature_count, tight_layout=True)
         # Setting figure size helps to optimize the figure size according to the feature count.
         fig.set_size_inches(feature_count * 4, feature_count * 4)
     
@@ -979,7 +979,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     # fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
     #                                       snap_patch_pred, variable='lai', legend=True)
     # fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
-    pair_plot(all_vars.squeeze(), tensor_2=None, features = PROSAILVARS,
+    pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features = PROSAILVARS,
               res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
@@ -1355,6 +1355,7 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
                                         'PROSAIL-VAE / SNAP \n CWC difference'],
                                         vmin=None, vmax=None)
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_CWC_err_prediction_vs_weiss.png')
+    plt.close('all')
     return
 
 

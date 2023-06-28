@@ -18,9 +18,11 @@ from rasterio.mask import mask
 
 @dataclass
 class MeasurementDates:
-    wheat_names = ["W1", "W2", "W3", "W4", "W5"]
+    # wheat_names = ["W1", "W2", "W3", "W4", "W5"]
+    wheat_names = ["W", "W", "W", "W", "W"]
     wheat_dates = ["2018-05-17", "2018-05-18", "2018-06-05", "2018-06-21", "2018-07-19"]
-    maize_names = ["M1", "M2", "M3", "M4", "M5", "M6"]
+    # maize_names = ["M1", "M2", "M3", "M4", "M5", "M6"]
+    maize_names = ["M", "M", "M", "M", "M", "M"]
     maize_dates = ["2018-05-31", "2018-06-01", "2018-06-22", "2018-06-21", "2018-08-02", "2018-08-29"]
 
 def plot_sampling_dates(s2_dates=None):
@@ -54,52 +56,57 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
 
     wheat_dates = [datetime.strptime(d, "%Y-%m-%d") for d in meas_dates.wheat_dates]
     # Convert date strings (e.g. 2014-10-18) to datetime
-    wheat_levels = np.tile([-4, 4, -4, 4, -4, 4],
-                int(np.ceil(len(wheat_dates)/6)))[:len(wheat_dates)]
+    wheat_levels = np.tile([1, 1, 1, 1, 1],
+                int(np.ceil(len(wheat_dates)/5)))[:len(wheat_dates)]
     maize_dates = [datetime.strptime(d, "%Y-%m-%d") for d in meas_dates.maize_dates]
     # Convert date strings (e.g. 2014-10-18) to datetime
-    maize_levels = np.tile([3, -3, 3, -3, 3, -3],
+    maize_levels = np.tile([-1, -1, -1, -1, -1, -1],
                 int(np.ceil(len(maize_dates)/6)))[:len(maize_dates)]
     # Create figure and plot a stem plot with the date
-    fig, ax = plt.subplots(figsize=(8.8, 4), layout="constrained", dpi=150)
+    fig, ax = plt.subplots(figsize=(8.8, 2), layout="constrained", dpi=150)
     ax.set(title="Measurement dates in BelSAR campaign")
 
     ax.vlines(wheat_dates, 0, wheat_levels, color="tab:red")  # The vertical stems.
-    ax.plot(wheat_dates, np.zeros_like(wheat_dates), "-o",
-            color="k", markerfacecolor="w")  # Baseline and markers on it.
-
+    ax.scatter(wheat_dates, np.zeros_like(wheat_dates), marker="o",
+                color="k", facecolor="w")  # Baseline and markers on it.
+    ax.axhline(0, color="k",zorder=0)
     # annotate lines
-    for d, l, r in zip(wheat_dates, wheat_levels, meas_dates.wheat_names):
+    wheat_d_offset = [-3,3,0,0,0]
+    for i, (d, l, r) in enumerate(zip(wheat_dates, wheat_levels, meas_dates.wheat_names)):
         ax.annotate(r, xy=(d, l),
-                    xytext=(-3, np.sign(l)*3), textcoords="offset points",
-                    horizontalalignment="right",
+                    xytext=(0 + wheat_d_offset[i], np.sign(l)*0.5), textcoords="offset points",
+                    horizontalalignment="center",
                     verticalalignment="bottom" if l > 0 else "top")
-        
+    maize_d_offset = [-3,3,3,-3,0,0]    
     ax.vlines(maize_dates, 0, maize_levels, color="tab:blue")  # The vertical stems.
-    ax.plot(maize_dates, np.zeros_like(maize_dates), "-o",
-            color="k", markerfacecolor="w")  # Baseline and markers on it.
+    ax.scatter(maize_dates, np.zeros_like(maize_dates), marker="o",
+            color="k", facecolor="w")  # Baseline and markers on it.
 
     # annotate lines
-    for d, l, r in zip(maize_dates, maize_levels, meas_dates.maize_names):
+    for i, (d, l, r) in enumerate(zip(maize_dates, maize_levels, meas_dates.maize_names)):
         ax.annotate(r, xy=(d, l),
-                    xytext=(-3, np.sign(l)*3), textcoords="offset points",
-                    horizontalalignment="right",
+                    xytext=(maize_d_offset[i], np.sign(l)*2), textcoords="offset points",
+                    horizontalalignment="center",
                     verticalalignment="bottom" if l > 0 else "top")
+    s2_d_offset = [0,0,0,0,0,0,0,0,10]
     if s2_dates is not None and s2_names is not None:
         s2_dates = [datetime.strptime(d, "%Y-%m-%d") for d in s2_dates]
-        s2_levels = np.tile([ 2, 2, 2, 2, 2, 2],
-                int(np.ceil(len(s2_dates)/6)))[:len(s2_dates)]
-        ax.vlines(s2_dates, 0, s2_levels, color="tab:green")  # The vertical stems.
-        ax.plot(s2_dates, np.zeros_like(s2_dates), "-o",
-                color="k", markerfacecolor="w")  # Baseline and markers on it.
+        # s2_levels = np.tile([ 2, 2, 2, 2, 2, 2],
+        #                     int(np.ceil(len(s2_dates)/6)))[:len(s2_dates)]
+        s2_levels = np.tile([ 0, 0, 0, 0, 0, 0],
+                            int(np.ceil(len(s2_dates)/6)))[:len(s2_dates)]
+        # ax.vlines(s2_dates, 0, s2_levels, color="tab:green")  # The vertical stems.
+        ax.scatter(s2_dates, np.zeros_like(s2_dates), marker="*", s=100,
+                    color="k", facecolor="g")  # Baseline and markers on it.
 
         # annotate lines
-        for d, l, r in zip(s2_dates, s2_levels, s2_names):
+        for i, (d, l, r) in enumerate(zip(s2_dates, s2_levels, s2_names)):
             ax.annotate(r, xy=(d, l),
-                        xytext=(-3, np.sign(l)*3), textcoords="offset points",
+                        xytext=(-3 + s2_d_offset[i], -2), textcoords="offset points",
                         horizontalalignment="right",
                         verticalalignment="bottom" if l > 0 else "top")
     # format x-axis with 1-week intervals
+    ax.set_ylim(-1.2,1.2)
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
     # ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y "))
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
@@ -360,23 +367,24 @@ def main():
 
 
     months_to_get = ["2016-02-01",
-                    "2016-06-01",
-                    "2016-10-01",
-                    "2018-04-01",
-                    "2018-08-01",
-                    "2018-10-01",
-                    "2017-03-01",
-                    "2017-07-01",
-                    "2017-11-01",
-                    "2019-01-01",
-                    "2019-05-01",
-                    "2019-09-01"]
+                     "2016-06-01",
+                     "2016-10-01",
+                     "2018-04-01",
+                     "2018-08-01",
+                     "2018-10-01",
+                     "2017-03-01",
+                     "2017-07-01",
+                     "2017-11-01",
+                     "2019-01-01",
+                     "2019-05-01",
+                     "2019-09-01"]
     fig, ax = plot_sampling_dates(months_to_get)
 
     fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", "2018-05-18", "2018-05-28", "2018-06-20", "2018-06-27",
-                                                       "2018-07-15", "2018-07-22", "2018-07-27",
-                                                       "2018-08-04"], 
-                                             s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"])
+                                                       "2018-07-15", "2018-07-22", "2018-07-27", "2018-08-04"], 
+                                            #  s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"]
+                                            s2_names=["S","S", "S", "S", "S", "S", "S", "S", "S"]
+                                             )
     fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/dates.svg")
     s2_product_name = parser.product_name
 

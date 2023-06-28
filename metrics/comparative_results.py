@@ -462,7 +462,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "rec_error_comparison.png"))
 
-    fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
+    fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200, tight_layout=True)
     for i, (_, model_info) in enumerate(model_dict.items()):
         axs[i].hist(err_scatter_dict[model_info["plot_name"]], bins=200, range=global_lim)
         axs[i].plot(global_lim, global_lim, 'k--')
@@ -475,7 +475,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         row = i % 2
         col = i//2
         for j, (_, model_info) in enumerate(model_dict.items()):
-            err = err_boxplot_dict[model_info["plot_name"]][:,i,...].abs()
+            err = err_boxplot_dict[model_info["plot_name"]][:,i,...].abs().reshape(-1)
             axs[row, col].boxplot(err, positions=[j], showfliers=False)
         # axs[row, col].set_xticklabels(recs_rdown.keys())
         axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)

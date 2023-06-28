@@ -160,14 +160,17 @@ def initialize_by_training(n_models:int,
                            logger,
                            pv_config:ProsailVAEConfig,
                            pv_config_hyper:ProsailVAEConfig|None=None,
-                           ):
+                           break_at_rec_loss=None):
     """
     Initialize prosial_vae by running a few models for several epochs at high lr,
       and selecting the best.
     """
     min_valid_loss = torch.inf
+    broke_at_rec = False
     logger.info(f"Intializing by training {n_models} models for {n_epochs} epochs:")
-    for _ in range(n_models):
+    best_model_idx = 0
+    for i in range(n_models):
+        logger.info(f'=========================== Model {i} ============================')
         prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
                                                        pv_config_hyper=pv_config_hyper,
                                                        logger_name=LOGGER_NAME)
@@ -187,7 +190,16 @@ def initialize_by_training(n_models:int,
                                                 cycle_training = False)
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
+            best_model_idx = i
             prosail_vae.save_ae(n_epochs, optimizer, model_min_loss, pv_config.vae_save_file_path)
+        if break_at_rec_loss is not None:
+            if all_valid_loss_df['rec_loss'].values.min() <= break_at_rec_loss:
+                logger.info(f'Model {i} has gone under threshold loss {min_valid_loss} < {break_at_rec_loss}.')
+                broke_at_rec = True
+                break
+    logger.info(f'Best model is model {best_model_idx}.')
+    logger.info(f'=====================================================================')
+    return broke_at_rec
     # best_prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
     #                                                     pv_config_hyper=pv_config_hyper,
     #                                                     logger_name=LOGGER_NAME)
@@ -229,9 +241,10 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                     break #stop training if lr too low
                 for g in optimizer.param_groups:
                     g['lr'] = 1e-4
-                lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer,
-                                                                      gamma=exp_lr_decay)
-            switch_loss(epoch, n_epoch, prosail_vae, swith_ratio=0.75)
+                lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
+                                                            patience=lr_recompute,
+                                                            threshold=0.01, threshold_mode='abs')
+            # switch_loss(epoch, n_epoch, prosail_vae, swith_ratio=0.75)
             if lr_recompute_mode:
                 raise NotImplementedError
                 # lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, prosail_vae, epoch,
@@ -352,6 +365,15 @@ def load_params(config_dir, config_file, parser=None):
         params["cycle_training"] = False
     if "R_down" not in params.keys():
         params["R_down"] = 1
+    if "n_init_models" not in params.keys():
+        params["n_init_models"] = 10
+    if "n_init_epochs" not in params.keys():
+        params["n_init_epochs"] = 10
+    if "init_lr" not in params.keys():
+        params["init_lr"] = 5e-4
+    if "break_init_at_rec_loss" not in params.keys():
+        params["break_init_at_rec_loss"] = None
+
     return params
 
 def setup_training():
@@ -466,7 +488,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     data_dir=data_dir)
     else:
         train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=params["batch_size"],
-                                                                                 num_workers=0, max_valid_samples=100)
+                                                                                 num_workers=0, max_valid_samples=None)
 
     if params["apply_norm_rec"]:
         norm_mean = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_mean.pt"))#[bands]
@@ -505,23 +527,37 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                  inference_mode=True, rsr_dir=parser.rsr_dir,
                                                  norm_mean=sup_norm_mean, norm_std=sup_norm_std)
     if params['init_model']:
-        n_models=10
-        lr = 1e-4
-        n_epochs=10
+        n_models=params["n_init_models"]
+        lr = params['init_lr']
+        n_epochs=params["n_init_epochs"]
         if socket.gethostname()=='CELL200973':
             n_epochs = 1
             n_models = 2
 
-        initialize_by_training(n_models=n_models,
+        broke_at_rec = initialize_by_training(n_models=n_models,
                                n_epochs=n_epochs,
-                                train_loader=train_loader,
-                                valid_loader=valid_loader,
-                                lr=lr,
-                                logger=logger,
-                                n_samples=training_config.n_samples,
-                                pv_config=pv_config,
-                                pv_config_hyper=pv_config_hyper
+                               train_loader=train_loader,
+                               valid_loader=valid_loader,
+                               lr=lr,
+                               logger=logger,
+                               n_samples=training_config.n_samples,
+                               pv_config=pv_config,
+                               pv_config_hyper=pv_config_hyper,
+                               break_at_rec_loss=params["break_init_at_rec_loss"]
                             )
+        if params["break_init_at_rec_loss"] is not None and not broke_at_rec:
+            broke_at_rec = initialize_by_training(n_models=n_models,
+                                                    n_epochs=n_epochs,
+                                                    train_loader=train_loader,
+                                                    valid_loader=valid_loader,
+                                                    lr=1e-3,
+                                                    logger=logger,
+                                                    n_samples=training_config.n_samples,
+                                                    pv_config=pv_config,
+                                                    pv_config_hyper=pv_config_hyper,
+                                                    break_at_rec_loss=params["break_init_at_rec_loss"])
+            if not broke_at_rec:
+                logger.info("No good initialization was found !")
         # Changing config to load the best model intialized
         params["load_model"] = True
         params["vae_load_file_path"] = params["vae_save_file_path"]

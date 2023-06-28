@@ -114,6 +114,18 @@ def get_rectangle_bounds_from_patch_info(patch_idx, patch_size=128, image_size =
     xmax = (col_idx + 1) * patch_size
     return xmin, xmax, ymin, ymax
 
+def plot_patch_rectangles(ax, patch_idxs, patch_size, image_size, color='red'):
+
+    for idx in patch_idxs:
+        xmin, xmax, ymin, ymax = get_rectangle_bounds_from_patch_info(idx,
+                                                                      patch_size=patch_size, 
+                                                                      image_size=image_size)
+        ax.add_patch(Rectangle((xmin,ymin),xmax-xmin,ymax-ymin,
+                        edgecolor=color,
+                        facecolor='none',
+                        lw=1))
+    return
+
 def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
     clean_patches = []
     nan_flag = False
@@ -210,6 +222,19 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize=(6, 6))
             ax.imshow(rgb_render(image_tensor)[0])
             ax.imshow(mask.squeeze(), cmap='YlOrRd')
+            plot_patch_rectangles(ax, perms[:n_train], patch_size=large_patch_size,
+                        image_size=((image_tensor.size(1)//large_patch_size)*large_patch_size,
+                                    (image_tensor.size(2)//large_patch_size)*large_patch_size), 
+                                    color='red')
+
+            plot_patch_rectangles(ax, perms[n_train:n_train + n_valid], patch_size=large_patch_size,
+                        image_size=((image_tensor.size(1)//large_patch_size)*large_patch_size,
+                                    (image_tensor.size(2)//large_patch_size)*large_patch_size), 
+                                    color='blue')
+            plot_patch_rectangles(ax, perms[n_train + n_valid:], patch_size=large_patch_size,
+                                  image_size=((image_tensor.size(1)//large_patch_size)*large_patch_size,
+                                              (image_tensor.size(2)//large_patch_size)*large_patch_size), 
+                                              color='green')
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{info[2]} {info[1]}")

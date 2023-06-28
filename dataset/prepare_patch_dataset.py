@@ -102,6 +102,17 @@ def get_patches(image_tensor, patch_size):
     patches = patches.reshape(-1, image_tensor.size(0), patch_size, patch_size)
     return patches
 
+def get_rectangle_bounds_from_patch_info(patch_idx, patch_size=128, image_size = (512, 512)):
+    # n_row = image_size[0] // patch_size
+    n_col = image_size[1] // patch_size
+    col_idx = patch_idx % n_col
+    line_idx = patch_idx // n_col
+    ymin = line_idx * patch_size
+    ymax = (line_idx + 1) * patch_size
+    xmin = col_idx * patch_size
+    xmax = (col_idx + 1) * patch_size
+    return xmin, xmax, ymin, ymax
+
 def get_clean_patch_tensor(patches, cloud_mask_idx=10, reject_mode='all'):
     clean_patches = []
     nan_flag = False

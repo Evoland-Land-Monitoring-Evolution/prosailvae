@@ -488,7 +488,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     data_dir=data_dir)
     else:
         train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=params["batch_size"],
-                                                                                 num_workers=0, max_valid_samples=None)
+                                                                                 num_workers=0, max_valid_samples=1000)
 
     if params["apply_norm_rec"]:
         norm_mean = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_mean.pt"))#[bands]

@@ -221,13 +221,13 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
     train_clean_patches = train_clean_patches[train_perms,...]
     train_patch_info = np.array(train_patch_info)[train_perms,:]
     if valid_size_for_small_patches:
-        train_patches_from_valid = valid_clean_patches[(valid_perms.size()*train_patch_size)//large_patch_size:,...]
+        train_patches_from_valid = valid_clean_patches[(valid_perms.size(0)*train_patch_size)//large_patch_size:,...]
         train_clean_patches = torch.cat((train_clean_patches, train_patches_from_valid), dim=0)
-        train_info_from_valid = valid_patch_info[(valid_perms.size()*train_patch_size)//large_patch_size:]
+        train_info_from_valid = valid_patch_info[(valid_perms.size(0)*train_patch_size)//large_patch_size:]
         train_patch_info = np.concatenate((train_patch_info, train_info_from_valid))
-        valid_clean_patches = valid_clean_patches[:(valid_perms.size()*train_patch_size)//large_patch_size,...]
-        valid_patch_info = valid_patch_info[:(valid_perms.size()*train_patch_size)//large_patch_size]
-        
+        valid_clean_patches = valid_clean_patches[:(valid_perms.size(0)*train_patch_size)//large_patch_size,...]
+        valid_patch_info = valid_patch_info[:(valid_perms.size(0)*train_patch_size)//large_patch_size]
+
     test_clean_patches = torch.cat(test_clean_patches, dim=0)
     test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu)
     test_clean_patches = test_clean_patches[test_perms,...]

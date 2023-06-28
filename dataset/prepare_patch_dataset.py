@@ -132,7 +132,8 @@ def get_all_images_norm_factor(tensor_files):
     _, dmin, dmax= rgb_render(all_tensors)
     return dmin, dmax
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
-                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, valid_files=None, invalid_files=None,res_dir=None):
+                                       valid_size = 0.05, test_size = 0.05, valid_tiles=None, 
+                                       valid_files=None, invalid_files=None,res_dir=None, valid_size_for_small_patches=True):
     assert large_patch_size % train_patch_size == 0
     tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files, invalid_files=invalid_files)
     train_clean_patches = []
@@ -167,9 +168,9 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         train_patches, nan_flag_1 = get_clean_patch_tensor(patches[perms[:n_train], ...],
                                                            cloud_mask_idx=10, reject_mode='all')
         valid_patches, nan_flag_2 = get_clean_patch_tensor(patches[perms[n_train:n_train + n_valid], ...],
-                                                         cloud_mask_idx=10, reject_mode='all')
+                                                            cloud_mask_idx=10, reject_mode='all')
         test_patches, nan_flag_3 = get_clean_patch_tensor(patches[perms[n_train + n_valid:], ...],
-                                                        cloud_mask_idx=10, reject_mode='all')
+                                                            cloud_mask_idx=10, reject_mode='all')
         if nan_flag_1 or nan_flag_2 or nan_flag_3:
             list_invalid_image_files.append(tensor_file)
             print(f"{tensor_file} is NaN!")
@@ -201,26 +202,32 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             fig.savefig(os.path.join(res_dir, f"full_roi_{info[2]}_{info[1]}.png"))
             plt.close('all')
     # raise NotImplementedError
-    try:
-        train_clean_patches = torch.cat(train_clean_patches, dim=0)
-    except Exception as exc:
-        print(exc),
-        print(len(train_clean_patches))
-        print(train_clean_patches)
-        raise ValueError
+
+
+    valid_clean_patches = torch.cat(valid_clean_patches, dim=0)
+    valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), 
+                                   patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
+                                                                        train_patch_size, train_patch_size)
+    valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu)
+
+    valid_clean_patches = valid_clean_patches[valid_perms,...]
+    valid_patch_info = np.array(valid_patch_info)[valid_perms,:]
+
+    train_clean_patches = torch.cat(train_clean_patches, dim=0)
     train_clean_patches = patchify(unpatchify(train_clean_patches.unsqueeze(0)), 
                                    patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
                                                                         train_patch_size, train_patch_size)
     train_perms = torch.randperm(train_clean_patches.size(0), generator=g_cpu)
     train_clean_patches = train_clean_patches[train_perms,...]
     train_patch_info = np.array(train_patch_info)[train_perms,:]
-    valid_clean_patches = torch.cat(valid_clean_patches, dim=0)
-    valid_clean_patches = patchify(unpatchify(valid_clean_patches.unsqueeze(0)), 
-                                   patch_size=train_patch_size).reshape(-1,image_tensor.size(0), 
-                                                                        train_patch_size, train_patch_size)
-    valid_perms = torch.randperm(valid_clean_patches.size(0), generator=g_cpu)
-    valid_clean_patches = valid_clean_patches[valid_perms,...]
-    valid_patch_info = np.array(valid_patch_info)[valid_perms,:]
+    if valid_size_for_small_patches:
+        train_patches_from_valid = valid_clean_patches[(valid_perms.size()*train_patch_size)//large_patch_size:,...]
+        train_clean_patches = torch.cat((train_clean_patches, train_patches_from_valid), dim=0)
+        train_info_from_valid = valid_patch_info[(valid_perms.size()*train_patch_size)//large_patch_size:]
+        train_patch_info = np.concatenate((train_patch_info, train_info_from_valid))
+        valid_clean_patches = valid_clean_patches[:(valid_perms.size()*train_patch_size)//large_patch_size,...]
+        valid_patch_info = valid_patch_info[:(valid_perms.size()*train_patch_size)//large_patch_size]
+        
     test_clean_patches = torch.cat(test_clean_patches, dim=0)
     test_perms = torch.randperm(test_clean_patches.size(0), generator=g_cpu)
     test_clean_patches = test_clean_patches[test_perms,...]

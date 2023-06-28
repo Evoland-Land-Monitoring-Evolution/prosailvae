@@ -194,7 +194,7 @@ def initialize_by_training(n_models:int,
             prosail_vae.save_ae(n_epochs, optimizer, model_min_loss, pv_config.vae_save_file_path)
         if break_at_rec_loss is not None:
             if all_valid_loss_df['rec_loss'].values.min() <= break_at_rec_loss:
-                logger.info(f'Model {i} has gone under threshold loss {min_valid_loss} < {break_at_rec_loss}.')
+                logger.info(f"Model {i} has gone under threshold loss {all_valid_loss_df['rec_loss'].values.min()} < {break_at_rec_loss}.")
                 broke_at_rec = True
                 break
     logger.info(f'Best model is model {best_model_idx}.')

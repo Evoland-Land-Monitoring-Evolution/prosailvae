@@ -349,7 +349,7 @@ class SimVAE(nn.Module):
         for loss_type, loss in loss_dict.items():
             if loss_type not in normalized_loss_dict.keys():
                 normalized_loss_dict[loss_type] = 0.0
-            normalized_loss_dict[loss_type] += loss #/ batch_size
+            normalized_loss_dict[loss_type] += loss / batch_size
         return loss_sum, normalized_loss_dict
 
     def supervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1):

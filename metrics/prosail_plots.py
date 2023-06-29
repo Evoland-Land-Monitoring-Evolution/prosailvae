@@ -320,7 +320,7 @@ def loss_curve(loss_df, save_file=None, fig=None, ax=None):
     if "loss_sum" in loss_names:
         loss_sum_min = loss_df['loss_sum'].values.min()
         loss_sum_min_epoch = loss_df['loss_sum'].values.argmin()
-        
+        ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min", c='r')
     positive_loss = []
     negative_loss = [] 
     pos_and_neg_loss = []
@@ -338,7 +338,7 @@ def loss_curve(loss_df, save_file=None, fig=None, ax=None):
     ax2=None
     if not (all(positive_loss) or all(negative_loss) or all(pos_and_neg_loss)):
         ax2=ax.twinx()
-    ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min", c='r')
+    
     for i in range(len(loss_names)):    
         loss = loss_df[loss_names[i]].values
         if ax2 is None:

@@ -321,7 +321,7 @@ def plot_frm4veg_results_comparison(model_dict, model_results, data_dir, filenam
 
 
 def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, prefix="", margin = 0.02, 
-                                   hue="Site", legend_col=3):
+                                   hue="Site", legend_col=3, hue_perfs=False):
     n_models = len(model_dict) + 1
     xmin = np.min(model_results["SNAP"]["Predicted LAI"])
     xmax = np.max(model_results["SNAP"]["Predicted LAI"])
@@ -340,11 +340,11 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
         df_metrics = model_results[model_name]
         fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
                                   legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", 
-                                  error_y="Predicted LAI std", hue_perfs=True)
+                                  error_y="Predicted LAI std", hue_perfs=hue_perfs)
         ax.set_title(model_info["plot_name"])
     df_metrics = model_results["SNAP"]
     fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
-                             legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std")
+                             legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", hue_perfs=hue_perfs)
     axs[-1].set_title("SNAP")
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)
@@ -733,7 +733,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
-                                           margin = 0.02)
+                                           margin = 0.02, hue_perfs=True)
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
                                            margin = 0.02, hue="Land cover")

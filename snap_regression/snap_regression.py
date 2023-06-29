@@ -18,10 +18,9 @@ from prosailvae.dist_utils import (sample_truncated_gaussian, kl_tntn, truncated
                                    numerical_kl_from_pdf, truncated_gaussian_cdf)
 from snap_nn import SnapNN, test_snap_nn
 from utils.image_utils import rgb_render, tensor_to_raster
-from dataset.prepare_silvia_validation import load_validation_data
-from dataset.prepare_belSAR_validation import load_belsar_validation_data, get_sites_geometry
+from dataset.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
-from metrics.prosail_plots import silvia_validation_plots, plot_belsar_metrics
+from metrics.prosail_plots import frm4veg_plots, plot_belsar_metrics
 from metrics.belsar_metrics import compute_metrics_at_date
 # from metrics.results import get_snap_belsar_predictions
 

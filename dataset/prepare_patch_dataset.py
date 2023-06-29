@@ -459,8 +459,8 @@ def main():
                  "30TUM", # Espagne Nord
                  "30SVJ", # Espagne Centre (Barrax)
                  # "30SVG", # Andalousie
-                 "30STE", # Maroc
-                 "33SVB", # Sicille
+                #  "30STE", # Maroc
+                #  "33SVB", # Sicille
                  "31UCS"] # Angleterre
         valid_tiles = ['theia_tensor']
     # valid_files = ["after_SENTINEL2A_20170621-111222-373_L2A_T30TUM_D_V1-4_roi_0.pth"]

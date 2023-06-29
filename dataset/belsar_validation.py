@@ -11,6 +11,15 @@ from utils.image_utils import tensor_to_raster
 from dataclasses import dataclass
 from datetime import datetime
 import matplotlib.pyplot as plt
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica",
+    'mathtext.fontset' : 'custom',
+    'mathtext.rm': 'Bitstream Vera Sans',
+    'mathtext.it': 'Bitstream Vera Sans:italic',
+    'mathtext.bf': 'Bitstream Vera Sans:bold'
+})
+
 import matplotlib.dates as mdates
 import zipfile
 import shutil
@@ -19,10 +28,12 @@ from rasterio.mask import mask
 @dataclass
 class MeasurementDates:
     # wheat_names = ["W1", "W2", "W3", "W4", "W5"]
-    wheat_names = ["W", "W", "W", "W", "W"]
+    # wheat_names = ["W", "W", "W", "W", "W"]
+    wheat_names = [r"$W$", r"$W$", r"$W$", r"$W$", r"$W$"]
     wheat_dates = ["2018-05-17", "2018-05-18", "2018-06-05", "2018-06-21", "2018-07-19"]
     # maize_names = ["M1", "M2", "M3", "M4", "M5", "M6"]
-    maize_names = ["M", "M", "M", "M", "M", "M"]
+    # maize_names = ["M", "M", "M", "M", "M", "M"]
+    maize_names = [r"$M$", r"$M$", r"$M$", r"$M$", r"$M$", r"$M$"]
     maize_dates = ["2018-05-31", "2018-06-01", "2018-06-22", "2018-06-21", "2018-08-02", "2018-08-29"]
 
 def plot_sampling_dates(s2_dates=None):
@@ -64,11 +75,11 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
                 int(np.ceil(len(maize_dates)/6)))[:len(maize_dates)]
     # Create figure and plot a stem plot with the date
     fig, ax = plt.subplots(figsize=(8.8, 2), layout="constrained", dpi=150)
-    ax.set(title="Measurement dates in BelSAR campaign")
+    # ax.set(title="Measurement dates in BelSAR campaign")
 
     ax.vlines(wheat_dates, 0, wheat_levels, color="tab:red")  # The vertical stems.
     ax.scatter(wheat_dates, np.zeros_like(wheat_dates), marker="o",
-                color="k", facecolor="w")  # Baseline and markers on it.
+                color="k", facecolor="w", zorder=40)  # Baseline and markers on it.
     ax.axhline(0, color="k",zorder=0)
     # annotate lines
     wheat_d_offset = [-3,3,0,0,0]
@@ -80,7 +91,7 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
     maize_d_offset = [-3,3,3,-3,0,0]    
     ax.vlines(maize_dates, 0, maize_levels, color="tab:blue")  # The vertical stems.
     ax.scatter(maize_dates, np.zeros_like(maize_dates), marker="o",
-            color="k", facecolor="w")  # Baseline and markers on it.
+            color="k", facecolor="w", zorder=50)  # Baseline and markers on it.
 
     # annotate lines
     for i, (d, l, r) in enumerate(zip(maize_dates, maize_levels, meas_dates.maize_names)):
@@ -97,16 +108,16 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
                             int(np.ceil(len(s2_dates)/6)))[:len(s2_dates)]
         # ax.vlines(s2_dates, 0, s2_levels, color="tab:green")  # The vertical stems.
         ax.scatter(s2_dates, np.zeros_like(s2_dates), marker="*", s=100,
-                    color="k", facecolor="g")  # Baseline and markers on it.
+                    color="k", facecolor="g", zorder=100)  # Baseline and markers on it.
 
         # annotate lines
         for i, (d, l, r) in enumerate(zip(s2_dates, s2_levels, s2_names)):
             ax.annotate(r, xy=(d, l),
-                        xytext=(-3 + s2_d_offset[i], -2), textcoords="offset points",
+                        xytext=(-3 + s2_d_offset[i], -6), textcoords="offset points",
                         horizontalalignment="right",
                         verticalalignment="bottom" if l > 0 else "top")
     # format x-axis with 1-week intervals
-    ax.set_ylim(-1.2,1.2)
+    ax.set_ylim(-1.5,1.5)
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
     # ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y "))
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
@@ -383,7 +394,7 @@ def main():
     fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", "2018-05-18", "2018-05-28", "2018-06-20", "2018-06-27",
                                                        "2018-07-15", "2018-07-22", "2018-07-27", "2018-08-04"], 
                                             #  s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"]
-                                            s2_names=["S","S", "S", "S", "S", "S", "S", "S", "S"]
+                                            s2_names=[r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$"]
                                              )
     fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/dates.svg")
     s2_product_name = parser.product_name

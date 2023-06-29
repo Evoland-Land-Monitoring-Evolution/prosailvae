@@ -34,17 +34,17 @@ def get_parser():
     return parser
 
 MONTHS_TO_RETRIEVE = ["2016-02-01",
-                     "2016-06-01",
-                     "2016-10-01",
-                     "2017-03-01",
-                     "2017-07-01",
-                     "2017-11-01",
-                     "2018-04-01",
-                     "2018-08-01",
-                     "2018-10-01",
-                     "2019-01-01",
-                     "2019-05-01",
-                     "2019-09-01"]
+                      "2016-06-01",
+                      "2016-10-01",
+                      "2017-03-01",
+                      "2017-07-01",
+                      "2017-11-01",
+                      "2018-04-01",
+                      "2018-08-01",
+                      "2018-10-01",
+                      "2019-01-01",
+                      "2019-05-01",
+                      "2019-09-01"]
 
 TILES_BB = {"32ULV": {'bb_left_top':[[ 717249, 6273008]], 'crs':"epsg:32632"},
             "31UFS": {'bb_left_top':[[ 527850, 6586729]], 'crs':"epsg:32631"},
@@ -236,7 +236,7 @@ def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1, top_left=
                                   sun_az.reshape((1,w,h)),
                                   joint_zen.reshape((1,w,h)),
                                   joint_az.reshape((1,w,h))))
-    print("Tile Tensor completed")
+    print(f"Tile Tensor completed - tensor size: {tile_tensor.shape}")
     return torch.from_numpy(tile_tensor)   
 
 def main():
@@ -246,52 +246,59 @@ def main():
     parser = get_parser().parse_args(args)
     # parser = get_parser().parse_args()
     #for tile in ["30SVG", "30STE", "33SVB", "31UCS"]:
+    list_product = ["SENTINEL2A_20170423-104254-989_L2A_T31TCJ_D",
+                    "SENTINEL2A_20170526-105518-082_L2A_T31TCJ_D",
+                    "SENTINEL2A_20170705-105605-592_L2A_T30SWJ_D",
+                    "SENTINEL2B_20180811-104744-821_L2A_T31TCJ_D",
+                    "SENTINEL2A_20180511-105804-037_L2A_T31TCJ_D",
+                    "SENTINEL2B_20180821-104015-463_L2A_T31TCJ_D",
+                    "SENTINEL2B_20180314-104014-461_L2A_T31TCJ_D",
+                    "SENTINEL2A_20170622-104021-457_L2A_T31TCJ_D",
+                    "SENTINEL2B_20180625-105253-379_L2A_T31TCJ_D",
+                    "SENTINEL2B_20180426-105202-871_L2A_T30SWJ_D",
+                    "SENTINEL2B_20180824-105058-149_L2A_T30SWJ_D",
+                    "SENTINEL2A_20170506-105029-462_L2A_T30SWJ_D",
+                    "SENTINEL2A_20180727-104023-458_L2A_T31TCJ_D",
+                    "SENTINEL2B_20180725-105415-357_L2A_T30SWJ_D",
+                    "SENTINEL2B_20170717-104757-036_L2A_T31TCJ_D",
+                    "SENTINEL2B_20180625-105253-379_L2A_T30SWJ_D",
+                    "SENTINEL2A_20170814-105517-079_L2A_T30SWJ_D",
+                    "SENTINEL2A_20170605-105303-597_L2A_T30SWJ_D",
+                    "SENTINEL2A_20170406-105317-631_L2A_T30SWJ_D",]
     download = True
     if not download:
         for tile in ["30SWJ", "31TCJ"]:
         #for tile in ["33TWF", "32TPQ", "30TUM", "30SVJ"]:
             tiles, bb_list = get_sites_bb(TILES_BB, tiles=[tile], in_crs="epsg:3857", size=5120)
     else:
-        tensor_dir = "/home/yoel/Téléchargements/tile_s2/torch_files"
-        for tile in ["30SWJ", "31TCJ"]:
+        
+        for tile in ["31TCJ", "30SWJ"]:
         #for tile in TILES_BB.keys():
-            tile_dir = os.path.join(tensor_dir,"T"+tile)
-            top_left = TILES_BB[tile]['bb_left_top'][0]
-            list_product = ["SENTINEL2A_20170423-104254-989_L2A_T31TCJ_D",
-                            "SENTINEL2A_20170526-105518-082_L2A_T31TCJ_D",
-                            "SENTINEL2A_20170705-105605-592_L2A_T30SWJ_D",
-                            "SENTINEL2B_20180811-104744-821_L2A_T31TCJ_D",
-                            "SENTINEL2A_20180511-105804-037_L2A_T31TCJ_D",
-                            "SENTINEL2B_20180821-104015-463_L2A_T31TCJ_D",
-                            "SENTINEL2B_20180314-104014-461_L2A_T31TCJ_D",
-                            "SENTINEL2A_20170622-104021-457_L2A_T31TCJ_D",
-                            "SENTINEL2B_20180625-105253-379_L2A_T31TCJ_D",
-                            "SENTINEL2B_20180426-105202-871_L2A_T30SWJ_D",
-                            "SENTINEL2B_20180824-105058-149_L2A_T30SWJ_D",
-                            "SENTINEL2A_20170506-105029-462_L2A_T30SWJ_D",
-                            "SENTINEL2A_20180727-104023-458_L2A_T31TCJ_D",
-                            "SENTINEL2B_20180725-105415-357_L2A_T30SWJ_D",
-                            "SENTINEL2B_20170717-104757-036_L2A_T31TCJ_D",
-                            "SENTINEL2B_20180625-105253-379_L2A_T30SWJ_D",
-                            "SENTINEL2A_20170814-105517-079_L2A_T30SWJ_D",
-                            "SENTINEL2A_20170605-105303-597_L2A_T30SWJ_D",
-                            "SENTINEL2A_20170406-105317-631_L2A_T30SWJ_D",]
-            for product_name in list_product:
-                if product_name[-7:-2] != tile:
-                    continue
-                # product_name = s3_id.split('/')[-2]
-                # product_name = fix_product_name(tile_dir, product_name)
-                #product_name = product_name.replace("_D_V", "_C_V")
-                product_dir = os.listdir(os.path.join(parser.output_dir, product_name))[0]
-                product_tensor = theia_product_to_tensor(os.path.join(parser.output_dir, product_name), 
-                                                         product_dir, part_loading=1, top_left=top_left, n_pixels=512)
-                tensor_visu, _, _ = rgb_render(product_tensor.squeeze())
-                fig, ax = plt.subplots(dpi=150, figsize=(6,6))
-                im = ax.imshow(tensor_visu)
-                ax.set_title(product_name)
-                fig.savefig(os.path.join(tensor_dir, product_name + '.png'))
-                print(f"Saving tensor file at {os.path.join(tensor_dir, product_name + '.pth')}")
-                torch.save(product_tensor, os.path.join(tensor_dir, product_name + '.pth'))
+            tile_dir = os.path.join(parser.output_dir,"T"+tile)
+            tensor_dir = os.path.join("/home/yoel/Téléchargements/tile_s2/torch_files","T" + tile)
+            list_tile_product = []
+            for d in os.listdir(tile_dir):
+                if os.path.isdir(os.path.join(tile_dir, d)) and d[:8]=="SENTINEL":
+                    list_tile_product.append(d)
+            for product_name in list_tile_product:
+                for roi, top_left in enumerate(TILES_BB[tile]['bb_left_top']):
+                    # product_name = s3_id.split('/')[-2]
+                    # product_name = fix_product_name(tile_dir, product_name)
+                    #product_name = product_name.replace("_D_V", "_C_V")
+                    product_dir = os.listdir(os.path.join(tile_dir, product_name))[0]
+
+                    product_tensor = theia_product_to_tensor(os.path.join(tile_dir, product_name), 
+                                                             product_dir, part_loading=1, top_left=top_left, n_pixels=512)
+                    if not product_tensor.isnan().any():
+                        tensor_visu, _, _ = rgb_render(product_tensor.squeeze())
+                        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+                        im = ax.imshow(tensor_visu)
+                        ax.set_title(product_name)
+                        fig.savefig(os.path.join(tensor_dir, product_name + f'_ROI_{roi}.png'))
+                        print(f"Saving tensor file at {os.path.join(tensor_dir, f'{product_name}_ROI_{roi}.pth')}")
+                        torch.save(product_tensor, os.path.join(tensor_dir, f'{product_name}_ROI_{roi}.pth'))
+                    else:
+                        print("NaN tensor !")
                 # shutils.rmtree(os.path.join(tensor_dir, product))
 
 if __name__ == "__main__":

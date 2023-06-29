@@ -13,7 +13,7 @@ from sklearn.metrics import r2_score
 #   "text.usetex": True,
 #   "font.family": "Helvetica"
 # })
-
+# plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 import numpy as np
 import pandas as pd
 import torch
@@ -25,6 +25,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from dataset.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 import os
+from math import ceil, log10
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
     fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
@@ -308,66 +309,143 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
         plt.close('all')
     prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
     
-def loss_curve(loss_df, save_file):
+def loss_curve(loss_df, save_file=None, fig=None, ax=None):
+    colors = ['b', 'orange', 'g', 'k']
     loss_names = loss_df.columns.values.tolist()
     loss_names.remove("epoch")
     epochs = loss_df["epoch"]
-    fig, ax = plt.subplots(dpi=150)
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(dpi=150)
     min_loss=1000000
     if "loss_sum" in loss_names:
         loss_sum_min = loss_df['loss_sum'].values.min()
         loss_sum_min_epoch = loss_df['loss_sum'].values.argmin()
-        ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min")
+        
+    positive_loss = []
+    negative_loss = [] 
+    pos_and_neg_loss = []
+    smaller_neg_part = 10000
+    biggest_neg_part = 0
     for i in range(len(loss_names)):
         loss = loss_df[loss_names[i]].values
+        negative_loss.append(loss.min() < 0)
+        positive_loss.append(loss.max() > 0)
+        pos_and_neg_loss.append(loss.max() > 0 and loss.min() < 0)
         min_loss = min(loss.min(), min_loss)
-        ax.plot(epochs,loss, label=loss_names[i])
-    if min_loss>0:
+        if min_loss < 0 :
+            smaller_neg_part = min(smaller_neg_part, abs(loss.min()))
+            biggest_neg_part = max(biggest_neg_part, abs(loss.min()))
+    ax2=None
+    if not (all(positive_loss) or all(negative_loss) or all(pos_and_neg_loss)):
+        ax2=ax.twinx()
+    ax.scatter([loss_sum_min_epoch], [loss_sum_min], label="loss_sum min", c='r')
+    for i in range(len(loss_names)):    
+        loss = loss_df[loss_names[i]].values
+        if ax2 is None:
+            if loss_names[i]=='loss_sum':
+                ax.plot(epochs,loss, label=loss_names[i], c='r')
+            else:
+                ax.plot(epochs,loss, label=loss_names[i], c=colors[i])
+        else:
+            if pos_and_neg_loss[i] or negative_loss[i]:
+                if loss_names[i]=='loss_sum':
+                    ax.plot(epochs, loss, label=loss_names[i], c='r')
+                else:
+                    ax.plot(epochs, loss, label=loss_names[i], c=colors[i])
+            else:
+                if loss_names[i]=='loss_sum':
+                    ax2.plot(epochs, loss, label=loss_names[i], c='r')
+                else:
+                    ax2.plot(epochs, loss, label=loss_names[i], c=colors[i])
+    if min_loss > 0:
         ax.set_yscale('log')
     else:
-        ax.set_yscale('symlog', linthresh=1e-5)
-        ax.set_ylim(bottom=min(0, min_loss))
-    ax.legend()
+        linthresh = 1e-5
+        if smaller_neg_part > 0:
+            linthresh = 10**(ceil(log10(smaller_neg_part))-1)
+        ax.set_yscale('symlog', linthresh=linthresh)
+        ax.set_ylim(bottom = min(0, 1.1 * min_loss))
+    ax.legend(loc="lower left")
+    if ax2 is not None:
+        ax2.legend(loc="upper right")
     ax.set_xlabel('epoch')
     ax.set_ylabel('loss')
-    fig.savefig(save_file)
+    if save_file is not None:
+        fig.savefig(save_file)
+    return fig, ax
 
-def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=False):
+
+def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file=None):
     loss_names = train_loss_df.columns.values.tolist()
     loss_names.remove("epoch")
     epochs = train_loss_df["epoch"]
     fig, axs = plt.subplots(3,1, dpi=150, sharex=True)
-    for i in range(len(loss_names)):
-        train_loss = train_loss_df[loss_names[i]].values
-        valid_loss = valid_loss_df[loss_names[i]].values
-        axs[0].plot(epochs,train_loss, label=loss_names[i])
-        axs[1].plot(epochs,valid_loss, label=loss_names[i])
+    _, _ = loss_curve(train_loss_df, fig=fig, ax=axs[0])
+    _, _ = loss_curve(valid_loss_df, fig=fig, ax=axs[1])
     axs[2].plot(epochs, info_df['lr'], label="lr")
-    train_loss_sum_min = train_loss_df['loss_sum'].values.min()
-    train_loss_sum_min_epoch = train_loss_df['loss_sum'].values.argmin()
-    axs[0].scatter([train_loss_sum_min_epoch], [train_loss_sum_min], label="loss_sum min")
-    valid_loss_sum_min = valid_loss_df['loss_sum'].values.min()
-    valid_loss_sum_min_epoch = valid_loss_df['loss_sum'].values.argmin()
-    axs[1].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
-    if train_loss_sum_min>0:
-        axs[0].set_yscale('log')
-    else:
-        axs[0].set_yscale('symlog', linthresh=1e-2)
-        axs[0].set_ylim(bottom=min(0, train_loss_sum_min))
-    if valid_loss_sum_min>0:
-        axs[1].set_yscale('log')
-    else:
-        axs[1].set_yscale('symlog', linthresh=1e-2)
-        axs[1].set_ylim(bottom=min(0, valid_loss_sum_min))
+    # train_loss_sum_min = train_loss_df['loss_sum'].values.min()
+    # train_loss_sum_min_epoch = train_loss_df['loss_sum'].values.argmin()
+    # axs[0].scatter([train_loss_sum_min_epoch], [train_loss_sum_min], label="loss_sum min")
+    # valid_loss_sum_min = valid_loss_df['loss_sum'].values.min()
+    # valid_loss_sum_min_epoch = valid_loss_df['loss_sum'].values.argmin()
+    # axs[1].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
+    # if train_loss_sum_min>0:
+    #     axs[0].set_yscale('log')
+    # else:
+    #     axs[0].set_yscale('symlog', linthresh=1e-2)
+    #     axs[0].set_ylim(bottom=min(0, train_loss_sum_min))
+    # if valid_loss_sum_min>0:
+    #     axs[1].set_yscale('log')
+    # else:
+    #     axs[1].set_yscale('symlog', linthresh=1e-2)
+    #     axs[1].set_ylim(bottom=min(0, valid_loss_sum_min))
     axs[2].set_yscale('log')
     for i in range(3):
-        
         axs[i].legend(fontsize=8)
     axs[2].set_xlabel('epoch')
     axs[0].set_ylabel('Train loss')
     axs[1].set_ylabel('Valid loss')
     axs[2].set_ylabel('LR')
-    fig.savefig(save_file)
+    if save_file is not None:
+        fig.savefig(save_file)
+    return fig, axs
+
+# def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file, log_scale=False):
+#     loss_names = train_loss_df.columns.values.tolist()
+#     loss_names.remove("epoch")
+#     epochs = train_loss_df["epoch"]
+#     fig, axs = plt.subplots(3,1, dpi=150, sharex=True)
+#     for i in range(len(loss_names)):
+#         train_loss = train_loss_df[loss_names[i]].values
+#         valid_loss = valid_loss_df[loss_names[i]].values
+#         axs[0].plot(epochs,train_loss, label=loss_names[i])
+#         axs[1].plot(epochs,valid_loss, label=loss_names[i])
+#     axs[2].plot(epochs, info_df['lr'], label="lr")
+#     train_loss_sum_min = train_loss_df['loss_sum'].values.min()
+#     train_loss_sum_min_epoch = train_loss_df['loss_sum'].values.argmin()
+#     axs[0].scatter([train_loss_sum_min_epoch], [train_loss_sum_min], label="loss_sum min")
+#     valid_loss_sum_min = valid_loss_df['loss_sum'].values.min()
+#     valid_loss_sum_min_epoch = valid_loss_df['loss_sum'].values.argmin()
+#     axs[1].scatter([valid_loss_sum_min_epoch], [valid_loss_sum_min], label="loss_sum min")
+#     if train_loss_sum_min>0:
+#         axs[0].set_yscale('log')
+#     else:
+#         axs[0].set_yscale('symlog', linthresh=1e-2)
+#         axs[0].set_ylim(bottom=min(0, train_loss_sum_min))
+#     if valid_loss_sum_min>0:
+#         axs[1].set_yscale('log')
+#     else:
+#         axs[1].set_yscale('symlog', linthresh=1e-2)
+#         axs[1].set_ylim(bottom=min(0, valid_loss_sum_min))
+#     axs[2].set_yscale('log')
+#     for i in range(3):
+        
+#         axs[i].legend(fontsize=8)
+#     axs[2].set_xlabel('epoch')
+#     axs[0].set_ylabel('Train loss')
+#     axs[1].set_ylabel('Valid loss')
+#     axs[2].set_ylabel('LR')
+#     fig.savefig(save_file)
     
 def plot_param_dist(res_dir, sim_dist, tgt_dist):
     fig = plt.figure(figsize=(18,12), dpi=150,)
@@ -578,7 +656,7 @@ def plot_param_compare_dist(rec_dist, refl_dist, res_dir, normalized=False, para
 
 def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='', 
               filename='pair_plot.png'):
-    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap):
+    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap, bins=100):
         """Plots single pair of features.
     
         Parameters
@@ -609,7 +687,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
             tdf['target'] = _y
             for c in colormap.keys():
                 tdf_filtered = tdf.loc[tdf['target']==c]
-                ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = 30)
+                ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = bins)
         else:
             # other wise plot the pair-wise scatter plot
             tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]])
@@ -629,7 +707,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
             else:
                 ax[feature_ind1, feature_ind2].set(xlabel='', ylabel=_features[feature_ind1])
     
-    def myplotGrid(X, y, features, colormap={0: "red", 1: "green", 2: "blue"}):
+    def myplotGrid(X, y, features, colormap={0: "red", 1: "green", 2: "blue"}, bins=100):
         """Plots a pair grid of the given features.
     
         Parameters
@@ -655,7 +733,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
         # Iterate through features to plot pairwise.
         for i in range(0, feature_count):
             for j in range(0, feature_count):
-                plot_single_pair(axis, i, j, X, y, features, colormap)
+                plot_single_pair(axis, i, j, X, y, features, colormap, bins=bins)
 
         plt.show()
         return fig, axis

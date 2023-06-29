@@ -357,7 +357,7 @@ def loss_curve(loss_df, save_file=None, fig=None, ax=None):
                     ax2.plot(epochs, loss, label=loss_names[i], c='r')
                 else:
                     ax2.plot(epochs, loss, label=loss_names[i], c=colors[i])
-                ax2.set_yscale('log')
+                # ax2.set_yscale('log')
     if min_loss > 0:
         ax.set_yscale('log')
     else:

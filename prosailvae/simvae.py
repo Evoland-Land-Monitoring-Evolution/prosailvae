@@ -11,6 +11,8 @@ import torch.nn as nn
 import torch
 from utils.utils import NaN_model_params
 from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
+# from sensorsio.utils import rgb_render
+# import matplotlib.pyplot as plt
 
 class SimVAE(nn.Module):
     """
@@ -468,6 +470,13 @@ class SimVAE(nn.Module):
         if batch_per_epoch is None:
             batch_per_epoch = len(dataloader)
         for i, batch in zip(range(min(len(dataloader), batch_per_epoch)), dataloader):
+            # print(i)
+            # if i==0:
+            #     s2_r = batch[0][0,...]
+            #     print(s2_r[0,0,...])
+            #     tensor_visu,_,_ = rgb_render(s2_r)
+            #     fig, ax = plt.subplots(dpi=150)
+            #     ax.imshow(tensor_visu)
             if NaN_model_params(self):
                 self.logger.debug("NaN model parameters at batch %d!", i)
             if max_samples is not None:

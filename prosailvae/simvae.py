@@ -293,7 +293,7 @@ class SimVAE(nn.Module):
         s2_r = batch[0].to(self.device)
         s2_a = batch[1].to(self.device)
         input_is_patch = check_is_patch(s2_r)
-
+        batch_size = s2_r.size(0)
         if self.spatial_mode: # self.decoder.loss_type=='spatial_nll':
             assert input_is_patch
         else: # encoder is pixellic
@@ -347,7 +347,7 @@ class SimVAE(nn.Module):
         for loss_type, loss in loss_dict.items():
             if loss_type not in normalized_loss_dict.keys():
                 normalized_loss_dict[loss_type] = 0.0
-            normalized_loss_dict[loss_type] += loss / len_loader
+            normalized_loss_dict[loss_type] += loss #/ batch_size
         return loss_sum, normalized_loss_dict
 
     def supervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1):
@@ -519,7 +519,7 @@ class SimVAE(nn.Module):
                                                                len_loader=len_loader)
                 else:
                     loss_sum, _ = self.supervised_batch_loss(batch, valid_loss_dict,
-                                                        len_loader=len_loader)
+                                                             len_loader=len_loader)
             if torch.isnan(loss_sum).any():
                 self.logger.error("NaN Loss encountered during validation !")
         return valid_loss_dict

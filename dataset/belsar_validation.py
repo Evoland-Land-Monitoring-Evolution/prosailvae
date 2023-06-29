@@ -11,14 +11,14 @@ from utils.image_utils import tensor_to_raster
 from dataclasses import dataclass
 from datetime import datetime
 import matplotlib.pyplot as plt
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "Helvetica",
-    'mathtext.fontset' : 'custom',
-    'mathtext.rm': 'Bitstream Vera Sans',
-    'mathtext.it': 'Bitstream Vera Sans:italic',
-    'mathtext.bf': 'Bitstream Vera Sans:bold'
-})
+# plt.rcParams.update({
+#     "text.usetex": True,
+#     "font.family": "Helvetica",
+#     'mathtext.fontset' : 'custom',
+#     'mathtext.rm': 'Bitstream Vera Sans',
+#     'mathtext.it': 'Bitstream Vera Sans:italic',
+#     'mathtext.bf': 'Bitstream Vera Sans:bold'
+# })
 
 import matplotlib.dates as mdates
 import zipfile

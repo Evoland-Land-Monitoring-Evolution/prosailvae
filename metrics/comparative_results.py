@@ -320,7 +320,8 @@ def plot_frm4veg_results_comparison(model_dict, model_results, data_dir, filenam
             fig.savefig(os.path.join(res_dir, f"{prefix}{variable}_{filename}_validation.png"))
 
 
-def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, prefix="", margin = 0.02, hue="Site", legend_col=3):
+def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, prefix="", margin = 0.02, 
+                                   hue="Site", legend_col=3):
     n_models = len(model_dict) + 1
     xmin = np.min(model_results["SNAP"]["Predicted LAI"])
     xmax = np.max(model_results["SNAP"]["Predicted LAI"])
@@ -338,11 +339,12 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
     for i, (model_name, model_info) in enumerate(model_dict.items()):
         df_metrics = model_results[model_name]
         fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
-                                legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", error_y="Predicted LAI std")
+                                  legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", 
+                                  error_y="Predicted LAI std", hue_perfs=True)
         ax.set_title(model_info["plot_name"])
     df_metrics = model_results["SNAP"]
     fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
-                            legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std")
+                             legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std")
     axs[-1].set_title("SNAP")
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)

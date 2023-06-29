@@ -1593,7 +1593,8 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
 
 
 def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site", 
-                    legend_col=2, xmin=None, xmax=None, error_x=None, error_y=None):
+                    legend_col=2, xmin=None, xmax=None, error_x=None, 
+                    error_y=None, hue_perfs = False):
     pred = df_metrics[y]
     ref = df_metrics[x]
     if fig is None or ax is None:
@@ -1603,12 +1604,22 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
     if xmax is None:
         xmax = max(np.max(pred), np.max(ref))
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
-    m, b = np.polyfit(ref, pred, 1)
-    r2 = r2_score(ref, pred)
-    rmse = np.sqrt(np.mean((ref - pred)**2))
-    perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
+    
+    m_tot, b_tot = np.polyfit(ref, pred, 1)
+    r2_tot = r2_score(ref, pred)
+    rmse_tot = np.sqrt(np.mean((ref - pred)**2))
+    perf_text = "All: \n y = {:.2f} x + {:.2f} \n r2: {:.2f} - RMSE: {:.2f}".format(m_tot, b_tot, r2_tot, rmse_tot)
+    if hue_perfs:
+        for elem in pd.unique(df_metrics[hue]):
+            pred = df_metrics[df_metrics[hue]==elem][y]
+            ref = df_metrics[df_metrics[hue]==elem][x]
+            # m, b = np.polyfit(ref, pred, 1)
+            r2 = r2_score(ref, pred)
+            rmse = np.sqrt(np.mean((ref - pred)**2))
+            perf_text += "\n {} : \n r2: {:.2f} - RMSE: {:.2f}".format(elem, r2, rmse)
+
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
-    line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
+    line = ax.plot([xmin, xmax], [m_tot * xmin + b_tot, m_tot * xmax + b_tot],'r')
 
     if error_x is not None and error_y is None:
         ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,

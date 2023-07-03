@@ -19,7 +19,7 @@ from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_confi
 from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path
-from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
+from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow, load_standardize_coeffs, IOStandardizeCoeffs
 from ProsailSimus import get_bands_idx
 import argparse
 import pandas as pd
@@ -447,30 +447,38 @@ def setup_training():
     logger.info('========================================================================')
     if params["supervised_kl"]:
         logger.info("Supervised KL loss (hyperprior) enabled.")
+        
         logger.info(f"copying {params['supervised_config_file']} into {res_dir+'/sup_kl_model_config.json'}")
-        logger.info(f"copying {params['supervised_weight_file']} into {res_dir+'/sup_kl_model_weights.tar'}")
-        logger.info(f"copying {os.path.join(os.path.dirname(params['supervised_config_file']), 'norm_mean.pt')} into {res_dir+'/sup_kl_norm_mean.pt'}")
         shutil.copyfile(params['supervised_config_file'], res_dir+"/sup_kl_model_config.json")
+        logger.info(f"copying {params['supervised_weight_file']} into {res_dir+'/sup_kl_model_weights.tar'}")
         shutil.copyfile(params['supervised_weight_file'], res_dir+"/sup_kl_model_weights.tar")
-        shutil.copyfile(os.path.join(os.path.dirname(params["supervised_config_file"]), "norm_mean.pt"),
-                        res_dir+"/sup_kl_norm_mean.pt")
-        shutil.copyfile(os.path.join(os.path.dirname(params["supervised_weight_file"]), "norm_std.pt"),
-                        res_dir+"/sup_kl_norm_std.pt")
         params_sup_kl_model = load_params(res_dir, "/sup_kl_model_config.json", parser=None)
         params_sup_kl_model['vae_load_file_path'] = res_dir + "/sup_kl_model_weights.tar"
         params_sup_kl_model["load_model"] = True
-        sup_norm_mean = torch.load(res_dir + "/sup_kl_norm_mean.pt")
-        sup_norm_std =torch.load(res_dir + "/sup_kl_norm_std.pt")
+
+        sup_kl_io_coeffs = load_standardize_coeffs(os.path.dirname(params["supervised_config_file"]))
+        torch.save(sup_kl_io_coeffs.bands.loc, res_dir + "/norm_mean.pt")
+        torch.save(sup_kl_io_coeffs.bands.scale, res_dir + "/norm_std.pt")
+        torch.save(sup_kl_io_coeffs.idx.loc, res_dir + "/idx_loc.pt")
+        torch.save(sup_kl_io_coeffs.idx.scale, res_dir + "/idx_scale.pt")
+        torch.save(sup_kl_io_coeffs.angles.loc, res_dir + "/angles_loc.pt")
+        torch.save(sup_kl_io_coeffs.angles.scale, res_dir + "/angles_scale.pt")
+        # logger.info(f"copying {os.path.join(os.path.dirname(params['supervised_config_file']), 'norm_mean.pt')} into {res_dir+'/sup_kl_norm_mean.pt'}")
+        # shutil.copyfile(os.path.join(os.path.dirname(params["supervised_config_file"]), "norm_mean.pt"),
+        #                 res_dir+"/sup_kl_norm_mean.pt")
+        # shutil.copyfile(os.path.join(os.path.dirname(params["supervised_weight_file"]), "norm_std.pt"),
+        #                 res_dir + "/sup_kl_norm_std.pt")
+        # sup_bands_loc = torch.load(res_dir + "/sup_kl_norm_mean.pt")
+        # sup_bands_scale = torch.load(res_dir + "/sup_kl_norm_std.pt")
     else:
         params_sup_kl_model = None
-        sup_norm_mean = None
-        sup_norm_std = None
-    return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_norm_mean, 
-            sup_norm_std, frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename, 
+        sup_kl_io_coeffs = None
+    return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
+            frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename, 
             belsar_dir, list_belsar_filenames)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
-                     sup_norm_mean=None, sup_norm_std=None):
+                     sup_kl_io_coeffs):
     """
     Intializes and trains a prosail instance
     """
@@ -491,41 +499,39 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                                  num_workers=0, max_valid_samples=1000)
 
     if params["apply_norm_rec"]:
-        norm_mean = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_mean.pt"))#[bands]
-        norm_std = torch.load(os.path.join(data_dir, params["dataset_file_prefix"] + "norm_std.pt"))#[bands]
-        if isinstance(norm_mean, np.ndarray):
-            norm_mean = torch.from_numpy(norm_mean)
-        if isinstance(norm_std, np.ndarray):
-            norm_std = torch.from_numpy(norm_std)
+        io_coeffs = load_standardize_coeffs(data_dir, params["dataset_file_prefix"])
     else:
-        norm_mean = torch.zeros(1, len(bands))
-        norm_std = torch.ones(1, len(bands))
-    torch.save(norm_mean, res_dir + "/norm_mean.pt")
-    torch.save(norm_std, res_dir + "/norm_std.pt")
+        io_coeffs = load_standardize_coeffs(None, params["dataset_file_prefix"])
+
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
     print(f"Weiss mode : {parser.weiss_mode}")
-    if params["load_model"] : # and not socket.gethostname()=='CELL200973' :
-        #"/home/uz/zerahy/scratch/prosailvae/results/cnn_39950033_jobarray/1_d2023_03_31_05_24_16_supervised_False_weiss_/prosailvae_weights.tar"
+
+    if params["load_model"]:
         vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
-        norm_mean = torch.load(os.path.join(params["vae_load_dir_path"], "norm_mean.pt"))
-        norm_std = torch.load(os.path.join(params["vae_load_dir_path"], "norm_std.pt"))
-        torch.save(norm_mean, res_dir + "/norm_mean.pt")
-        torch.save(norm_std, res_dir + "/norm_std.pt")
+        io_coeffs = load_standardize_coeffs(params["vae_load_dir_path"], params["dataset_file_prefix"])
     else:
         vae_load_file_path = None
+
+    torch.save(io_coeffs.bands.loc, res_dir + "/norm_mean.pt")
+    torch.save(io_coeffs.bands.scale, res_dir + "/norm_std.pt")
+    torch.save(io_coeffs.idx.loc, res_dir + "/idx_loc.pt")
+    torch.save(io_coeffs.idx.scale, res_dir + "/idx_scale.pt")
+    torch.save(io_coeffs.angles.loc, res_dir + "/angles_loc.pt")
+    torch.save(io_coeffs.angles.scale, res_dir + "/angles_scale.pt")
+
     params["vae_load_file_path"] = vae_load_file_path
     training_config = get_training_config(params)
     pv_config = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
                                        inference_mode = False, rsr_dir=parser.rsr_dir,
-                                       norm_mean = norm_mean, norm_std=norm_std)
+                                       io_coeffs=io_coeffs)
     pv_config_hyper=None
     if params_sup_kl_model is not None:
         bands_hyper, prosail_bands_hyper = get_bands_idx(params_sup_kl_model["weiss_bands"])
         pv_config_hyper = get_prosail_vae_config(params_sup_kl_model, bands=bands_hyper,
                                                  prosail_bands=prosail_bands_hyper,
                                                  inference_mode=True, rsr_dir=parser.rsr_dir,
-                                                 norm_mean=sup_norm_mean, norm_std=sup_norm_std)
+                                                 io_coeffs=sup_kl_io_coeffs)
     if params['init_model']:
         n_models=params["n_init_models"]
         lr = params['init_lr']
@@ -563,7 +569,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
         params["vae_load_file_path"] = params["vae_save_file_path"]
         pv_config = get_prosail_vae_config(params, bands=bands, prosail_bands=prosail_bands,
                                             inference_mode=False, rsr_dir=parser.rsr_dir,
-                                            norm_mean=norm_mean, norm_std=norm_std)
+                                            io_coeffs=io_coeffs)
 
     prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
                                                     pv_config_hyper=pv_config_hyper,
@@ -642,7 +648,7 @@ def save_array_xp_path(job_array_dir, res_dir):
 
 def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
-     job_array_dir, sup_norm_mean, sup_norm_std,
+     job_array_dir, sup_kl_io_coeffs,
      frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename,
      belsar_dir, list_belsar_filenames) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
@@ -650,7 +656,7 @@ def main():
     try:
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
-                                     sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
+                                     sup_kl_io_coeffs=sup_kl_io_coeffs)
         if not params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                             batch_size=1, num_workers=0)

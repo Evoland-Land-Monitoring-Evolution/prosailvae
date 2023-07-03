@@ -340,7 +340,8 @@ class SimVAE(nn.Module):
             loss_dict['kl_loss'] = kl_loss.item()
 
         if self.beta_index > 0:
-            index_loss = self.beta_index * self.decoder.rec_loss_fn(s2_r, rec)
+            index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec, lossfn=self.decoder.rec_loss_fn,
+                    normalize_idx=True, s2_r_bands_dim=1, rec_bands_dim=self.decoder.rec_loss_fn.feature_dim) # self.decoder.rec_loss_fn(s2_r, rec)
             loss_sum += index_loss
             loss_dict['index_loss'] = index_loss.item()
 

@@ -11,8 +11,11 @@ def mNDVI750(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B6 = s2_r.select(bands_dim, 4).unsqueeze(bands_dim)
     denom = (B6 + B5 - 2 * B2)
     zero_denom_idx = denom.abs() < eps
-    denom[zero_denom_idx] = eps * torch.sign(denom[zero_denom_idx])
-    return (B6 - B5) / denom
+    denom[zero_denom_idx] = eps # * torch.sign(denom[zero_denom_idx])
+    idx =  (B6 - B5) / denom
+    if idx.isnan().any() or idx.isinf().any():
+        pass
+    return idx
 
 def CRI2(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B2 = s2_r.select(bands_dim, 0).unsqueeze(bands_dim)
@@ -32,6 +35,15 @@ def ND_lma(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
 def LAI_savi(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B4 = s2_r.select(bands_dim, 2).unsqueeze(bands_dim)
     B8 = s2_r.select(bands_dim, 6).unsqueeze(bands_dim)
-    return - torch.log(torch.tensor(0.371) + torch.tensor(1.5) *(B8 - B4) / (B8 + B4 + torch.tensor(0.5))) / torch.tensor(2.4)
+    return - torch.log(torch.abs(torch.tensor(0.371) + torch.tensor(1.5) * (B8 - B4) / (B8 + B4 + torch.tensor(0.5))) + eps) / torch.tensor(2.4)
 
-INDEX_DICT = {"NDVI":NDVI, "mNDVI750":mNDVI750, "CRI2":CRI2, "NDII":NDII, "ND_lma":ND_lma, "LAI_savi":LAI_savi}
+INDEX_DICT = {"NDVI":NDVI, "CRI2":CRI2, "NDII":NDII, "ND_lma":ND_lma, "LAI_savi":LAI_savi}#}"mNDVI750":mNDVI750,
+
+def get_spectral_idx(s2_r, eps=torch.tensor(1e-7), bands_dim=1, index_dict=INDEX_DICT):
+    spectral_idx = []
+    for idx_name, idx_fn in index_dict.items():
+        idx = idx_fn(s2_r, eps=eps, bands_dim=bands_dim)
+        if idx.isnan().any() or idx.isinf().any():
+            raise ValueError(f"{idx_name} has NaN or infinite values!")
+        spectral_idx.append(idx)
+    return torch.cat(spectral_idx, axis=bands_dim)

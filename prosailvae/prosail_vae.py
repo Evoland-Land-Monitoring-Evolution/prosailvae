@@ -37,17 +37,17 @@ class ProsailVAEConfig:
     disabled_latent_values:list[int] = field(default_factory=lambda: [])
     R_down:int=1
 
-def get_prosail_vae_config(params, bands, norm_mean, norm_std,
+def get_prosail_vae_config(params, bands, io_coeffs,
                            inference_mode, prosail_bands, rsr_dir):
     """
     Get ProsailVAEConfig from params dict
     """
     # assert len(prosail_bands) == len(bands)
+    n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
     encoder_config = EncoderConfig(encoder_type=params['encoder_type'],
-                                   input_size=len(bands) + 2 * 3,
+                                   input_size=len(bands) + 2 * 3 + n_idx,
                                    output_size=len(PROSAILVARS),
-                                   norm_mean=norm_mean,
-                                   norm_std=norm_std,
+                                   io_coeffs=io_coeffs,
                                    bands=bands,
                                    last_activation = None,
                                    n_latent_params=2,
@@ -114,14 +114,14 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
     psimulator = ProsailSimulator(device='cpu', R_down=pv_config.R_down)
     if load_simulator:
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
-                                    norm_mean=pv_config.encoder_config.norm_mean,
-                                    norm_std=pv_config.encoder_config.norm_std,
-                                    apply_norm=pv_config.apply_norm_rec,
-                                    bands=pv_config.prosail_bands, R_down=pv_config.R_down)
+                                     bands_loc=pv_config.encoder_config.io_coeffs.bands.loc,
+                                     bands_scale=pv_config.encoder_config.io_coeffs.bands.scale,
+                                     apply_norm=pv_config.apply_norm_rec,
+                                     bands=pv_config.prosail_bands, R_down=pv_config.R_down)
     else:
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
-                                    norm_mean=None,
-                                    norm_std=None,
+                                    bands_loc=None,
+                                    bands_scale=None,
                                     apply_norm=pv_config.apply_norm_rec,
                                     bands=pv_config.prosail_bands, R_down=pv_config.R_down)
     

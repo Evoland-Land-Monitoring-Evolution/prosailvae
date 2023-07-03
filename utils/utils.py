@@ -14,6 +14,55 @@ import matplotlib.pyplot as plt
 import numpy as np
 from  matplotlib.lines import Line2D
 
+from dataclasses import dataclass
+
+@dataclass
+class StandardizeCoeff:
+    loc:torch.Tensor|None=None
+    scale:torch.Tensor|None=None
+
+@dataclass
+class IOStandardizeCoeffs:
+    bands:StandardizeCoeff
+    angles:StandardizeCoeff
+    idx:StandardizeCoeff
+
+def load_standardize_coeffs(data_dir:str|None=None, prefix="", n_bands=10, n_angles=6, n_idx=5):
+    coeffs_info_dict = {"bands_loc":["norm_mean", torch.zeros((n_bands))],
+                        "bands_scale":["norm_std", torch.ones((n_bands))],
+                        "idx_loc":["idx_loc", torch.zeros((n_idx))],
+                        "idx_scale":["idx_scale", torch.ones((n_idx))],
+                        "angles_loc":["angles_loc", torch.zeros((n_angles))],
+                        "angles_scale": ["angles_scale", torch.ones((n_angles))]}
+    coeffs_dict = {}
+    for coef_name, info in coeffs_info_dict.items():
+        if data_dir is not None and os.path.isfile(os.path.join(data_dir, prefix + f"{info[0]}.pt")):
+            coeffs_dict[coef_name] = torch.load(os.path.join(data_dir, prefix + f"{info[0]}.pt")) 
+        else:
+            coeffs_dict[coef_name] = info[1]
+    io_coeffs = IOStandardizeCoeffs(
+        bands=StandardizeCoeff(loc=coeffs_dict['bands_loc'], scale=coeffs_dict['bands_scale']),
+        idx=StandardizeCoeff(loc=coeffs_dict['idx_loc'], scale=coeffs_dict['idx_scale']),
+        angles=StandardizeCoeff(loc=coeffs_dict['angles_loc'], scale=coeffs_dict['angles_scale']))
+    return io_coeffs
+
+# @dataclass
+# class StandardizeCoeffs:
+#     loc:torch.Tensor
+#     scale:torch.Tensor
+
+def standardize(x, loc, scale, dim=0):
+    nb_dim = len(x.size())
+    standardized_x = (x - torch_select_unsqueeze(loc, select_dim=dim, nb_dim=nb_dim)
+                      ) / torch_select_unsqueeze(scale, select_dim=dim, nb_dim=nb_dim)
+    return standardized_x
+
+def unstandardize(x, loc, scale, dim=0):
+    nb_dim = len(x.size())
+    unstandardized_x = (x * torch_select_unsqueeze(scale, select_dim=dim, nb_dim=nb_dim)
+                      ) + torch_select_unsqueeze(loc, select_dim=dim, nb_dim=nb_dim)
+    return unstandardized_x
+
 def select_rec_loss_fn(loss_type):
     simple_losses_1d = ["diag_nll", "hybrid_nll", "lai_nll"]
     if loss_type in simple_losses_1d:

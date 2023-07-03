@@ -12,8 +12,8 @@ import torch
 import prosail
 from prosail.sail_model import init_prosail_spectra
 # from prosail import spectral_lib
-from utils.utils import gaussian_nll_loss, torch_select_unsqueeze
-from prosailvae.spectral_indices import INDEX_DICT
+from utils.utils import gaussian_nll_loss, torch_select_unsqueeze, standardize, unstandardize
+from prosailvae.spectral_indices import get_spectral_idx
 from scipy.signal import decimate
 from scipy.interpolate import interp1d
 
@@ -107,8 +107,10 @@ RSR of the sensor.
                 #  bands=[1, 2, 3, 4, 5, 6, 7, 8, 9, 11],
                  bands=[1, 2, 3, 4, 5, 6, 7, 8, 11, 12],
                  device='cpu',
-                 norm_mean=None,
-                 norm_std=None,
+                 bands_loc=None,
+                 bands_scale=None,
+                 idx_loc=None,
+                 idx_scale=None,
                  apply_norm=True,
                  R_down=1):
           
@@ -137,27 +139,16 @@ RSR of the sensor.
         self.solar = self.rsr_prospect[1, :].unsqueeze(0)
         self.rsr = self.rsr_prospect[2:, :].unsqueeze(0)
         self.rsr = self.rsr[:,bands,:]
-        # if self.R_down > 1:
-        #     self.solar = self.solar[:,:-1].reshape(1, -1, R_down).mean(2)
-        #     self.rsr = self.rsr[:,:,:-1].reshape(1, len(bands), -1, R_down).mean(3)
-        if norm_mean is None:
-            norm_mean = torch.zeros((1, len(bands)))
-        else:
-            if len(norm_mean.squeeze()) != len(bands):
-                print(norm_mean.size())
-                print(norm_mean)
-                print(bands)
-                raise ValueError
-        if norm_std is None:
-            norm_std = torch.ones((1, len(bands)))
-        else:
-            if len(norm_std.squeeze()) != len(bands):
-                print(norm_std.size())
-                print(norm_std)
-                raise ValueError
+
+        bands_loc = bands_loc if bands_loc is not None else torch.zeros((len(bands)))
+        bands_scale = bands_scale if bands_scale is not None else torch.ones((len(bands)))
+        idx_loc = idx_loc if idx_loc is not None else torch.zeros((5))
+        idx_scale = idx_scale if idx_scale is not None else torch.ones((5))
                 
-        self.norm_mean = norm_mean.float().to(device)
-        self.norm_std = norm_std.float().to(device)
+        self.bands_loc = bands_loc.float().to(device)
+        self.bands_scale = bands_scale.float().to(device)
+        self.idx_loc = idx_loc.float().to(device)
+        self.idx_scale = idx_scale.float().to(device)
         self.apply_norm = apply_norm
         
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
@@ -172,8 +163,10 @@ RSR of the sensor.
     def change_device(self, device):
         self.device = device
         self.rsr = self.rsr.to(device)
-        self.norm_mean = self.norm_mean.to(device)
-        self.norm_std = self.norm_std.to(device)
+        self.bands_loc = self.bands_loc.to(device)
+        self.bands_scale = self.bands_scale.to(device)
+        self.idx_loc = self.idx_loc.to(device)
+        self.idx_scale = self.idx_scale.to(device)
         self.s2norm_factor_d = self.s2norm_factor_d.to(device)
         self.s2norm_factor_n = self.s2norm_factor_n.to(device)
         self.solar = self.solar.to(device)
@@ -196,14 +189,10 @@ RSR of the sensor.
         return simu
     
     def normalize(self, s2_r, bands_dim=1):
-        dim_s2_r = len(s2_r.size())
-        return (s2_r - torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)) / torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r)
-    
+        return standardize(s2_r, self.bands_loc, self.bands_scale, dim=bands_dim)
+        
     def unnormalize(self, s2_r, bands_dim=1):
-        dim_s2_r = len(s2_r.size())
-        u_s2_r = s2_r * torch_select_unsqueeze(self.norm_std, bands_dim, dim_s2_r)
-        u_s2_r = u_s2_r + torch_select_unsqueeze(self.norm_mean, bands_dim, dim_s2_r)
-        return u_s2_r
+        return unstandardize(s2_r, self.bands_loc, self.bands_scale, dim=bands_dim)
 
     def forward(self, prosail_output: torch.Tensor, apply_norm=None) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)
@@ -214,20 +203,21 @@ RSR of the sensor.
         return simu  # type: ignore
     
     def index_loss(self, s2_r, s2_rec, lossfn=gaussian_nll_loss,
-                    index_terms=["NDVI", "mNDVI750", "CRI2", "NDII", "ND_lma", "LAI_savi"],
-                    bands_dim=1):
+                    normalize_idx=True, s2_r_bands_dim=1, rec_bands_dim=2):
 
         u_s2_r = self.unnormalize(s2_r)
         if self.apply_norm:
-            u_s2_rec = self.unnormalize(s2_rec)
+            u_s2_rec = self.unnormalize(s2_rec, rec_bands_dim)
         else:
             u_s2_rec = s2_rec
 
-        loss = torch.tensor(0.0).to(s2_r.device)
-        for idx in index_terms:
-            spectral_idx_tgt = INDEX_DICT[idx](u_s2_r, bands_dim=bands_dim)
-            spectral_idx_rec = INDEX_DICT[idx](u_s2_rec, bands_dim=bands_dim)
-            loss += lossfn(spectral_idx_tgt, spectral_idx_rec) 
+        spectral_idx_tgt = get_spectral_idx(s2_r=u_s2_r, bands_dim=s2_r_bands_dim)
+        spectral_idx_rec = get_spectral_idx(s2_r=u_s2_rec, bands_dim=rec_bands_dim)
+        if normalize_idx:
+            spectral_idx_tgt = standardize(spectral_idx_tgt, self.idx_loc, self.idx_scale, s2_r_bands_dim)
+            spectral_idx_rec = standardize(spectral_idx_rec, self.idx_loc, self.idx_scale, rec_bands_dim)
+        loss = lossfn(spectral_idx_tgt, spectral_idx_rec)
+
         return loss
 
 class ProsailSimulator():

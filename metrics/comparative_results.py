@@ -371,16 +371,16 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         axs[row, col].set_title(BANDS[i])
         axs[row, 0].set_ylabel('Absolute Error')
         axs[1, col].set_xlabel('Model')
-
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_err_boxplot.png"))
+
     fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
     for i, (_, model_info) in enumerate(model_dict.items()):
         axs[i].hist(err_boxplot_dict[model_info["plot_name"]][:,], bins=200, range=global_lim)
         axs[i].plot(global_lim, global_lim, 'k--')
         axs[i].set_title(model_info["plot_name"])
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "model_err_boxplot.png"))
+        fig.savefig(os.path.join(res_dir, "model_err_hist.png"))
 
 def compare_snap_versions_on_real_data(test_loader, res_dir):
     snap_ver = ["2.1", "3A", "3B"]

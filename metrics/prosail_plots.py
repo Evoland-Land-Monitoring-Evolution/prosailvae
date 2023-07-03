@@ -1197,6 +1197,13 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
 
+    fig, ax = plt.subplots()
+    err = (all_s2_r - all_rec).reshape(len(BANDS), -1).abs().cpu()
+    ax.boxplot(err, positions=np.arange(len(BANDS)), showfliers=False)
+    ax.set_yscale('symlog',linthresh=1e-6)
+    ax.set_xticklabels(BANDS)
+    ax.set_ylabel("Absolute error")
+    fig.savefig(f"{plot_dir}/bands_err_boxplot.png")
     # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     # weiss_ccc = all_weiss_cab / all_weiss_lai * 10
     # m, b = np.polyfit(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy(), 1)

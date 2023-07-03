@@ -17,10 +17,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import prosailvae
 from snap_regression.snap_nn import SnapNN
-from dataset.frm4veg_validation import load_frm4veg_data
+from validation.frm4veg_validation import load_frm4veg_data, interpolate_frm4veg_pred
 from tqdm import trange, tqdm
-from metrics.results import save_belsar_predictions, get_snap_belsar_predictions
-from metrics.belsar_metrics import compute_metrics_at_date
+from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
+from validation.validation import get_belsar_x_frm4veg_lai_results
+from utils.utils import load_standardize_coeffs
 
 def get_parser():
     """
@@ -65,129 +66,15 @@ def get_model_and_dataloader(parser):
                 config["disabled_latent_values"] = []
             if "R_down" not in config.keys():
                 config["R_down"] = 1
+            io_coeffs = load_standardize_coeffs(model_info["dir_path"])
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
-                                                norm_mean = norm_mean, norm_std=norm_std)
+                                                io_coeffs=io_coeffs)
             model = load_prosail_vae_with_hyperprior(pv_config=pv_config, pv_config_hyper=None,
                                                      logger_name="No logger")
             model_info["model"] = model
     info_test_data = np.load(os.path.join(parser.data_dir,"test_info.npy"))
     return model_dict, test_loader, info_test_data
-
-def var_of_product(var_1, var_2, mean_1, mean_2):
-    return (var_1 - mean_1.pow(2)) * (var_2 - mean_2.pow(2)) -  (mean_1 * mean_2).pow(2)
-
-def get_model_frm4veg_results(model_dict: dict,
-                              data_dir, filename, sensor, mode="lat_mode"):
-
-    #if not socket.gethostname()=='CELL200973' else "random"
-    idx_dict = {}
-    ref_dict = {}
-    for variable in ['lai', 'lai_eff', 'ccc', 'ccc_eff']:
-        gdf, _, _, _, _ = load_frm4veg_data(data_dir, filename, variable=variable)
-        gdf = gdf.iloc[:51]
-        ref_dict[variable] = gdf[variable].values.reshape(-1)
-        ref_dict[variable+"_std"] = gdf["uncertainty"].values.reshape(-1)
-        idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
-                              "y_idx" : torch.from_numpy(gdf["y_idx"].values).int()}
-    _, s2_r, s2_a, xcoords, ycoords = load_frm4veg_data(data_dir, filename, variable="lai")
-    s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
-    s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
-    model_results = {}
-    largest_hw = 0
-    model_inference_info = {}
-    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
-        hw = 0
-        model = model_info["model"]
-        if model.spatial_mode:
-            hw = model.encoder.nb_enc_cropped_hw
-        if hw > largest_hw:
-            largest_hw = hw    
-        with torch.no_grad():
-            (_, sim_image, cropped_s2_r, cropped_s2_a,
-             sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
-                                                patch_size=32, bands=torch.arange(10),
-                                                mode=mode, padding=True, no_rec=True)
-        model_inference_info[model_name] = {"s2_r":cropped_s2_r,
-                                            "s2_a":cropped_s2_a,
-                                            "hw": hw}
-    
-        lai_pred = sim_image[6, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
-        lai_std_pred = sigma_image[6, idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']]
-
-        lai_eff_pred = sim_image[6, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
-        lai_eff_std_pred = sigma_image[6, idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']]
-
-        ccc_pred = (sim_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']] 
-                    * sim_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']])
-        m_1 = sim_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']]
-        m_2 = sim_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']]
-        v_1 = sigma_image[1, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']].pow(2)
-        v_2 = sigma_image[6, idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']].pow(2)
-        ccc_std_pred = var_of_product(v_1, v_2, m_1, m_2).sqrt()
-        
-        ccc_eff_pred = (sim_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']] 
-                        * sim_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']])
-
-        m_1 = sim_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']]
-        m_2 = sim_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']]
-        v_1 = sigma_image[1, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']].pow(2)
-        v_2 = sigma_image[6, idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']].pow(2)
-        ccc_eff_std_pred = var_of_product(v_1, v_2, m_1, m_2).sqrt()
-        
-        model_results[model_name] = {'lai': lai_pred.numpy(),
-                                     'lai_std': lai_std_pred.numpy(),
-                                     'lai_eff': lai_eff_pred.numpy(),
-                                     'lai_eff_std': lai_eff_std_pred.numpy(),
-                                     'ccc': ccc_pred.numpy(),
-                                     'ccc_std': ccc_std_pred.numpy(),
-                                     'ccc_eff': ccc_eff_pred.numpy(),
-                                     'ccc_eff_std': ccc_eff_std_pred.numpy(),
-
-                                     'ref_lai': ref_dict['lai'],
-                                     'ref_lai_std': ref_dict["lai_std"],
-                                     'ref_lai_eff': ref_dict['lai_eff'],
-                                     'ref_lai_eff_std': ref_dict["lai_eff_std"],
-                                     'ref_ccc': ref_dict['ccc'],
-                                     'ref_ccc_std': ref_dict['ccc_std'],
-                                     'ref_ccc_eff': ref_dict['ccc_eff'],
-                                     'ref_ccc_eff_std': ref_dict['ccc_eff_std']}
-
-
-    for model_name, _ in model_dict.items():
-        delta_hw = largest_hw - model_inference_info[model_name]['hw']
-        s2_r = model_inference_info[model_name]["s2_r"]
-        s2_a = model_inference_info[model_name]["s2_a"]
-        # lai = model_results[model_name]["lai"]
-        # ccc = model_results[model_name]["ccc"]
-        if delta_hw > 0 :
-            # model_results[model_name]["lai"] = crop_s2_input(lai, delta_hw)
-            # model_results[model_name]["ccc"] = crop_s2_input(ccc, delta_hw)
-            model_inference_info[model_name]["s2_r"] = crop_s2_input(s2_r, delta_hw)
-            model_inference_info[model_name]["s2_a"] = crop_s2_input(s2_a, delta_hw)
-    
-    (snap_lai, snap_cab,
-        _) = get_weiss_biophyiscal_from_batch((model_inference_info[model_name]["s2_r"],
-                                               model_inference_info[model_name]["s2_a"]),
-                                               patch_size=32, sensor=sensor)
-    model_results["SNAP"] = {'lai': snap_lai[..., idx_dict['lai']['y_idx'], idx_dict['lai']['x_idx']].numpy(),
-                             'lai_std':np.zeros_like(ref_dict['lai']),
-                             'lai_eff': snap_lai[..., idx_dict['lai_eff']['y_idx'], idx_dict['lai_eff']['x_idx']].numpy(),
-                             'lai_eff_std':np.zeros_like(ref_dict['lai_eff']),
-                             'ccc': snap_cab[..., idx_dict['ccc']['y_idx'], idx_dict['ccc']['x_idx']].numpy(),
-                             'ccc_std':np.zeros_like(ref_dict['ccc']),
-                             'ccc_eff': snap_cab[..., idx_dict['ccc_eff']['y_idx'], idx_dict['ccc_eff']['x_idx']].numpy(),
-                             'ccc_eff_std':np.zeros_like(ref_dict['ccc_eff']),
-                             'ref_lai': ref_dict['lai'],
-                             'ref_lai_std': ref_dict['lai_std'],
-                             'ref_lai_eff': ref_dict['lai_eff'],
-                             'ref_lai_eff_std': ref_dict['lai_eff_std'],
-                             'ref_ccc': ref_dict['ccc'],
-                             'ref_ccc_std': ref_dict['ccc_std'],
-                             'ref_ccc_eff': ref_dict['ccc_eff'],
-                             'ref_ccc_eff_std': ref_dict['ccc_eff_std']}
-    return model_results
-
 
 def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50, mode = 'lat_mode'):
     """
@@ -352,11 +239,11 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest", mode=None):
     model_results = {}
     for _, (model_name, model_info) in enumerate(model_dict.items()):
-        model_results[model_name] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
-                                                            file_suffix=f"_{model_name}_{mode}", method=method)
+        model_results[model_name] = interpolate_belsar_metrics(belsar_dir=belsar_dir, res_dir=res_dir,
+                                                               file_suffix=f"_{model_name}_{mode}", method=method)
 
-    model_results["SNAP"] = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir,
-                                                    file_suffix="_SNAP", method=method)
+    model_results["SNAP"] = interpolate_belsar_metrics(belsar_dir=belsar_dir, res_dir=res_dir,
+                                                       file_suffix="_SNAP", method=method)
     return model_results
 
 def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir=None, suffix="", margin=0.02):
@@ -558,116 +445,6 @@ def compare_snap_versions_on_weiss_data(res_dir):
     fig, _ = regression_pair_plot(snap_lai_dict, global_lai_lim)
     fig.savefig(os.path.join(res_dir, "scatter_lai_snap_versions_weiss.png"))
 
-def interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, filename, sensor, method="simple_interpolate"):
-    date_str = filename[0].split("_")[1]
-    d0 = datetime.datetime.strptime(filename[0].split("_")[1], '%Y%m%d').date()
-    d1 = datetime.datetime.strptime(filename[1].split("_")[1], '%Y%m%d').date()
-    # d0 = datetime.date.fromisoformat('2018-05-15')
-    # d1 = datetime.date.fromisoformat('2018-06-13')
-    dt_image = (d1 - d0).days
-    gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename[0], variable="lai")
-    gdf = gdf.iloc[:51]
-    t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
-    validation_results_1 = get_model_frm4veg_results(model_dict, frm4veg_data_dir, filename[0], sensor[0])
-    validation_results_2 = get_model_frm4veg_results(model_dict, frm4veg_data_dir, filename[1], sensor[0])
-    validation_results = {}
-    for model_name, _ in validation_results_1.items():
-        model_results = {}
-        for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
-            if method=="simple_interpolate":
-                gdf, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
-                gdf = gdf.iloc[:51]
-                t_sample = gdf["date"].apply(lambda x: (x.date()-d0).days).values
-                # m = (validation_results_1[model_name][variable].squeeze() 
-                #     - validation_results_2[model_name][variable].squeeze()) / dt_image
-                # b = validation_results_2[model_name][variable].squeeze() - m * d1.day
-                v = t_sample / dt_image
-                u = (dt_image - t_sample) / dt_image
-                try:
-                    model_results[variable] = (u * validation_results_1[model_name][variable]
-                                               + v * validation_results_2[model_name][variable]).squeeze() # (m * t_sample + b).reshape(-1)
-                    model_results[variable + "_std"] = np.sqrt((u * validation_results_1[model_name][variable + "_std"])**2
-                                                             + (v * validation_results_2[model_name][variable + "_std"])**2).squeeze()
-                except Exception as exc:
-                    print(exc)
-                    print(model_name, variable, u.size(), t_sample.size(), v.size())
-                    print(validation_results_1[model_name][variable].size(),
-                          validation_results_2[model_name][variable].size(), dt_image)
-            elif method == "best":
-                ref = validation_results_1[model_name][f"ref_{variable}"]
-                err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
-                err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
-                results = np.zeros_like(ref)
-                results_std = np.zeros_like(ref)
-                try:
-                    err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
-                    results[err_1_le_err_2] = validation_results_1[model_name][f"{variable}"].reshape(-1)[err_1_le_err_2]
-                    results[np.logical_not(err_1_le_err_2)] = validation_results_2[model_name][f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-                    results_std[err_1_le_err_2] = validation_results_1[model_name][f"{variable}_std"].reshape(-1)[err_1_le_err_2]
-                    results_std[np.logical_not(err_1_le_err_2)] = validation_results_2[model_name][f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
- 
-                except:
-                    print(validation_results_1[model_name][f"{variable}"].shape)
-                    print(validation_results_1[model_name][f"{variable}"].reshape(-1).shape)
-                    print((err_1 <= err_2).shape)
-                    raise ValueError
-                model_results[variable] = results
-                model_results[variable + "_std"] = results_std
-            elif method == "worst":
-                ref = validation_results_1[model_name][f"ref_{variable}"]
-                err_1 = np.abs(validation_results_1[model_name][f"{variable}"] - ref)
-                err_2 = np.abs(validation_results_2[model_name][f"{variable}"] - ref)
-                results = np.zeros_like(ref)
-                results_std = np.zeros_like(ref)
-                err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
-                results[err_1_le_err_2] = validation_results_2[model_name][f"{variable}"].reshape(-1)[err_1_le_err_2]
-                results[np.logical_not(err_1_le_err_2)] = validation_results_1[model_name][f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-                results_std[err_1_le_err_2] = validation_results_2[model_name][f"{variable}_std"].reshape(-1)[err_1_le_err_2]
-                results_std[np.logical_not(err_1_le_err_2)] = validation_results_1[model_name][f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-                model_results[variable] = results
-                model_results[variable + "_std"] = results_std
-            elif method == "dist_interpolate":
-                raise NotImplementedError
-            else:
-                raise ValueError(method)
-        validation_results[model_name] = model_results
-        for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
-            validation_results[model_name][f'ref_{variable}'] = validation_results_1[model_name][f'ref_{variable}']
-            validation_results[model_name][f'ref_{variable}_std'] = validation_results_1[model_name][f'ref_{variable}_std']
-            gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename[0], variable=variable)
-            gdf = gdf.iloc[:51]
-            validation_results[model_name][f"{variable}_land_cover"] = gdf["land cover"].values
-    return validation_results
-
-def get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results, barrax_results, wytham_results=None,
-                                     frm4veg_lai="lai"):
-    metrics = {}
-    for model_name, _ in belsar_results.items():
-        ref_lai_list = [belsar_results[model_name]['lai_mean'].values.reshape(-1),
-                        barrax_results[model_name][f'ref_{frm4veg_lai}'].reshape(-1)]
-        ref_lai_std_list = [belsar_results[model_name]['lai_std'].values.reshape(-1),
-                            barrax_results[model_name][f'ref_{frm4veg_lai}_std'].reshape(-1)]
-        pred_lai_list = [belsar_results[model_name]['parcel_lai_mean'].values.reshape(-1),
-                         barrax_results[model_name][frm4veg_lai].reshape(-1)]
-        pred_lai_std_list = [belsar_results[model_name]['parcel_lai_sigma_mean'].values.reshape(-1),
-                             barrax_results[model_name][frm4veg_lai + "_std"].reshape(-1)]
-        site_list = ['Belgium'] * len(ref_lai_list[0]) + ['Spain'] * len(ref_lai_list[1])
-        land_cover_list = [belsar_results[model_name]['land_cover'].values.reshape(-1),
-                           barrax_results[model_name][f'{frm4veg_lai}_land_cover'].reshape(-1)]
-        if wytham_results is not None:
-            ref_lai_list.append(wytham_results[model_name][f'ref_{frm4veg_lai}'].reshape(-1))
-            ref_lai_std_list.append(wytham_results[model_name][f'ref_{frm4veg_lai}_std'].reshape(-1))
-            pred_lai_list.append(wytham_results[model_name][frm4veg_lai].reshape(-1))
-            pred_lai_std_list.append(wytham_results[model_name][frm4veg_lai+"_std"].reshape(-1))
-            site_list = site_list + ['England'] * len(ref_lai_list[2])
-            land_cover_list.append(wytham_results[model_name][f'{frm4veg_lai}_land_cover'].reshape(-1))
-        metrics[model_name] = pd.DataFrame(data={'LAI': np.concatenate(ref_lai_list),
-                                                 'LAI std':np.concatenate(ref_lai_std_list),
-                                                 'Predicted LAI': np.concatenate(pred_lai_list),
-                                                 'Predicted LAI std':np.concatenate(pred_lai_std_list),
-                                                 "Site": np.array(site_list),
-                                                 "Land cover": np.concatenate(land_cover_list)})
-    return metrics
 
 def get_models_global_metrics(models_dict, results_dict, sites, variable = 'lai', n_models = 2, n_sigma=3):
     methods = results_dict.keys()
@@ -692,6 +469,27 @@ def get_models_global_metrics(models_dict, results_dict, sites, variable = 'lai'
     
     return rmse, picp
 
+def get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, filenames, method, mode):
+    frm4veg_results = {}
+    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+        frm4veg_results[model_name] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
+                                                               filenames[1],  method=method,  is_SNAP=False, mode=mode)
+    frm4veg_results["SNAP"] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
+                                                        filenames[1],  method=method, is_SNAP=True, mode=mode)
+    return frm4veg_results
+
+def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barrax_results, wytham_results,
+                                                frm4veg_lai="lai"):
+    results = {}
+    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+        results[model_name] = get_belsar_x_frm4veg_lai_results(belsar_results[model_name], 
+                                                                barrax_results[model_name], 
+                                                                wytham_results[model_name],
+                                                                    frm4veg_lai=frm4veg_lai)
+    results["SNAP"] = get_belsar_x_frm4veg_lai_results(belsar_results["SNAP"],  barrax_results["SNAP"], 
+                                                        wytham_results["SNAP"], frm4veg_lai="SNAP")
+    return results
+
 def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                    recompute=True, mode ="lat_mode"):
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
@@ -699,7 +497,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
         if recompute:
             save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, model_name=model_name, mode=mode)
     if recompute:
-        get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+        save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
 
     belsar_results = {}
     barrax_results = {}
@@ -710,24 +508,22 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
         barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
-        barrax_sensor = ["2B", "2A"]
-        barrax_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
-                                                          method=method)
+        barrax_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, barrax_filenames,
+                                                                method=method, mode=mode)
         # plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
         #                                 res_dir=res_dir, prefix= "barrax_"+method+"_")
         wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
-        wytham_sensor = ["2A", "2A"]
-        wytham_results[method] = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, wytham_filenames, wytham_sensor,
-                                                          method=method)
+        wytham_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, wytham_filenames,
+                                                                method=method, mode=mode)
         # plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
         #                                 res_dir=res_dir, prefix= "wytham_"+method+"_")
         validation_lai_results[method] = {}
         for variable in ['lai', "lai_eff"]:
             print(method, variable)
-            validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_metrics(model_dict, belsar_results[method],
-                                                                                        barrax_results[method],
-                                                                                        wytham_results=wytham_results[method],
-                                                                                        frm4veg_lai=variable)
+            validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results[method],
+                                                                                                    barrax_results[method],
+                                                                                                    wytham_results=wytham_results[method],
+                                                                                                    frm4veg_lai=variable)
             
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))

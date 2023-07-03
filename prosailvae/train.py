@@ -18,7 +18,7 @@ import time
 from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
 from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
-from metrics.results import save_results, save_results_2d, get_res_dir_path
+from metrics.results import save_results, save_results_2d, get_res_dir_path, save_validation_results
 from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow, load_standardize_coeffs, IOStandardizeCoeffs
 from ProsailSimus import get_bands_idx
 import argparse
@@ -474,8 +474,7 @@ def setup_training():
         params_sup_kl_model = None
         sup_kl_io_coeffs = None
     return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
-            frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename, 
-            belsar_dir, list_belsar_filenames)
+            frm4veg_data_dir, belsar_dir)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_kl_io_coeffs):
@@ -649,26 +648,28 @@ def save_array_xp_path(job_array_dir, res_dir):
 def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
      job_array_dir, sup_kl_io_coeffs,
-     frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename,
-     belsar_dir, list_belsar_filenames) = setup_training()
+     frm4veg_data_dir, belsar_data_dir) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
+        validation_dir = os.path.join(res_dir, "validation")
+        os.makedirs(validation_dir)
+        save_validation_results(prosail_vae, validation_dir,
+                                frm4veg_data_dir=frm4veg_data_dir,
+                                belsar_data_dir=belsar_data_dir,
+                                model_name="pvae",
+                                method="simple_interpolate",
+                                mode="sim_tg_mean")
         if not params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                             batch_size=1, num_workers=0)
             info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
             save_results_2d(prosail_vae, test_loader, res_dir,
                             all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                            plot_results=parser.plot_results, info_test_data=info_test_data,
-                            frm4veg_data_dir = frm4veg_data_dir,
-                            frm4veg_barrax_filename=frm4veg_barrax_filename,
-                            frm4veg_wytham_filename=frm4veg_wytham_filename,
-                            belsar_dir=belsar_dir,
-                            list_belsar_filenames=list_belsar_filenames)
+                            plot_results=parser.plot_results, info_test_data=info_test_data)
         if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

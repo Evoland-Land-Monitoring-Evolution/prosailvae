@@ -13,26 +13,23 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     frm4veg_plots, plot_belsar_metrics, regression_plot)
 from dataset.loaders import  get_simloader
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
-from dataset.frm4veg_validation import load_frm4veg_data
-from metrics.belsar_metrics import compute_metrics_at_date
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
 from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
+from validation.validation import get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_validation_global_metrics
 
 from datetime import datetime 
 import shutil
 from time import sleep
 import warnings
-from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
 from torchutils.patches import patchify, unpatchify 
 import pandas as pd
 import numpy as np
-from dataset.belsar_validation import load_belsar_validation_data
-from utils.image_utils import tensor_to_raster
-from snap_regression.snap_nn import SnapNN
+
+
 
 LOGGER_NAME = "PROSAIL-VAE results logger"
 
@@ -67,59 +64,96 @@ def get_prosailvae_results_parser():
                         type=bool, default=False)  
     return parser
 
+# def belsar_x_frm4veg_validation_results(pvae, belsar_dir,frm4veg_data_dir, list_belsar_filenames, 
+#                                         res_dir, mode="sim_tg_mean", method="simple_interpolate"):
+#     save_belsar_predictions(belsar_dir, pvae, res_dir, list_belsar_filenames, model_name="pvae", mode=mode)
+#     belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode)
+#     # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
-def get_belsar_x_frm4veg_lai_metrics(belsar_metrics, frm4veg_data_dir, frm4veg_barrax_lai_pred, frm4veg_barrax_filename,
-                                     frm4veg_wytham_lai_pred=None, frm4veg_wytham_filename=None,  lai_eff=False):
-    # belsar_metrics['crop'] = belsar_metrics["name"].apply(lambda x: "wheat" if x[0]=="W" else "maize")
-    belsar_pred_at_site = belsar_metrics[f"parcel_{'lai'}_mean"].values
-    belsar_ref = belsar_metrics[f"{'lai'}_mean"].values
-    site = ["Belgium"] * len(belsar_ref)
-    variable = "lai"
-    if lai_eff:
-        variable = "lai_eff"
+#     barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
+#     barrax_sensor = ["2B", "2A"]
+#     barrax_results = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, barrax_filenames, barrax_sensor, 
+#                                                         method=method)
+#     # plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
+#     #                                 res_dir=res_dir, prefix= "barrax_"+method+"_")
+#     wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
+#     wytham_sensor = ["2A", "2A"]
+#     wytham_results = interpolate_frm4veg_pred(model_dict, frm4veg_data_dir, wytham_filenames, wytham_sensor,
+#                                                         method=method)
+#     pass
 
-    if isinstance(frm4veg_barrax_lai_pred, torch.Tensor):
-        frm4veg_barrax_lai_pred = frm4veg_barrax_lai_pred.numpy()
-    gdf_barrax_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable=variable)
-    barrax_ref = gdf_barrax_lai[variable].values.reshape(-1)
-    # ref_uncert = gdf_barrax_lai["uncertainty"].values
-    x_idx = gdf_barrax_lai["x_idx"].values.astype(int)
-    y_idx = gdf_barrax_lai["y_idx"].values.astype(int)
-    barrax_pred_at_site = frm4veg_barrax_lai_pred[:, y_idx, x_idx].reshape(-1)
-    site = site + ["Spain"] * len(barrax_ref)
+# def get_belsar_x_frm4veg_lai_metrics(belsar_metrics, frm4veg_data_dir, frm4veg_barrax_lai_pred, frm4veg_barrax_filename,
+#                                      frm4veg_wytham_lai_pred=None, frm4veg_wytham_filename=None,  lai_eff=False):
+#     # belsar_metrics['crop'] = belsar_metrics["name"].apply(lambda x: "wheat" if x[0]=="W" else "maize")
+#     belsar_pred_at_site = belsar_metrics[f"parcel_{'lai'}_mean"].values
+#     belsar_ref = belsar_metrics[f"{'lai'}_mean"].values
+#     site = ["Belgium"] * len(belsar_ref)
+#     variable = "lai"
+#     if lai_eff:
+#         variable = "lai_eff"
 
-    pred_at_site = np.concatenate((belsar_pred_at_site, barrax_pred_at_site))
-    ref = np.concatenate((belsar_ref, barrax_ref))
-    if frm4veg_wytham_lai_pred is not None and frm4veg_wytham_filename is not None:
-        if isinstance(frm4veg_wytham_lai_pred, torch.Tensor):
-            frm4veg_wytham_lai_pred = frm4veg_wytham_lai_pred.numpy()
-        gdf_wytham_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable=variable)
-        wytham_ref = gdf_wytham_lai[variable].values.reshape(-1)
-        # ref_uncert = gdf_wytham_lai["uncertainty"].values
-        x_idx = gdf_wytham_lai["x_idx"].values.astype(int)
-        y_idx = gdf_wytham_lai["y_idx"].values.astype(int)
-        wytham_pred_at_site = frm4veg_wytham_lai_pred[:, y_idx, x_idx].reshape(-1)
-        pred_at_site = np.concatenate((pred_at_site, wytham_pred_at_site))
-        ref = np.concatenate((ref, wytham_ref))
-        site = site + ["England"] * len(wytham_ref)
-    site = np.array(site)
-    validation_metrics = pd.DataFrame(data={"Predicted LAI":pred_at_site, "LAI": ref, "Site":site})
-    return validation_metrics
+#     if isinstance(frm4veg_barrax_lai_pred, torch.Tensor):
+#         frm4veg_barrax_lai_pred = frm4veg_barrax_lai_pred.numpy()
+#     gdf_barrax_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable=variable)
+#     barrax_ref = gdf_barrax_lai[variable].values.reshape(-1)
+#     # ref_uncert = gdf_barrax_lai["uncertainty"].values
+#     x_idx = gdf_barrax_lai["x_idx"].values.astype(int)
+#     y_idx = gdf_barrax_lai["y_idx"].values.astype(int)
+#     barrax_pred_at_site = frm4veg_barrax_lai_pred[:, y_idx, x_idx].reshape(-1)
+#     site = site + ["Spain"] * len(barrax_ref)
+
+#     pred_at_site = np.concatenate((belsar_pred_at_site, barrax_pred_at_site))
+#     ref = np.concatenate((belsar_ref, barrax_ref))
+#     if frm4veg_wytham_lai_pred is not None and frm4veg_wytham_filename is not None:
+#         if isinstance(frm4veg_wytham_lai_pred, torch.Tensor):
+#             frm4veg_wytham_lai_pred = frm4veg_wytham_lai_pred.numpy()
+#         gdf_wytham_lai, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable=variable)
+#         wytham_ref = gdf_wytham_lai[variable].values.reshape(-1)
+#         # ref_uncert = gdf_wytham_lai["uncertainty"].values
+#         x_idx = gdf_wytham_lai["x_idx"].values.astype(int)
+#         y_idx = gdf_wytham_lai["y_idx"].values.astype(int)
+#         wytham_pred_at_site = frm4veg_wytham_lai_pred[:, y_idx, x_idx].reshape(-1)
+#         pred_at_site = np.concatenate((pred_at_site, wytham_pred_at_site))
+#         ref = np.concatenate((ref, wytham_ref))
+#         site = site + ["England"] * len(wytham_ref)
+#     site = np.array(site)
+#     validation_metrics = pd.DataFrame(data={"Predicted LAI":pred_at_site, "LAI": ref, "Site":site})
+#     return validation_metrics
+
+def save_validation_results(model, res_dir,
+                            frm4veg_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation",
+                            belsar_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belsar_validation",
+                            model_name="pvae",
+                            method="simple_interpolate",
+                            mode="sim_tg_mean"):
+    (barrax_results, wytham_results, belsar_results
+     ) = get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, res_dir,
+                                      mode=mode, method=method, model_name=model_name)
+    df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
+                                                  frm4veg_lai="lai")
+
+    fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Site",
+                              legend_col=3, error_x="LAI std", 
+                              error_y="Predicted LAI std", hue_perfs=True)
+    fig.savefig(os.path.join(res_dir, f"LAI_regression_sites.png"))
+    fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Land cover",
+                              legend_col=3, error_x="LAI std", 
+                              error_y="Predicted LAI std", hue_perfs=False)
+    fig.savefig(os.path.join(res_dir, f"LAI_regression_land_cover.png"))
+    global_rmse_dict, global_picp_dict = get_validation_global_metrics(df_results, 
+                                                                       decompose_along_columns = ["Site", "Land cover"], 
+                                                                       n_sigma=3)
+    for key, rmse_df in global_rmse_dict.items():
+        rmse_df.to_csv(os.path.join(res_dir, f"{key}_validation_rmse.csv"))
+    for key, pcip_df in global_picp_dict.items():
+        pcip_df.to_csv(os.path.join(res_dir, f"{key}_validation_picp.csv"))
+    
 
 
 def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
-                    plot_results=False, info_test_data=None,
-                    frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation",
-                    frm4veg_barrax_filename = "FRM_Veg_Barrax_20180605", 
-                    frm4veg_wytham_filename = None, 
-                    max_test_patch=50,
-                    belsar_dir="",
-                    list_belsar_filenames=[]):
-    rec_mode = 'lat_mode' # if not socket.gethostname()=='CELL200973' else "random"
-    image_tensor_file_names = ["after_SENTINEL2B_20171127-105827-648_L2A_T31TCJ_C_V2-2_roi_0.pth"]
-    image_tensor_aliases = ["S2B_27_nov_2017_T31TCJ"]
-    device = PROSAIL_VAE.device
+                    plot_results=False, info_test_data=None, max_test_patch=50):
+    rec_mode = 'lat_mode' 
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
     # Saving Loss
@@ -290,76 +324,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     return 
 
 
-def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
-    NO_DATA = -10000
-    # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
-    for filename in list_belsar_filename: 
-        ver = "3A" if filename[:2] == "2A" else "3B"
-        model_lai = SnapNN(ver=ver, variable="lai")
-        model_lai.set_weiss_weights()
 
-        df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
-        s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
-        mask[mask==1.] = np.nan
-        mask[mask==0.] = 1.
-        if np.isnan(mask).all():
-            print(f"No valid pixels in {filename}!")
-        s2_r = s2_r * torch.from_numpy(mask).float()
-        s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
-        s2_data = torch.concat((s2_r, s2_a), 0)
-        with torch.no_grad():
-            lai_pred = model_lai.forward(s2_data, spatial_mode=True)
-        dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
-        tensor = torch.cat((lai_pred, dummy_tensor), 0)
-        tensor[tensor.isnan()] = NO_DATA
-        resolution = 10
-        file_path = res_dir + f"/{filename}_SNAP.tif"
-        tensor_to_raster(tensor, file_path,
-                         crs=crs,
-                         resolution=resolution,
-                         dtype=np.float32,
-                         bounds=None,
-                         xcoords=xcoords,
-                         ycoords=ycoords,
-                         nodata=NO_DATA,
-                         hw = 0, 
-                         half_res_coords=True)
-
-def save_belsar_predictions(belsar_dir, PROSAIL_VAE, res_dir, list_filenames, model_name="pvae", mode="lat_mode"):
-    NO_DATA = -10000
-    for filename in list_filenames:
-        df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
-        s2_r = torch.from_numpy(s2_r).float()
-        mask[mask==1.] = np.nan
-        mask[mask==0.] = 1.
-        if np.isnan(mask).all():
-            print(f"No valid pixels in {filename}!")
-        s2_r = (s2_r * torch.from_numpy(mask).float()).unsqueeze(0)
-        s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
-        
-        with torch.no_grad():
-            (_, sim_image, _, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), PROSAIL_VAE,
-                                                        patch_size=32, bands=torch.arange(10),
-                                                        mode=mode, padding=True, no_rec=True)
-        
-        # lai_validation_pred = sim_image[6,...].unsqueeze(0)
-        # cm_validation_pred = sim_image[5,...].unsqueeze(0)
-        tensor = torch.cat((sim_image[6,...].unsqueeze(0),
-                            sim_image[5,...].unsqueeze(0),
-                            sigma_image[6,...].unsqueeze(0), 
-                            sigma_image[5,...].unsqueeze(0)), 0)
-        tensor[tensor.isnan()] = NO_DATA
-        tensor_to_raster(tensor, res_dir + f"/{filename}_{model_name}_{mode}.tif",
-                         crs=crs,
-                            resolution=10,
-                            dtype=np.float32,
-                            bounds=None,
-                            xcoords=xcoords,
-                            ycoords=ycoords,
-                            nodata= NO_DATA,
-                            hw = 0,
-                            half_res_coords=True)
-    return
 
 def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,

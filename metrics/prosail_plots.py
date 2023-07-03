@@ -22,7 +22,7 @@ from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
 from utils.image_utils import rgb_render
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from dataset.frm4veg_validation import load_frm4veg_data
+from validation.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 import os
 from math import ceil, log10

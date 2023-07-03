@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import torch
 import numpy as np
 from sensorsio.utils import rgb_render
 from dataset.frm4veg_validation import load_frm4veg_data

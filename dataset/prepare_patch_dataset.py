@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from rasterio.coords import BoundingBox
 import datetime
+from prosailvae.spectral_indices import get_spectral_idx
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -295,15 +296,35 @@ def swap_bands(patches):
 
 def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
     with torch.no_grad():
-        s2_r_samples = patches.permute(1,0,2,3)[:n_bands,...].reshape(n_bands, -1)
+        s2_a = torch.zeros(patches.size(0), 3, patches.size(2), patches.size(3))   
+        s2_a[:,0,...] = patches[:,11,...] # sun zenith
+        s2_a[:,1,...] = patches[:,13,...] # joint zenith
+        s2_a[:,2,...] = patches[:,12,...] - patches[:,14, ...]
+        s2_a = torch.cat((torch.cos(s2_a), torch.sin(s2_a)),1)
+        s2_a_samples = s2_a.permute(1,0,2,3).reshape(6, -1)
+        spectral_idx = get_spectral_idx(patches[:, :n_bands,...], bands_dim=1).permute(1,0,2,3).reshape(5, -1)
+        s2_r_samples = patches.permute(1,0,2,3)[:n_bands, ...].reshape(n_bands, -1)
+        
         if mode=='mean':
             norm_mean = s2_r_samples.mean(1)
             norm_std = s2_r_samples.std(1)
+            angles_norm_mean = s2_a_samples.mean(1)
+            angles_norm_std = s2_a_samples.std(1)
+            idx_norm_mean = spectral_idx.mean(1)
+            idx_norm_std = spectral_idx.std(1)
+            
         elif mode=='quantile':
             max_samples=int(1e7)
             norm_mean = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
             norm_std = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
-    return norm_mean, norm_std
+            angles_norm_mean = torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
+            angles_norm_std = torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
+            idx_norm_mean = torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.5), dim=1)
+            idx_norm_std = torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.05), dim=1)
+
+
+    return norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, idx_norm_std
+
 
 def get_info_from_filename(filename, prefix=False):
     if prefix:
@@ -480,14 +501,19 @@ def main():
             ax.imshow(rgb_render(test_patch_i)[0])
             fig.savefig(os.path.join(parser.output_dir, f"test_{info[0]}_{info[1]}_{info[2]}.png"))
         pass
-    norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='mean')
-    print(f"mean {norm_std}, std {norm_std}")
-    norm_mean, norm_std = get_bands_norm_factors_from_patches(train_patches, mode='quantile')
+    mode = "quantile"
+    (norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, 
+        idx_norm_std) = get_bands_norm_factors_from_patches(train_patches, mode=mode)
     print(f"median {norm_mean}, quantiles difference {norm_std}")
 
     
     torch.save(norm_mean, os.path.join(parser.output_dir, "norm_mean.pt"))
     torch.save(norm_std, os.path.join(parser.output_dir, "norm_std.pt"))
+    torch.save(angles_norm_mean, os.path.join(parser.output_dir, "angles_norm_mean.pt"))
+    torch.save(angles_norm_std, os.path.join(parser.output_dir, "angles_norm_std.pt"))
+    torch.save(idx_norm_mean, os.path.join(parser.output_dir, "idx_norm_mean.pt"))
+    torch.save(idx_norm_std, os.path.join(parser.output_dir, "idx_norm_std.pt"))
+
     print(f"Train patches : {train_patches.size(0)}")
     print(f"Valid patches : {valid_patches.size(0)}")
     print(f"Test patches : {test_patches.size(0)}")

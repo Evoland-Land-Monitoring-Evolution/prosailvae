@@ -334,7 +334,7 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
         model_lai.set_weiss_weights()
 
         df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
-        s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+        s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]), ...].float()
         mask[mask==1.] = np.nan
         mask[mask==0.] = 1.
         if np.isnan(mask).all():

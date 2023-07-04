@@ -116,6 +116,8 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
                                      bands_loc=pv_config.encoder_config.io_coeffs.bands.loc,
                                      bands_scale=pv_config.encoder_config.io_coeffs.bands.scale,
+                                     idx_loc=pv_config.encoder_config.io_coeffs.idx.loc,
+                                     idx_scale=pv_config.encoder_config.io_coeffs.idx.scale,
                                      apply_norm=pv_config.apply_norm_rec,
                                      bands=pv_config.prosail_bands, R_down=pv_config.R_down)
     else:

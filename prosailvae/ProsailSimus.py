@@ -205,13 +205,13 @@ RSR of the sensor.
     def index_loss(self, s2_r, s2_rec, lossfn=gaussian_nll_loss,
                     normalize_idx=True, s2_r_bands_dim=1, rec_bands_dim=2):
 
-        u_s2_r = self.unnormalize(s2_r)
+        # u_s2_r = self.unnormalize(s2_r)
         if self.apply_norm:
             u_s2_rec = self.unnormalize(s2_rec, rec_bands_dim)
         else:
             u_s2_rec = s2_rec
 
-        spectral_idx_tgt = get_spectral_idx(s2_r=u_s2_r, bands_dim=s2_r_bands_dim)
+        spectral_idx_tgt = get_spectral_idx(s2_r=s2_r, bands_dim=s2_r_bands_dim)
         spectral_idx_rec = get_spectral_idx(s2_r=u_s2_rec, bands_dim=rec_bands_dim)
         if normalize_idx:
             spectral_idx_tgt = standardize(spectral_idx_tgt, self.idx_loc, self.idx_scale, s2_r_bands_dim)

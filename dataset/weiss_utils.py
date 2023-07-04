@@ -72,6 +72,7 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
     elif ver not in ["2.1", "3A", "3B"]:
         raise ValueError
     weiss_bands = torch.tensor([1,2,3,4,5,7,8,9])
+    weiss_angles = torch.tensor([1,0,2])
     s2_r, s2_a = batch
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=0)
     patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=0)
@@ -81,7 +82,7 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
     for i in range(patched_s2_r.size(0)):
         for j in range(patched_s2_r.size(1)):
             x = patched_s2_r[i, j, weiss_bands, ...]
-            angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, ...]))
+            angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, weiss_angles, ...]))
             s2_data = torch.cat((x, angles),0)
             with torch.no_grad():
                 lai_snap = SnapNN(variable='lai', ver=ver)

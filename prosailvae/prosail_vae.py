@@ -45,7 +45,7 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     # assert len(prosail_bands) == len(bands)
     n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
     encoder_config = EncoderConfig(encoder_type=params['encoder_type'],
-                                   input_size=len(bands) + 2 * 3 + n_idx,
+                                   input_size=len(bands) + 3 + n_idx,# + 2 * 3 + n_idx,
                                    output_size=len(PROSAILVARS),
                                    io_coeffs=io_coeffs,
                                    bands=bands,

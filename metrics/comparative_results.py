@@ -239,10 +239,10 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest", mode=None):
     model_results = {}
     for _, (model_name, model_info) in enumerate(model_dict.items()):
-        model_results[model_name] = interpolate_belsar_metrics(belsar_dir=belsar_dir, res_dir=res_dir,
+        model_results[model_name] = interpolate_belsar_metrics(belsar_data_dir=belsar_dir, belsar_pred_dir=res_dir,
                                                                file_suffix=f"_{model_name}_{mode}", method=method)
 
-    model_results["SNAP"] = interpolate_belsar_metrics(belsar_dir=belsar_dir, res_dir=res_dir,
+    model_results["SNAP"] = interpolate_belsar_metrics(belsar_data_dir=belsar_dir, belsar_pred_dir=res_dir,
                                                        file_suffix="_SNAP", method=method)
     return model_results
 
@@ -487,17 +487,18 @@ def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barr
                                                                 wytham_results[model_name],
                                                                     frm4veg_lai=frm4veg_lai)
     results["SNAP"] = get_belsar_x_frm4veg_lai_results(belsar_results["SNAP"],  barrax_results["SNAP"], 
-                                                        wytham_results["SNAP"], frm4veg_lai="SNAP")
+                                                        wytham_results["SNAP"], frm4veg_lai=frm4veg_lai)
     return results
 
 def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                    recompute=True, mode ="lat_mode"):
+    if recompute:
+        save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
         if recompute:
             save_belsar_predictions(belsar_dir, model, res_dir, list_belsar_filenames, model_name=model_name, mode=mode)
-    if recompute:
-        save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+
 
     belsar_results = {}
     barrax_results = {}
@@ -580,7 +581,7 @@ def main():
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
-        recompute = True if not socket.gethostname()=='CELL200973' else False
+        recompute = True #if not socket.gethostname()=='CELL200973' else False
         compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                        recompute=recompute, mode=mode)
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,

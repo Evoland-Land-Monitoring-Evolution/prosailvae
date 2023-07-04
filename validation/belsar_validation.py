@@ -340,8 +340,11 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
         if np.isnan(mask).all():
             print(f"No valid pixels in {filename}!")
         s2_r = s2_r * torch.from_numpy(mask).float()
-        s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
-        s2_data = torch.concat((s2_r, s2_a), 0)
+        s2_a_permutated = torch.cos(torch.deg2rad(torch.from_numpy(np.concatenate((s2_a[1:2,...], 
+                                                                                    s2_a[0:1,...], 
+                                                                                    s2_a[2:,...]),0)))).float()
+        
+        s2_data = torch.concat((s2_r, s2_a_permutated), 0)
         with torch.no_grad():
             lai_pred = model_lai.forward(s2_data, spatial_mode=True)
         dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))

@@ -105,8 +105,8 @@ class ProsailNNEncoder(Encoder):
         bands_scale = bands_scale if bands_scale is not None else torch.ones((config.input_size))
         idx_loc = idx_loc if idx_loc is not None else torch.zeros((5))
         idx_scale = idx_scale if idx_scale is not None else torch.ones((5))
-        angles_loc = angles_loc if angles_loc is not None else torch.zeros((6))
-        angles_scale = angles_scale if angles_scale is not None else torch.ones((6))
+        angles_loc = angles_loc if angles_loc is not None else torch.zeros((3))
+        angles_scale = angles_scale if angles_scale is not None else torch.ones((3))
         self.bands_loc = bands_loc.float().to(device)
         self.bands_scale = bands_scale.float().to(device)
         self.idx_loc = idx_loc.float().to(device)
@@ -142,10 +142,12 @@ class ProsailNNEncoder(Encoder):
         """
         spectral_idx = get_spectral_idx(s2_refl, bands_dim=1)
         normed_refl = standardize(s2_refl[:, self.bands], loc=self.bands_loc, scale=self.bands_scale, dim=1)
-        normed_angles = standardize(torch.concat(torch.cos(torch.deg2rad(angles)),
-                                                 torch.sin(torch.deg2rad(angles)), 
-                                                 axis=1), 
-                                                 loc=self.angles_loc, scale=self.angles_scale, dim=1)                         
+        # normed_angles = standardize(torch.concat(torch.cos(torch.deg2rad(angles)),
+                                                #  torch.sin(torch.deg2rad(angles)), 
+                                                #  axis=1), 
+                                                #  loc=self.angles_loc, scale=self.angles_scale, dim=1)   
+        normed_angles = standardize(torch.cos(torch.deg2rad(angles)), self.angles_loc, 
+                                    self.angles_scale, dim=1)                      
         encoder_output = self.net(torch.concat((normed_refl, normed_angles, spectral_idx), axis=1))
         return encoder_output, angles
     
@@ -248,8 +250,8 @@ class ProsailRNNEncoder(Encoder):
         bands_scale = bands_scale if bands_scale is not None else torch.ones((config.input_size))
         idx_loc = idx_loc if idx_loc is not None else torch.zeros((5))
         idx_scale = idx_scale if idx_scale is not None else torch.ones((5))
-        angles_loc = angles_loc if angles_loc is not None else torch.zeros((6))
-        angles_scale = angles_scale if angles_scale is not None else torch.ones((6))
+        angles_loc = angles_loc if angles_loc is not None else torch.zeros((3))
+        angles_scale = angles_scale if angles_scale is not None else torch.ones((3))
         self.bands_loc = bands_loc.float().to(device)
         self.bands_scale = bands_scale.float().to(device)
         self.idx_loc = idx_loc.float().to(device)
@@ -292,10 +294,12 @@ class ProsailRNNEncoder(Encoder):
             normed_refl = standardize(s2_refl[:, self.bands], loc=self.bands_loc, scale=self.bands_scale, dim=1)
         else:
             raise NotImplementedError
-        normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
-                                                  torch.sin(torch.deg2rad(angles))), 
-                                                  axis=1), 
-                                    loc=self.angles_loc, scale=self.angles_scale, dim=1)
+        # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
+        #                                           torch.sin(torch.deg2rad(angles))), 
+        #                                           axis=1), 
+        #                             loc=self.angles_loc, scale=self.angles_scale, dim=1)
+        normed_angles = standardize(torch.cos(torch.deg2rad(angles)), self.angles_loc, 
+                                    self.angles_scale, dim=1)
         encoder_output = self.net(torch.concat((normed_refl, normed_angles, spectral_idx), axis=1))
         return encoder_output, angles
 
@@ -363,8 +367,8 @@ class ProsailCNNEncoder(nn.Module):
         bands_scale = bands_scale if bands_scale is not None else torch.ones((config.input_size))
         idx_loc = idx_loc if idx_loc is not None else torch.zeros((5))
         idx_scale = idx_scale if idx_scale is not None else torch.ones((5))
-        angles_loc = angles_loc if angles_loc is not None else torch.zeros((6))
-        angles_scale = angles_scale if angles_scale is not None else torch.ones((6))
+        angles_loc = angles_loc if angles_loc is not None else torch.zeros((3))
+        angles_scale = angles_scale if angles_scale is not None else torch.ones((3))
         self.bands_loc = bands_loc.float().to(device)
         self.bands_scale = bands_scale.float().to(device)
         self.idx_loc = idx_loc.float().to(device)
@@ -397,9 +401,11 @@ class ProsailCNNEncoder(nn.Module):
             normed_refl = normed_refl.unsqueeze(0)
         if len(angles.size())==3:
             angles = angles.unsqueeze(0)
-        normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)), 
-                                                  torch.sin(torch.deg2rad(angles))), axis=1), 
-                                    self.angles_loc, self.angles_scale, dim=1)
+        # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)), 
+        #                                           torch.sin(torch.deg2rad(angles))), axis=1), 
+        #                             self.angles_loc, self.angles_scale, dim=1)
+        normed_angles = standardize(torch.cos(torch.deg2rad(angles)), self.angles_loc, 
+                            self.angles_scale, dim=1)
         y = self.cnet(torch.concat((normed_refl, normed_angles, spectral_idx), axis=1))
         # y_mu = self.mu_conv(y)
         # y_logvar = self.logvar_conv(y)
@@ -543,8 +549,8 @@ class ProsailResCNNEncoder(nn.Module):
         bands_scale = bands_scale if bands_scale is not None else torch.ones((config.input_size))
         idx_loc = idx_loc if idx_loc is not None else torch.zeros((5))
         idx_scale = idx_scale if idx_scale is not None else torch.ones((5))
-        angles_loc = angles_loc if angles_loc is not None else torch.zeros((6))
-        angles_scale = angles_scale if angles_scale is not None else torch.ones((6))
+        angles_loc = angles_loc if angles_loc is not None else torch.zeros((3))
+        angles_scale = angles_scale if angles_scale is not None else torch.ones((3))
         self.bands_loc = bands_loc.float().to(device)
         self.bands_scale = bands_scale.float().to(device)
         self.idx_loc = idx_loc.float().to(device)
@@ -584,9 +590,10 @@ class ProsailResCNNEncoder(nn.Module):
             normed_refl = normed_refl.unsqueeze(0) # Ensures batch dimension appears
         if len(angles.size())==3:
             angles = angles.unsqueeze(0)
-        normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
-                                                  torch.sin(torch.deg2rad(angles))), axis=1), 
-                                    self.angles_loc, self.angles_scale, dim=1)
+        # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
+        #                                           torch.sin(torch.deg2rad(angles))), axis=1), 
+        normed_angles = standardize(torch.cos(torch.deg2rad(angles)), self.angles_loc, 
+                                    self.angles_scale, dim=1)
         y = self.cnet(torch.concat((normed_refl, normed_angles, spectral_idx), axis=1))
         # y_mu = self.mu_conv(y)
         # y_logvar = self.logvar_conv(y)

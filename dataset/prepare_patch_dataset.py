@@ -296,22 +296,33 @@ def swap_bands(patches):
     patches[:,torch.arange(10),...] = patches[:,idx,...]
     return
 
+
+
+def min_max_to_loc_scale(minimum, maximum):
+    loc = (maximum + minimum) / 2
+    scale = (maximum - minimum) / 2
+    return loc, scale
+
+
 def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
+    cos_angle_min = torch.tensor([0.342108564072183, 0.979624800125421, -1.0000]) # sun zenith, S2 senith, relative azimuth
+    cos_angle_max = torch.tensor([0.9274847491748729, 1.0000, 1.0000])
     with torch.no_grad():
-        s2_a = torch.zeros(patches.size(0), 3, patches.size(2), patches.size(3))   
-        s2_a[:,0,...] = patches[:,11,...] # sun zenith
-        s2_a[:,1,...] = patches[:,13,...] # joint zenith
-        s2_a[:,2,...] = patches[:,12,...] - patches[:,14, ...] # Sun azimuth - joint azimuth 
-        s2_a_rad = torch.deg2rad(s2_a)
-        s2_a_cos_sin = torch.cat((torch.cos(s2_a_rad), torch.sin(s2_a_rad)), 1)
-        s2_a_samples = s2_a_cos_sin.permute(1,0,2,3).reshape(6, -1)
+        # s2_a = torch.zeros(patches.size(0), 3, patches.size(2), patches.size(3))   
+        # s2_a[:,0,...] = patches[:,11,...] # sun zenith
+        # s2_a[:,1,...] = patches[:,13,...] # joint zenith
+        # s2_a[:,2,...] = patches[:,12,...] - patches[:,14, ...] # Sun azimuth - joint azimuth 
+        # s2_a_rad = torch.deg2rad(s2_a)
+        # s2_a_cos_sin = torch.cat((torch.cos(s2_a_rad), torch.sin(s2_a_rad)), 1)
+        # s2_a_samples = s2_a_cos_sin.permute(1,0,2,3).reshape(6, -1)
+        
         spectral_idx = get_spectral_idx(patches[:, :n_bands,...], bands_dim=1).permute(1,0,2,3).reshape(5, -1)
         s2_r_samples = patches.permute(1,0,2,3)[:n_bands, ...].reshape(n_bands, -1)
         if mode=='mean':
             norm_mean = s2_r_samples.mean(1)
             norm_std = s2_r_samples.std(1)
-            angles_norm_mean = s2_a_samples.mean(1)
-            angles_norm_std = s2_a_samples.std(1)
+            # angles_norm_mean = s2_a_samples.mean(1)
+            # angles_norm_std = s2_a_samples.std(1)
             idx_norm_mean = spectral_idx.mean(1)
             idx_norm_std = spectral_idx.std(1)
             
@@ -319,13 +330,14 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
             max_samples=int(1e7)
             norm_mean = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
             norm_std = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
-            angles_norm_mean = torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
-            angles_norm_std = torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
+            # angles_norm_mean = torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
+            # angles_norm_std = torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_a_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
             idx_norm_mean = torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.5), dim=1)
             idx_norm_std = torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.05), dim=1)
 
+        cos_angles_loc, cos_angles_scale = min_max_to_loc_scale(cos_angle_min, cos_angle_max)
 
-    return norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, idx_norm_std
+    return norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_norm_mean, idx_norm_std
 
 
 def get_info_from_filename(filename, prefix=False):
@@ -522,10 +534,10 @@ def main():
     
     torch.save(norm_mean, os.path.join(parser.output_dir, "norm_mean.pt"))
     torch.save(norm_std, os.path.join(parser.output_dir, "norm_std.pt"))
-    torch.save(angles_norm_mean, os.path.join(parser.output_dir, "angles_norm_mean.pt"))
-    torch.save(angles_norm_std, os.path.join(parser.output_dir, "angles_norm_std.pt"))
-    torch.save(idx_norm_mean, os.path.join(parser.output_dir, "idx_norm_mean.pt"))
-    torch.save(idx_norm_std, os.path.join(parser.output_dir, "idx_norm_std.pt"))
+    torch.save(angles_norm_mean, os.path.join(parser.output_dir, "angles_loc.pt"))
+    torch.save(angles_norm_std, os.path.join(parser.output_dir, "angles_scale.pt"))
+    torch.save(idx_norm_mean, os.path.join(parser.output_dir, "idx_loc.pt"))
+    torch.save(idx_norm_std, os.path.join(parser.output_dir, "idx_scale.pt"))
 
     print(f"Train patches : {train_patches.size(0)}")
     print(f"Valid patches : {valid_patches.size(0)}")

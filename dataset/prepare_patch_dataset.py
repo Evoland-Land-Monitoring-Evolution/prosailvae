@@ -11,6 +11,7 @@ from matplotlib.patches import Rectangle
 from rasterio.coords import BoundingBox
 import datetime
 from prosailvae.spectral_indices import get_spectral_idx
+from metrics.prosail_plots import pair_plot
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -181,6 +182,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
         print(tensor_file)
         image_tensor = torch.load(tensor_file)
         print(image_tensor.size())
+
         min_x, max_x, min_y, max_y = get_valid_area_in_image(info[2])
         # if max_x is not None and max_y is not None:
         #     image_tensor = image_tensor[:,min_x: max_x, min_y: max_y]
@@ -299,12 +301,12 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
         s2_a = torch.zeros(patches.size(0), 3, patches.size(2), patches.size(3))   
         s2_a[:,0,...] = patches[:,11,...] # sun zenith
         s2_a[:,1,...] = patches[:,13,...] # joint zenith
-        s2_a[:,2,...] = patches[:,12,...] - patches[:,14, ...]
-        s2_a = torch.cat((torch.cos(s2_a), torch.sin(s2_a)),1)
-        s2_a_samples = s2_a.permute(1,0,2,3).reshape(6, -1)
+        s2_a[:,2,...] = patches[:,12,...] - patches[:,14, ...] # Sun azimuth - joint azimuth 
+        s2_a_rad = torch.deg2rad(s2_a)
+        s2_a_cos_sin = torch.cat((torch.cos(s2_a_rad), torch.sin(s2_a_rad)), 1)
+        s2_a_samples = s2_a_cos_sin.permute(1,0,2,3).reshape(6, -1)
         spectral_idx = get_spectral_idx(patches[:, :n_bands,...], bands_dim=1).permute(1,0,2,3).reshape(5, -1)
         s2_r_samples = patches.permute(1,0,2,3)[:n_bands, ...].reshape(n_bands, -1)
-        
         if mode=='mean':
             norm_mean = s2_r_samples.mean(1)
             norm_std = s2_r_samples.std(1)
@@ -500,8 +502,19 @@ def main():
             fig, ax = plt.subplots(dpi=150)
             ax.imshow(rgb_render(test_patch_i)[0])
             fig.savefig(os.path.join(parser.output_dir, f"test_{info[0]}_{info[1]}_{info[2]}.png"))
+            plt.close('all')
         pass
     mode = "quantile"
+ 
+    sun_zen = train_patches[:,11,0,0] # sun zenith
+    joint_zen = train_patches[:,13,0,0] # joint zenith
+    rel_azi = train_patches[:,12,0,0] - train_patches[:,14,0,0] # Sun azimuth - joint azimuth 
+    s2_a = torch.cat((joint_zen.unsqueeze(1), sun_zen.unsqueeze(1), rel_azi.unsqueeze(1)), 1)
+    s2_a_rad = torch.deg2rad(s2_a)
+    s2_a_cos_sin = (torch.cos(s2_a_rad))
+
+    pair_plot(s2_a_cos_sin, tensor_2=None, features = ['Joint Zenith', "Sun Zenith", "Relative Azimuth"],
+                    res_dir=parser.output_dir, filename='sim_prosail_pair_plot.png')
     (norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, 
         idx_norm_std) = get_bands_norm_factors_from_patches(train_patches, mode=mode)
     print(f"median {norm_mean}, quantiles difference {norm_std}")

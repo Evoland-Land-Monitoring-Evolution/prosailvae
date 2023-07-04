@@ -735,6 +735,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
         for i in range(0, feature_count):
             for j in range(0, feature_count):
                 plot_single_pair(axis, i, j, X, y, features, colormap, bins=bins)
+                axis[j, i].set_xlim(np.min(X[:,i]), np.max(X[:,i]))
 
         plt.show()
         return fig, axis
@@ -743,9 +744,10 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
     if tensor_2 is not None:
         X = np.concatenate((X,tensor_2.detach().cpu().numpy()))
         y = np.concatenate((y,np.ones(tensor_2.size(0))))
-    fig, axis = myplotGrid(X, y, features, colormap={0:'blue', 1:'red'})
-    fig.savefig(res_dir + filename)
-    return
+    fig, ax = myplotGrid(X, y, features, colormap={0:'blue', 1:'red'})
+    if res_dir is not None:
+        fig.savefig(res_dir + filename)
+    return fig, ax
 
 def plot_rec_error_vs_angles(tgt_dist, rec_dist, angles_dist,  res_dir='',):
     error_dist = (tgt_dist - rec_dist).abs().mean(1)

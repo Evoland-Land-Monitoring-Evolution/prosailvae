@@ -309,9 +309,13 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
     cos_angle_max = torch.tensor([0.9274847491748729, 1.0000, 1.0000])
     with torch.no_grad():
         # s2_a = torch.zeros(patches.size(0), 3, patches.size(2), patches.size(3))   
-        # s2_a[:,0,...] = patches[:,11,...] # sun zenith
-        # s2_a[:,1,...] = patches[:,13,...] # joint zenith
-        # s2_a[:,2,...] = patches[:,12,...] - patches[:,14, ...] # Sun azimuth - joint azimuth 
+        # s2_a[:,0,...] = patches[:,11,0,0] # sun zenith
+        # s2_a[:,1,...] = patches[:,13,0,0] # joint zenith
+        # s2_a[:,2,...] = patches[:,12,0,0] 
+        # s2_a[:,3,...] = patches[:,14,0,0] # Sun azimuth - joint azimuth 
+        # fig, ax = plt.subplots(1,4, dpi=150)
+        # for i in range(4):
+        #     ax[i].hist(s2_a[:,i].squeeze().detach().cpu().numpy(), bins = 100, )
         # s2_a_rad = torch.deg2rad(s2_a)
         # s2_a_cos_sin = torch.cat((torch.cos(s2_a_rad), torch.sin(s2_a_rad)), 1)
         # s2_a_samples = s2_a_cos_sin.permute(1,0,2,3).reshape(6, -1)
@@ -520,13 +524,18 @@ def main():
  
     sun_zen = train_patches[:,11,0,0] # sun zenith
     joint_zen = train_patches[:,13,0,0] # joint zenith
+    sun_azi = train_patches[:,12,0,0]
+    joint_azi = train_patches[:,14,0,0]
     rel_azi = train_patches[:,12,0,0] - train_patches[:,14,0,0] # Sun azimuth - joint azimuth 
     s2_a = torch.cat((joint_zen.unsqueeze(1), sun_zen.unsqueeze(1), rel_azi.unsqueeze(1)), 1)
     s2_a_rad = torch.deg2rad(s2_a)
     s2_a_cos_sin = (torch.cos(s2_a_rad))
 
     pair_plot(s2_a_cos_sin, tensor_2=None, features = ['Joint Zenith', "Sun Zenith", "Relative Azimuth"],
-                    res_dir=parser.output_dir, filename='sim_prosail_pair_plot.png')
+                    res_dir=parser.output_dir, filename='angles_pairplot.png')
+    s2_a = torch.cat((sun_zen.unsqueeze(1), joint_zen.unsqueeze(1), sun_azi.unsqueeze(1), joint_azi.unsqueeze(1)), 1)
+    pair_plot(s2_a, tensor_2=None, features = ['Sun Zenith', "S2 Zenith", "Sun Azimuth", "S2 Azimuth"],
+                res_dir=parser.output_dir, filename='angles_deg_pairplot.png')
     (norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, 
         idx_norm_std) = get_bands_norm_factors_from_patches(train_patches, mode=mode)
     print(f"median {norm_mean}, quantiles difference {norm_std}")

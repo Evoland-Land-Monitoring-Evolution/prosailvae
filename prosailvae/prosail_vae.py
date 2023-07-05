@@ -67,6 +67,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     if params["rec_bands_loss_coeffs"] is not None:
         assert len(bands) == len(params["rec_bands_loss_coeffs"])
         reconstruction_bands_coeffs = torch.tensor(params["rec_bands_loss_coeffs"]).squeeze()
+    else:
+        reconstruction_bands_coeffs = None
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],

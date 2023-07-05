@@ -10,7 +10,7 @@ import argparse
 from datetime import datetime
 import torch
 from tqdm import tqdm
-from validation.utils import var_of_product, simple_interpolate
+from validation.validation_utils import var_of_product, simple_interpolate
 from utils.image_utils import get_encoded_image_from_batch
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 

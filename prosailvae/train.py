@@ -16,8 +16,8 @@ import logging.config
 import traceback
 import time
 from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
-from torch_lr_finder import get_PROSAIL_VAE_lr
-from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
+# from torch_lr_finder import get_PROSAIL_VAE_lr
+from dataset.loaders import (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path, save_validation_results
 from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow, load_standardize_coeffs, IOStandardizeCoeffs
 from ProsailSimus import get_bands_idx
@@ -125,25 +125,25 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)
     return parser
 
-def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, optimizer, lrtrainloader, 
-                 old_lr=1.0, n_samples=1):
-    new_lr=old_lr
-    if epoch > 0 and lr_recompute is not None:
-        if epoch % lr_recompute == 0:
-            try:
-                new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, 
-                                            old_lr=old_lr, old_lr_max_ratio=10, n_samples=n_samples)
-                optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
-                if exp_lr_decay>0:
-                    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, 
-                                                                          gamma=exp_lr_decay)
-            except Exception as exc:
-                traceback.print_exc()
-                print(exc)
-                logger.error(f"Couldn't recompute lr at epoch {epoch} !")
-                logger.error(f"{exc}")
-                print(f"Couldn't recompute lr at epoch {epoch} !")
-    return lr_scheduler, optimizer, new_lr
+# def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, optimizer, lrtrainloader, 
+#                  old_lr=1.0, n_samples=1):
+#     new_lr=old_lr
+#     if epoch > 0 and lr_recompute is not None:
+#         if epoch % lr_recompute == 0:
+#             try:
+#                 new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, 
+#                                             old_lr=old_lr, old_lr_max_ratio=10, n_samples=n_samples)
+#                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
+#                 if exp_lr_decay>0:
+#                     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, 
+#                                                                           gamma=exp_lr_decay)
+#             except Exception as exc:
+#                 traceback.print_exc()
+#                 print(exc)
+#                 logger.error(f"Couldn't recompute lr at epoch {epoch} !")
+#                 logger.error(f"{exc}")
+#                 print(f"Couldn't recompute lr at epoch {epoch} !")
+#     return lr_scheduler, optimizer, new_lr
 
 def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     loss_type = PROSAIL_VAE.decoder.loss_type
@@ -373,7 +373,8 @@ def load_params(config_dir, config_file, parser=None):
         params["init_lr"] = 5e-4
     if "break_init_at_rec_loss" not in params.keys():
         params["break_init_at_rec_loss"] = None
-
+    if "rec_bands_loss_coeffs" not in params.keys():
+        params["rec_bands_loss_coeffs"] = None
     return params
 
 def setup_training():
@@ -573,19 +574,19 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                     supervised=prosail_vae.supervised,
                     tensors_dir=tensor_dir)
     lr_recompute_mode = params["lr_recompute_mode"]
-    if lr is None:
-        try:
-            # raise NotImplementedError
-            lr = get_PROSAIL_VAE_lr(prosail_vae, lrtrainloader, n_samples=params["n_samples"], 
-                                    disable_tqdm=not socket.gethostname()=='CELL200973')
-            logger.info('LR computed ! using lr = {:.2E}'.format(lr))
-        except Exception as exc:
-            traceback.print_exc()
-            print(exc)
-            lr = 1e-4
-            logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
-            logger.error(f"{exc}")
-            print(f"Couldn't recompute lr at initialization ! Using lr={lr}")
+    # if lr is None:
+    #     try:
+    #         # raise NotImplementedError
+    #         lr = get_PROSAIL_VAE_lr(prosail_vae, lrtrainloader, n_samples=params["n_samples"], 
+    #                                 disable_tqdm=not socket.gethostname()=='CELL200973')
+    #         logger.info('LR computed ! using lr = {:.2E}'.format(lr))
+    #     except Exception as exc:
+    #         traceback.print_exc()
+    #         print(exc)
+    #         lr = 1e-4
+    #         logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
+    #         logger.error(f"{exc}")
+    #         print(f"Couldn't recompute lr at initialization ! Using lr={lr}")
 
     optimizer = optim.Adam(prosail_vae.parameters(), lr=lr, weight_decay=1e-2)
     logger.info('PROSAIL-VAE and optimizer initialized.')

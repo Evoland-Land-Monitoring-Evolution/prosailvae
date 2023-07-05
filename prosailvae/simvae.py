@@ -62,7 +62,8 @@ class SimVAE(nn.Module):
         Samples can be random, the mode, the expectation, the median from distributions. 
         This is selected by mode.
     """
-    def __init__(self, encoder, decoder, lat_space, sim_space, config,
+    def __init__(self, encoder, decoder, lat_space, sim_space, reconstruction_loss, 
+                  config, index_loss=None,
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
                  inference_mode:bool=False,
@@ -74,6 +75,8 @@ class SimVAE(nn.Module):
         self.lat_space = lat_space
         self.sim_space = sim_space
         self.decoder = decoder
+        self.reconstruction_loss = reconstruction_loss
+        self.index_loss = index_loss
         # self.loss = loss
         self.encoder.eval()
         self.lat_space.eval()
@@ -312,7 +315,7 @@ class SimVAE(nn.Module):
             s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
 
         # Reconstruction term
-        rec_loss = self.decoder.loss(s2_r, rec)
+        rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum = rec_loss
@@ -341,7 +344,8 @@ class SimVAE(nn.Module):
 
         if self.beta_index > 0:
             index_loss = self.beta_index * self.decoder.ssimulator.index_loss(s2_r, rec, lossfn=self.decoder.rec_loss_fn,
-                    normalize_idx=True, s2_r_bands_dim=1, rec_bands_dim=self.decoder.rec_loss_fn.feature_dim) # self.decoder.rec_loss_fn(s2_r, rec)
+                                                                              normalize_idx=True, s2_r_bands_dim=1, 
+                                                                              rec_bands_dim=self.decoder.rec_loss_fn.feature_dim) # self.decoder.rec_loss_fn(s2_r, rec)
             loss_sum += index_loss
             loss_dict['index_loss'] = index_loss.item()
 

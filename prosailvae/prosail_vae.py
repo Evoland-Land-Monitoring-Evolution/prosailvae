@@ -17,6 +17,7 @@ from prosailvae.ProsailSimus import (SensorSimulator, ProsailSimulator, get_z2pr
                                      get_z2prosailparams_mat, get_prosailparams_pdf_span, 
                                      PROSAILVARS)
 from prosailvae.decoders import ProsailSimulatorDecoder
+from prosailvae.loss import NLLLoss
 
 @dataclass
 class ProsailVAEConfig:
@@ -63,10 +64,12 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     spatial_encoder = get_encoder(encoder_config).get_spatial_encoding()
     if spatial_encoder:
         params["loss_type"] = "spatial_nll"
+    assert len(bands) == len(params["rec_bands_loss_coeffs"])
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],
-                             loss_type=params["loss_type"])
+                             loss_type=params["loss_type"],
+                             reconstruction_bands_coeffs=torch.tensor(params["rec_bands_loss_coeffs"]).squeeze())
 
     return ProsailVAEConfig(encoder_config=encoder_config,
                             loss_config=loss_config,
@@ -103,6 +106,9 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                       disabled_latent=pv_config.disabled_latent,
                                       disabled_latent_values = pv_config.disabled_latent_values)
 
+    reconstruction_loss = NLLLoss(loss_type=pv_config.loss_config.loss_type, 
+                                  feature_coeffs=pv_config.loss_config.reconstruction_bands_coeffs)
+
     z2sim_mat = get_z2prosailparams_mat()
     z2sim_offset = get_z2prosailparams_offset()
     sim_pdf_support_span = get_prosailparams_pdf_span()
@@ -133,6 +139,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
 
     prosail_vae = SimVAE(encoder=encoder, decoder=decoder,
                         lat_space=lat_space, sim_space=pheno_var_space, config=pv_config,
+                        reconstruction_loss=reconstruction_loss,
                         supervised=pv_config.loss_config.supervised,
                         device='cpu',
                         beta_kl=pv_config.loss_config.beta_kl,

@@ -195,11 +195,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     #     os.makedirs(rm4veg_validation_plot_dir)
     
     # belsar_res_dir = plot_dir + "belsar_validation"
-    # if not os.path.isdir(belsar_res_dir):
-    #     os.makedirs(belsar_res_dir)
-
-    # _, s2_r, s2_a, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
-    # s2_r = torch.from_numpy(s2_r).float().unsqueeze(0)
+    # if not os.path.isdir(resultsmpy(s2_r).float().unsqueeze(0)
     # s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     # with torch.no_grad():
     #     (_, sim_image, cropped_s2_r, cropped_s2_a, 
@@ -457,10 +453,11 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 
                     ssimulator=PROSAIL_VAE.decoder.ssimulator)
         
-        normed_rec_dist =  (rec_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
-        normed_refl_dist =  (refl_dist.to(device) - ssimulator.norm_mean.to(device)) / ssimulator.norm_std.to(device) 
+        normed_rec_dist =  ssimulator.normalize(rec_dist.to(device))
+        normed_refl_dist =  ssimulator.normalize(refl_dist.to(device)) 
         logger.info("Plotting reflectance distribution")
-        plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, ssimulator=PROSAIL_VAE.decoder.ssimulator, bands_name=bands_name)
+        plot_refl_dist(normed_rec_dist, normed_refl_dist, metrics_dir, normalized=True, 
+                       ssimulator=PROSAIL_VAE.decoder.ssimulator, bands_name=bands_name)
         logger.info("Plotting reconstructed reflectance components pair plots")
         pair_plot(normed_rec_dist, tensor_2=None, features = BANDS, 
                 res_dir=metrics_dir, filename='normed_rec_pair_plot.png')

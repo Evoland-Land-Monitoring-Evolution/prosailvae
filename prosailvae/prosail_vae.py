@@ -64,7 +64,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     spatial_encoder = get_encoder(encoder_config).get_spatial_encoding()
     if spatial_encoder:
         params["loss_type"] = "spatial_nll"
-    assert len(bands) == len(params["rec_bands_loss_coeffs"])
+    if params["rec_bands_loss_coeffs"] is not None:
+        assert len(bands) == len(params["rec_bands_loss_coeffs"])
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],

@@ -229,7 +229,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                                                                            threshold=0.01, threshold_mode='abs')
 
     max_train_samples_per_epoch = 50
-    max_valid_samples_per_epoch = None
+    max_valid_samples_per_epoch = 200
     if socket.gethostname()=='CELL200973':
         max_train_samples_per_epoch = 5
         max_valid_samples_per_epoch = 2

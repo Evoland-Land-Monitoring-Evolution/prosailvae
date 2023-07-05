@@ -352,6 +352,8 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         fig.savefig(os.path.join(res_dir, "rec_error_comparison.png"))
 
     fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200, tight_layout=True)
+    if len(err_scatter_dict)==1:
+        axs = [axs]
     for i, (_, model_info) in enumerate(model_dict.items()):
         axs[i].hist(err_scatter_dict[model_info["plot_name"]], bins=200, range=global_lim)
         axs[i].plot(global_lim, global_lim, 'k--')
@@ -375,6 +377,8 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         fig.savefig(os.path.join(res_dir, "model_err_boxplot.png"))
 
     fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200)
+    if len(err_scatter_dict) == 1:
+        axs = [axs]
     for i, (_, model_info) in enumerate(model_dict.items()):
         axs[i].hist(err_boxplot_dict[model_info["plot_name"]][:,], bins=200, range=global_lim)
         axs[i].plot(global_lim, global_lim, 'k--')

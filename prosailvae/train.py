@@ -393,26 +393,13 @@ def setup_training():
               "-p", "False"]
         parser = get_prosailvae_train_parser().parse_args(args)
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
-        frm4veg_barrax_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
-        frm4veg_wytham_filename = None #"2A_20180629_FRM_Veg_Wytham_20180703"
         belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
         
     else:
         parser = get_prosailvae_train_parser().parse_args()
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
-        # silvia_filename = "FRM_Veg_Barrax_20180605"
-        frm4veg_barrax_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
-        frm4veg_wytham_filename = None #"2A_20180629_FRM_Veg_Wytham_20180703"
-    list_belsar_filenames = ["2A_20180508_both_BelSAR_agriculture_database",
-                            "2A_20180518_both_BelSAR_agriculture_database",
-                            "2A_20180528_both_BelSAR_agriculture_database",
-                            "2A_20180620_both_BelSAR_agriculture_database",
-                            "2A_20180627_both_BelSAR_agriculture_database",
-                            "2B_20180715_both_BelSAR_agriculture_database",
-                            "2B_20180722_both_BelSAR_agriculture_database",
-                            "2A_20180727_both_BelSAR_agriculture_database",
-                            "2B_20180804_both_BelSAR_agriculture_database"]    
+ 
     root_dir = TOP_PATH
     xp_array = parser.xp_array
     job_array_dir = None

@@ -538,7 +538,7 @@ def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
             else:
                 raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
     else:
-        res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
+        res_dir = f"{root_results_dir}/{n_xp}"#_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)    
     return res_dir

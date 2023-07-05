@@ -65,8 +65,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     if spatial_encoder:
         params["loss_type"] = "spatial_nll"
     if params["rec_bands_loss_coeffs"] is not None:
-        assert len(bands) == len(params["rec_bands_loss_coeffs"])
-        reconstruction_bands_coeffs = torch.tensor(params["rec_bands_loss_coeffs"]).squeeze()
+        assert len(bands) >= len(params["rec_bands_loss_coeffs"])
+        reconstruction_bands_coeffs = params["rec_bands_loss_coeffs"]
     else:
         reconstruction_bands_coeffs = None
     loss_config = LossConfig(supervised=params["supervised"],
@@ -111,7 +111,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                       disabled_latent_values = pv_config.disabled_latent_values)
 
     reconstruction_loss = NLLLoss(loss_type=pv_config.loss_config.loss_type, 
-                                  feature_coeffs=pv_config.loss_config.reconstruction_bands_coeffs)
+                                  feature_indexes=pv_config.loss_config.reconstruction_bands_coeffs)
 
     z2sim_mat = get_z2prosailparams_mat()
     z2sim_offset = get_z2prosailparams_offset()

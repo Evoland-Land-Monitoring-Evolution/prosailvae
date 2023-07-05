@@ -14,7 +14,7 @@ class LossConfig:
     beta_kl:float = 0.0
     beta_index:float = 0.0
     loss_type: str = 'diag_nll'
-    reconstruction_bands_coeffs:torch.Tensor|None=None
+    reconstruction_bands_coeffs:list[int]|None=None
     
 
 def get_nll_dimensions(loss_type):
@@ -41,23 +41,26 @@ def select_rec_loss_fn(loss_type):
         raise NotImplementedError("Please choose between 'diag_nll' (diagonal covariance matrix) and 'full_nll' (full covariance matrix) for nll loss option.")
     return rec_loss_fn
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1, feature_coeffs:float|torch.Tensor=1.0):
+def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1, feature_indexes:None|list[int]=None):
     """
     Gaussian Negative Log-Likelihood
     """    
     eps = torch.tensor(eps).to(device)
-    return (((torch.square(x - mu) / torch.max(sigma, eps)) +
-            torch.log(torch.max(sigma, eps))) * feature_coeffs).sum(sum_dim)
-
-
-def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1, feature_coeffs:torch.Tensor|None=None):
-
-    if feature_coeffs is not None:
-        feature_coeffs = torch_select_unsqueeze(feature_coeffs.squeeze(), 
-                                                select_dim=feature_dim, 
-                                                nb_dim=len(recs.size())).to(recs.device)
+    if feature_indexes is None:
+        return (((torch.square(x - mu) / torch.max(sigma, eps)) +
+                torch.log(torch.max(sigma, eps)))).sum(sum_dim)
     else:
-        feature_coeffs = 1.0
+        loss = []
+        for idx in feature_indexes:
+            loss.append(((torch.square(x.select(dim=sum_dim,index=idx) 
+                                   - mu.select(dim=sum_dim,index=idx)) / torch.max(sigma.select(dim=sum_dim,index=idx), eps)) +
+                        torch.log(torch.max(sigma.select(dim=sum_dim, index=idx), eps))).unsqueeze(sum_dim))
+        loss = torch.cat(loss, dim=sum_dim).sum(sum_dim)
+        return loss
+
+
+def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1, feature_indexes:list[int]|None=None):
+
     if len(recs.size()) < 3:
         raise ValueError("recs needs a batch, a feature and a sample dimension")
     elif recs.size(sample_dim)==1:
@@ -70,7 +73,7 @@ def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1, feature_coeffs:tor
         #     # reducing it because sample dimension disappeared
         #     feature_dim = feature_dim - 1
     return gaussian_nll(tgt.unsqueeze(sample_dim), rec_mu, rec_err_var, 
-                        sum_dim=feature_dim, feature_coeffs=feature_coeffs).mean()
+                        sum_dim=feature_dim, feature_indexes=feature_indexes).mean()
 
 class NLLLoss(nn.Module):
     """
@@ -80,17 +83,17 @@ class NLLLoss(nn.Module):
                  loss_type:str|None=None,
                  sample_dim=2, 
                  feature_dim=1, 
-                 feature_coeffs:torch.Tensor|None=None) -> None:
+                 feature_indexes:list[int]|None=None) -> None:
         super().__init__()
         if loss_type is not None:
             sample_dim, feature_dim = get_nll_dimensions(loss_type)
         self.sample_dim = sample_dim
         self.feature_dim = feature_dim 
-        self.feature_coeffs = feature_coeffs
+        self.feature_indexes = feature_indexes
 
     def forward(self, targets, inputs):
         return gaussian_nll_loss(targets, inputs, sample_dim=self.sample_dim, 
-                                 feature_dim=self.feature_dim, feature_coeffs=self.feature_coeffs)
+                                 feature_dim=self.feature_dim, feature_indexes=self.feature_indexes)
 
 class LatentLoss(nn.Module):
     def __init__(self, sample_dim=2, feature_dim=1, loss_type='nll') -> None:

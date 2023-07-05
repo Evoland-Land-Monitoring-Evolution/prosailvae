@@ -434,17 +434,17 @@ def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/",
               "-o", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/"]
-        
+        train_patch_size = 8
         parser = get_parser().parse_args(args)
     else:
         parser = get_parser().parse_args()
-
+        train_patch_size = 32
 
     if not os.path.isdir(parser.output_dir):
         os.makedirs(parser.output_dir)
 
     large_patch_size = 128
-    train_patch_size = 16
+    # train_patch_size = 16
     valid_size = 0.05
     test_size = 0.05
     if parser.theia:

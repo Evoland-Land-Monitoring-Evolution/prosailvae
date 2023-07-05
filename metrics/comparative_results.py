@@ -339,7 +339,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
 
     err_scatter_dict = {}
     err_boxplot_dict = {}
-    global_lim = [10, 0]
+    global_lim = [0, 1]
     for _, model_info in model_dict.items():
         err_boxplot_dict[model_info["plot_name"]] = (model_info["reconstruction"][:,:10,...]
                                                      - all_s2_r[:,:10,...])
@@ -585,11 +585,11 @@ def main():
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
-        recompute = True #if not socket.gethostname()=='CELL200973' else False
+        recompute = True if not socket.gethostname()=='CELL200973' else False
         compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                        recompute=recompute, mode=mode)
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
-     all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data)
+     all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, max_patch=2)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)
     # compare_snap_versions_on_real_data(test_loader, res_dir)
     # compare_snap_versions_on_weiss_data(res_dir)

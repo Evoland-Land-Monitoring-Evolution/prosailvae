@@ -79,7 +79,8 @@ def read_data_from_theia(left, bottom, right, top, src_epsg, path_to_theia_produ
     s2_a = np.stack((sun_zen, joint_zen, sun_az - joint_az), 0).data
     s2_r, masks, atm, xcoords, ycoords, crs = dataset.read_as_numpy(bands, bounds=bb,
                                                                     crs=dataset.crs,
-                                                                    band_type=dataset.SRE)
+                                                                    band_type=dataset.SRE,
+                                                                    read_atmos=True)
     validity_mask = np.sum(masks.data, axis=0, keepdims=True).astype(bool).astype(int).astype(float)
     s2_r = s2_r.data
     return s2_r, s2_a, validity_mask, xcoords, ycoords, crs

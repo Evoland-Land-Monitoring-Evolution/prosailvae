@@ -213,6 +213,8 @@ RSR of the sensor.
 
         spectral_idx_tgt = get_spectral_idx(s2_r=s2_r, bands_dim=s2_r_bands_dim)
         spectral_idx_rec = get_spectral_idx(s2_r=u_s2_rec, bands_dim=rec_bands_dim)
+        # spectral_idx_rec = spectral_idx_rec.mean(s2_r_bands_dim, keepdim=True)
+
         if normalize_idx:
             spectral_idx_tgt = standardize(spectral_idx_tgt, self.idx_loc, self.idx_scale, s2_r_bands_dim)
             spectral_idx_rec = standardize(spectral_idx_rec, self.idx_loc, self.idx_scale, rec_bands_dim)

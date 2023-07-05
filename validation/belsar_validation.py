@@ -12,21 +12,25 @@ from rasterio.mask import mask
 import fiona
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 from rasterio.mask import mask
-from .utils import simple_interpolate, read_data_from_theia
+if not __name__=="__main__":
+    from .validation_utils import simple_interpolate, read_data_from_theia
+else:
+    from validation_utils import simple_interpolate, read_data_from_theia
+from utils.image_utils import tensor_to_raster, get_encoded_image_from_batch
 from datetime import datetime
 import torch
-from utils.image_utils import tensor_to_raster, get_encoded_image_from_batch
+
 from snap_regression.snap_nn import SnapNN
 
-BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",
-                    "2A_20180518_both_BelSAR_agriculture_database",
-                    "2A_20180528_both_BelSAR_agriculture_database",
-                    "2A_20180620_both_BelSAR_agriculture_database",
-                    "2A_20180627_both_BelSAR_agriculture_database",
-                    "2B_20180715_both_BelSAR_agriculture_database",
-                    "2B_20180722_both_BelSAR_agriculture_database",
-                    "2A_20180727_both_BelSAR_agriculture_database",
-                    "2B_20180804_both_BelSAR_agriculture_database"]  
+BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
+                    "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés
+                    "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image
+                    "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés    
+                    "2A_20180627_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180715_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
+                    "2A_20180727_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180804_both_BelSAR_agriculture_database"]     # OK
 
 def get_data_point_bb(gdf, dataset, margin=100, res=10):
     left, right, bottom, top = (dataset.bounds.left, dataset.bounds.right, dataset.bounds.bottom, dataset.bounds.top)

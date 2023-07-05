@@ -485,7 +485,8 @@ def main():
                          "SENTINEL2A_20170219-103333-413_L2A_T32ULV_D_V1-4.pth",
                          "SENTINEL2A_20160304-095843-370_L2A_T33SVB_D_V1-4.pth",
                          "SENTINEL2A_20160622-095030-459_L2A_T33TWF_D_V1-4.pth",
-                         "SENTINEL2A_20180801-095403-317_L2A_T33TWF_C_V2-2.pth"]
+                         "SENTINEL2A_20180801-095403-317_L2A_T33TWF_C_V2-2.pth",
+                         "SENTINEL2A_20181215-101819-939_L2A_T32TPQ_C_V2-2.pth"]
         tiles = ["32ULV", # Vosges
                  "31UFS", # Belgique
                  "31UDP", # Ile de France
@@ -536,6 +537,11 @@ def main():
     s2_a = torch.cat((sun_zen.unsqueeze(1), joint_zen.unsqueeze(1), sun_azi.unsqueeze(1), joint_azi.unsqueeze(1)), 1)
     pair_plot(s2_a, tensor_2=None, features = ['Sun Zenith', "S2 Zenith", "Sun Azimuth", "S2 Azimuth"],
                 res_dir=parser.output_dir, filename='angles_deg_pairplot.png')
+    spectral_idx = get_spectral_idx(train_patches[:, :10,...], bands_dim=1).permute(1,0,2,3).reshape(5, -1)
+    perm = torch.randperm(spectral_idx.size(1))
+    pair_plot(spectral_idx.permute(1,0)[perm[:1000000],:], tensor_2=None, 
+              features = ["NDVI", "CRI2", "NDII", "ND_lma", "LAI_savi"],
+                res_dir=parser.output_dir, filename='spectral_idx_pairplot.png')
     (norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, 
         idx_norm_std) = get_bands_norm_factors_from_patches(train_patches, mode=mode)
     print(f"median {norm_mean}, quantiles difference {norm_std}")

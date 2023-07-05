@@ -105,7 +105,7 @@ def get_metrics(PROSAIL_VAE, loader,
             tgt_dist = torch.concat([tgt_dist, tgt], axis=0)
             error = torch.concat([error, error_i], axis=0)
             sim_dist = torch.concat([sim_dist, prosail_params_mode], axis=0)
-            rec_dist = torch.concat([rec_dist, rec.squeeze() * ssimulator.norm_std + ssimulator.norm_mean], axis=0)
+            rec_dist = torch.concat([rec_dist, ssimulator.normalize(rec.squeeze(), bands_dim=1)], axis=0)
             rel_error_i = (prosail_params_mode.squeeze() - tgt).abs() / (tgt.abs()+1e-10)
             rel_error = torch.concat([rel_error, rel_error_i], axis=0)
             piw_i = pheno_pi_upper - pheno_pi_lower

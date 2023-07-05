@@ -125,14 +125,14 @@ def full_gaussian_nll(x, mu, sigma_mat, eps=1e-6, device='cpu', regularization=1
 
 def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1):
     eps = torch.tensor(eps).to(device)
-    return (torch.square(x - mu) / torch.max(sigma, eps)).sum(sum_dim) +  \
-            torch.log(torch.max(sigma, eps)).sum(sum_dim)
+    return ((torch.square(x - mu) / torch.max(sigma, eps)) +
+            torch.log(torch.max(sigma, eps))).sum(sum_dim)
 
 def gaussian_nll_loss(tgt, recs, sample_dim=2, feature_dim=1):
     if len(recs.size()) < 3:
         raise ValueError("recs needs a batch, a feature and a sample dimension")
     elif recs.size(sample_dim)==1:
-        rec_err_var=torch.tensor([[0.0001]]).to(tgt.device) # constant variance, enabling computation even with 1 sample
+        rec_err_var=torch.tensor(0.0001).to(tgt.device) # constant variance, enabling computation even with 1 sample
         rec_mu = recs
     else:
         rec_err_var = recs.var(sample_dim, keepdim=True)#.unsqueeze(sample_dim)

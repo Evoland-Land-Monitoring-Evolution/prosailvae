@@ -66,11 +66,12 @@ def get_prosail_vae_config(params, bands, io_coeffs,
         params["loss_type"] = "spatial_nll"
     if params["rec_bands_loss_coeffs"] is not None:
         assert len(bands) == len(params["rec_bands_loss_coeffs"])
+        reconstruction_bands_coeffs = torch.tensor(params["rec_bands_loss_coeffs"]).squeeze()
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],
                              loss_type=params["loss_type"],
-                             reconstruction_bands_coeffs=torch.tensor(params["rec_bands_loss_coeffs"]).squeeze())
+                             reconstruction_bands_coeffs=reconstruction_bands_coeffs)
 
     return ProsailVAEConfig(encoder_config=encoder_config,
                             loss_config=loss_config,

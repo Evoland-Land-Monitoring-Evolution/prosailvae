@@ -8,7 +8,7 @@ def NDVI(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     non_zero_denom_idx = denom.abs() > eps
     ndvi = - torch.ones_like(B4)
     ndvi[non_zero_denom_idx] = num[non_zero_denom_idx] / denom[non_zero_denom_idx]
-    return torch.clamp(ndvi, min=torch.tensor(-1), max=torch.tensor(1))
+    return torch.clamp(ndvi, min=-1, max=1)
 
 def mNDVI750(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B2 = s2_r.select(bands_dim, 0).unsqueeze(bands_dim)
@@ -19,7 +19,7 @@ def mNDVI750(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     mndvi750 = - torch.ones_like(B6)
     non_zero_denom_idx = denom.abs() > eps
     mndvi750[non_zero_denom_idx] = num[non_zero_denom_idx] / denom[non_zero_denom_idx]
-    return torch.clamp(mndvi750, min=torch.tensor(-1), max=torch.tensor(1))
+    return torch.clamp(mndvi750, min=-1, max=1)
 
 def CRI2(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B2 = s2_r.select(bands_dim, 0).unsqueeze(bands_dim)
@@ -27,7 +27,7 @@ def CRI2(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     cri2 = torch.zeros_like(B2)
     b2_and_b5_sup_0_idx = torch.logical_and(B2 > eps, B5 >= B2)
     cri2[b2_and_b5_sup_0_idx] = 1 / (B2[b2_and_b5_sup_0_idx]) - 1 / (B5[b2_and_b5_sup_0_idx])
-    return torch.clamp(cri2, max=torch.tensor(20))
+    return torch.clamp(cri2, max=20)
 
 def NDII(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B8 = s2_r.select(bands_dim, 6).unsqueeze(bands_dim)
@@ -37,7 +37,7 @@ def NDII(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     non_zero_denom_idx = denom.abs() > eps
     ndii = - torch.ones_like(B8)
     ndii[non_zero_denom_idx] = num[non_zero_denom_idx] / denom[non_zero_denom_idx]
-    return torch.clamp(ndii, min=torch.tensor(-1), max=torch.tensor(1))
+    return torch.clamp(ndii, min=-1, max=1)
 
 def ND_lma(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B11 = s2_r.select(bands_dim, 8).unsqueeze(bands_dim)
@@ -47,7 +47,7 @@ def ND_lma(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     non_zero_denom_idx = denom.abs() > eps
     nd_lma = - torch.ones_like(B12)
     nd_lma[non_zero_denom_idx] = num[non_zero_denom_idx] / denom[non_zero_denom_idx]
-    return torch.clamp(nd_lma, min=torch.tensor(-1), max=torch.tensor(1))
+    return torch.clamp(nd_lma, min=-1, max=1)
 
 def LAI_savi(s2_r, eps=torch.tensor(1e-7), bands_dim=1):
     B4 = s2_r.select(bands_dim, 2).unsqueeze(bands_dim)

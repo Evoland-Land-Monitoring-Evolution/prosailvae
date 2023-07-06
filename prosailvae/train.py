@@ -407,7 +407,6 @@ def setup_training():
     if xp_array:
         job_array_dir = os.path.join(parser.root_results_dir, os.pardir)
     config_dir = os.path.join(root_dir,"config/")
-
     params = load_params(config_dir, config_file=parser.config_file, parser=parser)
     if "data_dir" not in params.keys():
         data_dir = os.path.join(root_dir,"data/")

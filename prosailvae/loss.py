@@ -47,8 +47,8 @@ def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1, feature_indexe
     """    
     eps = torch.tensor(eps).to(device)
     if feature_indexes is None:
-        return (((torch.square(x - mu) / torch.max(sigma, eps)) +
-                torch.log(torch.max(sigma, eps)))).sum(sum_dim)
+        return ((torch.square(x - mu) / torch.max(sigma, eps)) +
+                torch.log(torch.max(sigma, eps))).sum(sum_dim)
     else:
         loss = []
         for idx in feature_indexes:

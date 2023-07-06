@@ -315,7 +315,10 @@ class SimVAE(nn.Module):
             s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
 
         # Reconstruction term
-        rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)
+        if self.decoder.ssimulator.apply_norm:
+            rec_loss = self.reconstruction_loss(self.decoder.ssimulator.normalize(s2_r), rec)
+        else:
+            rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)
 
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum = rec_loss

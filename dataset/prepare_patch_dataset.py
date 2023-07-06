@@ -241,7 +241,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{info[2]} {info[1]}")
-            fig.savefig(os.path.join(res_dir, f"full_roi_{info[2]}_{info[1]}.png"))
+            fig.savefig(os.path.join(res_dir, f"{tensor_file}.png"))
             plt.close('all')
     # raise NotImplementedError
 
@@ -320,7 +320,7 @@ def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
         # s2_a_cos_sin = torch.cat((torch.cos(s2_a_rad), torch.sin(s2_a_rad)), 1)
         # s2_a_samples = s2_a_cos_sin.permute(1,0,2,3).reshape(6, -1)
         
-        spectral_idx = get_spectral_idx(patches[:, :n_bands,...], bands_dim=1).permute(1,0,2,3).reshape(5, -1)
+        spectral_idx = get_spectral_idx(patches[:, :n_bands,...], bands_dim=1).permute(1,0,2,3).reshape(4, -1)
         s2_r_samples = patches.permute(1,0,2,3)[:n_bands, ...].reshape(n_bands, -1)
         if mode=='mean':
             norm_mean = s2_r_samples.mean(1)
@@ -531,17 +531,17 @@ def main():
     s2_a = torch.cat((joint_zen.unsqueeze(1), sun_zen.unsqueeze(1), rel_azi.unsqueeze(1)), 1)
     s2_a_rad = torch.deg2rad(s2_a)
     s2_a_cos_sin = (torch.cos(s2_a_rad))
-
+    spectral_idx = get_spectral_idx(train_patches[:, :10,...], bands_dim=1).permute(1,0,2,3).reshape(6, -1)
+    perm = torch.randperm(spectral_idx.size(1))
+    pair_plot(spectral_idx.permute(1,0)[perm[:1000000],:], tensor_2=None, 
+              features = ["NDVI", "NDII", "ND_lma", "LAI_savi"], #"mNDVI750", "CRI2",
+                res_dir=parser.output_dir, filename='spectral_idx_pairplot.png')
     pair_plot(s2_a_cos_sin, tensor_2=None, features = ['Joint Zenith', "Sun Zenith", "Relative Azimuth"],
                     res_dir=parser.output_dir, filename='angles_pairplot.png')
     s2_a = torch.cat((sun_zen.unsqueeze(1), joint_zen.unsqueeze(1), sun_azi.unsqueeze(1), joint_azi.unsqueeze(1)), 1)
     pair_plot(s2_a, tensor_2=None, features = ['Sun Zenith', "S2 Zenith", "Sun Azimuth", "S2 Azimuth"],
                 res_dir=parser.output_dir, filename='angles_deg_pairplot.png')
-    spectral_idx = get_spectral_idx(train_patches[:, :10,...], bands_dim=1).permute(1,0,2,3).reshape(5, -1)
-    perm = torch.randperm(spectral_idx.size(1))
-    pair_plot(spectral_idx.permute(1,0)[perm[:1000000],:], tensor_2=None, 
-              features = ["NDVI", "CRI2", "NDII", "ND_lma", "LAI_savi"],
-                res_dir=parser.output_dir, filename='spectral_idx_pairplot.png')
+
     (norm_mean, norm_std, angles_norm_mean, angles_norm_std, idx_norm_mean, 
         idx_norm_std) = get_bands_norm_factors_from_patches(train_patches, mode=mode)
     print(f"median {norm_mean}, quantiles difference {norm_std}")

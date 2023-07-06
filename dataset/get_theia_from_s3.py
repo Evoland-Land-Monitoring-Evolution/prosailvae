@@ -47,21 +47,19 @@ MONTHS_TO_RETRIEVE = ["2016-02-01",
                       "2019-09-01"]
 
 TILES_BB = {"32ULV": {'bb_left_top':[[ 717249, 6273008]], 'crs':"epsg:32632"},
-            "31UFS": {'bb_left_top':[[ 527850, 6586729]], 'crs':"epsg:32631"},
-            "31UDP": {'bb_left_top':[[ 337026, 6198482]], 'crs':"epsg:32631"},
+            "31UFS": {'bb_left_top':[[ 527850, 6586729], [ 549787, 6559371]], 'crs':"epsg:32631"},
+            "31UDP": {'bb_left_top':[[ 337026, 6198482], [ 217851, 6145959]], 'crs':"epsg:32631"},
             "30UWU": {'bb_left_top':[[-244922, 6127419]], 'crs':"epsg:32630"},
             "30TXQ": {'bb_left_top':[[-116496, 5627644]], 'crs':"epsg:32630"}, #EPSG3857
             "31TFJ": {'bb_left_top':[[ 503783, 5435881]], 'crs':"epsg:32631"},
             "33TWF": {'bb_left_top':[[1741039, 5049233], [1732470, 4977074]], 'crs':"epsg:32633"}, #[1736870, 4978840]
             "32TPQ": {'bb_left_top':[[1245580, 5625487]], 'crs':"epsg:32632"},
             "30TUM": {'bb_left_top':[[-537544, 5184355]], 'crs':"epsg:32630"},
-            "30SWJ": {'bb_left_top':[[-261934, 4752698]], 'crs':"epsg:32630"},
             "30SVG": {'bb_left_top':[[-427431, 4456797]], 'crs':"epsg:32630"},
             "30STE": {'bb_left_top':[[-660596, 4232187]], 'crs':"epsg:32630"},
             "33SVB": {'bb_left_top':[[1576370, 4500670]], 'crs':"epsg:32633"},
             "31UCS": {'bb_left_top':[[  74351, 6662326]], 'crs':"epsg:32631"},
-            "30SWJ": {'bb_left_top':[[-212019, 4739549]], 'crs':"epsg:32630"},
-            "31TCJ": {'bb_left_top':[[ 190680, 5388953], [86908, 5441369], [109410,5462607]], 'crs':"epsg:32631"}}
+            "30SWJ": {'bb_left_top':[[-212019, 4739549], [-216509, 4738443], [- 236810,4741317]], 'crs':"epsg:32630"},}
 
 def get_bb_from_left_top(left, top, size = 5120):
     bottom = top - size
@@ -267,12 +265,12 @@ def main():
                     "SENTINEL2A_20170406-105317-631_L2A_T30SWJ_D",]
     download = True
     if not download:
-        for tile in ["30SWJ", "31TCJ"]:
-        #for tile in ["33TWF", "32TPQ", "30TUM", "30SVJ"]:
+        for tile in ["30SWJ"]:
+        #for tile in ["33TWF", "32TPQ", "30TUM", "30SVJ"]:, "31TCJ"
             tiles, bb_list = get_sites_bb(TILES_BB, tiles=[tile], in_crs="epsg:3857", size=5120)
     else:
         
-        for tile in ["31TCJ", "30SWJ"]:
+        for tile in ["30SWJ"]:#"31TCJ", 
         #for tile in TILES_BB.keys():
             tile_dir = os.path.join(parser.output_dir,"T"+tile)
             tensor_dir = os.path.join("/home/yoel/Téléchargements/tile_s2/torch_files","T" + tile)

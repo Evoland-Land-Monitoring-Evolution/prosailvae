@@ -531,7 +531,7 @@ def main():
     s2_a = torch.cat((joint_zen.unsqueeze(1), sun_zen.unsqueeze(1), rel_azi.unsqueeze(1)), 1)
     s2_a_rad = torch.deg2rad(s2_a)
     s2_a_cos_sin = (torch.cos(s2_a_rad))
-    spectral_idx = get_spectral_idx(train_patches[:, :10,...], bands_dim=1).permute(1,0,2,3).reshape(6, -1)
+    spectral_idx = get_spectral_idx(train_patches[:, :10,...], bands_dim=1).permute(1,0,2,3).reshape(4, -1)
     perm = torch.randperm(spectral_idx.size(1))
     pair_plot(spectral_idx.permute(1,0)[perm[:1000000],:], tensor_2=None, 
               features = ["NDVI", "NDII", "ND_lma", "LAI_savi"], #"mNDVI750", "CRI2",

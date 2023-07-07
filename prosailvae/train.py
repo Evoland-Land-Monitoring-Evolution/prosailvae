@@ -263,10 +263,11 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                                                   n_samples=n_samples,
                                                   max_samples=max_train_samples_per_epoch)
                 if plot_gradient and res_dir is not None:
-                    if not os.path.isdir(res_dir + "/gradient_flows"):
-                        os.makedirs(res_dir + "/gradient_flows")
+                    if not os.path.isdir(os.path.join(res_dir, "gradient_flows")):
+                        os.makedirs(os.path.join(res_dir, "gradient_flows"))
                     plot_grad_flow(prosail_vae,
-                                   savefile=res_dir+f"/gradient_flows/grad_flow_{epoch}.svg")
+                                   savefile=os.path.join(os.path.join(res_dir, "gradient_flows"), 
+                                                         f"gradient_flows/grad_flow_{epoch}.svg"))
             except Exception as exc:
                 logger.error(f"Error during Training at epoch {epoch} !")
                 logger.error('Original error :')
@@ -307,8 +308,10 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
             if valid_loss_dict['loss_sum'] < best_val_loss:
                 best_val_loss = valid_loss_dict['loss_sum']
                 if res_dir is not None:
-                    prosail_vae.save_ae(epoch, optimizer, best_val_loss,
-                                        res_dir + "/prosailvae_weights.tar")
+                    prosail_vae.save_ae(epoch, optimizer, best_val_loss, 
+                                        os.path.join(res_dir, "/prosailvae_weights.tar"))
+            if os.path.isfile(os.path.join(res_dir, "stop.txt")):
+                break
     if n_epoch < 1: # In case we just want to plot results
         all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
         all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
@@ -650,28 +653,28 @@ def main():
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
-        validation_dir = os.path.join(res_dir, "validation")
-        os.makedirs(validation_dir)
-        save_validation_results(prosail_vae, validation_dir,
-                                frm4veg_data_dir=frm4veg_data_dir,
-                                belsar_data_dir=belsar_data_dir,
-                                model_name="pvae",
-                                method="simple_interpolate",
-                                mode="sim_tg_mean")
-        if not params['supervised']:
-            _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
-                                                                         batch_size=1, num_workers=0)
-            info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
-            save_results_2d(prosail_vae, test_loader, res_dir,
-                            all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                            plot_results=parser.plot_results, info_test_data=info_test_data)
-        if not params['encoder_type'] in spatial_encoder_types:
-            save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
-                         all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                         plot_results=parser.plot_results, weiss_mode=parser.weiss_mode, n_samples=params["n_samples"])
-        save_array_xp_path(job_array_dir, res_dir)
-        if params["k_fold"] > 1:
-            save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)
+        # validation_dir = os.path.join(res_dir, "validation")
+        # os.makedirs(validation_dir)
+        # save_validation_results(prosail_vae, validation_dir,
+        #                         frm4veg_data_dir=frm4veg_data_dir,
+        #                         belsar_data_dir=belsar_data_dir,
+        #                         model_name="pvae",
+        #                         method="simple_interpolate",
+        #                         mode="sim_tg_mean")
+        # if not params['supervised']:
+        #     _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
+        #                                                                  batch_size=1, num_workers=0)
+        #     info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
+        #     save_results_2d(prosail_vae, test_loader, res_dir,
+        #                     all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+        #                     plot_results=parser.plot_results, info_test_data=info_test_data)
+        # if not params['encoder_type'] in spatial_encoder_types:
+        #     save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
+        #                  all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+        #                  plot_results=parser.plot_results, weiss_mode=parser.weiss_mode, n_samples=params["n_samples"])
+        # save_array_xp_path(job_array_dir, res_dir)
+        # if params["k_fold"] > 1:
+        #     save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)
     except Exception as exc:
         traceback.print_exc()
         print(exc)

@@ -210,6 +210,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
                   plot_gradient=False, lr_recompute_mode=True, cycle_training=False):
     logger = logging.getLogger(LOGGER_NAME)
+    tbeg = time.time()
     if prosail_vae.decoder.loss_type=='mse':
         n_samples=1
         logger.info('MSE Loss enabled, setting number of monte-carlo samples to 1')
@@ -312,6 +313,8 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
         all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
         all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
         info_df = pd.DataFrame(data={"lr":10000, "epoch":0}, index=[0])
+    tend = time.time()
+    logger.info('Total training time: {:.1f} seconds'.format(tend-tbeg))
     return all_train_loss_df, all_valid_loss_df, info_df
 
 

@@ -190,6 +190,7 @@ def initialize_by_training(n_models:int,
                                                 cycle_training = False)
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
+            min_valid_loss = model_min_loss
             best_model_idx = i
             prosail_vae.save_ae(n_epochs, optimizer, model_min_loss, pv_config.vae_save_file_path)
         if break_at_rec_loss is not None:

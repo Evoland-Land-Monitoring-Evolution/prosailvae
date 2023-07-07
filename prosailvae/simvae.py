@@ -67,7 +67,8 @@ class SimVAE(nn.Module):
                  supervised:bool=False,  device:str='cpu',
                  beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
                  inference_mode:bool=False,
-                 lat_nll:str="", disabled_latent=[], disabled_latent_values=[]):
+                 lat_nll:str="", disabled_latent=[], 
+                 disabled_latent_values=[],):
         super(SimVAE, self).__init__()
         # encoder
         self.config = config
@@ -90,6 +91,7 @@ class SimVAE(nn.Module):
         self.hyper_prior = None
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
+        self.deterministic = config.deterministic
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
@@ -122,11 +124,11 @@ class SimVAE(nn.Module):
         dist_params = self.lat_space.get_params_from_encoder(y)
         return dist_params
 
-    def sample_latent_from_params(self, dist_params, n_samples=1):
+    def sample_latent_from_params(self, dist_params, n_samples=1, deterministic=False):
         """
         Sample latent distribution
         """
-        z = self.lat_space.sample_latent_from_params(dist_params, n_samples=n_samples)
+        z = self.lat_space.sample_latent_from_params(dist_params, n_samples=n_samples, deterministic=deterministic)
         return z
 
     def transfer_latent(self, z):
@@ -165,7 +167,7 @@ class SimVAE(nn.Module):
         if self.inference_mode:
             return dist_params, None, None, None
         # latent sampling
-        z = self.sample_latent_from_params(dist_params, n_samples=n_samples)
+        z = self.sample_latent_from_params(dist_params, n_samples=n_samples, deterministic=self.deterministic)
         # transfer to simulator variable
         sim = self.transfer_latent(z)
 

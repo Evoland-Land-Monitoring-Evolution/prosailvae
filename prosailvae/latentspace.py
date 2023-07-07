@@ -105,11 +105,13 @@ class TruncatedNormalLatent(LatentSpace):
         z = self.sample_latent_from_params(params, n_samples=n_samples)
         return z
 
-    def sample_latent_from_params(self, params: torch.Tensor, n_samples:int=1):
+    def sample_latent_from_params(self, params: torch.Tensor, n_samples:int=1, deterministic=False):
         """
         Sample the latent variables in a differentiable manner from distribution parameters.
         """
         mu = params[..., 0]
+        if deterministic:
+            return mu.unsqueeze(-1)
         sigma = params[..., 1]
         tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
         z = tn_dist.rsample([n_samples]).permute(1, 2, 0) # Batch x Latent x Sample

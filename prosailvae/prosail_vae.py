@@ -37,6 +37,7 @@ class ProsailVAEConfig:
     disabled_latent:list[int] = field(default_factory=lambda: [])
     disabled_latent_values:list[int] = field(default_factory=lambda: [])
     R_down:int=1
+    deterministic:bool=False
 
 def get_prosail_vae_config(params, bands, io_coeffs,
                            inference_mode, prosail_bands, rsr_dir):
@@ -86,7 +87,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
                             prosail_bands=prosail_bands,
                             disabled_latent=params["disabled_latent"],
                             disabled_latent_values=params["disabled_latent_values"],
-                            R_down=params["R_down"])
+                            R_down=params["R_down"], 
+                            deterministic=params["deterministic"])
 
 
 def get_prosail_vae(pv_config:ProsailVAEConfig,

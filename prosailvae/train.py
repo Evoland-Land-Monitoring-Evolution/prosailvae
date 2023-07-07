@@ -375,6 +375,8 @@ def load_params(config_dir, config_file, parser=None):
         params["break_init_at_rec_loss"] = None
     if "rec_bands_loss_coeffs" not in params.keys():
         params["rec_bands_loss_coeffs"] = None
+    if "deterministic" not in params.keys():
+        params["deterministic"] = False
     return params
 
 def setup_training():
@@ -507,7 +509,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     torch.save(io_coeffs.angles.scale, res_dir + "/angles_scale.pt")
     print(f"io_coeffs.idx.loc : {io_coeffs.idx.loc}")
     print(f"io_coeffs.idx.scale : {io_coeffs.idx.loc}")
-    
+
     params["vae_load_file_path"] = vae_load_file_path
     training_config = get_training_config(params)
     pv_config = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,

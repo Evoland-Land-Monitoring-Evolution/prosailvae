@@ -310,8 +310,8 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                 if res_dir is not None:
                     prosail_vae.save_ae(epoch, optimizer, best_val_loss, 
                                         os.path.join(res_dir, "/prosailvae_weights.tar"))
-            if os.path.isfile(os.path.join(res_dir, "stop.txt")):
-                break
+            # if os.path.isfile(os.path.join(res_dir, "stop.txt")):
+            #     break
     if n_epoch < 1: # In case we just want to plot results
         all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
         all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])

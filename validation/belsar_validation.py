@@ -5,10 +5,8 @@ import rasterio as rio
 import numpy as np
 import socket
 import argparse
-import rasterio
 import zipfile
 import shutil
-from rasterio.mask import mask
 import fiona
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 from rasterio.mask import mask
@@ -23,9 +21,9 @@ import torch
 from snap_regression.snap_nn import SnapNN
 
 BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
-                    "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés
-                    "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image
-                    "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés    
+                    "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
+                    "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
+                    "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés  => A retirer !  
                     "2A_20180627_both_BelSAR_agriculture_database",     # OK
                     "2B_20180715_both_BelSAR_agriculture_database",     # OK
                     "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
@@ -200,7 +198,7 @@ after_filename_dict =  {"2018-05-17" : "2A_20180518_both_BelSAR_agriculture_data
                                 #  '2018-08-29'
                          }
 def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, belsar_pred_filename, 
-                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000):
+                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_reconstruction=True):
     """
     Get metrics df for single image prediction for all sites
     """
@@ -210,12 +208,18 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
         line = sites_geometry.iloc[i]
         site_name  = line['Name']
         polygon = line['geometry']
-        with rasterio.open(os.path.join(belsar_pred_dir, 
-                                        belsar_pred_filename + f"{belsar_pred_file_suffix}.tif"), 
-                                        mode = 'r') as src:
+        with rio.open(os.path.join(belsar_pred_dir, f"{belsar_pred_filename}{belsar_pred_file_suffix}.tif"), 
+                      mode = 'r') as src:
             masked_array, _ = mask(src, [polygon], invert=False)
             masked_array[masked_array==NO_DATA] = np.nan
+
+        with rio.open(os.path.join(belsar_pred_dir, f"error_{belsar_pred_filename}{belsar_pred_file_suffix}.tif"), 
+                      mode = 'r') as src:
+            masked_err, _ = mask(src, [polygon], invert=False)
+            masked_err[masked_err==NO_DATA] = np.nan        
+
         site_samples = validation_df[validation_df["Field ID"]==site_name]
+
         d = {"name" : site_name,
              "land_cover":"Wheat" if site_name[0]=="W" else "Maize",
              "date" : date,
@@ -235,10 +239,16 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
             if not np.isnan(masked_array[pred_array_idx[variable]['sigma'],...]).all():
                 d[f"{variable}_sigma_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['sigma'],...])
                 d[f"{variable}_sigma_std"] = np.nanstd(masked_array[pred_array_idx[variable]['sigma'],...])
+
+            if not np.isnan(masked_err).all():
+                d[f"rec_err_mean"] = np.nanmean(masked_err)
+                d[f"rec_err_std"] = np.nanstd(masked_err)
+
         metrics = pd.concat((metrics, pd.DataFrame(d, index=[0])))
     return metrics.reset_index(drop=True)
 
-def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_dir, file_suffix, NO_DATA=-10000):
+def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_dir, file_suffix, NO_DATA=-10000, 
+                                   get_reconstruction=True):
     """
     Get metrics for all sites at all dates (all images)
     """
@@ -271,34 +281,39 @@ def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest
             metrics[variable] = simple_interpolate(after_metrics[variable], before_metrics[variable], 
                                                         after_metrics['delta'], before_metrics['delta'], is_std=is_std)
         metrics['delta_before'] = before_metrics['delta']
-        metrics['after_before'] = after_metrics['delta']
-    
+        metrics['delta_after'] = after_metrics['delta']
+        metrics["date"] = (abs(metrics['delta_after']) + abs(metrics['delta_before'])) / 2
     elif method == "closest":
         metrics = get_belsar_campaign_metrics_df(belsar_data_dir, closest_filename_dict, belsar_pred_dir, file_suffix)
     elif method == 'best':
         before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix)
         after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix)
         metrics = before_metrics.copy()
+        metrics["date"] = abs(before_metrics['delta'])
         for i in range(len(metrics)):
             err_before = np.abs(metrics['lai_mean'].iloc[i] - metrics['ref_lai'].iloc[i])
             err_after = np.abs(after_metrics['lai_mean'].iloc[i] - after_metrics['lai_mean'].iloc[i])
             if err_after < err_before:
                 metrics.iloc[i] = after_metrics.iloc[i]
+                metrics["date"].iloc[i] = abs(metrics['delta'].iloc[i])
     elif method =="worst":
         before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix)
         after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix)
         metrics = before_metrics.copy()
+        metrics["date"] = abs(before_metrics['delta'])
         for i in range(len(metrics)):
             err_before = np.abs(metrics['lai_mean'].iloc[i] - metrics['ref_lai'].iloc[i])
             err_after = np.abs(after_metrics['lai_mean'].iloc[i] - after_metrics['ref_lai'].iloc[i])
             if err_after > err_before:
                 metrics.iloc[i] = after_metrics.iloc[i]
+                metrics["date"].iloc[i] = abs(metrics['delta'].iloc[i])
     else:
         raise NotImplementedError
     return metrics
 
 
-def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_name="pvae", mode="lat_mode"):
+def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_name="pvae", mode="lat_mode",
+                            save_reconstruction=False):
     NO_DATA = -10000
     for filename in list_filenames:
         df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
@@ -311,10 +326,18 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
         s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
         
         with torch.no_grad():
-            (_, sim_image, _, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
+            
+            (rec, sim_image, s2_r, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
                                                         patch_size=32, bands=torch.arange(10),
-                                                        mode=mode, padding=True, no_rec=True)
+                                                        mode=mode, padding=True, no_rec=not save_reconstruction)
         
+            if save_reconstruction:
+                err_tensor = (rec - s2_r.squeeze(0)).abs().mean(0, keepdim=True)
+                err_tensor[err_tensor.isnan()] = NO_DATA
+                tensor_to_raster(err_tensor, res_dir + f"/error_{filename}_{model_name}_{mode}.tif",
+                         crs=crs, resolution=10, dtype=np.float32, bounds=None,
+                         xcoords=xcoords, ycoords=ycoords, nodata=NO_DATA,
+                         hw = 0, half_res_coords=True)
         # lai_validation_pred = sim_image[6,...].unsqueeze(0)
         # cm_validation_pred = sim_image[5,...].unsqueeze(0)
         tensor = torch.cat((sim_image[6,...].unsqueeze(0),

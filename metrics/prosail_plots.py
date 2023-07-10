@@ -1060,6 +1060,9 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     # fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
     #                                       snap_patch_pred, variable='lai', legend=True)
     # fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
+
+
+
     pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features = PROSAILVARS,
               res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
     fig, ax = plt.subplots()
@@ -1067,11 +1070,19 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
     ax.set_ylabel('LAI latent sigma')
     fig.savefig(f"{plot_dir}/lai_err_vs_sigma.png")
+
+    fig, ax = plt.subplots()
+    ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)
+    ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
+    ax.set_ylabel('Pixel reconstruction error')
+    fig.savefig(f"{plot_dir}/lai_err_vs_rec_err.png")
+
     fig, ax = plt.subplots()
     ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
     ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
     ax.set_ylabel('Cab latent sigma')
     fig.savefig(f"{plot_dir}/cab_err_vs_sigma.png")
+    
     fig, ax = plt.subplots()
     ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
     ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
@@ -1122,6 +1133,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].set_xlabel(f"True {band}")
         ax[row, col].set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_bands_scatter_true_vs_pred.png")
+
     n_cols = 5
     n_rows = 2
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols, n_rows*2), tight_layout=True, dpi=150)

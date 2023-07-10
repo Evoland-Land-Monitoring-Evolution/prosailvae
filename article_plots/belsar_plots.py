@@ -172,8 +172,15 @@ def plot_belsar_site(data_dir, filename):
 
 # fig, ax = plot_sampling_dates(months_to_get)
 
-fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", "2018-05-18", "2018-05-28", "2018-06-20", "2018-06-27",
-                                                    "2018-07-15", "2018-07-22", "2018-07-27", "2018-08-04"], 
+fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", 
+                                                #    "2018-05-18", 
+                                                #    "2018-05-28", 
+                                                #    "2018-06-20", 
+                                                   "2018-06-27",
+                                                   "2018-07-15", 
+                                                   "2018-07-22", 
+                                                   "2018-07-27", 
+                                                   "2018-08-04"], 
                                         #  s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"]
                                         s2_names=[r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$"]
                                             )

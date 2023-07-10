@@ -653,28 +653,28 @@ def main():
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
-        # validation_dir = os.path.join(res_dir, "validation")
-        # os.makedirs(validation_dir)
-        # save_validation_results(prosail_vae, validation_dir,
-        #                         frm4veg_data_dir=frm4veg_data_dir,
-        #                         belsar_data_dir=belsar_data_dir,
-        #                         model_name="pvae",
-        #                         method="simple_interpolate",
-        #                         mode="sim_tg_mean")
-        # if not params['supervised']:
-        #     _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
-        #                                                                  batch_size=1, num_workers=0)
-        #     info_test_data = np.load(os.path.join(data_dir,"test_info.npy"))
-        #     save_results_2d(prosail_vae, test_loader, res_dir,
-        #                     all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-        #                     plot_results=parser.plot_results, info_test_data=info_test_data)
-        # if not params['encoder_type'] in spatial_encoder_types:
-        #     save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
-        #                  all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-        #                  plot_results=parser.plot_results, weiss_mode=parser.weiss_mode, n_samples=params["n_samples"])
-        # save_array_xp_path(job_array_dir, res_dir)
-        # if params["k_fold"] > 1:
-        #     save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)
+        validation_dir = os.path.join(res_dir, "validation")
+        os.makedirs(validation_dir)
+        save_validation_results(prosail_vae, validation_dir,
+                                frm4veg_data_dir=frm4veg_data_dir,
+                                belsar_data_dir=belsar_data_dir,
+                                model_name="pvae",
+                                method="simple_interpolate",
+                                mode="sim_tg_mean")
+        if not params['supervised']:
+            _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
+                                                                         batch_size=1, num_workers=0)
+            info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
+            save_results_2d(prosail_vae, test_loader, res_dir,
+                            all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+                            plot_results=parser.plot_results, info_test_data=info_test_data)
+        if not params['encoder_type'] in spatial_encoder_types:
+            save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
+                         all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+                         plot_results=parser.plot_results, weiss_mode=parser.weiss_mode, n_samples=params["n_samples"])
+        save_array_xp_path(job_array_dir, res_dir)
+        if params["k_fold"] > 1:
+            save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)
     except Exception as exc:
         traceback.print_exc()
         print(exc)

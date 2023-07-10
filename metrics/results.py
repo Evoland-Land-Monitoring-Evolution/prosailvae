@@ -131,6 +131,7 @@ def save_validation_results(model, res_dir,
                                       mode=mode, method=method, model_name=model_name)
     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
                                                   frm4veg_lai="lai")
+    df_results['LAI error'] = df_results['Predicted LAI'] - df_results['LAI']
     df_results.to_csv(os.path.join(res_dir, f"all_campaigns_{mode}_{method}.csv"))
     fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Site",
                               legend_col=3, error_x="LAI std", 
@@ -140,6 +141,20 @@ def save_validation_results(model, res_dir,
                               legend_col=3, error_x="LAI std", 
                               error_y="Predicted LAI std", hue_perfs=False)
     fig.savefig(os.path.join(res_dir, f"LAI_regression_land_cover.png"))
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    fig, ax = plt.subplots(dpi=150)
+    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
+    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error.png"))
+    
+    fig, ax = plt.subplots(dpi=150)
+    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Time delta", ax=ax)
+    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_dt.png"))
+
+    fig, ax = regression_plot(df_results, x="LAI error", y="Reconstruction error", fig=None, ax=None, hue="Site",
+                              legend_col=3, error_x=None, 
+                              error_y=None, hue_perfs=True)
     global_rmse_dict, global_picp_dict = get_validation_global_metrics(df_results, 
                                                                        decompose_along_columns = ["Site", "Land cover"], 
                                                                        n_sigma=3)

@@ -309,7 +309,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                 best_val_loss = valid_loss_dict['loss_sum']
                 if res_dir is not None:
                     prosail_vae.save_ae(epoch, optimizer, best_val_loss, 
-                                        os.path.join(res_dir, "/prosailvae_weights.tar"))
+                                        os.path.join(res_dir, "prosailvae_weights.tar"))
             # if os.path.isfile(os.path.join(res_dir, "stop.txt")):
             #     break
     if n_epoch < 1: # In case we just want to plot results

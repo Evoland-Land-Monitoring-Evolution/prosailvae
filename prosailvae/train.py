@@ -657,14 +657,14 @@ def main():
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
-        validation_dir = os.path.join(res_dir, "validation")
-        os.makedirs(validation_dir)
-        save_validation_results(prosail_vae, validation_dir,
-                                frm4veg_data_dir=frm4veg_data_dir,
-                                belsar_data_dir=belsar_data_dir,
-                                model_name="pvae",
-                                method="simple_interpolate",
-                                mode="sim_tg_mean")
+        # validation_dir = os.path.join(res_dir, "validation")
+        # os.makedirs(validation_dir)
+        # save_validation_results(prosail_vae, validation_dir,
+        #                         frm4veg_data_dir=frm4veg_data_dir,
+        #                         belsar_data_dir=belsar_data_dir,
+        #                         model_name="pvae",
+        #                         method="simple_interpolate",
+        #                         mode="sim_tg_mean")
         if not params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                          batch_size=1, num_workers=0)

@@ -151,7 +151,7 @@ def save_validation_results(model, res_dir,
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Time delta", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_dt.png"))
-    
+
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_site.png"))
@@ -296,7 +296,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                                                              cropped_s2_a),
                                                              patch_size=32, sensor=info[0])
             
-            patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}/"
+            patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}_{info[3]}/"
             if not os.path.isdir(patch_plot_dir):
                 os.makedirs(patch_plot_dir)
             PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,

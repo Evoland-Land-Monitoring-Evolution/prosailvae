@@ -466,10 +466,10 @@ def get_models_global_metrics(models_dict, results_dict, sites, variable = 'lai'
             results = results_dict[method][variable][model]
             for k, site in enumerate(sites):
                 site_results = results[results['Site']==site]
-                picp[i,j,k] = np.logical_and(site_results['LAI'] < site_results['Predicted LAI'] + n_sigma * site_results['Predicted LAI std'],
-                                             site_results['LAI'] > site_results['Predicted LAI'] - n_sigma * site_results['Predicted LAI std']).astype(int).mean()
-            picp[i,j,-1] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma * results['Predicted LAI std'],
-                                             results['LAI'] > results['Predicted LAI'] - n_sigma * results['Predicted LAI std']).astype(int).mean()
+                picp[i,j,k] = np.logical_and(site_results['LAI'] < site_results['Predicted LAI'] + n_sigma/2 * site_results['Predicted LAI std'],
+                                             site_results['LAI'] > site_results['Predicted LAI'] - n_sigma/2 * site_results['Predicted LAI std']).astype(int).mean()
+            picp[i,j,-1] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma/2 * results['Predicted LAI std'],
+                                             results['LAI'] > results['Predicted LAI'] - n_sigma/2 * results['Predicted LAI std']).astype(int).mean()
     
     return rmse, picp
 
@@ -538,6 +538,9 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
                                            margin = 0.02, hue="Land cover")
+            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
+                                           margin = 0.02, hue="Time delta")
             plt.close('all')
             rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
                                                    variable=variable, n_models=len(model_dict)+1, n_sigma=3)

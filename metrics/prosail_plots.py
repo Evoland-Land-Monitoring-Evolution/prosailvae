@@ -1073,8 +1073,8 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     fig, ax = plt.subplots()
     ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)
-    ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
-    ax.set_ylabel('Pixel reconstruction error')
+    ax.set_ylabel('LAI difference (SNAP LAI - predicted LAI)')
+    ax.set_xlabel('Pixel reconstruction error')
     fig.savefig(f"{plot_dir}/lai_err_vs_rec_err.png")
 
     fig, ax = plt.subplots()

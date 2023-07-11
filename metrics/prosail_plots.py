@@ -1073,8 +1073,12 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     fig, ax = plt.subplots()
     ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)
-    ax.set_ylabel('LAI difference (SNAP LAI - predicted LAI)')
-    ax.set_xlabel('Pixel reconstruction error')
+    sns.kdeplot(data=pd.DataFrame({"Reconstruction error":(all_s2_r - all_rec).abs().mean(0), 
+                                   "LAI difference (Prediction - SNAP)":(all_lai - all_weiss_lai)}), 
+                                   x="Reconstruction error", y="LAI difference (Prediction - SNAP)",
+                                   levels=5, thresh=.2, ax=ax, color="red")
+    # ax.set_ylabel('LAI difference (SNAP LAI - predicted LAI)')
+    # ax.set_xlabel('Pixel reconstruction error')
     fig.savefig(f"{plot_dir}/lai_err_vs_rec_err.png")
 
     fig, ax = plt.subplots()
@@ -1351,7 +1355,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
                          weiss_cw, sigma_image, i, info=None):
     if info is None:
-        info = ["SENSOR","DATE","TILE"]
+        info = ["SENSOR","DATE","TILE", "ROI"]
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
@@ -1365,7 +1369,7 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
                               ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions {info[1]} {info[2]}")
-    fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_prosail_var_pred_dist.png")
+    fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_{info[3]}_prosail_var_pred_dist.png")
 
     n_cols = 5
     n_rows = 2

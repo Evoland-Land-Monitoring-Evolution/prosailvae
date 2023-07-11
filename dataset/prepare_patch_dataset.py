@@ -59,12 +59,12 @@ def get_images_path(data_dir, valid_tiles=None, valid_files=None, invalid_files=
                         continue
                 tile_file_path = os.path.join(tile_dir, tile_file)
                 if tile_file[-4:] == ".pth":
-                    sensor, date, tile, id = get_info_from_filename(tile_file)
+                    sensor, date, tile, id, roi = get_info_from_filename(tile_file)
                     if id in id_list:
-                        print(f"Already an image with : {sensor}, {date}, {tile}")
+                        print(f"Already an image with : {sensor}, {date}, {tile}, {roi}")
                     else:
                         id_list.append(id)
-                        file_info.append([sensor, date, tile])
+                        file_info.append([sensor, date, tile, roi])
                         print(f"Adding : {tile_file}")
                         list_files.append(tile_file_path)
     return list_files, file_info
@@ -160,9 +160,10 @@ def get_all_images_norm_factor(tensor_files):
 
 def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_patch_size = 32, 
                                        valid_size = 0.05, test_size = 0.05, valid_tiles=None, 
-                                       valid_files=None, invalid_files=None,res_dir=None):
+                                       valid_files=None, invalid_files=None, res_dir=None):
     assert large_patch_size % train_patch_size == 0
-    tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files, invalid_files=invalid_files)
+    tensor_files, file_info = get_images_path(data_dir, valid_tiles=valid_tiles, valid_files=valid_files, 
+                                              invalid_files=invalid_files)
     train_clean_patches = []
     valid_clean_patches = []
     test_clean_patches = []
@@ -241,7 +242,7 @@ def get_train_valid_test_patch_tensors(data_dir, large_patch_size = 128, train_p
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"{info[2]} {info[1]}")
-            fig.savefig(os.path.join(res_dir, f"{tensor_file}.png"))
+            fig.savefig(os.path.join(res_dir, f"{file_info[i][0]}_{file_info[i][1]}_{file_info[i][2]}_{file_info[i][3]}.png"))
             plt.close('all')
     # raise NotImplementedError
 
@@ -357,7 +358,12 @@ def get_info_from_filename(filename, prefix=False):
         raise ValueError("Sensor name not found!")
     date = filename_comp[1].split("-")[0]
     tile = filename_comp[3]
-    return sensor, date, tile, sensor + date + tile
+    if filename_comp[-2]=="roi":
+        roi = filename_comp[-1][:-4]
+    else:
+        roi = 0
+
+    return sensor, date, tile, sensor + date + tile + roi, roi
 
 
 def theia_product_to_tensor(data_dir, s2_product_name, part_loading=1):

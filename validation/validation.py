@@ -24,17 +24,16 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, belsa
     return barrax_results, wytham_results, belsar_results
 
 def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
-                                     frm4veg_lai="lai"):
-    rec_err_list = [belsar_results['rec_err_mean'].values.reshape(-1),
-                    barrax_results[f'{frm4veg_lai}_rec_err'].reshape(-1),
-                    wytham_results[f'{frm4veg_lai}_rec_err'].reshape(-1)]
+                                     frm4veg_lai="lai", get_reconstruction_error=False):
+
+    
     date_list = [belsar_results['date'].values.reshape(-1),
                  barrax_results[f'{frm4veg_lai}_date'].reshape(-1),
                  wytham_results[f"{frm4veg_lai}_date"].reshape(-1)]
     
-    ref_lai_list = [belsar_results['ref_lai'].values.reshape(-1),
+    ref_lai = np.concatenate([belsar_results['ref_lai'].values.reshape(-1),
                     barrax_results[f'ref_{frm4veg_lai}'].reshape(-1),
-                    wytham_results[f'ref_{frm4veg_lai}'].reshape(-1)]
+                    wytham_results[f'ref_{frm4veg_lai}'].reshape(-1)])
     
     ref_lai_std_list = [belsar_results['ref_lai_std'].values.reshape(-1),
                         barrax_results[f'ref_{frm4veg_lai}_std'].reshape(-1),
@@ -50,14 +49,20 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_resu
     land_cover_list = [belsar_results['land_cover'].values.reshape(-1),
                        barrax_results[f'{frm4veg_lai}_land_cover'].reshape(-1),
                        wytham_results[f'{frm4veg_lai}_land_cover'].reshape(-1)]
+    if get_reconstruction_error:
+        rec_err = np.concatenate([belsar_results['rec_err_mean'].values.reshape(-1),
+                        barrax_results[f'{frm4veg_lai}_rec_err'].reshape(-1),
+                        wytham_results[f'{frm4veg_lai}_rec_err'].reshape(-1)])
+    else:
+        rec_err = np.zeros_like(rec_err)
 
-    results = pd.DataFrame(data={'LAI': np.concatenate(ref_lai_list),
+    results = pd.DataFrame(data={'LAI':ref_lai,
                                 'LAI std':np.concatenate(ref_lai_std_list),
                                 'Predicted LAI': np.concatenate(pred_lai_list),
                                 'Predicted LAI std':np.concatenate(pred_lai_std_list),
                                 "Site": np.array(site_list),
                                 "Land cover": np.concatenate(land_cover_list),
-                                "Reconstruction error": np.concatenate(rec_err_list),
+                                "Reconstruction error": rec_err,
                                 "Time delta": np.concatenate(date_list)},
                                 )
     return results

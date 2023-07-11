@@ -483,15 +483,17 @@ def get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, filenames, meth
     return frm4veg_results
 
 def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barrax_results, wytham_results,
-                                                frm4veg_lai="lai"):
+                                                frm4veg_lai="lai", get_reconstruction_error=False):
     results = {}
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         results[model_name] = get_belsar_x_frm4veg_lai_results(belsar_results[model_name], 
                                                                 barrax_results[model_name], 
                                                                 wytham_results[model_name],
-                                                                    frm4veg_lai=frm4veg_lai)
+                                                                frm4veg_lai=frm4veg_lai, 
+                                                                get_reconstruction_error=get_reconstruction_error)
     results["SNAP"] = get_belsar_x_frm4veg_lai_results(belsar_results["SNAP"],  barrax_results["SNAP"], 
-                                                        wytham_results["SNAP"], frm4veg_lai=frm4veg_lai)
+                                                        wytham_results["SNAP"], frm4veg_lai=frm4veg_lai,
+                                                        get_reconstruction_error=False)
     return results
 
 def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
@@ -526,18 +528,21 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
         for variable in ['lai', "lai_eff"]:
             print(method, variable)
             validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results[method],
-                                                                                                    barrax_results[method],
-                                                                                                    wytham_results=wytham_results[method],
-                                                                                                    frm4veg_lai=variable)
+                                                                                                   barrax_results[method],
+                                                                                                   wytham_results=wytham_results[method],
+                                                                                                   frm4veg_lai=variable,
+                                                                                                   get_reconstruction_error=True)
             
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
                                            margin = 0.02, hue_perfs=True)
+            
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
                                            margin = 0.02, hue="Land cover")
+            
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
                                            margin = 0.02, hue="Time delta")

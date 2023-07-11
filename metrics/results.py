@@ -151,6 +151,10 @@ def save_validation_results(model, res_dir,
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Time delta", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_dt.png"))
+    
+    fig, ax = plt.subplots(dpi=150)
+    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
+    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_site.png"))
 
     fig, ax = regression_plot(df_results, x="LAI error", y="Reconstruction error", fig=None, ax=None, hue="Site",
                               legend_col=3, error_x=None, 

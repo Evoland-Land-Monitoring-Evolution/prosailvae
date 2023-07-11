@@ -187,7 +187,8 @@ def initialize_by_training(n_models:int,
                                                 exp_lr_decay=-1,
                                                 plot_gradient=False,#parser.plot_results,
                                                 lr_recompute_mode=False,
-                                                cycle_training = False)
+                                                cycle_training = False, 
+                                                accum_iter=1)
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
             min_valid_loss = model_min_loss
@@ -208,7 +209,8 @@ def initialize_by_training(n_models:int,
 
 def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
-                  plot_gradient=False, lr_recompute_mode=True, cycle_training=False):
+                  plot_gradient=False, lr_recompute_mode=True, cycle_training=False,
+                  accum_iter=1):
     logger = logging.getLogger(LOGGER_NAME)
     tbeg = time.time()
     if prosail_vae.decoder.loss_type=='mse':
@@ -249,9 +251,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
             # switch_loss(epoch, n_epoch, prosail_vae, swith_ratio=0.75)
             if lr_recompute_mode:
                 raise NotImplementedError
-                # lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, prosail_vae, epoch,
-                #                                                lr_recompute, exp_lr_decay, logger,
-                #                                                 optimizer, old_lr=old_lr,
+                # lr_scheduler, optimizer, old_lr = recompute_lr(lr_scheduler, prosaaccum_iter=old_lr,
                 #                                                 lrtrainloader=lrtrainloader,
                 #                                                 weiss_mode=weiss_mode,
                 #                                                 n_samples=n_samples)
@@ -261,7 +261,8 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
             try:
                 train_loss_dict = prosail_vae.fit(train_loader, optimizer,
                                                   n_samples=n_samples,
-                                                  max_samples=max_train_samples_per_epoch)
+                                                  max_samples=max_train_samples_per_epoch,
+                                                  accum_iter=accum_iter)
                 if plot_gradient and res_dir is not None:
                     if not os.path.isdir(os.path.join(res_dir, "gradient_flows")):
                         os.makedirs(os.path.join(res_dir, "gradient_flows"))
@@ -384,6 +385,8 @@ def load_params(config_dir, config_file, parser=None):
         params["rec_bands_loss_coeffs"] = None
     if "deterministic" not in params.keys():
         params["deterministic"] = False
+    if "accum_iter" not in params.keys():
+        params["accum_iter"] = 1
     return params
 
 def setup_training():
@@ -616,7 +619,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                          exp_lr_decay=params["exp_lr_decay"],
                                                          plot_gradient=False,#parser.plot_results,
                                                          lr_recompute_mode=lr_recompute_mode,
-                                                         cycle_training=params["cycle_training"])
+                                                         cycle_training=params["cycle_training"], 
+                                                         accum_iter=params["accum_iter"])
     logger.info("Training Completed !")
 
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df

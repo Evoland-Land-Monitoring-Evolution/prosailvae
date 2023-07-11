@@ -198,7 +198,7 @@ after_filename_dict =  {"2018-05-17" : "2A_20180518_both_BelSAR_agriculture_data
                                 #  '2018-08-29'
                          }
 def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, belsar_pred_filename, 
-                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_reconstruction=True):
+                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_error=True):
     """
     Get metrics df for single image prediction for all sites
     """
@@ -212,11 +212,8 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
                       mode = 'r') as src:
             masked_array, _ = mask(src, [polygon], invert=False)
             masked_array[masked_array==NO_DATA] = np.nan
-
-        with rio.open(os.path.join(belsar_pred_dir, f"error_{belsar_pred_filename}{belsar_pred_file_suffix}.tif"), 
-                      mode = 'r') as src:
-            masked_err, _ = mask(src, [polygon], invert=False)
-            masked_err[masked_err==NO_DATA] = np.nan        
+            if get_error:
+                masked_err = masked_array[-1,...] 
 
         site_samples = validation_df[validation_df["Field ID"]==site_name]
 
@@ -236,19 +233,20 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
             if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():
                 d[f"{variable}_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['mean'],...])
                 d[f"{variable}_std"] = np.nanstd(masked_array[pred_array_idx[variable]['mean'],...])
+
             if not np.isnan(masked_array[pred_array_idx[variable]['sigma'],...]).all():
                 d[f"{variable}_sigma_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['sigma'],...])
                 d[f"{variable}_sigma_std"] = np.nanstd(masked_array[pred_array_idx[variable]['sigma'],...])
-
-            if not np.isnan(masked_err).all():
-                d[f"rec_err_mean"] = np.nanmean(masked_err)
-                d[f"rec_err_std"] = np.nanstd(masked_err)
+            if get_error:
+                if not np.isnan(masked_err).all():
+                    d[f"rec_err_mean"] = np.nanmean(masked_err)
+                    d[f"rec_err_std"] = np.nanstd(masked_err)
 
         metrics = pd.concat((metrics, pd.DataFrame(d, index=[0])))
     return metrics.reset_index(drop=True)
 
 def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_dir, file_suffix, NO_DATA=-10000, 
-                                   get_reconstruction=True):
+                                   get_error=True):
     """
     Get metrics for all sites at all dates (all images)
     """
@@ -263,8 +261,8 @@ def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_d
         sites_geometry.reset_index(inplace=True, drop=True)
         delta_t = delta_dict[date]
         image_metrics = get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, 
-                                                 filename, file_suffix, 
-                                                 date, delta_t, NO_DATA=NO_DATA)
+                                                 filename, file_suffix, date, delta_t,
+                                                 NO_DATA=NO_DATA, get_error=get_error)
         metrics = pd.concat((metrics, image_metrics))
     return metrics.reset_index(drop=True)
 
@@ -331,19 +329,21 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
                                                         patch_size=32, bands=torch.arange(10),
                                                         mode=mode, padding=True, no_rec=not save_reconstruction)
         
-            if save_reconstruction:
-                err_tensor = (rec - s2_r.squeeze(0)).abs().mean(0, keepdim=True)
-                err_tensor[err_tensor.isnan()] = NO_DATA
-                tensor_to_raster(err_tensor, res_dir + f"/error_{filename}_{model_name}_{mode}.tif",
-                         crs=crs, resolution=10, dtype=np.float32, bounds=None,
-                         xcoords=xcoords, ycoords=ycoords, nodata=NO_DATA,
-                         hw = 0, half_res_coords=True)
+
+                # err_tensor[err_tensor.isnan()] = NO_DATA
+                # tensor_to_raster(err_tensor, res_dir + f"/error_{filename}_{model_name}_{mode}.tif",
+                #          crs=crs, resolution=10, dtype=np.float32, bounds=None,
+                #          xcoords=xcoords, ycoords=ycoords, nodata=NO_DATA,
+                #          hw = 0, half_res_coords=True)
         # lai_validation_pred = sim_image[6,...].unsqueeze(0)
         # cm_validation_pred = sim_image[5,...].unsqueeze(0)
         tensor = torch.cat((sim_image[6,...].unsqueeze(0),
                             sim_image[5,...].unsqueeze(0),
                             sigma_image[6,...].unsqueeze(0), 
                             sigma_image[5,...].unsqueeze(0)), 0)
+        if save_reconstruction:
+            err_tensor = (rec - s2_r.squeeze(0)).abs().mean(0, keepdim=True)
+            tensor = torch.cat((tensor, err_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
         tensor_to_raster(tensor, res_dir + f"/{filename}_{model_name}_{mode}.tif",
                          crs=crs, resolution=10, dtype=np.float32, bounds=None,

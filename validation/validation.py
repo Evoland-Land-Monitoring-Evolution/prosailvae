@@ -45,7 +45,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_resu
     pred_lai_std_list = [belsar_results['lai_sigma_mean'].values.reshape(-1),
                          barrax_results[f"{frm4veg_lai}_std"].reshape(-1),
                          wytham_results[f"{frm4veg_lai}_std"].reshape(-1)]
-    site_list = ['Belgium'] * len(ref_lai_list[0]) + ['Spain'] * len(ref_lai_list[1]) + ['England'] * len(ref_lai_list[2])
+    site_list = ['Belgium'] * len(ref_lai_std_list[0]) + ['Spain'] * len(ref_lai_std_list[1]) + ['England'] * len(ref_lai_std_list[2])
     land_cover_list = [belsar_results['land_cover'].values.reshape(-1),
                        barrax_results[f'{frm4veg_lai}_land_cover'].reshape(-1),
                        wytham_results[f'{frm4veg_lai}_land_cover'].reshape(-1)]

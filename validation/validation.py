@@ -54,7 +54,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_resu
                         barrax_results[f'{frm4veg_lai}_rec_err'].reshape(-1),
                         wytham_results[f'{frm4veg_lai}_rec_err'].reshape(-1)])
     else:
-        rec_err = np.zeros_like(rec_err)
+        rec_err = np.zeros_like(ref_lai)
 
     results = pd.DataFrame(data={'LAI':ref_lai,
                                 'LAI std':np.concatenate(ref_lai_std_list),

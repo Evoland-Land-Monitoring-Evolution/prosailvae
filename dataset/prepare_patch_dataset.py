@@ -361,7 +361,7 @@ def get_info_from_filename(filename, prefix=False):
     if filename_comp[-2]=="roi":
         roi = filename_comp[-1][:-4]
     else:
-        roi = 0
+        roi = "0"
 
     return sensor, date, tile, sensor + date + tile + roi, roi
 

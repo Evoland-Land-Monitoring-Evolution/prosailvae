@@ -130,7 +130,7 @@ def save_validation_results(model, res_dir,
      ) = get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, res_dir,
                                       mode=mode, method=method, model_name=model_name)
     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
-                                                  frm4veg_lai="lai")
+                                                  frm4veg_lai="lai", get_reconstruction_error=True)
     df_results['LAI error'] = df_results['Predicted LAI'] - df_results['LAI']
     df_results.to_csv(os.path.join(res_dir, f"all_campaigns_{mode}_{method}.csv"))
     fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Site",

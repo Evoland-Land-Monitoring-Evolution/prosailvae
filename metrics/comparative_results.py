@@ -544,7 +544,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
                                            margin = 0.02, hue="Land cover")
             
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
+                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Time_delta",
                                            margin = 0.02, hue="Time delta")
             plt.close('all')
             rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 

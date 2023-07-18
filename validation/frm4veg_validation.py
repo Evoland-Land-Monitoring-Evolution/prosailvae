@@ -348,10 +348,9 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
         gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename_before, variable=variable)
         gdf = gdf.iloc[:51]
         model_results[f"{variable}_land_cover"] = gdf["land cover"].values
+        dt_before = gdf["date"].apply(lambda x: (x.date() - d_before).days).values
+        dt_after = gdf["date"].apply(lambda x: (x.date() - d_after).days).values
         if method=="simple_interpolate":
-            dt_before = gdf["date"].apply(lambda x: (x.date() - d_before).days).values
-            dt_after = gdf["date"].apply(lambda x: (x.date() - d_after).days).values
-
             model_results[variable] = simple_interpolate(validation_results_after[variable].squeeze(),
                                                          validation_results_before[variable].squeeze(),
                                                          dt_after, dt_before).squeeze()

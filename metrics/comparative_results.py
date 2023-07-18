@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import prosailvae
 from snap_regression.snap_nn import SnapNN
-from validation.frm4veg_validation import load_frm4veg_data, interpolate_frm4veg_pred
+from validation.frm4veg_validation import load_frm4veg_data, interpolate_frm4veg_pred, BARRAX_FILENAMES, WYTHAM_FILENAMES
 from tqdm import trange, tqdm
 from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
 from validation.validation import get_belsar_x_frm4veg_lai_results
@@ -514,13 +514,13 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
-        barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
-        barrax_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, barrax_filenames,
+        # barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
+        barrax_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, BARRAX_FILENAMES,
                                                                 method=method, mode=mode)
         # plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
         #                                 res_dir=res_dir, prefix= "barrax_"+method+"_")
-        wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
-        wytham_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, wytham_filenames,
+        # wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
+        wytham_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, WYTHAM_FILENAMES,
                                                                 method=method, mode=mode)
         # plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
         #                                 res_dir=res_dir, prefix= "wytham_"+method+"_")

@@ -9,13 +9,18 @@ import socket
 import argparse
 from datetime import datetime
 import torch
+
+
 from tqdm import tqdm
-from validation.validation_utils import var_of_product, simple_interpolate
+if __name__ == "__main__":
+    from validation_utils import var_of_product, simple_interpolate
+else:
+    from validation.validation_utils import var_of_product, simple_interpolate
 from utils.image_utils import get_encoded_image_from_batch
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 
-BARRAX_FILENAMES = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
-WYTHAM_FILENAMES = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
+BARRAX_FILENAMES = ["2B_20180516_FRM_Veg_Barrax_20180605_V2", "2A_20180613_FRM_Veg_Barrax_20180605_V2"]
+WYTHAM_FILENAMES = ["2A_20180629_FRM_Veg_Wytham_20180703_V2", "2A_20180706_FRM_Veg_Wytham_20180703_V2"]
 
 # from utils.image_utils import tensor_to_raster
 
@@ -116,11 +121,12 @@ def get_bb_equivalent_polygon(bb, in_crs, out_crs):
     polygon = Polygon(coords)
     return gpd.GeoDataFrame(data={"geometry":[polygon]}).set_crs(in_crs).to_crs(out_crs)
 
-def compute_frm4veg_data(data_dir, filename, s2_product_name, no_angle_data=False, date="2018-06-30"):
+def compute_frm4veg_data(data_dir, filename, s2_product_name, no_angle_data=False, date="2018-06-30", method="DHP"):
     output_file_name = s2_product_name[8:19] + "_" + filename
     data_file = filename + ".xlsx"
     data_df = pd.read_excel(os.path.join(data_dir, data_file), sheet_name="GroundData", skiprows=[0])
     data_df = data_df.drop(columns=['Comments'])
+    data_df = data_df[data_df["Method"]==method]
     data_gdf = gpd.GeoDataFrame(data_df, geometry=gpd.points_from_xy(data_df['Easting Coord. '], data_df['Northing Coord. ']))
     data_gdf = data_gdf.set_crs('epsg:4326')
 
@@ -405,13 +411,13 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
 
 def main():
     if socket.gethostname()=='CELL200973':
-        # args=["-f", "FRM_Veg_Wytham_20180703",
-        args=["-f", "FRM_Veg_Barrax_20180605",
+        args=["-f", "FRM_Veg_Wytham_20180703_V2",
+        # args=["-f", "FRM_Veg_Barrax_20180605_V2",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
-              "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
+            #   "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
             #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
             #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
-        # "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
+        "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()

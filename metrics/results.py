@@ -20,7 +20,7 @@ from utils.image_utils import get_encoded_image_from_batch
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
 from validation.validation import get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_validation_global_metrics
-
+from article_plots.belsar_plots import get_belsar_sites_time_series
 from datetime import datetime 
 import shutil
 from time import sleep
@@ -125,12 +125,18 @@ def save_validation_results(model, res_dir,
                             belsar_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belsar_validation",
                             model_name="pvae",
                             method="simple_interpolate",
-                            mode="sim_tg_mean"):
-    (barrax_results, wytham_results, belsar_results
+                            mode="sim_tg_mean", 
+                            save_reconstruction=True):
+    (barrax_results, wytham_results, belsar_results, all_belsar
      ) = get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, res_dir,
-                                      mode=mode, method=method, model_name=model_name)
+                                      mode=mode, method=method, model_name=model_name, 
+                                      save_reconstruction=save_reconstruction)
+    for site in ["W1", "W2", "W3", "M1", "M2", "M3"]:
+        fig, ax = get_belsar_sites_time_series(all_belsar, site=site)
+        fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_{site}.png"))
+
     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
-                                                  frm4veg_lai="lai", get_reconstruction_error=True)
+                                                  frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
     df_results['LAI error'] = df_results['Predicted LAI'] - df_results['LAI']
     df_results.to_csv(os.path.join(res_dir, f"all_campaigns_{mode}_{method}.csv"))
     fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Site",

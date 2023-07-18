@@ -5,16 +5,9 @@ from datetime import datetime
 from dataclasses import dataclass
 import os 
 from validation.belsar_validation import load_belsar_validation_data, get_sites_geometry
-from sensorsio import utils
 
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "Helvetica",
-    'mathtext.fontset' : 'custom',
-    'mathtext.rm': 'Bitstream Vera Sans',
-    'mathtext.it': 'Bitstream Vera Sans:italic',
-    'mathtext.bf': 'Bitstream Vera Sans:bold'
-})
+
+
 
 @dataclass
 class MeasurementDates:
@@ -76,7 +69,7 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
     wheat_d_offset = [-3,3,0,0,0]
     for i, (d, l, r) in enumerate(zip(wheat_dates, wheat_levels, meas_dates.wheat_names)):
         ax.annotate(r, xy=(d, l),
-                    xytext=(0 + wheat_d_offset[i], np.sign(l)*0.5), textcoords="offset points",
+                    xytext=(0 + wheat_d_offset[i], np.sign(l) * 0.5), textcoords="offset points",
                     horizontalalignment="center",
                     verticalalignment="bottom" if l > 0 else "top")
     maize_d_offset = [-3,3,3,-3,0,0]    
@@ -121,42 +114,6 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
     return fig, anext
 
 
-def plot_belsar_site(data_dir, filename):
-    df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(data_dir, filename)
-
-    # fig, ax = plt.subplots()
-    # visu, _, _ = utils.rgb_render(s2_r)
-    # ax.imshow(visu, extent = [xcoords[0], xcoords[-1], ycoords[-1], ycoords[0]])
-    # wheat_sites.plot(ax=ax,  color = 'red')
-    # maize_sites.plot(ax=ax,  color = 'blue')
-    maize_sites = get_sites_geometry(data_dir, crs, crop="maize")
-    wheat_sites = get_sites_geometry(data_dir, crs, crop="wheat")
-    mask[mask==0.] = np.nan
-    fig, ax = plt.subplots(dpi=200)
-    visu, _, _ = utils.rgb_render(s2_r)
-    ax.imshow(visu, extent = [xcoords[0], xcoords[-1], ycoords[-1], ycoords[0]])
-    ax.imshow(mask.squeeze(), extent = [xcoords[0], xcoords[-1], ycoords[-1], ycoords[0]], cmap='YlOrRd')
-    for i in range(len(maize_sites)):
-        contour = maize_sites["geometry"].iloc[i].exterior.xy
-        ax.plot(contour[0], contour[1], "blue", linewidth=0.5)
-    # maize_sites.plot(ax=ax,  color = 'blue')
-    # wheat_sites.plot(ax=ax,  color = 'green')
-    for i in range(len(maize_sites)):
-        contour = wheat_sites["geometry"].iloc[i].exterior.xy
-        ax.plot(contour[0], contour[1], "red", linewidth=0.5)
-    for xi, yi, text in zip(wheat_sites.centroid.x, wheat_sites.centroid.y, wheat_sites["Name"]):
-        ax.annotate(text,
-                xy=(xi, yi), xycoords='data',
-                xytext=(1.5, 1.5), textcoords='offset points',
-                color='red')
-    for xi, yi, text in zip(maize_sites.centroid.x, maize_sites.centroid.y, maize_sites["Name"]):
-        ax.annotate(text,
-                xy=(xi, yi), xycoords='data',
-                xytext=(1.5, 1.5), textcoords='offset points',
-                color='blue')
-    
-    fig.savefig(os.path.join(data_dir, filename + "_mask.png"))
-
 # months_to_get = ["2016-02-01",
 #                     "2016-06-01",
 #                     "2016-10-01",
@@ -172,31 +129,55 @@ def plot_belsar_site(data_dir, filename):
 
 # fig, ax = plot_sampling_dates(months_to_get)
 
-fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", 
-                                                #    "2018-05-18", 
-                                                #    "2018-05-28", 
-                                                #    "2018-06-20", 
-                                                   "2018-06-27",
-                                                   "2018-07-15", 
-                                                   "2018-07-22", 
-                                                   "2018-07-27", 
-                                                   "2018-08-04"], 
-                                        #  s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"]
-                                        s2_names=[r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$"]
-                                            )
-fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/dates.svg")
+def get_belsar_sites_time_series(metrics, site="W1"):
+    site_metrics = metrics[metrics["name"]==site]
+    lai_pred = site_metrics["lai_mean"].values
+    dates = site_metrics["date"].values
+    dates = [datetime.strptime(d, "%Y-%m-%d") for d in dates]
+    fig, ax = plt.subplots(dpi=150)
+    ax.scatter(dates, lai_pred)
+    ax.set_xlabel("LAI")
+    ax.set_ylabel("Date")
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=2))
+    # ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y "))
+    plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+    return fig, ax
 
-list_output_filenames = ["2A_20180518_both_BelSAR_agriculture_database",
-                            "2A_20180528_both_BelSAR_agriculture_database",
-                            "2A_20180620_both_BelSAR_agriculture_database",
-                            "2A_20180627_both_BelSAR_agriculture_database",
-                            "2B_20180715_both_BelSAR_agriculture_database",
-                            "2B_20180722_both_BelSAR_agriculture_database",
-                            "2A_20180727_both_BelSAR_agriculture_database",
-                            "2B_20180801_both_BelSAR_agriculture_database",
-                            "2B_20180804_both_BelSAR_agriculture_database",
-                            "2A_20180508_both_BelSAR_agriculture_database"]
+if __name__=="__main__":
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "Helvetica",
+        'mathtext.fontset' : 'custom',
+        'mathtext.rm': 'Bitstream Vera Sans',
+        'mathtext.it': 'Bitstream Vera Sans:italic',
+        'mathtext.bf': 'Bitstream Vera Sans:bold'
+    })
+    fig, ax = plot_measurements_and_s2_dates(s2_dates=["2018-05-08", 
+                                                    #    "2018-05-18", 
+                                                    #    "2018-05-28", 
+                                                    #    "2018-06-20", 
+                                                    "2018-06-27",
+                                                    "2018-07-15", 
+                                                    "2018-07-22", 
+                                                    "2018-07-27", 
+                                                    "2018-08-04"], 
+                                            #  s2_names=["2A","2A", "2A", "2A", "2A", "2B", "2B", "2B", "2A", "2B"]
+                                            s2_names=[r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$", r"$S$"]
+                                                )
+    fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/dates.svg")
 
-data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/"
-for output_filename in list_output_filenames:
-    plot_belsar_site(data_dir, output_filename)
+    list_output_filenames = ["2A_20180518_both_BelSAR_agriculture_database",
+                                "2A_20180528_both_BelSAR_agriculture_database",
+                                "2A_20180620_both_BelSAR_agriculture_database",
+                                "2A_20180627_both_BelSAR_agriculture_database",
+                                "2B_20180715_both_BelSAR_agriculture_database",
+                                "2B_20180722_both_BelSAR_agriculture_database",
+                                "2A_20180727_both_BelSAR_agriculture_database",
+                                "2B_20180801_both_BelSAR_agriculture_database",
+                                "2B_20180804_both_BelSAR_agriculture_database",
+                                "2A_20180508_both_BelSAR_agriculture_database"]
+
+    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/"
+    # for output_filename in list_output_filenames:
+        # plot_belsar_site(data_dir, output_filename)
+

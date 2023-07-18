@@ -7,6 +7,7 @@ import socket
 import argparse
 import zipfile
 import shutil
+from tqdm import tqdm
 import fiona
 fiona.drvsupport.supported_drivers['KML'] = 'rw'
 from rasterio.mask import mask
@@ -19,16 +20,75 @@ from datetime import datetime
 import torch
 
 from snap_regression.snap_nn import SnapNN
+from sensorsio import utils
+import matplotlib.pyplot as plt
 
 BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
+                    "2B_20180526_both_BelSAR_agriculture_database",
                     "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
                     "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés  => A retirer !  
                     "2A_20180627_both_BelSAR_agriculture_database",     # OK
+                    "2A_20180630_both_BelSAR_agriculture_database",
+                    "2B_20180702_both_BelSAR_agriculture_database",
                     "2B_20180715_both_BelSAR_agriculture_database",     # OK
                     "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
+                    "2B_20180725_both_BelSAR_agriculture_database",
                     "2A_20180727_both_BelSAR_agriculture_database",     # OK
                     "2B_20180804_both_BelSAR_agriculture_database"]     # OK
+
+
+all_filename_dict = {"2018-05-08": "2A_20180508_both_BelSAR_agriculture_database",     # OK
+                    "2018-05-18": "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
+                    "2018-05-26": "2B_20180526_both_BelSAR_agriculture_database",
+                    "2018-05-28": "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
+                    "2018-06-20": "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés  => A retirer !  
+                    "2018-06-27": "2A_20180627_both_BelSAR_agriculture_database",     # OK
+                    "2018-06-30": "2A_20180630_both_BelSAR_agriculture_database",
+                    "2018-07-02": "2B_20180702_both_BelSAR_agriculture_database",
+                    "2018-07-15": "2B_20180715_both_BelSAR_agriculture_database",     # OK
+                    "2018-07-22": "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
+                    "2018-07-25": "2B_20180725_both_BelSAR_agriculture_database",
+                    "2018-07-27": "2A_20180727_both_BelSAR_agriculture_database",     # OK
+                    "2018-08-04": "2B_20180804_both_BelSAR_agriculture_database"}  
+
+
+
+def plot_belsar_site(data_dir, filename):
+    df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(data_dir, filename)
+
+    # fig, ax = plt.subplots()
+    # visu, _, _ = utils.rgb_render(s2_r)
+    # ax.imshow(visu, extent = [xcoords[0], xcoords[-1], ycoords[-1], ycoords[0]])
+    # wheat_sites.plot(ax=ax,  color = 'red')
+    # maize_sites.plot(ax=ax,  color = 'blue')
+    maize_sites = get_sites_geometry(data_dir, crs, crop="maize")
+    wheat_sites = get_sites_geometry(data_dir, crs, crop="wheat")
+    mask[mask==0.] = np.nan
+    fig, ax = plt.subplots(dpi=200)
+    visu, _, _ = utils.rgb_render(s2_r)
+    ax.imshow(visu, extent = [xcoords[0], xcoords[-1], ycoords[-1], ycoords[0]])
+    ax.imshow(mask.squeeze(), extent = [xcoords[0], xcoords[-1], ycoords[-1], ycoords[0]], cmap='YlOrRd')
+    for i in range(len(maize_sites)):
+        contour = maize_sites["geometry"].iloc[i].exterior.xy
+        ax.plot(contour[0], contour[1], "blue", linewidth=0.5)
+    # maize_sites.plot(ax=ax,  color = 'blue')
+    # wheat_sites.plot(ax=ax,  color = 'green')
+    for i in range(len(maize_sites)):
+        contour = wheat_sites["geometry"].iloc[i].exterior.xy
+        ax.plot(contour[0], contour[1], "red", linewidth=0.5)
+    for xi, yi, text in zip(wheat_sites.centroid.x, wheat_sites.centroid.y, wheat_sites["Name"]):
+        ax.annotate(text,
+                xy=(xi, yi), xycoords='data',
+                xytext=(1.5, 1.5), textcoords='offset points',
+                color='red')
+    for xi, yi, text in zip(maize_sites.centroid.x, maize_sites.centroid.y, maize_sites["Name"]):
+        ax.annotate(text,
+                xy=(xi, yi), xycoords='data',
+                xytext=(1.5, 1.5), textcoords='offset points',
+                color='blue')
+    
+    fig.savefig(os.path.join(data_dir, filename + "_mask.png"))
 
 def get_data_point_bb(gdf, dataset, margin=100, res=10):
     left, right, bottom, top = (dataset.bounds.left, dataset.bounds.right, dataset.bounds.bottom, dataset.bounds.top)
@@ -233,7 +293,8 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
             if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():
                 d[f"{variable}_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['mean'],...])
                 d[f"{variable}_std"] = np.nanstd(masked_array[pred_array_idx[variable]['mean'],...])
-
+            else:
+                continue
             if not np.isnan(masked_array[pred_array_idx[variable]['sigma'],...]).all():
                 d[f"{variable}_sigma_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['sigma'],...])
                 d[f"{variable}_sigma_std"] = np.nanstd(masked_array[pred_array_idx[variable]['sigma'],...])
@@ -313,7 +374,7 @@ def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest
 def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_name="pvae", mode="lat_mode",
                             save_reconstruction=False):
     NO_DATA = -10000
-    for filename in list_filenames:
+    for filename in tqdm(list_filenames):
         df, s2_r, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
         s2_r = torch.from_numpy(s2_r).float()
         mask[mask==1.] = np.nan
@@ -390,6 +451,21 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
                          hw = 0, 
                          half_res_coords=True)
 
+def get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, file_suffix, NO_DATA=-10000):
+    metrics = pd.DataFrame()
+    for date, filename in all_filename_dict.items():
+        validation_df, _, _, _, _, _, crs = load_belsar_validation_data(belsar_data_dir, filename)
+        ids = pd.unique(validation_df["Field ID"]).tolist()
+        sites_geometry = get_sites_geometry(belsar_data_dir, crs)
+        sites_geometry = sites_geometry[sites_geometry['Name'].apply(lambda x: x in ids)]
+        sites_geometry.reset_index(inplace=True, drop=True)
+        delta_t = 0
+        image_metrics = get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, 
+                                                 filename, file_suffix, date, delta_t,
+                                                 NO_DATA=NO_DATA, get_error=False)
+        metrics = pd.concat((metrics, image_metrics))
+    return metrics.reset_index(drop=True)
+
 def main():
     """
     Preprocesses belsar data for valdiation
@@ -403,25 +479,32 @@ def main():
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
-    list_s2_products = ["SENTINEL2A_20180508-104025-460_L2A_T31UFS_D_V2-2.zip",
-                        'SENTINEL2A_20180528-104613-414_L2A_T31UFS_D_V2-2.zip',
-                        'SENTINEL2A_20180620-105211-086_L2A_T31UFS_D_V2-2.zip',
-                        'SENTINEL2B_20180801-104018-457_L2A_T31UFS_D_V2-2.zip',
-                        'SENTINEL2A_20180518-104024-461_L2A_T31UFS_D_V2-2.zip',
-                        'SENTINEL2B_20180804-105022-459_L2A_T31UFS_D_V2-2.zip',
-                        "SENTINEL2B_20180722-104020-458_L2A_T31UFS_D_V2-2.zip",
-                        "SENTINEL2A_20180627-104023-457_L2A_T31UFS_D_V2-2.zip",
-                        "SENTINEL2B_20180715-105300-591_L2A_T31UFS_D_V1-8.zip",
-                        "SENTINEL2A_20180727-104023-458_L2A_T31UFS_D_V2-2.zip"]
+    # list_s2_products = ["SENTINEL2A_20180508-104025-460_L2A_T31UFS_D_V2-2.zip",
+    #                     'SENTINEL2A_20180528-104613-414_L2A_T31UFS_D_V2-2.zip',
+    #                     'SENTINEL2A_20180620-105211-086_L2A_T31UFS_D_V2-2.zip',
+    #                     'SENTINEL2B_20180801-104018-457_L2A_T31UFS_D_V2-2.zip',
+    #                     'SENTINEL2A_20180518-104024-461_L2A_T31UFS_D_V2-2.zip',
+    #                     'SENTINEL2B_20180804-105022-459_L2A_T31UFS_D_V2-2.zip',
+    #                     "SENTINEL2B_20180722-104020-458_L2A_T31UFS_D_V2-2.zip",
+    #                     "SENTINEL2A_20180627-104023-457_L2A_T31UFS_D_V2-2.zip",
+    #                     "SENTINEL2B_20180715-105300-591_L2A_T31UFS_D_V1-8.zip",
+    #                     "SENTINEL2A_20180727-104023-458_L2A_T31UFS_D_V2-2.zip"]
+    list_s2_products = ["SENTINEL2B_20180526-105635-059_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180521-105416-754_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180630-105440-000_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180528-104613-414_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20180725-105415-357_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20180702-104021-464_L2A_T31UFS_D.zip"]
     for s2_product in list_s2_products:
         if s2_product[-4:]=='.zip':
             with zipfile.ZipFile(os.path.join(parser.data_dir, s2_product), 'r') as zip_ref:
                 zip_ref.extractall(parser.data_dir)
                 s2_product = os.path.normpath(str(list(zipfile.Path(os.path.join(parser.data_dir, s2_product)).iterdir())[0])).split(os.sep)[-1]
-            output_file_names = preprocess_belsar_validation_data(parser.data_dir, parser.data_filename, s2_product, crop="both")
+            output_file_name = preprocess_belsar_validation_data(parser.data_dir, parser.data_filename, s2_product, crop="both")
+            plot_belsar_site(parser.data_dir, output_file_name)
             shutil.rmtree(os.path.join(parser.data_dir, s2_product))
         else:
-            output_file_names = preprocess_belsar_validation_data(parser.data_dir, parser.data_filename, s2_product, crop="both")
-        print(output_file_names)
+            output_file_name = preprocess_belsar_validation_data(parser.data_dir, parser.data_filename, s2_product, crop="both")
+        print(output_file_name)
 if __name__ == "__main__":
     main()

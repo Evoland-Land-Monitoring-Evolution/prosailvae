@@ -1,27 +1,28 @@
 import pandas as pd
 import numpy as np
 from validation.frm4veg_validation import interpolate_frm4veg_pred, BARRAX_FILENAMES, WYTHAM_FILENAMES
-from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, BELSAR_FILENAMES
+from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, BELSAR_FILENAMES, get_all_belsar_predictions
 
 def get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, belsar_pred_dir,
-                                 mode="sim_tg_mean", method="simple_interpolate", model_name="pvae",):
-    
-
-
-    barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
-                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
-                                              )
-
-    wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
-                                              WYTHAM_FILENAMES[1],  method=method, is_SNAP=False)
+                                 mode="sim_tg_mean", method="simple_interpolate", model_name="pvae",
+                                 save_reconstruction=False):
     
     save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, BELSAR_FILENAMES, model_name=model_name, mode=mode, 
-                            save_reconstruction=True)
-        
+                            save_reconstruction=save_reconstruction)
+    all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")
+    
+    barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
+                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
+                                              get_reconstruction=save_reconstruction)
+
+    wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
+                                              WYTHAM_FILENAMES[1],  method=method, is_SNAP=False,
+                                              get_reconstruction=save_reconstruction)
+    
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix=f"_{model_name}_{mode}", method=method)
 
-    return barrax_results, wytham_results, belsar_results
+    return barrax_results, wytham_results, belsar_results, all_belsar
 
 def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
                                      frm4veg_lai="lai", get_reconstruction_error=False):

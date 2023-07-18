@@ -657,21 +657,23 @@ def main():
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
-        validation_dir = os.path.join(res_dir, "validation")
-        os.makedirs(validation_dir)
-        save_validation_results(prosail_vae, validation_dir,
-                                frm4veg_data_dir=frm4veg_data_dir,
-                                belsar_data_dir=belsar_data_dir,
-                                model_name="pvae",
-                                method="simple_interpolate",
-                                mode="sim_tg_mean")
+        if not socket.gethostname()=='CELL200973':
+            validation_dir = os.path.join(res_dir, "validation")
+            os.makedirs(validation_dir)
+            save_validation_results(prosail_vae, validation_dir,
+                                    frm4veg_data_dir=frm4veg_data_dir,
+                                    belsar_data_dir=belsar_data_dir,
+                                    model_name="pvae",
+                                    method="simple_interpolate",
+                                    mode="sim_tg_mean")
         if not params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                          batch_size=1, num_workers=0)
             info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
             save_results_2d(prosail_vae, test_loader, res_dir,
                             all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                            plot_results=parser.plot_results, info_test_data=info_test_data)
+                            plot_results=parser.plot_results, info_test_data=info_test_data, 
+                            max_test_patch=50 if not socket.gethostname()=='CELL200973' else 2)
         if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

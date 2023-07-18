@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from dataset.juan_datapoints import get_interpolated_validation_data
 from dataset.weiss_utils import load_weiss_dataset
 from utils.image_utils import get_encoded_image_from_batch
+from sklearn.metrics import r2_score
 
 def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
     metrics_dir = res_dir + "/metrics/"
@@ -191,4 +192,12 @@ def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_
         lai_pred = torch.cat((lai_pred, lais), axis=1)
 
     return lai_nlls, lai_pred, sim_pdfs, sim_supports
+
+def regression_metrics(x_ref, x):
+    assert isinstance(x_ref, np.ndarray)
+    assert isinstance(x, np.ndarray)
+    m, b = np.polyfit(x_ref, x, 1)
+    r2 = r2_score(x_ref, x)
+    rmse = np.sqrt(np.mean((x_ref - x)**2))
+    return m, b, r2, rmse
 

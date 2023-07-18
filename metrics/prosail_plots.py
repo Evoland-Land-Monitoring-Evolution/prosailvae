@@ -7,7 +7,6 @@ Created on Thu Nov 17 11:46:20 2022
 """
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
 
 # plt.rcParams.update({
 #   "text.usetex": True,
@@ -26,6 +25,7 @@ from validation.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 import os
 from math import ceil, log10
+from metrics.metrics_utils import regression_metrics
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
     fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
@@ -966,9 +966,7 @@ def plot_patch_pairs(s2_r_pred, s2_r_ref, idx=0):
 def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     fig, ax = plt.subplots()
     lai_i = lais.squeeze()
-    m, b = np.polyfit(lai_i.numpy(), lai_pred.numpy(), 1)
-    r2 = r2_score(lai_i.numpy(), lai_pred.numpy())
-    mse = (lais - lai_pred).pow(2).mean().numpy()
+    m, b, r2, rmse = regression_metrics(lai_i.numpy() - lai_pred.numpy())
     if time_delta is not None:
         sc = ax.scatter(lai_i, lai_pred, c=time_delta.abs(), s=5)
         cbar = plt.colorbar(sc)
@@ -982,7 +980,7 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     ax.plot([minlim, maxlim],
             [minlim, maxlim],'k--')
     ax.plot([minlim, maxlim],
-            [m * minlim + b, m * maxlim + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+            [m * minlim + b, m * maxlim + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
     ax.legend()
     ax.set_ylabel('Predicted LAI')
     ax.set_xlabel(f"{site} LAI")# {LAI_columns(site)[i]}")
@@ -1014,9 +1012,8 @@ def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf,
                                 model_pred_at_site, snap_pred_at_site,
                                 variable='lai', legend=True):
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy(), 1)
-    r2 = r2_score(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy())
-    rmse = (all_snap_lai - all_model_lai).pow(2).mean().sqrt().cpu().numpy()
+    m, b, r2, rmse = regression_metrics(all_snap_lai.detach().cpu().numpy(), 
+                                        all_model_lai.detach().cpu().numpy())
     ax.scatter(all_snap_lai.cpu().numpy(), all_model_lai.cpu().numpy(), s=0.5)
 
     # x_idx = gdf["x_idx"].values.astype(int)
@@ -1053,7 +1050,7 @@ def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf,
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
-                                  all_cw_rel, 
+                                  all_cw_rel, cyclical_ref_lai, cyclical_lai,
                                 #   gdf_lai, model_patch_pred, snap_patch_pred, 
                                   max_sigma=1.4):
 
@@ -1061,9 +1058,11 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     #                                       snap_patch_pred, variable='lai', legend=True)
     # fig.savefig(f"{plot_dir}/validation_lai_model_vs_snap.png")
 
-
-
-    pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features = PROSAILVARS,
+    fig, ax = regression_plot(pd.DataFrame({"Simulated LAI":cyclical_ref_lai.detach().cpu().numpy(), 
+                                            "Predicted LAI":cyclical_lai.detach().cpu().numpy()}), 
+                              "Simulated LAI", "Predicted LAI", hue=None)
+    fig.savefig(f"{plot_dir}/cyclical_lai_scatter.png")
+    pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
               res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
@@ -1173,16 +1172,15 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig.savefig(f"{plot_dir}/all_lai_2dhist_true_vs_pred.png")
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy())
-    mse = (all_weiss_lai - all_lai).pow(2).mean().cpu().numpy()
+    m, b, r2, rmse = regression_metrics(all_weiss_lai.detach().cpu().numpy(), 
+                                        all_lai.detach().cpu().numpy())
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.scatter(all_weiss_lai.cpu().numpy(),
                         all_lai.cpu().numpy(),s=0.5)
     ax.plot([xmin, xmax],
             [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1195,16 +1193,15 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     ccc = all_cab * all_lai
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cab.cpu().numpy(), ccc.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cab.cpu().numpy(), ccc.cpu().numpy())
-    mse = (all_weiss_cab - ccc).pow(2).mean().cpu().numpy()
+    m, b, r2, rmse = regression_metrics(all_weiss_cab.detach().cpu().numpy(), 
+                                        ccc.detach().cpu().numpy())
     xmin = min(ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
     xmax = max(ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
     ax.scatter(all_weiss_cab.cpu().numpy(),
                         ccc.cpu().numpy(),s=0.5)
     ax.plot([xmin, xmax],
             [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1289,16 +1286,16 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     cwc = all_lai * all_cw
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b = np.polyfit(all_weiss_cw.cpu().numpy(), cwc.cpu().numpy(), 1)
-    r2 = r2_score(all_weiss_cw.cpu().numpy(), cwc.cpu().numpy())
-    mse = (all_weiss_cw - cwc).pow(2).mean().cpu().numpy()
+    m, b, r2, rmse = regression_metrics(all_weiss_cw.detach().cpu().numpy(), 
+                                        cwc.detach().cpu().numpy())
+    
     xmin = min(cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
     xmax = max(cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
     ax.scatter(all_weiss_cw.cpu().numpy(),
                         cwc.cpu().numpy(),s=0.5)
     ax.plot([xmin, xmax],
             [m * xmin + b, m * xmax + b],'r', 
-            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1516,9 +1513,7 @@ def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None,
     if xmax is None:
         xmax = max(np.max(pred_at_site), np.max(ref))
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
-    m, b = np.polyfit(ref, pred_at_site, 1)
-    r2 = r2_score(ref, pred_at_site)
-    rmse = np.sqrt(np.mean((ref - pred_at_site)**2))
+    m, b, r2, rmse = regression_metrics(ref, pred_at_site)
     perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
     line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
@@ -1596,9 +1591,7 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
     if xmax is None:
         xmax = max(np.max(pred_at_site), np.max(ref))
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
-    m, b = np.polyfit(ref, pred_at_site, 1)
-    r2 = r2_score(ref, pred_at_site)
-    rmse = np.sqrt(np.mean((ref - pred_at_site)**2))
+    m, b, r2, rmse = regression_metrics(ref, pred_at_site)
     perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
     line = ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
@@ -1620,9 +1613,9 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
 
 def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site", 
                     legend_col=2, xmin=None, xmax=None, error_x=None, 
-                    error_y=None, hue_perfs = False):
-    pred = df_metrics[y]
-    ref = df_metrics[x]
+                    error_y=None, hue_perfs=False):
+    pred = df_metrics[y].values
+    ref = df_metrics[x].values
     if fig is None or ax is None:
         fig, ax = plt.subplots(dpi=150, figsize=(6,6))
     if xmin is None:
@@ -1631,17 +1624,13 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
         xmax = max(np.max(pred), np.max(ref))
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
     
-    m_tot, b_tot = np.polyfit(ref, pred, 1)
-    r2_tot = r2_score(ref, pred)
-    rmse_tot = np.sqrt(np.mean((ref - pred)**2))
+    m_tot, b_tot, r2_tot, rmse_tot = regression_metrics(ref, pred)
     perf_text = "All: \n y = {:.2f} x + {:.2f} \n r2: {:.2f} - RMSE: {:.2f}".format(m_tot, b_tot, r2_tot, rmse_tot)
     if hue_perfs:
         for elem in pd.unique(df_metrics[hue]):
             pred = df_metrics[df_metrics[hue]==elem][y]
             ref = df_metrics[df_metrics[hue]==elem][x]
-            # m, b = np.polyfit(ref, pred, 1)
-            r2 = r2_score(ref, pred)
-            rmse = np.sqrt(np.mean((ref - pred)**2))
+            m, b, r2, rmse = regression_metrics(ref, pred)
             perf_text += "\n {} : \n r2: {:.2f} - RMSE: {:.2f}".format(elem, r2, rmse)
 
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
@@ -1663,10 +1652,11 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(xmin, xmax)
     ax.set_aspect('equal', 'box')
-    if not legend_col:
-        ax.get_legend().remove()
-    else:
-        sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),
-                        ncol=legend_col, frameon=True)
-        fig.tight_layout()
+    if hue is not None:
+        if not legend_col:
+            ax.get_legend().remove()
+        else:
+            sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),
+                            ncol=legend_col, frameon=True)
+            fig.tight_layout()
     return fig, ax

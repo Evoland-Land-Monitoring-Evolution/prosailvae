@@ -371,8 +371,8 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_rec_err = np.zeros_like(ref)
             err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
             results[err_1_le_err_2] = validation_results_before[f"{variable}"].reshape(-1)[err_1_le_err_2]
-            date[err_1_le_err_2] = abs(dt_before)
-            date[np.logical_not(err_1_le_err_2)] = abs(dt_after)
+            date[err_1_le_err_2] = abs(dt_before[err_1_le_err_2])
+            date[np.logical_not(err_1_le_err_2)] = abs(dt_after[np.logical_not(err_1_le_err_2)])
             results[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             results_std[err_1_le_err_2] = validation_results_before[f"{variable}_std"].reshape(-1)[err_1_le_err_2]
@@ -390,8 +390,8 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_std = np.zeros_like(ref)
             results_rec_err = np.zeros_like(ref)
             err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
-            date[err_1_le_err_2] = abs(dt_after)
-            date[np.logical_not(err_1_le_err_2)] = abs(dt_before)
+            date[err_1_le_err_2] = abs(dt_after[err_1_le_err_2])
+            date[np.logical_not(err_1_le_err_2)] = abs(dt_before[np.logical_not(err_1_le_err_2)])
             results[err_1_le_err_2] = validation_results_after[f"{variable}"].reshape(-1)[err_1_le_err_2]
             results_std[err_1_le_err_2] = validation_results_after[f"{variable}_std"].reshape(-1)[err_1_le_err_2]
             results_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[err_1_le_err_2]
@@ -410,13 +410,14 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
 
 def main():
     if socket.gethostname()=='CELL200973':
-        args=["-f", "FRM_Veg_Wytham_20180703_V2",
-        # args=["-f", "FRM_Veg_Barrax_20180605_V2",
+        # args=["-f", "FRM_Veg_Wytham_20180703_V2",
+        args=["-f", "FRM_Veg_Barrax_20180605_V2",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
             #   "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
             #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
             #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
-        "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
+        # "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
+        "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()
@@ -424,7 +425,7 @@ def main():
     s2_product_name = parser.product_name
 
     output_file_names = compute_frm4veg_data(parser.data_dir, parser.data_filename, s2_product_name,
-                                             date='2018-07-06', no_angle_data=True)
+                                             date='2018-07-06', no_angle_data=False)
     print(output_file_names)
 if __name__ == "__main__":
     main()

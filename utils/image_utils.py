@@ -127,7 +127,7 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
         rec_image = crop_s2_input(rec_image, hw)
         s2_a = crop_s2_input(s2_a, hw)
         s2_r = crop_s2_input(s2_r, hw)
-        sigma_image = crop_s2_input(sigma_image,hw)
+        sigma_image = crop_s2_input(sigma_image, hw)
     return rec_image, sim_image, s2_r, s2_a, sigma_image
 
 def check_is_patch(tensor:torch.Tensor):

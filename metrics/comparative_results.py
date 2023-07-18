@@ -4,7 +4,7 @@ import numpy as np
 import datetime
 import argparse
 import socket
-from utils.utils import load_dict, save_dict
+from utils.utils import load_dict, save_dict, load_standardize_coeffs
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
@@ -21,7 +21,6 @@ from validation.frm4veg_validation import load_frm4veg_data, interpolate_frm4veg
 from tqdm import trange, tqdm
 from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
 from validation.validation import get_belsar_x_frm4veg_lai_results
-from utils.utils import load_standardize_coeffs
 
 def get_parser():
     """
@@ -47,7 +46,7 @@ def get_model_and_dataloader(parser):
     """
     Get test data (patches) in a loader and loads all trained models
     """
-    _, _, test_loader = get_train_valid_test_loader_from_patches(parser.data_dir,
+    _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(parser.data_dir,
                                                                  bands = torch.arange(10),
                                                                  batch_size=1, num_workers=0)
     model_dict = load_dict(parser.model_dict_path)
@@ -85,6 +84,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
         model_info["reconstruction"] = []
         model_info["prosail_vars"] = []
         model_info["latent_sigma"] = []
+        model_info["cyclical_ref_lai"] = []
+        model_info["cyclical_lai"] = []
     all_s2_r = []
     all_snap_lai = []
     all_snap_cab = []
@@ -105,12 +106,19 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
                 (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 sigma_image) = get_encoded_image_from_batch(batch, model, patch_size=32,
                                                             bands=torch.arange(10),
-                                                            mode=mode)
+                                                            mode=mode, no_rec=False)
+                
+                (_, cyclical_sim_image, _, _, _) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
+                                                                                model, patch_size=32,
+                                                                                    bands=torch.arange(10),
+                                                                                    mode=mode, no_rec=True)
                 current_patch_results[model_name] = {"reconstruction": rec_image,
                                                        "prosail_vars": sim_image, 
                                                        "latent_sigma": sigma_image,
                                                        "cropped_s2_r" : cropped_s2_r,
                                                        "cropped_s2_a": cropped_s2_a,
+                                                       "cyclical_ref_lai":crop_s2_input(sim_image, hw)[6,...].reshape(-1),
+                                                       "cyclical_lai":cyclical_sim_image[6,...].reshape(-1),
                                                        "hw":hw}
             for model_name, model_info in model_dict.items():
                 delta_hw = largest_hw - current_patch_results[model_name]['hw']
@@ -119,16 +127,22 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
                 sigma_image = current_patch_results[model_name]["latent_sigma"]
                 cropped_s2_r = current_patch_results[model_name]["cropped_s2_r"]
                 cropped_s2_a = current_patch_results[model_name]["cropped_s2_a"]
+                cyclical_ref_lai = current_patch_results[model_name]["cyclical_ref_lai"]
+                cyclical_lai = current_patch_results[model_name]["cyclical_lai"]
                 if delta_hw > 0 :
                     rec_image = crop_s2_input(rec_image, delta_hw)
                     sim_image = crop_s2_input(sim_image, delta_hw)
                     sigma_image = crop_s2_input(sigma_image, delta_hw)
                     cropped_s2_r = crop_s2_input(cropped_s2_r, delta_hw)
                     cropped_s2_a = crop_s2_input(cropped_s2_a, delta_hw)
+                    cyclical_ref_lai = crop_s2_input(cyclical_ref_lai, delta_hw)
+                    cyclical_lai = crop_s2_input(cyclical_lai, delta_hw)
 
                 model_info["reconstruction"].append(rec_image)
                 model_info["prosail_vars"].append(sim_image)
                 model_info["latent_sigma"].append(sigma_image)
+                model_info["cyclical_ref_lai"].append(cyclical_ref_lai)
+                model_info["cyclical_lai"].append(cyclical_lai)
             all_s2_r.append(cropped_s2_r.squeeze())
             info = info_test_data[i,:]
             try:
@@ -152,6 +166,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
             model_info["reconstruction"] = torch.stack(model_info["reconstruction"], 0)
             model_info["prosail_vars"] = torch.stack(model_info["prosail_vars"], 0)
             model_info["latent_sigma"] = torch.stack(model_info["latent_sigma"], 0)
+            model_info["cyclical_ref_lai"] = torch.cat(model_info["cyclical_ref_lai"], 0)
+            model_info["cyclical_lai"] = torch.cat(model_info["cyclical_lai"], 0)
         all_s2_r = torch.stack(all_s2_r, axis=0)
     return model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw
 
@@ -228,7 +244,7 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
         fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
                                   legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", 
                                   error_y="Predicted LAI std", hue_perfs=hue_perfs)
-        ax.set_title(model_info["plot_name"])
+        ax.set_title(model_info["plot_name"] + f"\n loss: {model_info['loss']}")
     df_metrics = model_results["SNAP"]
     fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
                              legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", hue_perfs=hue_perfs)
@@ -324,7 +340,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                                             + ["SNAP"], vmin=vmin, vmax=vmax)
         if res_dir is not None:
             fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_LAI.png"))
-
+        plt.close('all')
     lai_scatter_dict = {}
     lai_scatter_dict["SNAP's Biophysical Processor"] = all_snap_lai.squeeze(1).reshape(-1)
     global_lim = [lai_scatter_dict["SNAP's Biophysical Processor"].min().item(),
@@ -360,6 +376,17 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         axs[i].set_title(model_info["plot_name"])
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_err_hist.png"))
+
+    fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200, tight_layout=True)
+    if len(err_scatter_dict)==1:
+        axs = [axs]
+    for i, (_, model_info) in enumerate(model_dict.items()):
+        regression_plot(pd.DataFrame({"Simulated LAI":model_info["cyclical_ref_lai"].detach().cpu().numpy(), 
+                                      "Predicted LAI":model_info["cyclical_lai"].detach().cpu().numpy()}), 
+                              "Simulated LAI", "Predicted LAI", hue=None)
+        axs[i].set_title(model_info["plot_name"])
+    if res_dir is not None:
+        fig.savefig(os.path.join(res_dir, "model_cyclical_lai_scatter.png"))
 
     fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True)
     for i in range(10):
@@ -564,6 +591,15 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
     # plot_frm4veg_results_comparison(model_dict, barrax_results_after, frm4veg_data_dir, barrax_filename_after, 
     #                                    res_dir=res_dir)
 
+def get_models_validation_rec_loss(model_dict, loader):
+    for model_name, model_info in model_dict.items(): 
+        loss_dict = model_info["model"].validate(loader)
+        if "rec_loss" in loss_dict.keys():
+            model_info['loss'] = loss_dict["rec_loss"]
+        else:
+            model_info['loss'] = loss_dict["loss_sum"]
+    return
+
 def main():
     """
     main.
@@ -592,12 +628,15 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
+    get_models_validation_rec_loss(model_dict, test_loader)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
         compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
                                        recompute=recompute, mode=mode)
+    
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
-     all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, max_patch=2)
+     all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 
+                                      max_patch=30 if not socket.gethostname()=='CELL200973' else 2)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)
     # compare_snap_versions_on_real_data(test_loader, res_dir)
     # compare_snap_versions_on_weiss_data(res_dir)

@@ -16,7 +16,7 @@ from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
 from utils.utils import load_dict, save_dict
-from utils.image_utils import get_encoded_image_from_batch
+from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
 from validation.validation import get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_validation_global_metrics
@@ -290,17 +290,28 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     all_weiss_cw = []
     all_s2_r = []
     all_sigma = []
+    cyclical_ref_lai = []
+    cyclical_lai = []
     with torch.no_grad():
         for i, batch in enumerate(loader):
             (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 sigma_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                                                             bands=torch.arange(10),
-                                                            mode=rec_mode)
+                                                            mode=rec_mode, no_rec=False)
+            (_, cyclical_sim_image, cyclical_cropped_s2_r, cyclical_cropped_s2_a,
+                cyclical_sigma_image) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
+                                                                        PROSAIL_VAE, patch_size=32,
+                                                                        bands=torch.arange(10),
+                                                                        mode=rec_mode, no_rec=True)
+            hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
+            cyclical_ref_lai.append(crop_s2_input(sim_image, hw)[6,...].reshape(-1))
+            cyclical_lai.append(cyclical_sim_image[6,...].reshape(-1))
             info = info_test_data[i,:]
             (weiss_lai, weiss_cab,
                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
-                                                             cropped_s2_a),
-                                                             patch_size=32, sensor=info[0])
+                                                              cropped_s2_a),
+                                                              patch_size=32, 
+                                                              sensor=info[0])
             
             patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}_{info[3]}/"
             if not os.path.isdir(patch_plot_dir):
@@ -334,9 +345,11 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         all_weiss_cw = torch.cat(all_weiss_cw)
         all_s2_r = torch.cat(all_s2_r, axis=1)
         all_sigma = torch.cat(all_sigma, axis=1)
-
+        cyclical_ref_lai = torch.cat(cyclical_ref_lai)
+        cyclical_lai = torch.cat(cyclical_lai)
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel,
+                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel, 
+                                      cyclical_ref_lai, cyclical_lai
                                     #   gdf_lai, lai_validation_pred, snap_validation_lai
                                       )
 

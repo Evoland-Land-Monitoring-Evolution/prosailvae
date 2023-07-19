@@ -73,6 +73,7 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     loss_config = LossConfig(supervised=params["supervised"],
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],
+                             beta_cyclical=params["beta_cyclical"],
                              loss_type=params["loss_type"],
                              reconstruction_bands_coeffs=reconstruction_bands_coeffs)
 
@@ -150,6 +151,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         device='cpu',
                         beta_kl=pv_config.loss_config.beta_kl,
                         beta_index=pv_config.loss_config.beta_index,
+                        beta_cyclical=pv_config.loss_config.beta_cyclical,
                         logger_name=logger_name, inference_mode=pv_config.inference_mode,
                         lat_nll="lai_nll" if pv_config.loss_config.loss_type=="lai_nll" else "")
     prosail_vae.set_hyper_prior(hyper_prior)

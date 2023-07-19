@@ -387,6 +387,8 @@ def load_params(config_dir, config_file, parser=None):
         params["deterministic"] = False
     if "accum_iter" not in params.keys():
         params["accum_iter"] = 1
+    if "beta_cyclical"not in params.keys():
+        params["beta_cyclical"] = 0
     return params
 
 def setup_training():

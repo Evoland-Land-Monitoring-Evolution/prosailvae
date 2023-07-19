@@ -440,7 +440,7 @@ def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/torch_files/",
               "-o", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/"]
-        train_patch_size = 8
+        train_patch_size = 16
         parser = get_parser().parse_args(args)
     else:
         parser = get_parser().parse_args()

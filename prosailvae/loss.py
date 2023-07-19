@@ -13,6 +13,7 @@ class LossConfig:
     supervised:bool = False
     beta_kl:float = 0.0
     beta_index:float = 0.0
+    beta_cyclical:float = 0.0
     loss_type: str = 'diag_nll'
     reconstruction_bands_coeffs:list[int]|None=None
     

@@ -65,7 +65,7 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space, reconstruction_loss, 
                   config, index_loss=None,
                  supervised:bool=False,  device:str='cpu',
-                 beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',
+                 beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',beta_cyclical:float=0.0,
                  inference_mode:bool=False,
                  lat_nll:str="", disabled_latent=[], 
                  disabled_latent_values=[],):
@@ -92,7 +92,7 @@ class SimVAE(nn.Module):
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
         self.deterministic = config.deterministic
-        self.beta_cyclical=1
+        self.beta_cyclical = beta_cyclical
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
@@ -175,7 +175,9 @@ class SimVAE(nn.Module):
         # decoding
         rec = self.decode(sim, angles, apply_norm=apply_norm)
         if is_patch:
-            return dist_params, z, unbatchify(sim, batch_size=batch_size), unbatchify(rec, batch_size=batch_size)
+            return (dist_params, unbatchify(z, batch_size=batch_size),
+                    unbatchify(sim, batch_size=batch_size), 
+                    unbatchify(rec, batch_size=batch_size))
         else:
             return dist_params, z, sim, rec
 
@@ -316,16 +318,32 @@ class SimVAE(nn.Module):
             assert check_is_patch(rec)
             s2_r = crop_s2_input(s2_r, self.encoder.nb_enc_cropped_hw)
             s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
-
+            z = crop_s2_input(z, self.encoder.nb_enc_cropped_hw)
         # Reconstruction term
         if self.decoder.ssimulator.apply_norm:
             rec_loss = self.reconstruction_loss(self.decoder.ssimulator.normalize(s2_r), rec)
         else:
-            rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)
-        if self.beta_cyclical > 0:
-            pass
+            rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)           
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum = rec_loss
+        if self.beta_cyclical > 0:
+            sample_dim = self.reconstruction_loss.sample_dim   
+            feature_dim = self.reconstruction_loss.feature_dim   
+            rec_cyc = rec.transpose(sample_dim, 1)
+            rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
+            s2_a_cyc = s2_a.unsqueeze(sample_dim)
+            s2_a_cyc = s2_a_cyc.tile([(n_samples if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])
+            s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
+            s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
+            z_cyc = z.transpose(sample_dim, 1)
+            z_cyc = z_cyc.reshape(-1, *z_cyc.shape[2:])
+            z_cyc = batchify_batch_latent(z_cyc)
+            z_cyc = z.transpose(feature_dim, -1)
+            z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
+            cyclical_batch = (rec_cyc, s2_a_cyc, z_cyc)
+            cyclical_loss, _ = self.beta_cyclical * self.supervised_batch_loss(cyclical_batch, {}, ref_is_lat=True)
+            loss_sum += cyclical_loss
+            loss_dict['cyclical_loss'] = cyclical_loss.item()            
         # Kl term
         if self.beta_kl > 0:
             if self.hyper_prior is None: # KL Truncated Normal latent || Uniform prior
@@ -362,16 +380,19 @@ class SimVAE(nn.Module):
             if loss_type not in normalized_loss_dict.keys():
                 normalized_loss_dict[loss_type] = 0.0
             normalized_loss_dict[loss_type] += loss / batch_size
+        
         return loss_sum, normalized_loss_dict
 
-    def supervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1):
+    def supervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1, ref_is_lat=False):
         """
         Computes supervised loss on batch (gaussian NLL)
         """
         s2_r = batch[0].to(self.device)
         s2_a = batch[1].to(self.device) 
-        ref_sim = batch[2].to(self.device) 
-        ref_lat = self.sim_space.sim2z(ref_sim)
+        batch_size = s2_r.size(0)
+        ref_lat = batch[2].to(self.device) 
+        if not ref_is_lat:
+            ref_lat = self.sim_space.sim2z(ref_lat)
         encoder_output, _ = self.encode(s2_r, s2_a)
         if encoder_output.isnan().any() or encoder_output.isinf().any():
             nan_in_params = NaN_model_params(self)
@@ -391,7 +412,7 @@ class SimVAE(nn.Module):
         for loss_type, loss in all_losses.items():
             if loss_type not in normalized_loss_dict.keys():
                 normalized_loss_dict[loss_type] = 0.0
-            normalized_loss_dict[loss_type] += loss / len_loader
+            normalized_loss_dict[loss_type] += loss / batch_size
 
         return loss_sum, normalized_loss_dict
 

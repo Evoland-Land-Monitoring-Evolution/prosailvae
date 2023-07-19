@@ -166,6 +166,8 @@ class TruncatedNormalLatent(LatentSpace):
         """
         mu = params[:, :, 0]
         sigma = params[:, :, 1]
+        if len(z.size())==2:
+            z=z.unsqueeze(2)
         nll = truncated_gaussian_nll(z, mu.unsqueeze(2), sigma.unsqueeze(2), reduction=reduction_nll)
         if reduction=='mean':
             nll=nll.mean()

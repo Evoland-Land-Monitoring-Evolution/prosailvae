@@ -593,7 +593,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
 
 def get_models_validation_rec_loss(model_dict, loader):
     for model_name, model_info in model_dict.items(): 
-        loss_dict = model_info["model"].validate(loader)
+        loss_dict = model_info["model"].validate(loader, n_samples=10 if not socket.gethostname()=='CELL200973' else 2)
         if "rec_loss" in loss_dict.keys():
             model_info['loss'] = loss_dict["rec_loss"]
         else:

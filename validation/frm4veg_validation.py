@@ -254,7 +254,7 @@ def get_frm4veg_material(frm4veg_data_dir, frm4veg_filename):
     ref_dict = {}
     for variable in ['lai', 'lai_eff', 'ccc', 'ccc_eff']:
         gdf, _, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_filename, variable=variable)
-        gdf = gdf.iloc[:51]
+        # gdf = gdf.iloc[:51]
         ref_dict[variable] = gdf[variable].values.reshape(-1)
         ref_dict[variable+"_std"] = gdf["uncertainty"].values.reshape(-1)
         site_idx_dict[variable] = {"x_idx" : torch.from_numpy(gdf["x_idx"].values).int(),
@@ -357,7 +357,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
         model_results[f'ref_{variable}'] = validation_results_before[f'ref_{variable}']
         model_results[f'ref_{variable}_std'] = validation_results_before[f'ref_{variable}_std']
         gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename_before, variable=variable)
-        gdf = gdf.iloc[:51]
+        # gdf = gdf.iloc[:51]
         model_results[f"{variable}_land_cover"] = gdf["land cover"].values
         dt_before = gdf["date"].apply(lambda x: (x.date() - d_before).days).values
         dt_after = gdf["date"].apply(lambda x: (x.date() - d_after).days).values

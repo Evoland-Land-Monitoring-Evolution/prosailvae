@@ -329,8 +329,8 @@ class SimVAE(nn.Module):
         if self.beta_cyclical > 0:
             sample_dim = self.reconstruction_loss.sample_dim   
             feature_dim = self.reconstruction_loss.feature_dim 
-            rec = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
-            rec_cyc = rec.transpose(sample_dim, 1)
+            rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+            rec_cyc = rec_cyc.transpose(sample_dim, 1)
             rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
             s2_a_cyc = s2_a.unsqueeze(sample_dim)
             s2_a_cyc = s2_a_cyc.tile([(n_samples if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])

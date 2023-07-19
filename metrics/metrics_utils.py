@@ -194,6 +194,10 @@ def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_
     return lai_nlls, lai_pred, sim_pdfs, sim_supports
 
 def regression_metrics(x_ref, x):
+    if isinstance(x, torch.Tensor):
+        x = x.detach().cpu().numpy()
+    if isinstance(x_ref, torch.Tensor):
+        x_ref = x_ref.detach().cpu().numpy()
     assert isinstance(x_ref, np.ndarray)
     assert isinstance(x, np.ndarray)
     m, b = np.polyfit(x_ref, x, 1)

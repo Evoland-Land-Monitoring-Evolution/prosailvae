@@ -591,7 +591,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
-                                           margin = 0.02, hue="Campaign")
+                                           margin = 0.02, hue="Campaign", legend_col=2)
             plt.close('all')
             rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
                                                    variable=variable, n_models=len(model_dict)+1, n_sigma=3)

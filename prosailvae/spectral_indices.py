@@ -62,6 +62,7 @@ def get_spectral_idx(s2_r, eps=torch.tensor(1e-4), bands_dim=1, index_dict=INDEX
         idx = idx_fn(s2_r, eps=eps, bands_dim=bands_dim)
         if not s2_r.isnan().any() or s2_r.isinf().any():
             if idx.isnan().any() or idx.isinf().any():
-                raise ValueError(f"{idx_name} has NaN or infinite values!")
+                print(s2_r[torch.logical_or(idx.isnan(), idx.isinf())])
+                raise ValueError(f"{idx_name} has NaN {idx.isnan().int().sum()} or infinite {idx.isinf().int().sum()} values!")
         spectral_idx.append(idx)
     return torch.cat(spectral_idx, axis=bands_dim)

@@ -58,11 +58,13 @@ INDEX_DICT = {"NDVI":NDVI, "NDII":NDII, "ND_lma":ND_lma, "LAI_savi":LAI_savi}#} 
 
 def get_spectral_idx(s2_r, eps=torch.tensor(1e-4), bands_dim=1, index_dict=INDEX_DICT):
     spectral_idx = []
+    assert (s2_r >=0.0).all() and (s2_r <= 1.0).all()
     for idx_name, idx_fn in index_dict.items():
         idx = idx_fn(s2_r, eps=eps, bands_dim=bands_dim)
         if not s2_r.isnan().any() or s2_r.isinf().any():
             if idx.isnan().any() or idx.isinf().any():
-                print(s2_r[torch.logical_or(idx.isnan(), idx.isinf())])
+                print(s2_r[torch.logical_or(idx.isnan().tile([(s2_r.size(bands_dim) if i==bands_dim else 1) for i in range(len(s2_r.size()))]), 
+                                            idx.isinf().tile([(s2_r.size(bands_dim) if i==bands_dim else 1) for i in range(len(s2_r.size()))]))])
                 raise ValueError(f"{idx_name} has NaN {idx.isnan().int().sum()} or infinite {idx.isinf().int().sum()} values!")
         spectral_idx.append(idx)
     return torch.cat(spectral_idx, axis=bands_dim)

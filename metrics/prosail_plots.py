@@ -1628,8 +1628,8 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
     perf_text = "All: \n y = {:.2f} x + {:.2f} \n r2: {:.2f} - RMSE: {:.2f}".format(m_tot, b_tot, r2_tot, rmse_tot)
     if hue_perfs:
         for elem in pd.unique(df_metrics[hue]):
-            pred = df_metrics[df_metrics[hue]==elem][y]
-            ref = df_metrics[df_metrics[hue]==elem][x]
+            pred = df_metrics[df_metrics[hue]==elem][y].values
+            ref = df_metrics[df_metrics[hue]==elem][x].values
             m, b, r2, rmse = regression_metrics(ref, pred)
             perf_text += "\n {} : \n r2: {:.2f} - RMSE: {:.2f}".format(elem, r2, rmse)
 

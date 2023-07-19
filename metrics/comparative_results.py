@@ -517,16 +517,18 @@ def get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, filenames, meth
                                                         filenames[1],  method=method, is_SNAP=True, mode=mode)
     return frm4veg_results
 
-def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barrax_results, wytham_results,
+def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                 frm4veg_lai="lai", get_reconstruction_error=False):
     results = {}
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         results[model_name] = get_belsar_x_frm4veg_lai_results(belsar_results[model_name], 
                                                                 barrax_results[model_name], 
+                                                                barrax_2021_results[model_name],
                                                                 wytham_results[model_name],
                                                                 frm4veg_lai=frm4veg_lai, 
                                                                 get_reconstruction_error=get_reconstruction_error)
     results["SNAP"] = get_belsar_x_frm4veg_lai_results(belsar_results["SNAP"],  barrax_results["SNAP"], 
+                                                       barrax_2021_results["SNAP"], 
                                                         wytham_results["SNAP"], frm4veg_lai=frm4veg_lai,
                                                         get_reconstruction_error=False)
     return results
@@ -568,6 +570,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             print(method, variable)
             validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results[method],
                                                                                                    barrax_results[method],
+                                                                                                   barrax_2021_results[method],
                                                                                                    wytham_results=wytham_results[method],
                                                                                                    frm4veg_lai=variable,
                                                                                                    get_reconstruction_error=True)

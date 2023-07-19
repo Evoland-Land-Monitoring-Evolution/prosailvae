@@ -20,6 +20,7 @@ from utils.image_utils import get_encoded_image_from_batch
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
 
 BARRAX_FILENAMES = ["2B_20180516_FRM_Veg_Barrax_20180605_V2", "2A_20180613_FRM_Veg_Barrax_20180605_V2"]
+BARRAX_2021_FILENAME = "2B_20210722_FRM_Veg_Barrax_20210719"
 WYTHAM_FILENAMES = ["2A_20180629_FRM_Veg_Wytham_20180703_V2", "2A_20180706_FRM_Veg_Wytham_20180703_V2"]
 
 # from utils.image_utils import tensor_to_raster
@@ -317,29 +318,32 @@ def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
         snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
     return snap_results
 
-def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_after, 
+def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, 
+                                is_SNAP=False, mode="sim_tg_mean", 
+                                get_reconstruction=True):
+    sensor = filename.split("_")[0]
+    (s2_r, s2_a, site_idx_dict, ref_dict) = get_frm4veg_material(frm4veg_data_dir, filename)
+    if not is_SNAP:
+        validation_results = get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, 
+                                                        ref_dict, mode=mode, 
+                                                        get_reconstruction=get_reconstruction)
+    else:
+        validation_results = get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, 
+                                                             ref_dict, sensor=sensor)
+    return validation_results
+
+def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_after=None, 
                              method="simple_interpolate", is_SNAP=False, mode="sim_tg_mean",
                              get_reconstruction=True):
-    sensor_before = filename_before.split("_")[0]
-    sensor_after = filename_after.split("_")[0]
-    (s2_r_before, s2_a_before, site_idx_dict_before, 
-     ref_dict_before) = get_frm4veg_material(frm4veg_data_dir, filename_before)
-    (s2_r_after, s2_a_after, site_idx_dict_after, 
-     ref_dict_after) = get_frm4veg_material(frm4veg_data_dir, filename_after)
-    if not is_SNAP:
-        validation_results_before = get_model_frm4veg_results(model, s2_r_before, s2_a_before, site_idx_dict_before, 
-                                                            ref_dict_before, mode=mode, get_reconstruction=get_reconstruction)
-        validation_results_after = get_model_frm4veg_results(model, s2_r_after, s2_a_after, site_idx_dict_after, 
-                                                            ref_dict_after, mode=mode, get_reconstruction=get_reconstruction)
-    else:
-        validation_results_before = get_snap_frm4veg_results(s2_r_before, s2_a_before, site_idx_dict_before, 
-                                                             ref_dict_before, sensor=sensor_before)
-        validation_results_after = get_snap_frm4veg_results(s2_r_after, s2_a_after, site_idx_dict_after, 
-                                                             ref_dict_after, sensor=sensor_after)
-
+    validation_results_before = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_before, 
+                                                            is_SNAP=is_SNAP, mode=mode,
+                                                            get_reconstruction=get_reconstruction)
     d_before = datetime.strptime(filename_before.split("_")[1], '%Y%m%d').date()
+    validation_results_after = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_after, 
+                                                            is_SNAP=is_SNAP, mode=mode,
+                                                            get_reconstruction=get_reconstruction)
     d_after = datetime.strptime(filename_after.split("_")[1], '%Y%m%d').date()
-
+    
     model_results = {}
 
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
@@ -411,13 +415,17 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
 def main():
     if socket.gethostname()=='CELL200973':
         # args=["-f", "FRM_Veg_Wytham_20180703_V2",
-        args=["-f", "FRM_Veg_Barrax_20180605_V2",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
+        # args=["-f", "FRM_Veg_Barrax_20180605_V2",
+        args=["-f", "FRM_Veg_Barrax_20210719",
+            #   "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation/",
             #   "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
             #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
             #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
         # "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
-        "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+        # "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+        "-p", "SENTINEL2B_20210722-111020-007_L2A_T30SWJ_C_V3-0"]
+        
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
         parser = get_prosailvae_train_parser().parse_args()

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from sensorsio.utils import rgb_render
-from dataset.frm4veg_validation import load_frm4veg_data
+from validation.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 import pandas as pd
 import tikzplotlib
@@ -59,14 +59,17 @@ def tikzplotlib_fix_ncols(obj):
     for child in obj.get_children():
         tikzplotlib_fix_ncols(child)
 
-frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
-frm4veg_barrax_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+# frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
+# frm4veg_barrax_filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+# frm4veg_wytham_filename = "2A_20180629_FRM_Veg_Wytham_20180703"
+frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
+frm4veg_barrax_filename = "2B_20210722_FRM_Veg_Barrax_20210719"
 frm4veg_wytham_filename = "2A_20180629_FRM_Veg_Wytham_20180703"
 gdf_barrax_lai, s2_r_barrax, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_barrax_filename, variable="lai")
 fig, ax = plot_frm4veg_validation_patch(gdf_barrax_lai, s2_r_barrax, variable="lai", legend_columns=3)
 tikzplotlib_fix_ncols(fig)
 tikzplotlib.save("test.tex")
-fig.savefig("barrax_site.svg")
+fig.savefig(frm4veg_data_dir+"/barrax_site_2021.svg")
 gdf_wytham_lai, s2_r_wytham, _, _, _ = load_frm4veg_data(frm4veg_data_dir, frm4veg_wytham_filename, variable="lai")
 fig, ax = plot_frm4veg_validation_patch(gdf_wytham_lai, s2_r_wytham, variable="lai", legend_columns=2)
 fig.savefig("wytham_site.svg")

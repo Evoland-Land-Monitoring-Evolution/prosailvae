@@ -406,11 +406,13 @@ def setup_training():
               "-p", "False"]
         parser = get_prosailvae_train_parser().parse_args(args)
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
         
     else:
         parser = get_prosailvae_train_parser().parse_args()
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
  
     root_dir = TOP_PATH
@@ -473,7 +475,7 @@ def setup_training():
         params_sup_kl_model = None
         sup_kl_io_coeffs = None
     return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
-            frm4veg_data_dir, belsar_dir)
+            frm4veg_data_dir, frm4veg_2021_data_dir, belsar_dir)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_kl_io_coeffs):
@@ -650,18 +652,20 @@ def save_array_xp_path(job_array_dir, res_dir):
 def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
      job_array_dir, sup_kl_io_coeffs,
-     frm4veg_data_dir, belsar_data_dir) = setup_training()
+     frm4veg_data_dir, frm4veg_2021_data_dir, 
+     belsar_data_dir) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
-        if not socket.gethostname()=='CELL200973':
+        if True: # not socket.gethostname()=='CELL200973':
             validation_dir = os.path.join(res_dir, "validation")
             os.makedirs(validation_dir)
             save_validation_results(prosail_vae, validation_dir,
                                     frm4veg_data_dir=frm4veg_data_dir,
+                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                     belsar_data_dir=belsar_data_dir,
                                     model_name="pvae",
                                     method="simple_interpolate",

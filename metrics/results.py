@@ -122,20 +122,21 @@ def get_prosailvae_results_parser():
 
 def save_validation_results(model, res_dir,
                             frm4veg_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation",
+                            frm4veg_2021_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation",
                             belsar_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belsar_validation",
                             model_name="pvae",
                             method="simple_interpolate",
                             mode="sim_tg_mean", 
                             save_reconstruction=True):
-    (barrax_results, wytham_results, belsar_results, all_belsar
-     ) = get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, res_dir,
+    (barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
+     ) = get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
                                       save_reconstruction=save_reconstruction)
     for site in ["W1", "W2", "W3", "M1", "M2", "M3"]:
         fig, ax = get_belsar_sites_time_series(all_belsar, site=site)
         fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_{site}.png"))
 
-    df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
+    df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                   frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
     df_results['LAI error'] = df_results['Predicted LAI'] - df_results['LAI']
     df_results.to_csv(os.path.join(res_dir, f"all_campaigns_{mode}_{method}.csv"))

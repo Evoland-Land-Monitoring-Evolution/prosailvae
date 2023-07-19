@@ -1,59 +1,80 @@
 import pandas as pd
 import numpy as np
-from validation.frm4veg_validation import interpolate_frm4veg_pred, BARRAX_FILENAMES, WYTHAM_FILENAMES
-from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, BELSAR_FILENAMES, get_all_belsar_predictions
-
-def get_all_campaign_lai_results(model, frm4veg_data_dir, belsar_data_dir, belsar_pred_dir,
+from validation.frm4veg_validation import (interpolate_frm4veg_pred, 
+                                           BARRAX_FILENAMES, WYTHAM_FILENAMES, BARRAX_2021_FILENAME,
+                                           get_frm4veg_results_at_date)
+from validation.belsar_validation import (interpolate_belsar_metrics, save_belsar_predictions, 
+                                          BELSAR_FILENAMES, get_all_belsar_predictions)
+def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
                                  mode="sim_tg_mean", method="simple_interpolate", model_name="pvae",
                                  save_reconstruction=False):
     
-    save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, BELSAR_FILENAMES, model_name=model_name, mode=mode, 
-                            save_reconstruction=save_reconstruction)
-    all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")
+
     
     barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
                                               BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
                                               get_reconstruction=save_reconstruction)
-
+    barrax_2021_results = get_frm4veg_results_at_date(model, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
+                                                      is_SNAP=False, get_reconstruction=save_reconstruction)
     wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
                                               WYTHAM_FILENAMES[1],  method=method, is_SNAP=False,
                                               get_reconstruction=save_reconstruction)
     
+    save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, BELSAR_FILENAMES, model_name=model_name, mode=mode, 
+                            save_reconstruction=save_reconstruction)
+    all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")   
+     
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix=f"_{model_name}_{mode}", method=method)
 
-    return barrax_results, wytham_results, belsar_results, all_belsar
+    return barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
 
-def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_results,
+def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                      frm4veg_lai="lai", get_reconstruction_error=False):
 
     
     date_list = [belsar_results['date'].values.reshape(-1),
                  barrax_results[f'{frm4veg_lai}_date'].reshape(-1),
+                 barrax_2021_results[f'{frm4veg_lai}_date'].reshape(-1),
                  wytham_results[f"{frm4veg_lai}_date"].reshape(-1)]
     
     ref_lai = np.concatenate([belsar_results['ref_lai'].values.reshape(-1),
                     barrax_results[f'ref_{frm4veg_lai}'].reshape(-1),
+                    barrax_2021_results[f'ref_{frm4veg_lai}'].reshape(-1),
                     wytham_results[f'ref_{frm4veg_lai}'].reshape(-1)])
     
     ref_lai_std_list = [belsar_results['ref_lai_std'].values.reshape(-1),
                         barrax_results[f'ref_{frm4veg_lai}_std'].reshape(-1),
+                        barrax_2021_results[f'ref_{frm4veg_lai}_std'].reshape(-1),
                         wytham_results[f'ref_{frm4veg_lai}_std'].reshape(-1)]
     
     pred_lai_list = [belsar_results['lai_mean'].values.reshape(-1),
                      barrax_results[frm4veg_lai].reshape(-1),
+                     barrax_2021_results[frm4veg_lai].reshape(-1),
                      wytham_results[frm4veg_lai].reshape(-1)]
+    
     pred_lai_std_list = [belsar_results['lai_sigma_mean'].values.reshape(-1),
                          barrax_results[f"{frm4veg_lai}_std"].reshape(-1),
+                         barrax_2021_results[f"{frm4veg_lai}_std"].reshape(-1),
                          wytham_results[f"{frm4veg_lai}_std"].reshape(-1)]
-    site_list = ['Belgium'] * len(ref_lai_std_list[0]) + ['Spain'] * len(ref_lai_std_list[1]) + ['England'] * len(ref_lai_std_list[2])
+    
+    site_list = (['Belgium'] * len(ref_lai_std_list[0]) 
+                 + ['Spain'] * len(ref_lai_std_list[1]) 
+                 + ['Spain'] * len(ref_lai_std_list[2]) 
+                 + ['England'] * len(ref_lai_std_list[3]))
+    campaign_list = (['BelSAR (2018)'] * len(ref_lai_std_list[0]) 
+                 + ['FRM4VEG (Barrax - 2018)'] * len(ref_lai_std_list[1]) 
+                 + ['FRM4VEG (Barrax - 2021)'] * len(ref_lai_std_list[2]) 
+                 + ['FRM4VEG (Wytham - 2018)'] * len(ref_lai_std_list[3]))    
     land_cover_list = [belsar_results['land_cover'].values.reshape(-1),
                        barrax_results[f'{frm4veg_lai}_land_cover'].reshape(-1),
+                       barrax_2021_results[f'{frm4veg_lai}_land_cover'].reshape(-1),
                        wytham_results[f'{frm4veg_lai}_land_cover'].reshape(-1)]
     if get_reconstruction_error:
         rec_err = np.concatenate([belsar_results['rec_err_mean'].values.reshape(-1),
-                        barrax_results[f'{frm4veg_lai}_rec_err'].reshape(-1),
-                        wytham_results[f'{frm4veg_lai}_rec_err'].reshape(-1)])
+                                    barrax_results[f'{frm4veg_lai}_rec_err'].reshape(-1),
+                                    barrax_2021_results[f'{frm4veg_lai}_rec_err'].reshape(-1),
+                                    wytham_results[f'{frm4veg_lai}_rec_err'].reshape(-1)])
     else:
         rec_err = np.zeros_like(ref_lai)
 
@@ -64,8 +85,9 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, wytham_resu
                                 "Site": np.array(site_list),
                                 "Land cover": np.concatenate(land_cover_list),
                                 "Reconstruction error": rec_err,
-                                "Time delta": np.concatenate(date_list)},
-                                )
+                                "Time delta": np.concatenate(date_list),
+                                "Campaign": np.array(campaign_list),
+                                })
     return results
 
 def get_validation_global_metrics(df_results, decompose_along_columns = ["Site", "Land cover"], n_sigma=3):

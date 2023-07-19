@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import prosailvae
 from snap_regression.snap_nn import SnapNN
-from validation.frm4veg_validation import load_frm4veg_data, interpolate_frm4veg_pred, BARRAX_FILENAMES, WYTHAM_FILENAMES
+from validation.frm4veg_validation import (load_frm4veg_data, interpolate_frm4veg_pred, BARRAX_FILENAMES, WYTHAM_FILENAMES, 
+                                           BARRAX_2021_FILENAME, get_frm4veg_results_at_date)
 from tqdm import trange, tqdm
 from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
 from validation.validation import get_belsar_x_frm4veg_lai_results
@@ -502,10 +503,17 @@ def get_models_global_metrics(models_dict, results_dict, sites, variable = 'lai'
 
 def get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, filenames, method, mode):
     frm4veg_results = {}
-    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
-        frm4veg_results[model_name] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
-                                                               filenames[1],  method=method,  is_SNAP=False, mode=mode)
-    frm4veg_results["SNAP"] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
+    if isinstance(filenames, str):
+        for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+            frm4veg_results[model_name] = get_frm4veg_results_at_date(model_info["model"], frm4veg_data_dir, BARRAX_2021_FILENAME,
+                                                                      is_SNAP=False, get_reconstruction=False)
+        frm4veg_results["SNAP"] = get_frm4veg_results_at_date(model_info["model"], frm4veg_data_dir, BARRAX_2021_FILENAME,
+                                                                      is_SNAP=True, get_reconstruction=False)
+    else:
+        for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+            frm4veg_results[model_name] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
+                                                                filenames[1],  method=method,  is_SNAP=False, mode=mode)
+        frm4veg_results["SNAP"] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
                                                         filenames[1],  method=method, is_SNAP=True, mode=mode)
     return frm4veg_results
 
@@ -523,7 +531,8 @@ def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barr
                                                         get_reconstruction_error=False)
     return results
 
-def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
+def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir,
+                                   res_dir, list_belsar_filenames, 
                                    recompute=True, mode ="lat_mode"):
     if recompute:
         save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
@@ -535,6 +544,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
 
     belsar_results = {}
     barrax_results = {}
+    barrax_2021_results = {}
     wytham_results = {}
     validation_lai_results = {}
     for method in ["simple_interpolate", "best", "worst"]: #'closest', 
@@ -544,6 +554,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res
         # barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
         barrax_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, BARRAX_FILENAMES,
                                                                 method=method, mode=mode)
+        barrax_2021_results[method] = get_frm4veg_validation_metrics(model_dict, frm4veg_2021_data_dir, BARRAX_2021_FILENAME,
+                                                                    method=method, mode=mode)
         # plot_frm4veg_results_comparison(model_dict, barrax_results[method], frm4veg_data_dir, barrax_filenames[0],
         #                                 res_dir=res_dir, prefix= "barrax_"+method+"_")
         # wytham_filenames = ["2A_20180629_FRM_Veg_Wytham_20180703", "2A_20180706_FRM_Veg_Wytham_20180703"]
@@ -610,10 +622,12 @@ def main():
                 "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/"]
         parser = get_parser().parse_args(args)
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
     else:
         parser = get_parser().parse_args()
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
     res_dir = parser.res_dir
     if not os.path.isdir(res_dir):
@@ -631,7 +645,7 @@ def main():
     get_models_validation_rec_loss(model_dict, test_loader)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
-        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, res_dir, list_belsar_filenames, 
+        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
                                        recompute=recompute, mode=mode)
     
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,

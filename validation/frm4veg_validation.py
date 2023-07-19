@@ -272,6 +272,7 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
                                             mode=mode, padding=True, no_rec=not get_reconstruction)
         rec_err = (rec - cropped_s2_r.squeeze(0)).abs().mean(0, keepdim=True)
     model_pred = {"s2_r":cropped_s2_r, "s2_a":cropped_s2_a}
+
     for lai_variable in ['lai', 'lai_eff']: # 'ccc', 'ccc_eff']:
         model_pred[lai_variable] = sim_image[6, site_idx_dict[lai_variable]['y_idx'], 
                                                 site_idx_dict[lai_variable]['x_idx']].numpy()
@@ -296,6 +297,7 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
         model_pred[f"ref_{ccc_variable}_std"] = ref_dict[f"{ccc_variable}_std"]
         model_pred[f"{ccc_variable}_rec_err"] = rec_err[..., site_idx_dict[ccc_variable]['y_idx'], 
                                                              site_idx_dict[ccc_variable]['x_idx']].numpy()
+                                                             
     return model_pred #, rec, cropped_s2_r
 
 
@@ -330,6 +332,11 @@ def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename,
     else:
         validation_results = get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, 
                                                              ref_dict, sensor=sensor)
+    d = datetime.strptime(filename.split("_")[1], '%Y%m%d').date()
+    for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
+        gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename, variable=variable)
+        validation_results[f"{variable}_land_cover"] = gdf["land cover"].values
+        validation_results[f"{variable}_date"] = gdf["date"].apply(lambda x: (x.date() - d).days).values
     return validation_results
 
 def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_after=None, 

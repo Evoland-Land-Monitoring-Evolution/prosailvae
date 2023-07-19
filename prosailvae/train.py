@@ -15,7 +15,7 @@ import logging
 import logging.config
 import traceback
 import time
-from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
+from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig, load_params)
 # from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path, save_validation_results

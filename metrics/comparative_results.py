@@ -6,7 +6,7 @@ import argparse
 import socket
 from utils.utils import load_dict, save_dict, load_standardize_coeffs
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
-from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config)
+from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, load_params)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
 from prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics, regression_plot
 from prosailvae.ProsailSimus import get_bands_idx, BANDS
@@ -53,19 +53,19 @@ def get_model_and_dataloader(parser):
     model_dict = load_dict(parser.model_dict_path)
     for model_name, model_info in model_dict.items():
         if model_info["type"] == "simvae":
-            config = load_dict(os.path.join(model_info["dir_path"], "config.json"))
+            config = load_params(model_info["dir_path"], "config.json")
             bands, prosail_bands = get_bands_idx(config["weiss_bands"])
             norm_mean = torch.load(os.path.join(model_info["dir_path"], "norm_mean.pt"))
             norm_std = torch.load(os.path.join(model_info["dir_path"], "norm_std.pt"))
             params_path = os.path.join(model_info["dir_path"], "prosailvae_weights.tar")
             config["load_model"] = True
             config["vae_load_file_path"] = params_path
-            if "disabled_latent" not in config.keys():
-                config["disabled_latent"] = []
-            if "disabled_latent_values" not in config.keys():
-                config["disabled_latent_values"] = []
-            if "R_down" not in config.keys():
-                config["R_down"] = 1
+            # if "disabled_latent" not in config.keys():
+            #     config["disabled_latent"] = []
+            # if "disabled_latent_values" not in config.keys():
+            #     config["disabled_latent_values"] = []
+            # if "R_down" not in config.keys():
+            #     config["R_down"] = 1
             io_coeffs = load_standardize_coeffs(model_info["dir_path"])
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
@@ -136,8 +136,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
                     sigma_image = crop_s2_input(sigma_image, delta_hw)
                     cropped_s2_r = crop_s2_input(cropped_s2_r, delta_hw)
                     cropped_s2_a = crop_s2_input(cropped_s2_a, delta_hw)
-                    cyclical_ref_lai = crop_s2_input(cyclical_ref_lai, delta_hw)
-                    cyclical_lai = crop_s2_input(cyclical_lai, delta_hw)
+                    cyclical_ref_lai = cyclical_ref_lai
+                    cyclical_lai = cyclical_lai
 
                 model_info["reconstruction"].append(rec_image)
                 model_info["prosail_vars"].append(sim_image)
@@ -347,9 +347,9 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     global_lim = [lai_scatter_dict["SNAP's Biophysical Processor"].min().item(),
                     lai_scatter_dict["SNAP's Biophysical Processor"].max().item()]
     for _, model_info in model_dict.items():
-            lai_scatter_dict[model_info["plot_name"]] = model_info["prosail_vars"][:,6,...].reshape(-1)
-            global_lim[0] = min(global_lim[0], lai_scatter_dict[model_info["plot_name"]].min().item())
-            global_lim[1] = max(global_lim[1], lai_scatter_dict[model_info["plot_name"]].max().item())
+        lai_scatter_dict[model_info["plot_name"]] = model_info["prosail_vars"][:,6,...].reshape(-1)
+        global_lim[0] = min(global_lim[0], lai_scatter_dict[model_info["plot_name"]].min().item())
+        global_lim[1] = max(global_lim[1], lai_scatter_dict[model_info["plot_name"]].max().item())
     fig, _ = regression_pair_plot(lai_scatter_dict, global_lim)
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
@@ -408,7 +408,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     if len(err_scatter_dict) == 1:
         axs = [axs]
     for i, (_, model_info) in enumerate(model_dict.items()):
-        axs[i].hist(err_boxplot_dict[model_info["plot_name"]][:,], bins=200, range=global_lim)
+        axs[i].hist(err_boxplot_dict[model_info["plot_name"]][:,i,...].reshape(-1), bins=200, range=global_lim)
         axs[i].plot(global_lim, global_lim, 'k--')
         axs[i].set_title(model_info["plot_name"])
     if res_dir is not None:
@@ -649,11 +649,11 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
-    get_models_validation_rec_loss(model_dict, valid_loader)
-    for mode in ["sim_tg_mean"]: # , "lat_mode"]
-        recompute = True if not socket.gethostname()=='CELL200973' else False
-        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
-                                       recompute=recompute, mode=mode)
+    # get_models_validation_rec_loss(model_dict, valid_loader)
+    # for mode in ["sim_tg_mean"]: # , "lat_mode"]
+    #     recompute = True if not socket.gethostname()=='CELL200973' else False
+    #     compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
+    #                                    recompute=recompute, mode=mode)
     
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 

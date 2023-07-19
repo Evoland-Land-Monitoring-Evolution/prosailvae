@@ -18,6 +18,76 @@ from prosailvae.ProsailSimus import (SensorSimulator, ProsailSimulator, get_z2pr
                                      PROSAILVARS)
 from prosailvae.decoders import ProsailSimulatorDecoder
 from prosailvae.loss import NLLLoss
+from utils.utils import load_dict
+
+def load_params(config_dir, config_file, parser=None):
+    """
+    Load parameter dict form prosail vae and training
+    """
+    params = load_dict(config_dir + config_file)
+    if params["supervised"]:
+        params["simulated_dataset"]=True
+    if not "load_model" in params.keys():
+        params["load_model"]=False
+    if not "vae_load_dir_path" in params.keys():
+        params["vae_load_dir_path"]=None
+    if not "lr_recompute_mode" in params.keys():
+        params["lr_recompute_mode"]=False
+    if not "init_model" in params.keys():
+        params["init_model"] = False
+    if parser is not None:
+        params["k_fold"] = parser.n_xp
+        params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
+    if "layer_sizes" not in params.keys():
+        params["layer_sizes"] = [512, 512]
+    if "kernel_sizes" not in params.keys():
+        params['kernel_sizes'] = [3, 3]
+    if "first_layer_kernel" not in params.keys():
+        params["first_layer_kernel"] = 3
+    if "first_layer_size" not in params.keys():
+        params["first_layer_size"] = 128
+    if "block_layer_sizes" not in params.keys():
+        params["block_layer_sizes"] = [128, 128]
+    if "block_layer_depths" not in params.keys():
+        params["block_layer_depths"] = [2, 2]
+    if "block_kernel_sizes" not in params.keys():
+        params["block_kernel_sizes"] = [3, 1]
+    if "block_n" not in params.keys():
+        params["block_n"] = [1,3]
+    if "supervised_kl" not in params.keys():
+        params["supervised_kl"] = False
+    if "weiss_bands" not in params.keys():
+        params["weiss_bands"] = False
+    params["vae_save_file_path"] = None
+    if "supervised_config_file" not in params.keys():
+        params["supervised_config_file"] = None
+    if "supervised_weight_file" not in params.keys():
+        params["supervised_weight_file"] = None
+    if "disabled_latent" not in params.keys():
+        params["disabled_latent"] = []
+    if "disabled_latent_values" not in params.keys():
+        params["disabled_latent_values"] = []
+    if "cycle_training" not in params.keys():
+        params["cycle_training"] = False
+    if "R_down" not in params.keys():
+        params["R_down"] = 1
+    if "n_init_models" not in params.keys():
+        params["n_init_models"] = 10
+    if "n_init_epochs" not in params.keys():
+        params["n_init_epochs"] = 10
+    if "init_lr" not in params.keys():
+        params["init_lr"] = 5e-4
+    if "break_init_at_rec_loss" not in params.keys():
+        params["break_init_at_rec_loss"] = None
+    if "rec_bands_loss_coeffs" not in params.keys():
+        params["rec_bands_loss_coeffs"] = None
+    if "deterministic" not in params.keys():
+        params["deterministic"] = False
+    if "accum_iter" not in params.keys():
+        params["accum_iter"] = 1
+    if "beta_cyclical"not in params.keys():
+        params["beta_cyclical"] = 0
+    return params
 
 @dataclass
 class ProsailVAEConfig:

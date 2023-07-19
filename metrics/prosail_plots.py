@@ -1625,7 +1625,7 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
     ax.plot([xmin, xmax], [xmin, xmax], '--k')
     
     m_tot, b_tot, r2_tot, rmse_tot = regression_metrics(ref, pred)
-    perf_text = "All: \n y = {:.2f} x + {:.2f} \n r2: {:.2f} - RMSE: {:.2f}".format(m_tot, b_tot, r2_tot, rmse_tot)
+    perf_text = "All: \n r2: {:.2f} - RMSE: {:.2f}".format(r2_tot, rmse_tot)
     if hue_perfs:
         for elem in pd.unique(df_metrics[hue]):
             pred = df_metrics[df_metrics[hue]==elem][y].values
@@ -1633,7 +1633,7 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
             m, b, r2, rmse = regression_metrics(ref, pred)
             perf_text += "\n {} : \n r2: {:.2f} - RMSE: {:.2f}".format(elem, r2, rmse)
 
-    ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
+    ax.text(.01, .99, perf_text, ha='left', va='top', transform=ax.transAxes)
     line = ax.plot([xmin, xmax], [m_tot * xmin + b_tot, m_tot * xmax + b_tot],'r')
 
     if error_x is not None and error_y is None:

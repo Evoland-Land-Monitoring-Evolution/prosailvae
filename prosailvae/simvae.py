@@ -92,6 +92,7 @@ class SimVAE(nn.Module):
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
         self.deterministic = config.deterministic
+        self.beta_cyclical=1
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
@@ -308,7 +309,7 @@ class SimVAE(nn.Module):
                 s2_r = batchify_batch_latent(s2_r)
                 s2_a = batchify_batch_latent(s2_a)
         # Forward Pass
-        params, _, _, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
+        params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
 
         # cropping pixels lost to padding
         if self.spatial_mode:
@@ -321,7 +322,8 @@ class SimVAE(nn.Module):
             rec_loss = self.reconstruction_loss(self.decoder.ssimulator.normalize(s2_r), rec)
         else:
             rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)
-
+        if self.beta_cyclical > 0:
+            pass
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum = rec_loss
         # Kl term

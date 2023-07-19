@@ -401,6 +401,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_std = np.zeros_like(ref)
             results_rec_err = np.zeros_like(ref)
             err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
+            date = np.zeros_like(ref)
             date[err_1_le_err_2] = abs(dt_after[err_1_le_err_2])
             date[np.logical_not(err_1_le_err_2)] = abs(dt_before[np.logical_not(err_1_le_err_2)])
             results[err_1_le_err_2] = validation_results_after[f"{variable}"].reshape(-1)[err_1_le_err_2]

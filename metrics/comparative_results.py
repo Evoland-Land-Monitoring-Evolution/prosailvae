@@ -245,7 +245,7 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
         fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
                                   legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", 
                                   error_y="Predicted LAI std", hue_perfs=hue_perfs)
-        ax.set_title(model_info["plot_name"] + f"\n loss: {model_info['loss']}")
+        ax.set_title(model_info["plot_name"] + "\n loss: {:.2f}".format(model_info['loss']))
     df_metrics = model_results["SNAP"]
     fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
                              legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", hue_perfs=hue_perfs)
@@ -588,6 +588,10 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Time_delta",
                                            margin = 0.02, hue="Time delta")
+            
+            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
+                                           margin = 0.02, hue="Campaign")
             plt.close('all')
             rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
                                                    variable=variable, n_models=len(model_dict)+1, n_sigma=3)

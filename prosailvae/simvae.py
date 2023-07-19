@@ -9,7 +9,7 @@ Created on Thu Sep  1 08:25:49 2022
 import logging
 import torch.nn as nn
 import torch
-from utils.utils import NaN_model_params
+from utils.utils import NaN_model_params, unstandardize
 from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
 # from sensorsio.utils import rgb_render
 # import matplotlib.pyplot as plt
@@ -328,7 +328,8 @@ class SimVAE(nn.Module):
         loss_sum = rec_loss
         if self.beta_cyclical > 0:
             sample_dim = self.reconstruction_loss.sample_dim   
-            feature_dim = self.reconstruction_loss.feature_dim   
+            feature_dim = self.reconstruction_loss.feature_dim 
+            rec = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
             rec_cyc = rec.transpose(sample_dim, 1)
             rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
             s2_a_cyc = s2_a.unsqueeze(sample_dim)

@@ -452,7 +452,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     torch.save(io_coeffs.angles.loc, res_dir + "/angles_loc.pt")
     torch.save(io_coeffs.angles.scale, res_dir + "/angles_scale.pt")
     print(f"io_coeffs.idx.loc : {io_coeffs.idx.loc}")
-    print(f"io_coeffs.idx.scale : {io_coeffs.idx.loc}")
+    print(f"io_coeffs.idx.scale : {io_coeffs.idx.scale}")
 
     params["vae_load_file_path"] = vae_load_file_path
     training_config = get_training_config(params)

@@ -74,7 +74,7 @@ def get_model_and_dataloader(parser):
                                                      logger_name="No logger")
             model_info["model"] = model
     info_test_data = np.load(os.path.join(parser.data_dir,"test_info.npy"))
-    return model_dict, test_loader, info_test_data
+    return model_dict, test_loader, valid_loader, info_test_data
 
 def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50, mode = 'lat_mode'):
     """
@@ -641,8 +641,8 @@ def main():
                             "2B_20180722_both_BelSAR_agriculture_database",
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
-    model_dict, test_loader, info_test_data = get_model_and_dataloader(parser)
-    get_models_validation_rec_loss(model_dict, test_loader)
+    model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
+    get_models_validation_rec_loss(model_dict, valid_loader)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
         compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 

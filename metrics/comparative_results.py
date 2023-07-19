@@ -649,11 +649,11 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
-    # get_models_validation_rec_loss(model_dict, valid_loader)
-    # for mode in ["sim_tg_mean"]: # , "lat_mode"]
-    #     recompute = True if not socket.gethostname()=='CELL200973' else False
-    #     compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
-    #                                    recompute=recompute, mode=mode)
+    get_models_validation_rec_loss(model_dict, valid_loader)
+    for mode in ["sim_tg_mean"]: # , "lat_mode"]
+        recompute = True if not socket.gethostname()=='CELL200973' else False
+        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
+                                       recompute=recompute, mode=mode)
     
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 

@@ -300,11 +300,12 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, res_dir=None):
 
     for i in range(all_s2_r.size(0)):
+        info = info_test_data[i]
         if res_dir is not None:
             res_dir_i = os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}")
             if not os.path.isdir(res_dir_i):
                 os.makedirs(res_dir_i)
-        info = info_test_data[i]
+        
         fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] 
                               + [model_info["reconstruction"][i,...] for _, model_info in model_dict.items()],
                               title_list = [f"Sentinel {info[0]} \n"
@@ -388,7 +389,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     for i, (_, model_info) in enumerate(model_dict.items()):
         regression_plot(pd.DataFrame({"Simulated LAI":model_info["cyclical_ref_lai"].detach().cpu().numpy(), 
                                       "Predicted LAI":model_info["cyclical_lai"].detach().cpu().numpy()}), 
-                              "Simulated LAI", "Predicted LAI", hue=None)
+                        "Simulated LAI", "Predicted LAI", hue=None, fig=fig, ax=axs[i], s=5)
         axs[i].set_title(model_info["plot_name"])
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, "model_cyclical_lai_scatter.png"))
@@ -653,11 +654,11 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
-    get_models_validation_rec_loss(model_dict, valid_loader)
-    for mode in ["sim_tg_mean"]: # , "lat_mode"]
-        recompute = True if not socket.gethostname()=='CELL200973' else False
-        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
-                                       recompute=recompute, mode=mode)
+    # get_models_validation_rec_loss(model_dict, valid_loader)
+    # for mode in ["sim_tg_mean"]: # , "lat_mode"]
+    #     recompute = True if not socket.gethostname()=='CELL200973' else False
+    #     compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
+    #                                    recompute=recompute, mode=mode)
     
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 

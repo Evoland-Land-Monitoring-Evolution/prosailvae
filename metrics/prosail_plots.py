@@ -1613,7 +1613,7 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
 
 def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site", 
                     legend_col=2, xmin=None, xmax=None, error_x=None, 
-                    error_y=None, hue_perfs=False):
+                    error_y=None, hue_perfs=False, s=20):
     pred = df_metrics[y].values
     ref = df_metrics[x].values
     if fig is None or ax is None:
@@ -1648,7 +1648,7 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
         ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
                     yerr=df_metrics[error_y].values, ecolor='k', fmt='o', linestyle='', markersize=0.1, 
                     elinewidth=0.5, zorder=0)
-    g = sns.scatterplot(data=df_metrics, x=x, y=y, hue=hue, ax=ax, s=20,zorder=10)
+    g = sns.scatterplot(data=df_metrics, x=x, y=y, hue=hue, ax=ax, s=s, zorder=10)
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(xmin, xmax)
     ax.set_aspect('equal', 'box')

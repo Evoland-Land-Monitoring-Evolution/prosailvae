@@ -5,8 +5,8 @@ from datetime import datetime
 from dataclasses import dataclass
 import os 
 from validation.belsar_validation import load_belsar_validation_data, get_sites_geometry
-
-
+import pandas as pd
+import seaborn as sns
 
 
 @dataclass
@@ -129,15 +129,45 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
 
 # fig, ax = plot_sampling_dates(months_to_get)
 
-def get_belsar_sites_time_series(metrics, site="W1"):
+def get_belsar_sites_time_series(metrics, belsar_data_dir, site="W1"):
+    validation_df, _, _, _, _, _, crs = load_belsar_validation_data(belsar_data_dir, "2A_20180508_both_BelSAR_agriculture_database") 
+    measurement_dates = []
+    lai = []
+    lai_std = []
+    fields = []
+    for date in pd.unique(validation_df["date"]):
+        sub_val_df = validation_df[validation_df["date"]==date]
+        # fields_ids = pd.unique(sub_val_df["Field ID"])
+        # for field_id in fields_ids:
+        if not len(sub_val_df[sub_val_df["Field ID"]==site])==0:
+            measurement_dates.append(date)
+            lai.append(np.mean(sub_val_df[sub_val_df["Field ID"]==site]["lai"].values))
+            lai_std.append(np.std(sub_val_df[sub_val_df["Field ID"]==site]["lai"].values))
+            fields.append(site)
+    ref_metrics = pd.DataFrame({"Date":[datetime.strptime(d, "%Y-%m-%d") for d in measurement_dates],
+                                "LAI":lai,
+                                "lai_std":lai_std,
+                                "name":fields,
+                                "type":["Measurement" for d in measurement_dates]})
     site_metrics = metrics[metrics["name"]==site]
-    lai_pred = site_metrics["lai_mean"].values
-    dates = site_metrics["date"].values
-    dates = [datetime.strptime(d, "%Y-%m-%d") for d in dates]
+    pred_metrics = site_metrics[["lai_mean", "lai_std", "name"]]
+    pred_metrics['type'] = ['Prediction' for _ in range(len(pred_metrics))]
+    pred_metrics.rename(columns={'lai_mean': 'LAI'}, inplace=True)
+    dates_pred = site_metrics["date"].values
+    dates_pred = [datetime.strptime(d, "%Y-%m-%d") for d in dates_pred]
+    pred_metrics["Date"] = dates_pred
+    all_metrics = pd.concat((ref_metrics, pred_metrics))
+    all_metrics.reset_index(inplace=True, drop=True)
+    # lai_pred = site_metrics["lai_mean"].values
+
     fig, ax = plt.subplots(dpi=150)
-    ax.scatter(dates, lai_pred)
-    ax.set_xlabel("LAI")
-    ax.set_ylabel("Date")
+    sns.scatterplot(data=all_metrics, x="Date", y="LAI",ax=ax, hue="type")
+    ax.errorbar(all_metrics['Date'].values, all_metrics['LAI'].values, yerr=all_metrics['lai_std'],
+                ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,
+                elinewidth=0.5, zorder=0)
+    # ax.scatter(dates_pred, lai_pred)
+    # ax.set_xlabel("LAI")
+    # ax.set_ylabel("Date")
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=2))
     # ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y "))
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right")

@@ -257,6 +257,7 @@ after_filename_dict =  {"2018-05-17" : "2A_20180518_both_BelSAR_agriculture_data
                         '2018-08-02' : "2B_20180804_both_BelSAR_agriculture_database",
                                 #  '2018-08-29'
                          }
+
 def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, belsar_pred_filename, 
                              belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_error=True):
     """

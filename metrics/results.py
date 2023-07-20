@@ -133,7 +133,7 @@ def save_validation_results(model, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
                                       save_reconstruction=save_reconstruction)
     for site in ["W1", "W2", "W3", "M1", "M2", "M3"]:
-        fig, ax = get_belsar_sites_time_series(all_belsar, site=site)
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site)
         fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_{site}.png"))
 
     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
@@ -159,6 +159,10 @@ def save_validation_results(model, res_dir,
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error.png"))
     
+    fig, ax = plt.subplots(dpi=150)
+    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Land cover", ax=ax)
+    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_land_cover.png"))
+
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Time delta", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_dt.png"))

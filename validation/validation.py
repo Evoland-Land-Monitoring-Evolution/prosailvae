@@ -10,7 +10,10 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
                                  save_reconstruction=False):
     
 
-    
+        
+    save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, BELSAR_FILENAMES, model_name=model_name, mode=mode, 
+                            save_reconstruction=save_reconstruction)
+    all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")   
     barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
                                               BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
                                               get_reconstruction=save_reconstruction)
@@ -19,11 +22,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
     wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
                                               WYTHAM_FILENAMES[1],  method=method, is_SNAP=False,
                                               get_reconstruction=save_reconstruction)
-    
-    save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, BELSAR_FILENAMES, model_name=model_name, mode=mode, 
-                            save_reconstruction=save_reconstruction)
-    all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")   
-     
+
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix=f"_{model_name}_{mode}", method=method)
 

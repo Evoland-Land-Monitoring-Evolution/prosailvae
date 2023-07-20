@@ -376,12 +376,10 @@ class SimVAE(nn.Module):
             loss_dict['index_loss'] = index_loss.item()
 
         loss_dict['loss_sum'] = loss_sum.item()
-
         for loss_type, loss in loss_dict.items():
             if loss_type not in normalized_loss_dict.keys():
                 normalized_loss_dict[loss_type] = 0.0
-            normalized_loss_dict[loss_type] += loss / batch_size
-        
+            normalized_loss_dict[loss_type] += loss
         return loss_sum, normalized_loss_dict
 
     def supervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1, ref_is_lat=False):
@@ -413,8 +411,7 @@ class SimVAE(nn.Module):
         for loss_type, loss in all_losses.items():
             if loss_type not in normalized_loss_dict.keys():
                 normalized_loss_dict[loss_type] = 0.0
-            normalized_loss_dict[loss_type] += loss / batch_size
-
+            normalized_loss_dict[loss_type] += loss 
         return loss_sum, normalized_loss_dict
 
     def compute_lat_nlls_batch(self, batch):
@@ -502,6 +499,7 @@ class SimVAE(nn.Module):
         self.train()
         train_loss_dict = {}
         len_loader = len(dataloader.dataset)
+        n_batches=0
         for batch_idx, batch in enumerate(dataloader):
             if NaN_model_params(self):
                 self.logger.debug("NaN model parameters at batch %d!", batch_idx)
@@ -509,12 +507,13 @@ class SimVAE(nn.Module):
                 if batch_idx == max_samples:
                     break
             try:
+                n_batches += batch[0].size(0)
                 if not self.supervised:
-                    loss_sum, _ = self.unsupervised_batch_loss(batch, train_loss_dict,
+                    loss_sum, train_loss_dict = self.unsupervised_batch_loss(batch, train_loss_dict,
                                                                n_samples=n_samples,
                                                                len_loader=len_loader,)
                 else:
-                    loss_sum, _ = self.supervised_batch_loss(batch, train_loss_dict,
+                    loss_sum, train_loss_dict = self.supervised_batch_loss(batch, train_loss_dict,
                                                             len_loader=len_loader)
             except Exception as exc:
                 self.logger.error("Couldn't compute loss at batch %d!", batch_idx)
@@ -525,15 +524,17 @@ class SimVAE(nn.Module):
 
             if torch.isnan(loss_sum).any():
                 self.logger.error("NaN Loss encountered during training at batch %d!", batch_idx)
-            loss_sum.backward()
             loss_sum = loss_sum / accum_iter 
+            loss_sum.backward()
             if ((batch_idx + 1) % accum_iter == 0) or (batch_idx + 1 == len(dataloader)):
                 
                 optimizer.step()
             
                 if NaN_model_params(self):
-                    self.logger.debug("NaN model parameters after batch %d!", i)
+                    self.logger.debug("NaN model parameters after batch %d!", batch_idx)
                 optimizer.zero_grad()
+        for loss_type, loss in train_loss_dict.items():
+            train_loss_dict[loss_type] = loss / n_batches 
         self.eval()
         return train_loss_dict
 
@@ -544,10 +545,12 @@ class SimVAE(nn.Module):
         self.eval()
         valid_loss_dict = {}
         len_loader = len(dataloader.dataset)
+        n_batches=0
         with torch.no_grad():
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
             for i, batch in zip(range(min(len(dataloader),batch_per_epoch)), dataloader):
+                n_batches += batch[0].size(0)
                 if max_samples is not None:
                     if i == max_samples:
                         break
@@ -560,4 +563,6 @@ class SimVAE(nn.Module):
                                                              len_loader=len_loader)
             if torch.isnan(loss_sum).any():
                 self.logger.error("NaN Loss encountered during validation !")
+        for loss_type, loss in valid_loss_dict.items():
+            valid_loss_dict[loss_type] = loss / n_batches 
         return valid_loss_dict

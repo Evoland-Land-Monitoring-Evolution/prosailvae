@@ -300,6 +300,10 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, res_dir=None):
 
     for i in range(all_s2_r.size(0)):
+        if res_dir is not None:
+            res_dir_i = os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}")
+            if not os.path.isdir(res_dir_i):
+                os.makedirs(res_dir_i)
         info = info_test_data[i]
         fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] 
                               + [model_info["reconstruction"][i,...] for _, model_info in model_dict.items()],
@@ -307,7 +311,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                                             f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
                                             + [model_info["plot_name"] for _, model_info in model_dict.items()])
         if res_dir is not None:
-            fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_reconstructions_rgb.png"))
+            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_reconstructions_rgb.png"))
 
         fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]]
                               + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...]
@@ -316,7 +320,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                                             f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
                                             + [model_info["plot_name"] for _, model_info in model_dict.items()])
         if res_dir is not None:
-            fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png"))
+            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png"))
         models_errs = [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
                                  for _, model_info in model_dict.items()]
         vmin = min([err.cpu().min().item() for err in models_errs])
@@ -327,7 +331,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                                             ] + [model_info["plot_name"] for _, model_info in model_dict.items()],
                                             vmin=vmin, vmax=vmax)
         if res_dir is not None:
-            fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_patch_err.png"))
+            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_err.png"))
         lai_patch_tensors = [model_info["prosail_vars"][i,6,...].unsqueeze(0) 
                              for _, model_info in model_dict.items()] + [all_snap_lai[i,...]]
         vmin = min([lai_tensor.min() for lai_tensor in lai_patch_tensors])
@@ -340,7 +344,7 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                                             + [model_info["plot_name"] for _, model_info in model_dict.items()]
                                             + ["SNAP"], vmin=vmin, vmax=vmax)
         if res_dir is not None:
-            fig.savefig(os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}_LAI.png"))
+            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_LAI.png"))
         plt.close('all')
     lai_scatter_dict = {}
     lai_scatter_dict["SNAP's Biophysical Processor"] = all_snap_lai.squeeze(1).reshape(-1)
@@ -591,7 +595,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
-                                           margin = 0.02, hue="Campaign", legend_col=2)
+                                           margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True)
             plt.close('all')
             rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
                                                    variable=variable, n_models=len(model_dict)+1, n_sigma=3)

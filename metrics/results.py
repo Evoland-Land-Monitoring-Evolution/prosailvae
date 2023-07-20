@@ -144,6 +144,10 @@ def save_validation_results(model, res_dir,
                               legend_col=3, error_x="LAI std", 
                               error_y="Predicted LAI std", hue_perfs=True)
     fig.savefig(os.path.join(res_dir, f"LAI_regression_sites.png"))
+    fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Campaign",
+                              legend_col=3, error_x="LAI std", 
+                              error_y="Predicted LAI std", hue_perfs=True)
+    fig.savefig(os.path.join(res_dir, f"LAI_regression_campaign.png"))
     fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Land cover",
                               legend_col=3, error_x="LAI std", 
                               error_y="Predicted LAI std", hue_perfs=False)

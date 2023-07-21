@@ -186,7 +186,7 @@ def save_validation_results(model, res_dir,
                               legend_col=3, error_x=None, 
                               error_y=None, hue_perfs=True)
     global_rmse_dict, global_picp_dict = get_validation_global_metrics(df_results, 
-                                                                       decompose_along_columns = ["Site", "Land cover"], 
+                                                                       decompose_along_columns = ["Site", "Land cover", "Campaign"], 
                                                                        n_sigma=3)
     for key, rmse_df in global_rmse_dict.items():
         rmse_df.to_csv(os.path.join(res_dir, f"{key}_validation_rmse.csv"))

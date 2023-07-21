@@ -6,6 +6,7 @@ import argparse
 import socket
 from utils.utils import load_dict, save_dict, load_standardize_coeffs
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
+from metrics.metrics_utils import regression_metrics
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, load_params)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
 from prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics, regression_plot
@@ -21,7 +22,7 @@ from validation.frm4veg_validation import (load_frm4veg_data, interpolate_frm4ve
                                            BARRAX_2021_FILENAME, get_frm4veg_results_at_date)
 from tqdm import trange, tqdm
 from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
-from validation.validation import get_belsar_x_frm4veg_lai_results
+from validation.validation import get_belsar_x_frm4veg_lai_results, get_validation_global_metrics
 
 def get_parser():
     """
@@ -297,7 +298,7 @@ def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir
         fig.savefig(os.path.join(res_dir, f"cm_belsar_validation{suffix}.png"))
 
 def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
-                             all_snap_cw, info_test_data, res_dir=None):
+                             all_snap_cw, info_test_data, rmse_dict, picp_dict, res_dir=None):
 
     for i in range(all_s2_r.size(0)):
         info = info_test_data[i]
@@ -362,6 +363,40 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     err_scatter_dict = {}
     err_boxplot_dict = {}
     global_lim = [0, 1]
+    for method in ['simple_interpolate']:
+        for variable in ['lai', "lai_eff"]:
+            fig_rmse_c, ax_rmse_c = plt.subplots(dpi=150)
+            fig_picp_c, ax_picp_c = plt.subplots(dpi=150)
+            fig_rmse_l, ax_rmse_l = plt.subplots(dpi=150)
+            fig_picp_l, ax_picp_l = plt.subplots(dpi=150)
+            for i, (model_name, model_info) in enumerate(model_dict.items()):
+                rmse = rmse_dict[method][variable][model_name]['Campaign']['All'].values[0]
+                picp = picp_dict[method][variable][model_name]['Campaign']['All'].values[0]
+                loss = model_info['loss']
+                _, _, r2_cyclical, rmse_cyclical = regression_metrics(model_info["cyclical_ref_lai"].detach().cpu().numpy(), 
+                                                                      model_info["cyclical_lai"].detach().cpu().numpy())
+
+                ax_rmse_c.scatter(rmse_cyclical, rmse, label=str(i))
+                ax_picp_c.scatter(rmse_cyclical, picp, label=str(i))
+                ax_rmse_l.scatter(loss, rmse, label=str(i))
+                ax_picp_l.scatter(loss, picp, label=str(i))
+            ax_rmse_c.legend()
+            ax_picp_c.legend()
+            ax_rmse_l.legend()
+            ax_picp_l.legend()
+            ax_rmse_c.set_xlabel("RMSE on simulated LAI")
+            ax_picp_c.set_xlabel("RMSE on simulated LAI")
+            ax_rmse_l.set_xlabel("Reconstruction loss (NLL)")
+            ax_picp_l.set_xlabel("Reconstruction loss (NLL)")
+            ax_rmse_c.set_ylabel("Validation RMSE")
+            ax_picp_c.set_ylabel("Validation PICP")
+            ax_rmse_l.set_ylabel("Validation RMSE")
+            ax_picp_l.set_ylabel("Validation PICP")
+            if res_dir is not None:
+                fig_picp_c.savefig(os.path.join(res_dir, f"picp_vs_cyclical_rmse_{method}_{variable}.png"))
+                fig_picp_l.savefig(os.path.join(res_dir, f"picp_vs_rec_loss_{method}_{variable}.png"))
+                fig_rmse_c.savefig(os.path.join(res_dir, f"rmse_vs_cyclical_rmse_{method}_{variable}.png"))
+                fig_rmse_l.savefig(os.path.join(res_dir, f"rmse_vs_rec_loss_{method}_{variable}.png"))
     for _, model_info in model_dict.items():
         err_boxplot_dict[model_info["plot_name"]] = (model_info["reconstruction"][:,:10,...]
                                                      - all_s2_r[:,:10,...])
@@ -483,28 +518,28 @@ def compare_snap_versions_on_weiss_data(res_dir):
     fig.savefig(os.path.join(res_dir, "scatter_lai_snap_versions_weiss.png"))
 
 
-def get_models_global_metrics(models_dict, results_dict, sites, variable = 'lai', n_models = 2, n_sigma=3):
-    methods = results_dict.keys()
-    rmse = np.zeros((len(methods), n_models, len(sites)+1))
-    picp = np.zeros((len(methods), n_models-1, len(sites)+1))
-    for i, method in enumerate(methods):
-        for j, model in enumerate(results_dict[method][variable].keys()):
-            results = results_dict[method][variable][model]
-            for k, site in enumerate(sites):
-                site_results = results[results['Site']==site]
-                rmse[i,j,k] = np.sqrt((site_results['Predicted LAI'] - site_results['LAI']).pow(2).mean())
-            rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
-    for i, method in enumerate(methods):
-        for j, model in enumerate(models_dict.keys()):
-            results = results_dict[method][variable][model]
-            for k, site in enumerate(sites):
-                site_results = results[results['Site']==site]
-                picp[i,j,k] = np.logical_and(site_results['LAI'] < site_results['Predicted LAI'] + n_sigma/2 * site_results['Predicted LAI std'],
-                                             site_results['LAI'] > site_results['Predicted LAI'] - n_sigma/2 * site_results['Predicted LAI std']).astype(int).mean()
-            picp[i,j,-1] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma/2 * results['Predicted LAI std'],
-                                             results['LAI'] > results['Predicted LAI'] - n_sigma/2 * results['Predicted LAI std']).astype(int).mean()
+# def get_models_global_metrics(models_dict, results_dict, sites, variable='lai', n_models=2, n_sigma=3):
+#     methods = results_dict.keys()
+#     rmse = np.zeros((len(methods), n_models, len(sites)+1))
+#     picp = np.zeros((len(methods), n_models-1, len(sites)+1))
+#     for i, method in enumerate(methods):
+#         for j, model in enumerate(results_dict[method][variable].keys()):
+#             results = results_dict[method][variable][model]
+#             for k, site in enumerate(sites):
+#                 site_results = results[results['Site']==site]
+#                 rmse[i,j,k] = np.sqrt((site_results['Predicted LAI'] - site_results['LAI']).pow(2).mean())
+#             rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
+#     for i, method in enumerate(methods):
+#         for j, model in enumerate(models_dict.keys()):
+#             results = results_dict[method][variable][model]
+#             for k, site in enumerate(sites):
+#                 site_results = results[results['Site']==site]
+#                 picp[i,j,k] = np.logical_and(site_results['LAI'] < site_results['Predicted LAI'] + n_sigma/2 * site_results['Predicted LAI std'],
+#                                              site_results['LAI'] > site_results['Predicted LAI'] - n_sigma/2 * site_results['Predicted LAI std']).astype(int).mean()
+#             picp[i,j,-1] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma/2 * results['Predicted LAI std'],
+#                                              results['LAI'] > results['Predicted LAI'] - n_sigma/2 * results['Predicted LAI std']).astype(int).mean()
     
-    return rmse, picp
+#     return rmse, picp
 
 def get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, filenames, method, mode):
     frm4veg_results = {}
@@ -539,8 +574,7 @@ def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barr
     return results
 
 def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir,
-                                   res_dir, list_belsar_filenames, 
-                                   recompute=True, mode ="lat_mode"):
+                                   res_dir, list_belsar_filenames, recompute=True, mode="lat_mode"):
     if recompute:
         save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
@@ -554,7 +588,11 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
     barrax_2021_results = {}
     wytham_results = {}
     validation_lai_results = {}
+    picp_dict = {}
+    rmse_dict = {}
     for method in ["simple_interpolate", "best", "worst"]: #'closest', 
+        picp_dict[method] = {}
+        rmse_dict[method] = {}
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
@@ -571,8 +609,11 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
         # plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
         #                                 res_dir=res_dir, prefix= "wytham_"+method+"_")
         validation_lai_results[method] = {}
+
         for variable in ['lai', "lai_eff"]:
             print(method, variable)
+            picp_dict[method][variable] = {}
+            rmse_dict[method][variable] = {}
             validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results[method],
                                                                                                    barrax_results[method],
                                                                                                    barrax_2021_results[method],
@@ -582,6 +623,9 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
+                rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
+                picp_dict[method][variable][model] = picp
+                rmse_dict[method][variable][model] = rmse
             plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
                                            margin = 0.02, hue_perfs=True)
@@ -598,10 +642,14 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
                                            margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True)
             plt.close('all')
-            rmse, picp = get_models_global_metrics(model_dict, validation_lai_results, sites=["Spain", "England", "Belgium"], 
-                                                   variable=variable, n_models=len(model_dict)+1, n_sigma=3)
+            
+            # get_models_global_metrics(model_dict, validation_lai_results, 
+            #                                        sites=["Spain", "England", "Belgium"], 
+            #                                        variable=variable, n_models=len(model_dict)+1, n_sigma=3)
+
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Land_cover_rmse.npy"), rmse)
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Land_cover_picp.npy"), picp)
+    return rmse_dict, picp_dict
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"
@@ -657,13 +705,17 @@ def main():
     get_models_validation_rec_loss(model_dict, valid_loader)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
-        compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm4veg_2021_data_dir, res_dir, list_belsar_filenames, 
-                                       recompute=recompute, mode=mode)
+        rmse_dict, picp_dict = compare_validation_regressions(model_dict, belsar_dir, 
+                                                              frm4veg_data_dir, frm4veg_2021_data_dir, 
+                                                              res_dir, list_belsar_filenames, 
+                                                              recompute=recompute, mode=mode)
     
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 
                                       max_patch=30 if not socket.gethostname()=='CELL200973' else 2)
-    plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, res_dir)
+    plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, 
+                             rmse_dict, picp_dict, res_dir,
+                             )
     # compare_snap_versions_on_real_data(test_loader, res_dir)
     # compare_snap_versions_on_weiss_data(res_dir)
     

@@ -52,7 +52,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                      barrax_2021_results[frm4veg_lai].reshape(-1),
                      wytham_results[frm4veg_lai].reshape(-1)]
     
-    pred_lai_std_list = [belsar_results['lai_mean_std'].values.reshape(-1),
+    pred_lai_std_list = [belsar_results['lai_sigma_mean'].values.reshape(-1),
                          barrax_results[f"{frm4veg_lai}_std"].reshape(-1),
                          barrax_2021_results[f"{frm4veg_lai}_std"].reshape(-1),
                          wytham_results[f"{frm4veg_lai}_std"].reshape(-1)]
@@ -104,9 +104,9 @@ def get_validation_global_metrics(df_results, decompose_along_columns = ["Site",
             picp = {}
             for _, element in enumerate(pd.unique(df_results[column])):
                 results = df_results[df_results[column]==element]
-                picp[element] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma * results['Predicted LAI std'],
-                                               results['LAI'] > results['Predicted LAI'] - n_sigma * results['Predicted LAI std']).astype(int).mean()
-            picp["All"] = np.logical_and(df_results['LAI'] < df_results['Predicted LAI'] + n_sigma * df_results['Predicted LAI std'],
-                                         df_results['LAI'] > df_results['Predicted LAI'] - n_sigma * df_results['Predicted LAI std']).astype(int).mean()
+                picp[element] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma/2 * results['Predicted LAI std'],
+                                               results['LAI'] > results['Predicted LAI'] - n_sigma/2 * results['Predicted LAI std']).astype(int).mean()
+            picp["All"] = np.logical_and(df_results['LAI'] < df_results['Predicted LAI'] + n_sigma/2 * df_results['Predicted LAI std'],
+                                         df_results['LAI'] > df_results['Predicted LAI'] - n_sigma/2 * df_results['Predicted LAI std']).astype(int).mean()
             global_picp_dict[column] = pd.DataFrame(data=picp, index=[0])
     return global_rmse_dict, global_picp_dict

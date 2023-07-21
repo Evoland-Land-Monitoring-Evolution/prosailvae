@@ -288,20 +288,21 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
             d[f"ref_{variable}_std"] = np.std(site_ref)
             d[f"{variable}_mean"] = np.nan
             d[f"{variable}_std"] = np.nan
-            d[f"{variable}_mean_std"] = np.nan
+            # d[f"{variable}_mean_std"] = np.nan
             d[f"{variable}_sigma_mean"] = np.nan
             d[f"{variable}_sigma_std"] = np.nan
 
             if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():
                 d[f"{variable}_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['mean'],...])
                 d[f"{variable}_std"] = np.nanstd(masked_array[pred_array_idx[variable]['mean'],...])
-                sigma_pred = masked_array[pred_array_idx[variable]['sigma'],...]
-                N = np.sum(np.logical_not(np.isnan(sigma_pred)).astype(int))
-                var_sum = np.sum(sigma_pred[np.logical_not(np.isnan(sigma_pred))] ** 2)
-                d[f"{variable}_mean_std"] = np.sqrt(var_sum) / N
+
             else:
                 continue
             if not np.isnan(masked_array[pred_array_idx[variable]['sigma'],...]).all():
+                sigma_pred = masked_array[pred_array_idx[variable]['sigma'],...]
+                # N = np.sum(np.logical_not(np.isnan(sigma_pred)).astype(int))
+                # var_sum = np.sum(sigma_pred[np.logical_not(np.isnan(sigma_pred))] ** 2)
+                # d[f"{variable}_mean_std"] = np.sqrt(var_sum) / N
                 d[f"{variable}_sigma_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['sigma'],...])
                 d[f"{variable}_sigma_std"] = np.nanstd(masked_array[pred_array_idx[variable]['sigma'],...])
             if get_error:

@@ -1,5 +1,5 @@
 {
-    "rnn_pvae": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/1_d2023_07_07_11_40_32_supervised_False_/",
+    "rcnn_pvae_b05_i0_c1_lai_R7": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/1/",
     		"type":"simvae",
     		"plot_name":"PROSAIL-VAE"
     }

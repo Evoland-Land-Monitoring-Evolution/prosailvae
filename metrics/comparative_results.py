@@ -351,13 +351,13 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
     lai_scatter_dict["SNAP's Biophysical Processor"] = all_snap_lai.squeeze(1).reshape(-1)
     global_lim = [lai_scatter_dict["SNAP's Biophysical Processor"].min().item(),
                     lai_scatter_dict["SNAP's Biophysical Processor"].max().item()]
-    for _, model_info in model_dict.items():
-        lai_scatter_dict[model_info["plot_name"]] = model_info["prosail_vars"][:,6,...].reshape(-1)
-        global_lim[0] = min(global_lim[0], lai_scatter_dict[model_info["plot_name"]].min().item())
-        global_lim[1] = max(global_lim[1], lai_scatter_dict[model_info["plot_name"]].max().item())
-    fig, _ = regression_pair_plot(lai_scatter_dict, global_lim)
-    if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
+    # for _, model_info in model_dict.items():
+    #     lai_scatter_dict[model_info["plot_name"]] = model_info["prosail_vars"][:,6,...].reshape(-1)
+    #     global_lim[0] = min(global_lim[0], lai_scatter_dict[model_info["plot_name"]].min().item())
+    #     global_lim[1] = max(global_lim[1], lai_scatter_dict[model_info["plot_name"]].max().item())
+    # fig, _ = regression_pair_plot(lai_scatter_dict, global_lim)
+    # if res_dir is not None:
+    #     fig.savefig(os.path.join(res_dir, "model_lai_comparison.png"))
 
     err_scatter_dict = {}
     err_boxplot_dict = {}
@@ -369,9 +369,9 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
         
         global_lim[0] = min(global_lim[0], err_scatter_dict[model_info["plot_name"]].min().item())
         global_lim[1] = max(global_lim[1], err_scatter_dict[model_info["plot_name"]].max().item())
-    fig, _ = regression_pair_plot(err_scatter_dict, global_lim)
-    if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, "rec_error_comparison.png"))
+    # fig, _ = regression_pair_plot(err_scatter_dict, global_lim)
+    # if res_dir is not None:
+    #     fig.savefig(os.path.join(res_dir, "rec_error_comparison.png"))
 
     fig, axs = plt.subplots(1, len(err_scatter_dict), figsize=(3*len(err_scatter_dict), 3), dpi=200, tight_layout=True)
     if len(err_scatter_dict)==1:

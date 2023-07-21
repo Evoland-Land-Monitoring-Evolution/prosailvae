@@ -132,7 +132,7 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
 
 # fig, ax = plot_sampling_dates(months_to_get)
 
-def get_belsar_sites_time_series(metrics, belsar_data_dir, site="W1"):
+def get_belsar_sites_time_series(metrics, belsar_data_dir, site="W1", fig=None, ax=None):
     validation_df, _, _, _, _, _, crs = load_belsar_validation_data(belsar_data_dir, "2A_20180508_both_BelSAR_agriculture_database") 
     measurement_dates = []
     lai = []
@@ -162,8 +162,8 @@ def get_belsar_sites_time_series(metrics, belsar_data_dir, site="W1"):
     all_metrics = pd.concat((ref_metrics, pred_metrics))
     all_metrics.reset_index(inplace=True, drop=True)
     # lai_pred = site_metrics["lai_mean"].values
-
-    fig, ax = plt.subplots(dpi=150)
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data=all_metrics, x="Date", y="LAI",ax=ax, hue="type")
     ax.errorbar(all_metrics['Date'].values, all_metrics['LAI'].values, yerr=all_metrics['lai_std'],
                 ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,

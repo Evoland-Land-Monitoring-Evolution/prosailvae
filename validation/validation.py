@@ -52,7 +52,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                      barrax_2021_results[frm4veg_lai].reshape(-1),
                      wytham_results[frm4veg_lai].reshape(-1)]
     
-    pred_lai_std_list = [belsar_results['lai_sigma_mean'].values.reshape(-1),
+    pred_lai_std_list = [belsar_results['lai_mean_std'].values.reshape(-1),
                          barrax_results[f"{frm4veg_lai}_std"].reshape(-1),
                          barrax_2021_results[f"{frm4veg_lai}_std"].reshape(-1),
                          wytham_results[f"{frm4veg_lai}_std"].reshape(-1)]

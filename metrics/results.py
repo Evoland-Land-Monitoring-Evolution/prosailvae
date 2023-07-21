@@ -132,9 +132,16 @@ def save_validation_results(model, res_dir,
      ) = get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
                                       save_reconstruction=save_reconstruction)
-    for site in ["W1", "W2", "W3", "M1", "M2", "M3"]:
-        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site)
-        fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_{site}.png"))
+    fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(3, 2*10))
+    for i in range(1,11):
+        site = "W"+str(i)
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i])
+    fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Wheat.png"))
+    fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(3, 2*10))
+    for i in range(1,11):
+        site = "M"+str(i)
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i])
+    fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Maize.png"))
 
     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                   frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
@@ -158,7 +165,11 @@ def save_validation_results(model, res_dir,
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error.png"))
-    
+
+    fig, ax = plt.subplots(dpi=150)
+    sns.scatterplot(data = df_results, x="LAI error", y="Predicted LAI std",  hue="Campaign", ax=ax)
+    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_sigma_campaign.png"))
+
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Land cover", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_land_cover.png"))
@@ -301,6 +312,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     all_sigma = []
     cyclical_ref_lai = []
     cyclical_lai = []
+    cyclical_lai_sigma = []
     with torch.no_grad():
         for i, batch in enumerate(loader):
             (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
@@ -315,6 +327,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
             cyclical_ref_lai.append(crop_s2_input(sim_image, hw)[6,...].reshape(-1))
             cyclical_lai.append(cyclical_sim_image[6,...].reshape(-1))
+            cyclical_lai_sigma.append(cyclical_sigma_image[6,...].reshape(-1))
             info = info_test_data[i,:]
             (weiss_lai, weiss_cab,
                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
@@ -356,9 +369,10 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         all_sigma = torch.cat(all_sigma, axis=1)
         cyclical_ref_lai = torch.cat(cyclical_ref_lai)
         cyclical_lai = torch.cat(cyclical_lai)
+        cyclical_lai_sigma = torch.cat(cyclical_lai_sigma)
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel, 
-                                      cyclical_ref_lai, cyclical_lai
+                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma
                                     #   gdf_lai, lai_validation_pred, snap_validation_lai
                                       )
 

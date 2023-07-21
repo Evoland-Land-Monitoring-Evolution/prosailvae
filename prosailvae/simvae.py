@@ -342,8 +342,8 @@ class SimVAE(nn.Module):
             z_cyc = z.transpose(feature_dim, -1)
             z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
             cyclical_batch = (rec_cyc, s2_a_cyc, z_cyc)
-            cyclical_loss, _ = self.beta_cyclical * self.supervised_batch_loss(cyclical_batch, {}, ref_is_lat=True)
-            loss_sum += cyclical_loss
+            cyclical_loss, _ = self.supervised_batch_loss(cyclical_batch, {}, ref_is_lat=True)
+            loss_sum += self.beta_cyclical * cyclical_loss
             loss_dict['cyclical_loss'] = cyclical_loss.item()            
         # Kl term
         if self.beta_kl > 0:

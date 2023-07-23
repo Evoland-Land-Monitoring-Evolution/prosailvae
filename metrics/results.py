@@ -28,7 +28,8 @@ import warnings
 from torchutils.patches import patchify, unpatchify 
 import pandas as pd
 import numpy as np
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 LOGGER_NAME = "PROSAIL-VAE results logger"
@@ -128,6 +129,7 @@ def save_validation_results(model, res_dir,
                             method="simple_interpolate",
                             mode="sim_tg_mean", 
                             save_reconstruction=True):
+
     (barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
      ) = get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
@@ -160,8 +162,7 @@ def save_validation_results(model, res_dir,
                               error_y="Predicted LAI std", hue_perfs=False)
     fig.savefig(os.path.join(res_dir, f"LAI_regression_land_cover.png"))
 
-    import matplotlib.pyplot as plt
-    import seaborn as sns
+
     fig, ax = plt.subplots(dpi=150)
     sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
     fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error.png"))

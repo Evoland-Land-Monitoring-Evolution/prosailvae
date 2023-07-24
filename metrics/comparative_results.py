@@ -526,8 +526,11 @@ def compare_snap_versions_on_weiss_data(res_dir):
 #     for i, method in enumerate(methods):
 #         for j, model in enumerate(results_dict[method][variable].keys()):
 #             results = results_dict[method][variable][model]
-#             for k, si
-enumerate(methods):
+#             for k, site in enumerate(sites):
+#                 site_results = results[results['Site']==site]
+#                 rmse[i,j,k] = np.sqrt((site_results['Predicted LAI'] - site_results['LAI']).pow(2).mean())
+#             rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
+#     for i, method in enumerate(methods):
 #         for j, model in enumerate(models_dict.keys()):
 #             results = results_dict[method][variable][model]
 #             for k, site in enumerate(sites):

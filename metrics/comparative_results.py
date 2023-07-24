@@ -299,55 +299,55 @@ def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir
 
 def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, rmse_dict, picp_dict, res_dir=None):
+    if len(model_dict) < 7:
+        for i in range(all_s2_r.size(0)):
+            info = info_test_data[i]
+            if res_dir is not None:
+                res_dir_i = os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}")
+                if not os.path.isdir(res_dir_i):
+                    os.makedirs(res_dir_i)
+            
+            fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] 
+                                + [model_info["reconstruction"][i,...] for _, model_info in model_dict.items()],
+                                title_list = [f"Sentinel {info[0]} \n"
+                                                f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
+                                                + [model_info["plot_name"] for _, model_info in model_dict.items()])
+            if res_dir is not None:
+                fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_reconstructions_rgb.png"))
 
-    for i in range(all_s2_r.size(0)):
-        info = info_test_data[i]
-        if res_dir is not None:
-            res_dir_i = os.path.join(res_dir, f"{i}_{info[1]}_{info[2]}")
-            if not os.path.isdir(res_dir_i):
-                os.makedirs(res_dir_i)
-        
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] 
-                              + [model_info["reconstruction"][i,...] for _, model_info in model_dict.items()],
-                              title_list = [f"Sentinel {info[0]} \n"
-                                            f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
-                                            + [model_info["plot_name"] for _, model_info in model_dict.items()])
-        if res_dir is not None:
-            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_reconstructions_rgb.png"))
-
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]]
-                              + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...]
-                                 for _, model_info in model_dict.items()],
-                              title_list = [f"Sentinel {info[0]} \n"
-                                            f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
-                                            + [model_info["plot_name"] for _, model_info in model_dict.items()])
-        if res_dir is not None:
-            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png"))
-        models_errs = [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
-                                 for _, model_info in model_dict.items()]
-        vmin = min([err.cpu().min().item() for err in models_errs])
-        vmax = max([err.cpu().max().item() for err in models_errs])
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] + models_errs,
-                              title_list = [f"Sentinel {info[0]} \n"
-                                            f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"
-                                            ] + [model_info["plot_name"] for _, model_info in model_dict.items()],
-                                            vmin=vmin, vmax=vmax)
-        if res_dir is not None:
-            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_err.png"))
-        lai_patch_tensors = [model_info["prosail_vars"][i,6,...].unsqueeze(0) 
-                             for _, model_info in model_dict.items()] + [all_snap_lai[i,...]]
-        vmin = min([lai_tensor.min() for lai_tensor in lai_patch_tensors])
-        vmax = max([lai_tensor.max() for lai_tensor in lai_patch_tensors])
-        fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] 
-                              + [model_info["prosail_vars"][i,6,...].unsqueeze(0) for _, model_info in model_dict.items()]
-                              + [all_snap_lai[i,...]],
-                              title_list = [f"Sentinel {info[0]} \n"
-                                            f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
-                                            + [model_info["plot_name"] for _, model_info in model_dict.items()]
-                                            + ["SNAP"], vmin=vmin, vmax=vmax)
-        if res_dir is not None:
-            fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_LAI.png"))
-        plt.close('all')
+            fig, _ = plot_patches(patch_list = [all_s2_r[i,torch.tensor([8,3,6]),...]]
+                                + [model_info["reconstruction"][i,torch.tensor([8,3,6]),...]
+                                    for _, model_info in model_dict.items()],
+                                title_list = [f"Sentinel {info[0]} \n"
+                                                f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
+                                                + [model_info["plot_name"] for _, model_info in model_dict.items()])
+            if res_dir is not None:
+                fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_rec_B8B5B11.png"))
+            models_errs = [(all_s2_r[i,...] - model_info["reconstruction"][i,...]).abs().mean(0).unsqueeze(0)
+                                    for _, model_info in model_dict.items()]
+            vmin = min([err.cpu().min().item() for err in models_errs])
+            vmax = max([err.cpu().max().item() for err in models_errs])
+            fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] + models_errs,
+                                title_list = [f"Sentinel {info[0]} \n"
+                                                f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"
+                                                ] + [model_info["plot_name"] for _, model_info in model_dict.items()],
+                                                vmin=vmin, vmax=vmax)
+            if res_dir is not None:
+                fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_patch_err.png"))
+            lai_patch_tensors = [model_info["prosail_vars"][i,6,...].unsqueeze(0) 
+                                for _, model_info in model_dict.items()] + [all_snap_lai[i,...]]
+            vmin = min([lai_tensor.min() for lai_tensor in lai_patch_tensors])
+            vmax = max([lai_tensor.max() for lai_tensor in lai_patch_tensors])
+            fig, _ = plot_patches(patch_list = [all_s2_r[i,...]] 
+                                + [model_info["prosail_vars"][i,6,...].unsqueeze(0) for _, model_info in model_dict.items()]
+                                + [all_snap_lai[i,...]],
+                                title_list = [f"Sentinel {info[0]} \n"
+                                                f"{info[1][:4]}/{info[1][4:6]}/{info[1][6:]} - {info[2]}"] 
+                                                + [model_info["plot_name"] for _, model_info in model_dict.items()]
+                                                + ["SNAP"], vmin=vmin, vmax=vmax)
+            if res_dir is not None:
+                fig.savefig(os.path.join(res_dir_i, f"{i}_{info[1]}_{info[2]}_LAI.png"))
+            plt.close('all')
     lai_scatter_dict = {}
     lai_scatter_dict["SNAP's Biophysical Processor"] = all_snap_lai.squeeze(1).reshape(-1)
     global_lim = [lai_scatter_dict["SNAP's Biophysical Processor"].min().item(),

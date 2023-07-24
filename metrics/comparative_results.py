@@ -380,10 +380,11 @@ def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                 ax_picp_c.scatter(rmse_cyclical, picp, label=str(i))
                 ax_rmse_l.scatter(loss, rmse, label=str(i))
                 ax_picp_l.scatter(loss, picp, label=str(i))
-            ax_rmse_c.legend()
-            ax_picp_c.legend()
-            ax_rmse_l.legend()
-            ax_picp_l.legend()
+            if not i > 5:
+                ax_rmse_c.legend()
+                ax_picp_c.legend()
+                ax_rmse_l.legend()
+                ax_picp_l.legend()
             ax_rmse_c.set_xlabel("RMSE on simulated LAI")
             ax_picp_c.set_xlabel("RMSE on simulated LAI")
             ax_rmse_l.set_xlabel("Reconstruction loss (NLL)")
@@ -590,7 +591,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
     validation_lai_results = {}
     picp_dict = {}
     rmse_dict = {}
-    for method in ["simple_interpolate", "best", "worst"]: #'closest', 
+    for method in ["simple_interpolate"]:#, "best", "worst"]: #'closest', 
         picp_dict[method] = {}
         rmse_dict[method] = {}
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode)
@@ -626,29 +627,32 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
                 picp_dict[method][variable][model] = picp
                 rmse_dict[method][variable][model] = rmse
-            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
-                                           margin = 0.02, hue_perfs=True)
-            
-            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
-                                           margin = 0.02, hue="Land cover")
-            
-            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Time_delta",
-                                           margin = 0.02, hue="Time delta")
-            
-            plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
-                                           res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
-                                           margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True)
+            if not len(model_dict) > 6: 
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
+                                            margin = 0.02, hue_perfs=True)
+                
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
+                                            margin = 0.02, hue="Land cover")
+                
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Time_delta",
+                                            margin = 0.02, hue="Time delta")
+                
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
+                                            margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True)
             plt.close('all')
             
             # get_models_global_metrics(model_dict, validation_lai_results, 
             #                                        sites=["Spain", "England", "Belgium"], 
             #                                        variable=variable, n_models=len(model_dict)+1, n_sigma=3)
 
-            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Land_cover_rmse.npy"), rmse)
-            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Land_cover_picp.npy"), picp)
+            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_rmse.npy"), rmse)
+            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_picp.npy"), picp)
+    save_dict(rmse_dict, os.path.join(res_dir, f"LAI_Campaign_rmse.json"))
+    save_dict(picp_dict, os.path.join(res_dir, f"LAI_Campaign_picp.json"))
     return rmse_dict, picp_dict
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"

@@ -526,11 +526,8 @@ def compare_snap_versions_on_weiss_data(res_dir):
 #     for i, method in enumerate(methods):
 #         for j, model in enumerate(results_dict[method][variable].keys()):
 #             results = results_dict[method][variable][model]
-#             for k, site in enumerate(sites):
-#                 site_results = results[results['Site']==site]
-#                 rmse[i,j,k] = np.sqrt((site_results['Predicted LAI'] - site_results['LAI']).pow(2).mean())
-#             rmse[i,j,-1] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
-#     for i, method in enumerate(methods):
+#             for k, si
+enumerate(methods):
 #         for j, model in enumerate(models_dict.keys()):
 #             results = results_dict[method][variable][model]
 #             for k, site in enumerate(sites):
@@ -651,8 +648,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
 
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_rmse.npy"), rmse)
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_picp.npy"), picp)
-    save_dict(rmse_dict, os.path.join(res_dir, f"LAI_Campaign_rmse.json"))
-    save_dict(picp_dict, os.path.join(res_dir, f"LAI_Campaign_picp.json"))
+    # save_dict(rmse_dict, os.path.join(res_dir, f"LAI_Campaign_rmse.json"))
+    # save_dict(picp_dict, os.path.join(res_dir, f"LAI_Campaign_picp.json"))
     return rmse_dict, picp_dict
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"

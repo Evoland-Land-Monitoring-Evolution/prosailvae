@@ -5,10 +5,10 @@ Created on Mon Oct 24 10:46:58 2022
 
 @author: yoel
 """
-import jax.numpy as jnp
+# import jax.numpy as jnp
 import numpy as np
-import numpyro
-import numpyro.distributions as dist
+# import numpyro
+# import numpyro.distributions as dist
 import pandas as pd
 
 import torch
@@ -33,32 +33,32 @@ def correlate_with_lai(lai, V, V_mean, lai_conv):
     V_corr = V_mean + (V - V_mean) * np.maximum((lai_conv - lai), 0) / lai_conv
     return V_corr
 
-def sample_param(param_dist, lai=None):
-    if param_dist[5] == "uniform":
-        sample = numpyro.sample(param_dist[6], dist.Uniform(param_dist[0], param_dist[1]))
-    elif param_dist[5] == "gaussian":
+# def sample_param(param_dist, lai=None):
+#     if param_dist[5] == "uniform":
+#         sample = numpyro.sample(param_dist[6], dist.Uniform(param_dist[0], param_dist[1]))
+#     elif param_dist[5] == "gaussian":
         
-        sample = numpyro.sample(param_dist[6], 
-                                dist.TwoSidedTruncatedDistribution(dist.Normal(param_dist[2], param_dist[3]),
-                                                                   low=param_dist[0], high=param_dist[1]))
-    elif param_dist[5] == "lognormal":
-        low = param_dist[0]
-        if param_dist[0] == 0:
-            low=1e-16
-        sample = numpyro.sample(param_dist[6], dist.TwoSidedTruncatedDistribution(dist.Normal(param_dist[2], param_dist[3]),
-                                           low=low, 
-                                           high=np.log(param_dist[1])))
-        sample = jnp.exp(sample)
-    else:
-        raise NotImplementedError("Please choose sample distribution among gaussian, uniform and lognormal")
-    if lai is not None and param_dist[4] is not None:
-        if param_dist[2] is None : 
-            sample = correlate_with_lai(lai, sample, 
-                                        (param_dist[1] - param_dist[0])/2, 
-                                        param_dist[4])
-        else:
-            sample = correlate_with_lai(lai, sample, param_dist[2],  param_dist[4])
-    return sample
+#         sample = numpyro.sample(param_dist[6], 
+#                                 dist.TwoSidedTruncatedDistribution(dist.Normal(param_dist[2], param_dist[3]),
+#                                                                    low=param_dist[0], high=param_dist[1]))
+#     elif param_dist[5] == "lognormal":
+#         low = param_dist[0]
+#         if param_dist[0] == 0:
+#             low=1e-16
+#         sample = numpyro.sample(param_dist[6], dist.TwoSidedTruncatedDistribution(dist.Normal(param_dist[2], param_dist[3]),
+#                                            low=low, 
+#                                            high=np.log(param_dist[1])))
+#         sample = jnp.exp(sample)
+#     else:
+#         raise NotImplementedError("Please choose sample distribution among gaussian, uniform and lognormal")
+#     if lai is not None and param_dist[4] is not None:
+#         if param_dist[2] is None : 
+#             sample = correlate_with_lai(lai, sample, 
+#                                         (param_dist[1] - param_dist[0])/2, 
+#                                         param_dist[4])
+#         else:
+#             sample = correlate_with_lai(lai, sample, param_dist[2],  param_dist[4])
+#     return sample
 
 
 def np_sample_param(param_dist, lai=None, n_samples=1, uniform_mode=True, lai_conv_override=None):
@@ -88,28 +88,28 @@ def np_sample_param(param_dist, lai=None, n_samples=1, uniform_mode=True, lai_co
             sample = correlate_with_lai(lai, sample, param_dist[2],  lai_conv)
     return sample
 
-def sample_prosail_vars(var_dists, static_angles=False):
-    lai = sample_param(var_dists.lai, lai=None)
-    N = sample_param(var_dists.N, lai=lai)
-    cab = sample_param(var_dists.cab, lai=lai)
-    car = sample_param(var_dists.car, lai=lai)
-    cbrown = sample_param(var_dists.cbrown, lai=lai)
-    caw = sample_param(var_dists.caw, lai=lai)
-    cm = sample_param(var_dists.cm, lai=lai)
-    lidfa = sample_param(var_dists.lidfa, lai=lai)
-    hspot = sample_param(var_dists.hspot, lai=lai)
-    psoil = sample_param(var_dists.psoil, lai=lai)
-    rsoil = sample_param(var_dists.rsoil, lai=lai)
-    if static_angles:
-        tts = np.array([48.0])
-        tto = np.array([5.0])
-        psi = np.array([-56])
-    else:
-        tts = sample_param(var_dists.tts, lai=lai)
-        tto = sample_param(var_dists.tto, lai=lai)
-        psi = sample_param(var_dists.psi, lai=lai)
+# def sample_prosail_vars(var_dists, static_angles=False):
+#     lai = sample_param(var_dists.lai, lai=None)
+#     N = sample_param(var_dists.N, lai=lai)
+#     cab = sample_param(var_dists.cab, lai=lai)
+#     car = sample_param(var_dists.car, lai=lai)
+#     cbrown = sample_param(var_dists.cbrown, lai=lai)
+#     caw = sample_param(var_dists.caw, lai=lai)
+#     cm = sample_param(var_dists.cm, lai=lai)
+#     lidfa = sample_param(var_dists.lidfa, lai=lai)
+#     hspot = sample_param(var_dists.hspot, lai=lai)
+#     psoil = sample_param(var_dists.psoil, lai=lai)
+#     rsoil = sample_param(var_dists.rsoil, lai=lai)
+#     if static_angles:
+#         tts = np.array([48.0])
+#         tto = np.array([5.0])
+#         psi = np.array([-56])
+#     else:
+#         tts = sample_param(var_dists.tts, lai=lai)
+#         tto = sample_param(var_dists.tto, lai=lai)
+#         psi = sample_param(var_dists.psi, lai=lai)
 
-    return N, cab, car, cbrown, caw, cm, lai, lidfa, hspot, psoil, rsoil, tts, tto, psi
+#     return N, cab, car, cbrown, caw, cm, lai, lidfa, hspot, psoil, rsoil, tts, tto, psi
 
 def sample_angles(n_samples=100):
     PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
@@ -155,19 +155,19 @@ def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=Non
     return prosail_vars
 
 
-def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=None, static_angles=False):
-    prosail_vars = np.zeros((nb_simus, 14))
-    prosail_s2_sim = np.zeros((nb_simus, 10))
-    with numpyro.handlers.seed(rng_seed=5):
-        for i in trange(nb_simus):
-            prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist, static_angles=static_angles)
-            mean = ssimulator(psimulator(torch.from_numpy(prosail_vars[i,:]).view(1,-1).float())).numpy()
-            if noise>0:
-                sigma = numpyro.sample("sigma", dist.Uniform(0., noise))
-                prosail_s2_sim[i,:] = numpyro.sample("obs", dist.Normal(mean, sigma))
-            else:
-                prosail_s2_sim[i,:] = mean
-    return prosail_vars, prosail_s2_sim
+# def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=None, static_angles=False):
+#     prosail_vars = np.zeros((nb_simus, 14))
+#     prosail_s2_sim = np.zeros((nb_simus, 10))
+#     with numpyro.handlers.seed(rng_seed=5):
+#         for i in trange(nb_simus):
+#             prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist, static_angles=static_angles)
+#             mean = ssimulator(psimulator(torch.from_numpy(prosail_vars[i,:]).view(1,-1).float())).numpy()
+#             if noise>0:
+#                 sigma = numpyro.sample("sigma", dist.Uniform(0., noise))
+#                 prosail_s2_sim[i,:] = numpyro.sample("obs", dist.Normal(mean, sigma))
+#             else:
+#                 prosail_s2_sim[i,:] = mean
+#     return prosail_vars, prosail_s2_sim
 
 def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
                                 n_samples_per_batch=1024, uniform_mode=False, lai_corr=True):
@@ -197,165 +197,165 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
     return prosail_vars, prosail_s2_sim
 
 
-def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
-                                          tto=None, psi=None, eps_mae = 1e-3, max_iter=100, 
-                                          samples_per_iter=1024):
-    best_prosail_vars = np.ones((1, 14))
-    best_prosail_s2_sim = np.ones((1, 10))
-    best_mae = np.inf
-    iter = 0
-    bins=200
-    aggregate_s2_hist = np.zeros((bins, 10))
-    with numpyro.handlers.seed(rng_seed=5):
-        while best_mae > eps_mae and iter < max_iter :
-            if iter%10==0:
-                print(f"{iter} - {best_mae}")
-            prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter)
-            prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
+# def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
+#                                           tto=None, psi=None, eps_mae = 1e-3, max_iter=100, 
+#                                           samples_per_iter=1024):
+#     best_prosail_vars = np.ones((1, 14))
+#     best_prosail_s2_sim = np.ones((1, 10))
+#     best_mae = np.inf
+#     iter = 0
+#     bins=200
+#     aggregate_s2_hist = np.zeros((bins, 10))
+#     with numpyro.handlers.seed(rng_seed=5):
+#         while best_mae > eps_mae and iter < max_iter :
+#             if iter%10==0:
+#                 print(f"{iter} - {best_mae}")
+#             prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter)
+#             prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
             
-            aggregate_s2_hist += np.apply_along_axis(lambda a: np.histogram(a, bins=bins, range=[0.0, 1.0])[0], 0, prosail_s2_sim)
-            if noise > 0:
-                raise NotImplementedError
-            mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
-            best_mae_iter = mare.min()
+#             aggregate_s2_hist += np.apply_along_axis(lambda a: np.histogram(a, bins=bins, range=[0.0, 1.0])[0], 0, prosail_s2_sim)
+#             if noise > 0:
+#                 raise NotImplementedError
+#             mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
+#             best_mae_iter = mare.min()
 
-            if best_mae_iter < best_mae:
-                best_mae = best_mae_iter
-                best_prosail_vars = prosail_vars[mare.argmin(),:]
-                best_prosail_s2_sim = prosail_s2_sim[mare.argmin(),:]
-            iter += 1
-    if iter==max_iter:
-        print(f"WARNING : No sample with mae better than {eps_mae} was generated in {max_iter} iterations with {samples_per_iter} samples each ({max_iter * samples_per_iter} samples) ")    
-    else:
-        print(f"A sample with mae better than {eps_mae} was generated in {max_iter} iterations with {samples_per_iter} samples each ({max_iter * samples_per_iter} samples) ")    
+#             if best_mae_iter < best_mae:
+#                 best_mae = best_mae_iter
+#                 best_prosail_vars = prosail_vars[mare.argmin(),:]
+#                 best_prosail_s2_sim = prosail_s2_sim[mare.argmin(),:]
+#             iter += 1
+#     if iter==max_iter:
+#         print(f"WARNING : No sample with mae better than {eps_mae} was generated in {max_iter} iterations with {samples_per_iter} samples each ({max_iter * samples_per_iter} samples) ")    
+#     else:
+#         print(f"A sample with mae better than {eps_mae} was generated in {max_iter} iterations with {samples_per_iter} samples each ({max_iter * samples_per_iter} samples) ")    
 
-    return best_prosail_vars, best_prosail_s2_sim, max_iter * samples_per_iter, aggregate_s2_hist, best_mae
+#     return best_prosail_vars, best_prosail_s2_sim, max_iter * samples_per_iter, aggregate_s2_hist, best_mae
 
 
-def simulate_lai_with_rec_error_hist(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
-                                          tto=None, psi=None, max_iter=100, 
-                                          samples_per_iter=1024, log_err = True, uniform_mode=True, lai_corr=False, 
-                                          lai_conv_override=None, weiss_mode=False):
+# def simulate_lai_with_rec_error_hist(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
+#                                           tto=None, psi=None, max_iter=100, 
+#                                           samples_per_iter=1024, log_err = True, uniform_mode=True, lai_corr=False, 
+#                                           lai_conv_override=None, weiss_mode=False):
     
-    best_mae = np.inf
-    iter = 0
-    bins=200
-    aggregate_lai_hist = np.zeros((bins, 1))
-    heatmap=0
-    min_lai = ProsailVarsDist.lai[0]
-    max_lai = ProsailVarsDist.lai[1]
-    min_err = 0
-    max_err = 2
-    n_bin_err = 100
-    n_bin_lai = 200
-    xedges = np.linspace(min_lai, max_lai, n_bin_lai)
-    if log_err:
-        max_err=5
-        min_err = 5e-3
-        yedges = np.logspace(np.log10(min_err), np.log10(max_err), n_bin_err)
-    else:
-        yedges = np.linspace(min_err, max_err, n_bin_err)
-    with numpyro.handlers.seed(rng_seed=5):
-        for iter in range(max_iter) :
-            if iter%10==0:
-                print(f"{iter} - {best_mae}")
-            prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, 
-                                                       tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter, 
-                                                       uniform_mode=uniform_mode, lai_corr=lai_corr, lai_conv_override=lai_conv_override)
-            lai_sim = prosail_vars[:,6]
-            prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
-            aggregate_lai_hist += np.histogram(lai_sim, bins=n_bin_lai, range=[min_lai, max_lai])[0].reshape(-1,1)
-            if noise > 0:
-                raise NotImplementedError
-            if weiss_mode:
-                mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
-            else:
-                mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
-            xs = lai_sim
-            ys = mare
-            hist, xedges, yedges = np.histogram2d(
-                xs, ys, bins=[xedges, yedges])
-            heatmap += hist
-            best_mae_iter = mare.min()
-            if best_mae_iter < best_mae:
-                best_mae = best_mae_iter
-                best_prosail_vars = prosail_vars[mare.argmin(),:]
-                best_prosail_s2_sim = prosail_s2_sim[mare.argmin(),:]
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    return best_prosail_vars, best_prosail_s2_sim, heatmap, extent, aggregate_lai_hist, best_mae
+#     best_mae = np.inf
+#     iter = 0
+#     bins=200
+#     aggregate_lai_hist = np.zeros((bins, 1))
+#     heatmap=0
+#     min_lai = ProsailVarsDist.lai[0]
+#     max_lai = ProsailVarsDist.lai[1]
+#     min_err = 0
+#     max_err = 2
+#     n_bin_err = 100
+#     n_bin_lai = 200
+#     xedges = np.linspace(min_lai, max_lai, n_bin_lai)
+#     if log_err:
+#         max_err=5
+#         min_err = 5e-3
+#         yedges = np.logspace(np.log10(min_err), np.log10(max_err), n_bin_err)
+#     else:
+#         yedges = np.linspace(min_err, max_err, n_bin_err)
+#     with numpyro.handlers.seed(rng_seed=5):
+#         for iter in range(max_iter) :
+#             if iter%10==0:
+#                 print(f"{iter} - {best_mae}")
+#             prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, 
+#                                                        tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter, 
+#                                                        uniform_mode=uniform_mode, lai_corr=lai_corr, lai_conv_override=lai_conv_override)
+#             lai_sim = prosail_vars[:,6]
+#             prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
+#             aggregate_lai_hist += np.histogram(lai_sim, bins=n_bin_lai, range=[min_lai, max_lai])[0].reshape(-1,1)
+#             if noise > 0:
+#                 raise NotImplementedError
+#             if weiss_mode:
+#                 mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
+#             else:
+#                 mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
+#             xs = lai_sim
+#             ys = mare
+#             hist, xedges, yedges = np.histogram2d(
+#                 xs, ys, bins=[xedges, yedges])
+#             heatmap += hist
+#             best_mae_iter = mare.min()
+#             if best_mae_iter < best_mae:
+#                 best_mae = best_mae_iter
+#                 best_prosail_vars = prosail_vars[mare.argmin(),:]
+#                 best_prosail_s2_sim = prosail_s2_sim[mare.argmin(),:]
+#     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+#     return best_prosail_vars, best_prosail_s2_sim, heatmap, extent, aggregate_lai_hist, best_mae
 
 
-def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
-                                                    tto=None, psi=None, max_iter=100, 
-                                                    samples_per_iter=1024, log_err = True, uniform_mode=True, lai_corr=False, 
-                                                    lai_conv_override=None, weiss_mode=False, sigma=2):
-    AD=0.01
-    MD=2  
+# def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
+#                                                     tto=None, psi=None, max_iter=100, 
+#                                                     samples_per_iter=1024, log_err = True, uniform_mode=True, lai_corr=False, 
+#                                                     lai_conv_override=None, weiss_mode=False, sigma=2):
+#     AD=0.01
+#     MD=2  
 
-    best_mae = np.inf
-    iter = 0
-    bins=200
-    aggregate_lai_hist = np.zeros((bins, 1))
-    heatmap=0
-    min_lai = ProsailVarsDist.lai[0]
-    max_lai = ProsailVarsDist.lai[1]
-    min_err = 0
-    max_err = 2
-    n_bin_err = 100
-    n_bin_lai = 200
-    xedges = np.linspace(min_lai, max_lai, n_bin_lai)
-    all_cases_in_enveloppe_err = []
-    all_cases_in_enveloppe_LAI = []
-    if log_err:
-        max_err=5
-        min_err = 5e-3
-        yedges = np.logspace(np.log10(min_err), np.log10(max_err), n_bin_err)
-    else:
-        yedges = np.linspace(min_err, max_err, n_bin_err)
-    with numpyro.handlers.seed(rng_seed=5):
-        for iter in range(max_iter) :
-            if iter%10==0:
-                print(f"{iter} - {best_mae}")
-            prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, 
-                                                       tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter, 
-                                                       uniform_mode=uniform_mode, lai_corr=lai_corr, lai_conv_override=lai_conv_override)
-            lai_sim = prosail_vars[:,6]
-            prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
+#     best_mae = np.inf
+#     iter = 0
+#     bins=200
+#     aggregate_lai_hist = np.zeros((bins, 1))
+#     heatmap=0
+#     min_lai = ProsailVarsDist.lai[0]
+#     max_lai = ProsailVarsDist.lai[1]
+#     min_err = 0
+#     max_err = 2
+#     n_bin_err = 100
+#     n_bin_lai = 200
+#     xedges = np.linspace(min_lai, max_lai, n_bin_lai)
+#     all_cases_in_enveloppe_err = []
+#     all_cases_in_enveloppe_LAI = []
+#     if log_err:
+#         max_err=5
+#         min_err = 5e-3
+#         yedges = np.logspace(np.log10(min_err), np.log10(max_err), n_bin_err)
+#     else:
+#         yedges = np.linspace(min_err, max_err, n_bin_err)
+#     with numpyro.handlers.seed(rng_seed=5):
+#         for iter in range(max_iter) :
+#             if iter%10==0:
+#                 print(f"{iter} - {best_mae}")
+#             prosail_vars = partial_sample_prosail_vars(ProsailVarsDist, lai=lai, 
+#                                                        tts=tts, tto=tto, psi=psi, n_samples=samples_per_iter, 
+#                                                        uniform_mode=uniform_mode, lai_corr=lai_corr, lai_conv_override=lai_conv_override)
+#             lai_sim = prosail_vars[:,6]
+#             prosail_s2_sim = ssimulator(psimulator(torch.from_numpy(prosail_vars).view(-1,14).float().detach())).numpy()
 
-            aggregate_lai_hist += np.histogram(lai_sim, bins=n_bin_lai, range=[min_lai, max_lai])[0].reshape(-1,1)
-            if noise > 0:
-                raise NotImplementedError
-            if weiss_mode:
-                mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
-                enveloppe_low = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 - sigma * MD / 100 ) - sigma * AD
-                enveloppe_high = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 + sigma * MD / 100 ) + sigma * AD
-                cases_in_sigma_enveloppe = np.logical_and((prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] < enveloppe_high).all(1),
-                                                           (prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] > enveloppe_low).all(1))            
-            else:
-                mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
-                enveloppe_low = s2_r_ref * (1 - sigma * MD / 100 ) - sigma * AD
-                enveloppe_high = s2_r_ref * (1 + sigma * MD / 100 ) + sigma * AD
-                cases_in_sigma_enveloppe = np.logical_and((prosail_s2_sim  < enveloppe_high).all(1), 
-                                                          (prosail_s2_sim > enveloppe_low).all(1))
+#             aggregate_lai_hist += np.histogram(lai_sim, bins=n_bin_lai, range=[min_lai, max_lai])[0].reshape(-1,1)
+#             if noise > 0:
+#                 raise NotImplementedError
+#             if weiss_mode:
+#                 mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
+#                 enveloppe_low = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 - sigma * MD / 100 ) - sigma * AD
+#                 enveloppe_high = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 + sigma * MD / 100 ) + sigma * AD
+#                 cases_in_sigma_enveloppe = np.logical_and((prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] < enveloppe_high).all(1),
+#                                                            (prosail_s2_sim[:,[1,2,3,4,5,7,8,9]] > enveloppe_low).all(1))            
+#             else:
+#                 mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
+#                 enveloppe_low = s2_r_ref * (1 - sigma * MD / 100 ) - sigma * AD
+#                 enveloppe_high = s2_r_ref * (1 + sigma * MD / 100 ) + sigma * AD
+#                 cases_in_sigma_enveloppe = np.logical_and((prosail_s2_sim  < enveloppe_high).all(1), 
+#                                                           (prosail_s2_sim > enveloppe_low).all(1))
 
-            if cases_in_sigma_enveloppe.any():
-                all_cases_in_enveloppe_err.append(mare[cases_in_sigma_enveloppe].reshape(-1,1))
-                all_cases_in_enveloppe_LAI.append(prosail_vars[cases_in_sigma_enveloppe, 6].reshape(-1,1))
-            xs = lai_sim
-            ys = mare
-            hist, xedges, yedges = np.histogram2d(
-                xs, ys, bins=[xedges, yedges])
-            heatmap += hist
-            best_mae_iter = mare.min()
-            if best_mae_iter < best_mae:
-                best_mae = best_mae_iter
-                best_prosail_vars = prosail_vars[mare.argmin(),:]
-                best_prosail_s2_sim = prosail_s2_sim[mare.argmin(),:]
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    if len(all_cases_in_enveloppe_err) > 0:
-        all_cases_in_enveloppe_err = np.concatenate(all_cases_in_enveloppe_err, axis=0)
-        all_cases_in_enveloppe_LAI = np.concatenate(all_cases_in_enveloppe_LAI, axis=0)
-    return best_prosail_vars, best_prosail_s2_sim, heatmap, extent, aggregate_lai_hist, best_mae, all_cases_in_enveloppe_err, all_cases_in_enveloppe_LAI
+#             if cases_in_sigma_enveloppe.any():
+#                 all_cases_in_enveloppe_err.append(mare[cases_in_sigma_enveloppe].reshape(-1,1))
+#                 all_cases_in_enveloppe_LAI.append(prosail_vars[cases_in_sigma_enveloppe, 6].reshape(-1,1))
+#             xs = lai_sim
+#             ys = mare
+#             hist, xedges, yedges = np.histogram2d(
+#                 xs, ys, bins=[xedges, yedges])
+#             heatmap += hist
+#             best_mae_iter = mare.min()
+#             if best_mae_iter < best_mae:
+#                 best_mae = best_mae_iter
+#                 best_prosail_vars = prosail_vars[mare.argmin(),:]
+#                 best_prosail_s2_sim = prosail_s2_sim[mare.argmin(),:]
+#     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+#     if len(all_cases_in_enveloppe_err) > 0:
+#         all_cases_in_enveloppe_err = np.concatenate(all_cases_in_enveloppe_err, axis=0)
+#         all_cases_in_enveloppe_LAI = np.concatenate(all_cases_in_enveloppe_LAI, axis=0)
+#     return best_prosail_vars, best_prosail_s2_sim, heatmap, extent, aggregate_lai_hist, best_mae, all_cases_in_enveloppe_err, all_cases_in_enveloppe_LAI
 
 
 

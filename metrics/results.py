@@ -19,7 +19,8 @@ from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
-from validation.validation import get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_validation_global_metrics
+from validation.validation import (get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, 
+                                   get_validation_global_metrics, get_all_campaign_lai_results_SNAP)
 from article_plots.belsar_plots import get_belsar_sites_time_series
 from datetime import datetime 
 import shutil
@@ -129,20 +130,27 @@ def save_validation_results(model, res_dir,
                             method="simple_interpolate",
                             mode="sim_tg_mean", 
                             save_reconstruction=True):
-
+    (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
+     ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
+                                      method=method, get_all_belsar=True)
     (barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
      ) = get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
-                                      save_reconstruction=save_reconstruction)
+                                      save_reconstruction=save_reconstruction, get_all_belsar=True)
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(3, 2*10))
     for i in range(0,10):
         site = "W" + str(i+1)
-        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i])
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], label="PROSAIL-VAE", use_ref_metrics=True)
+        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], label="SNAP")
+        ax.legend()
+    axs[-1].set_ylabel("Date")
     fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Wheat.png"))
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(3, 2*10))
     for i in range(0,10):
         site = "M" + str(i+1)
-        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i])
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], label="PROSAIL-VAE", use_ref_metrics=True)
+        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], label="SNAP")
+    axs[-1].set_ylabel("Date")
     fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Maize.png"))
 
     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,

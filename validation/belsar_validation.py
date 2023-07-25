@@ -38,6 +38,20 @@ BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2B_20180804_both_BelSAR_agriculture_database"]     # OK
 
 
+ALL_BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
+                    "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
+                    "2B_20180526_both_BelSAR_agriculture_database",
+                    "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
+                    "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés  => A retirer !  
+                    "2A_20180627_both_BelSAR_agriculture_database",     # OK
+                    "2A_20180630_both_BelSAR_agriculture_database",
+                    "2B_20180702_both_BelSAR_agriculture_database",
+                    "2B_20180715_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
+                    "2B_20180725_both_BelSAR_agriculture_database",
+                    "2A_20180727_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180804_both_BelSAR_agriculture_database"] 
+
 all_filename_dict = {"2018-05-08": "2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2018-05-18": "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
                     "2018-05-26": "2B_20180526_both_BelSAR_agriculture_database",
@@ -442,7 +456,7 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
         s2_data = torch.concat((s2_r, s2_a_permutated), 0)
         with torch.no_grad():
             lai_pred = model_lai.forward(s2_data, spatial_mode=True)
-        dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
+        dummy_tensor = 0 * NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
         tensor = torch.cat((lai_pred, dummy_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
         resolution = 10

@@ -223,7 +223,7 @@ RSR of the sensor.
         return loss
 
 class ProsailSimulator():
-    def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu', R_down=10):
+    def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu', R_down=1):
         super().__init__()
         self.factor = factor
         self.typelidf = typelidf

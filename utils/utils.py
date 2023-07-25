@@ -27,7 +27,7 @@ class IOStandardizeCoeffs:
     angles:StandardizeCoeff
     idx:StandardizeCoeff
 
-def load_standardize_coeffs(data_dir:str|None=None, prefix="", n_bands=10, n_angles=6, n_idx=4):
+def load_standardize_coeffs(data_dir:str|None=None, prefix="", n_bands=10, n_angles=3, n_idx=4):
     coeffs_info_dict = {"bands_loc":["norm_mean", torch.zeros((n_bands))],
                         "bands_scale":["norm_std", torch.ones((n_bands))],
                         "idx_loc":["idx_loc", torch.zeros((n_idx))],

@@ -12,6 +12,7 @@ from rasterio.coords import BoundingBox
 import datetime
 from prosailvae.spectral_indices import get_spectral_idx
 from metrics.prosail_plots import pair_plot
+from dataset.dataset_utils import min_max_to_loc_scale
 
 BANDS_IDX = {'B02':0, 'B03':1, 'B04':2, 'B05':4, 'B06':5, 'B07':6, 'B08':3, 'B8A':7, 'B11':8, 'B12':9}
 
@@ -296,14 +297,6 @@ def swap_bands(patches):
     idx = torch.LongTensor([ v for _, (_,v) in enumerate(BANDS_IDX.items()) ])
     patches[:,torch.arange(10),...] = patches[:,idx,...]
     return
-
-
-
-def min_max_to_loc_scale(minimum, maximum):
-    loc = (maximum + minimum) / 2
-    scale = (maximum - minimum) / 2
-    return loc, scale
-
 
 def get_bands_norm_factors_from_patches(patches, n_bands=10, mode='mean'):
     cos_angle_min = torch.tensor([0.342108564072183, 0.979624800125421, -1.0000]) # sun zenith, S2 senith, relative azimuth

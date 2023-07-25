@@ -19,7 +19,8 @@ from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, ProsailVa
 from dataset.validate_prosail_weiss import load_weiss_dataset
 from tqdm import trange
 import scipy.stats as stats
-
+from dataset.dataset_utils import min_max_to_loc_scale
+from prosailvae.spectral_indices import get_spectral_idx
 PROSAIL_VARS = [
     "N", "cab", "car", "cbrown", "caw", "cm",
     "lai", "lidfa", "hspot", "psoil", "rsoil"
@@ -362,6 +363,29 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
 def get_refl_normalization(prosail_refl):
     return prosail_refl.mean(0), prosail_refl.std(0)
 
+
+def get_bands_norm_factors(s2_r_samples, mode='mean'):
+    cos_angle_min = torch.tensor([0.342108564072183, 0.979624800125421, -1.0000]) # sun zenith, S2 senith, relative azimuth
+    cos_angle_max = torch.tensor([0.9274847491748729, 1.0000, 1.0000])
+    with torch.no_grad():       
+        spectral_idx = get_spectral_idx(s2_r_samples, bands_dim=1).reshape(4, -1)
+        if mode=='mean':
+            norm_mean = s2_r_samples.mean(1)
+            norm_std = s2_r_samples.std(1)
+            idx_norm_mean = spectral_idx.mean(1)
+            idx_norm_std = spectral_idx.std(1)
+            
+        elif mode=='quantile':
+            max_samples=int(1e7)
+            norm_mean = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.5), dim=1)
+            norm_std = torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(s2_r_samples[:, :max_samples], q=torch.tensor(0.05), dim=1)
+            idx_norm_mean = torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.5), dim=1)
+            idx_norm_std = torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.95), dim=1) - torch.quantile(spectral_idx[:, :max_samples], q=torch.tensor(0.05), dim=1)
+
+        cos_angles_loc, cos_angles_scale = min_max_to_loc_scale(cos_angle_min, cos_angle_max)
+
+    return norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_norm_mean, idx_norm_std
+
 def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False, lai_corr=True):
 
     psimulator = ProsailSimulator()
@@ -376,15 +400,18 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
                                                             n_samples_per_batch=1024,
                                                             uniform_mode=uniform_mode,
                                                             lai_corr=lai_corr)
-    norm_mean, norm_std = get_refl_normalization(prosail_s2_sim)
+    (norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_loc, 
+     idx_scale) = get_bands_norm_factors(torch.from_numpy(prosail_s2_sim).float().transpose(1,0), mode='quantile')
     torch.save(torch.from_numpy(prosail_vars),
                data_dir + data_file_prefix + "prosail_sim_vars.pt")
-    
     torch.save(torch.from_numpy(prosail_s2_sim),
                data_dir + data_file_prefix + "prosail_s2_sim_refl.pt")
-    torch.save(torch.from_numpy(norm_mean), parser.data_dir + data_file_prefix + "norm_mean.pt")
-    torch.save(torch.from_numpy(norm_std), parser.data_dir + data_file_prefix + "norm_std.pt")
-
+    torch.save(norm_mean, os.path.join(data_dir, f"{data_file_prefix}norm_mean.pt"))
+    torch.save(norm_std, os.path.join(data_dir, f"{data_file_prefix}norm_std.pt"))
+    torch.save(cos_angles_loc, os.path.join(data_dir, f"{data_file_prefix}angles_loc.pt"))
+    torch.save(cos_angles_scale, os.path.join(data_dir, f"{data_file_prefix}angles_scale.pt"))
+    torch.save(idx_loc, os.path.join(data_dir, f"{data_file_prefix}idx_loc.pt"))
+    torch.save(idx_scale, os.path.join(data_dir, f"{data_file_prefix}idx_scale.pt"))
 
 def save_weiss_dataset(data_dir, rsr_dir, noise, lai_corr=True):
 

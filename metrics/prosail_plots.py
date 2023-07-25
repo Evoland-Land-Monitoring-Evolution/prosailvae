@@ -966,7 +966,7 @@ def plot_patch_pairs(s2_r_pred, s2_r_ref, idx=0):
 def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     fig, ax = plt.subplots()
     lai_i = lais.squeeze()
-    m, b, r2, rmse = regression_metrics(lai_i.numpy() - lai_pred.numpy())
+    m, b, r2, rmse = regression_metrics(lai_i.numpy(), lai_pred.numpy())
     if time_delta is not None:
         sc = ax.scatter(lai_i, lai_pred, c=time_delta.abs(), s=5)
         cbar = plt.colorbar(sc)

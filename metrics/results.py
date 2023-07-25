@@ -137,7 +137,7 @@ def save_validation_results(model, res_dir,
      ) = get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
                                       save_reconstruction=save_reconstruction, get_all_belsar=True)
-    fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(3, 2*10))
+    fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(5, 2*10))
     for i in range(0,10):
         site = "W" + str(i+1)
         fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], label="PROSAIL-VAE", use_ref_metrics=True)
@@ -162,7 +162,7 @@ def save_validation_results(model, res_dir,
                               error_y="Predicted LAI std", hue_perfs=True)
     fig.savefig(os.path.join(res_dir, f"LAI_regression_sites.png"))
     fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Campaign",
-                              legend_col=3, error_x="LAI std", 
+                              legend_col=2, error_x="LAI std", 
                               error_y="Predicted LAI std", hue_perfs=True)
     fig.savefig(os.path.join(res_dir, f"LAI_regression_campaign.png"))
     fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Land cover",

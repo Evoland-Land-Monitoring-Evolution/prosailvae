@@ -86,7 +86,11 @@ def get_prosailvae_train_parser():
     parser.add_argument("-c", dest="config_file",
                         help="name of config json file on config directory.",
                         type=str, default="config.json")
-
+    
+    parser.add_argument("-cd", dest="config_dir",
+                        help="path to config directory",
+                        type=str, default="")
+    
     parser.add_argument("-x", dest="n_xp",
                         help="Number of experience (to use in case of kfold)",
                         type=int, default=1)
@@ -335,7 +339,8 @@ def setup_training():
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
               "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
               "-a", "False",
-              "-p", "False"]
+              "-p", "False",
+              "-cd", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config/']
         parser = get_prosailvae_train_parser().parse_args(args)
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
@@ -352,7 +357,7 @@ def setup_training():
     job_array_dir = None
     if xp_array:
         job_array_dir = os.path.join(parser.root_results_dir, os.pardir)
-    config_dir = os.path.join(root_dir,"config/")
+    config_dir = parser.config_dir
     params = load_params(config_dir, config_file=parser.config_file, parser=parser)
     if "data_dir" not in params.keys():
         data_dir = os.path.join(root_dir,"data/")

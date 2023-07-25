@@ -202,7 +202,19 @@ def save_validation_results(model, res_dir,
     for key, pcip_df in global_picp_dict.items():
         pcip_df.to_csv(os.path.join(res_dir, f"{key}_validation_picp.csv"))
     
-
+def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10):
+    with torch.no_grad():
+        all_rec_var = []
+        for i, batch in enumerate(loader):
+            if i==max_batch:
+                break
+            s2_r = batch[0].to(PROSAIL_VAE.device)
+            s2_a = batch[1].to(PROSAIL_VAE.device)
+            _, _, _, rec = PROSAIL_VAE.forward(s2_r, n_samples=n_samples, angles=s2_a)
+            rec_var = rec.var(sample_dim)
+            rec_var = rec_var.transpose(bands_dim,0).reshape(n_bands,-1)
+            all_rec_var.append(rec_var.cpu())
+    return torch.cat(all_rec_var, 1)
 
 def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
@@ -239,11 +251,23 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     # pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     if not plot_results:
         return
+
+    
     
     plot_dir = res_dir + "/plots/"
     if not os.path.isdir(plot_dir):
         os.makedirs(plot_dir)
-    
+
+    rec_var = get_rec_var(PROSAIL_VAE, loader, max_batch=10, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10)
+    n_col = 5
+    fig, ax = plt.subplots(10//n_col, n_col, dpi=150, sharex=True, sharey=True, figsize=(5*n_col, 2*(10//n_col)))
+    for i in range(10):
+        col = i%n_col
+        row = i//n_col
+        ax[row, col].hist(torch.log10(rec_var)[i,:], bins=100, density=True)
+        ax[row, col].set_title(BANDS[i])
+        ax[-1, col].set_xlabel("log10 rec. variance")
+    fig.savefig(os.path.join(plot_dir, "rec_var.png"))
     # rm4veg_validation_plot_dir = plot_dir + "/frm4veg_validation/"
     # if not os.path.isdir(rm4veg_validation_plot_dir):
     #     os.makedirs(rm4veg_validation_plot_dir)

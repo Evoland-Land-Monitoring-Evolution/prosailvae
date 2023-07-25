@@ -43,20 +43,26 @@ def select_rec_loss_fn(loss_type):
         raise NotImplementedError("Please choose between 'diag_nll' (diagonal covariance matrix) and 'full_nll' (full covariance matrix) for nll loss option.")
     return rec_loss_fn
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device='cpu', sum_dim=1, feature_indexes:None|list[int]=None):
+def gaussian_nll(x:torch.Tensor, mu:torch.Tensor, sigma2:torch.Tensor, eps:float=1e-6, 
+                 device:str='cpu', sum_dim:int=1, feature_indexes:None|list[int]=None):
     """
     Gaussian Negative Log-Likelihood
     """    
     eps = torch.tensor(eps).to(device)
     if feature_indexes is None:
-        return ((torch.square(x - mu) / torch.max(sigma, eps)) +
-                torch.log(torch.max(sigma, eps))).sum(sum_dim)
+        return ((torch.square(x - mu) / torch.max(sigma2, eps)) +
+                torch.log(torch.max(sigma2, eps))).sum(sum_dim)
     else:
         loss = []
         for idx in feature_indexes:
-            loss.append(((torch.square(x.select(dim=sum_dim,index=idx) 
-                                   - mu.select(dim=sum_dim,index=idx)) / torch.max(sigma.select(dim=sum_dim,index=idx), eps)) +
-                        torch.log(torch.max(sigma.select(dim=sum_dim, index=idx), eps))).unsqueeze(sum_dim))
+            if len(sigma2.size()) != 0:
+                idx_sigma2 = torch.max(sigma2.select(dim=sum_dim,index=idx), eps)
+            else:
+                idx_sigma2 = sigma2
+            idx_loss = ((torch.square(x.select(dim=sum_dim,index=idx) 
+                                      - mu.select(dim=sum_dim,index=idx)) / idx_sigma2) +
+                        torch.log(idx_sigma2)).unsqueeze(sum_dim)
+            loss.append(idx_loss)
         loss = torch.cat(loss, dim=sum_dim).sum(sum_dim)
         return loss
 

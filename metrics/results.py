@@ -140,8 +140,8 @@ def save_validation_results(model, res_dir,
         fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i])
     fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Wheat.png"))
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(3, 2*10))
-    for i in range(1,11):
-        site = "M" + str(i)
+    for i in range(0,10):
+        site = "M" + str(i+1)
         fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i])
     fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Maize.png"))
 

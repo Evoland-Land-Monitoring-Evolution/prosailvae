@@ -273,6 +273,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         ax[row, col].set_title(BANDS[i])
         ax[-1, col].set_xlabel("log10 rec. variance")
     fig.savefig(os.path.join(plot_dir, "rec_var.png"))
+    pair_plot(torch.log10(rec_var).squeeze().permute(1,0), tensor_2=None, features=BANDS,
+              res_dir=plot_dir, filename='rec_var_pair_plot.png')
     # rm4veg_validation_plot_dir = plot_dir + "/frm4veg_validation/"
     # if not os.path.isdir(rm4veg_validation_plot_dir):
     #     os.makedirs(rm4veg_validation_plot_dir)

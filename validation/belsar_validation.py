@@ -52,7 +52,8 @@ ALL_BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2A_20180727_both_BelSAR_agriculture_database",     # OK
                     "2B_20180804_both_BelSAR_agriculture_database"] 
 
-all_filename_dict = {"2018-05-08": "2A_20180508_both_BelSAR_agriculture_database",     # OK
+all_filename_dict = {""
+                    "2018-05-08": "2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2018-05-18": "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
                     "2018-05-26": "2B_20180526_both_BelSAR_agriculture_database",
                     "2018-05-28": "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
@@ -510,12 +511,28 @@ def main():
     #                     "SENTINEL2A_20180627-104023-457_L2A_T31UFS_D_V2-2.zip",
     #                     "SENTINEL2B_20180715-105300-591_L2A_T31UFS_D_V1-8.zip",
     #                     "SENTINEL2A_20180727-104023-458_L2A_T31UFS_D_V2-2.zip"]
-    list_s2_products = ["SENTINEL2B_20180526-105635-059_L2A_T31UFS_D.zip",
-                        "SENTINEL2A_20180521-105416-754_L2A_T31UFS_D.zip",
-                        "SENTINEL2A_20180630-105440-000_L2A_T31UFS_D.zip",
-                        "SENTINEL2A_20180528-104613-414_L2A_T31UFS_D.zip",
-                        "SENTINEL2B_20180725-105415-357_L2A_T31UFS_D.zip",
-                        "SENTINEL2B_20180702-104021-464_L2A_T31UFS_D.zip"]
+    # list_s2_products = ["SENTINEL2B_20180526-105635-059_L2A_T31UFS_D.zip",
+    #                     "SENTINEL2A_20180521-105416-754_L2A_T31UFS_D.zip",
+    #                     "SENTINEL2A_20180630-105440-000_L2A_T31UFS_D.zip",
+    #                     "SENTINEL2A_20180528-104613-414_L2A_T31UFS_D.zip",
+    #                     "SENTINEL2B_20180725-105415-357_L2A_T31UFS_D.zip",
+    #                     "SENTINEL2B_20180702-104021-464_L2A_T31UFS_D.zip"]
+    
+    list_s2_products = ["SENTINEL2B_20180225-105018-458_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180418-104512-083_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180421-105629-233_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20180506-105423-569_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20180801-104018-457_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180806-104340-891_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20180930-104411-965_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20180918-105420-575_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20181010-104018-457_L2A_T31UFS_D.zip",
+                        "SENTINEL2B_20181013-105334-676_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20181117-105645-408_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20181005-104019-463_L2A_T31UFS_D.zip",
+                        "SENTINEL2A_20181104-104426-945_L2A_T31UFS_D.zip"]
+
+
     for s2_product in list_s2_products:
         if s2_product[-4:]=='.zip':
             with zipfile.ZipFile(os.path.join(parser.data_dir, s2_product), 'r') as zip_ref:

@@ -1057,7 +1057,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     cyclical_piw = n_sigma * cyclical_lai_sigma
     cyclical_mpiw = torch.mean(cyclical_piw)
     cyclical_pic = torch.logical_and(cyclical_ref_lai < cyclical_lai + n_sigma / 2 * cyclical_lai_sigma, 
-                         cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma).astype(int)
+                         cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma).int()
     cyclical_picp = torch.mean(cyclical_pic)
     # fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
     #                                       snap_patch_pred, variable='lai', legend=True)
@@ -1066,6 +1066,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig, ax = regression_plot(pd.DataFrame({"Simulated LAI":cyclical_ref_lai.detach().cpu().numpy(), 
                                             "Predicted LAI":cyclical_lai.detach().cpu().numpy()}), 
                               "Simulated LAI", "Predicted LAI", hue=None)
+    ax.set_title(f"PICP: {cyclical_picp}")
     fig.savefig(f"{plot_dir}/cyclical_lai_scatter.png")
     pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
               res_dir=plot_dir, filename='sim_prosail_pair_plot.png')

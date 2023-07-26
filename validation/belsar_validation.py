@@ -38,7 +38,12 @@ BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2B_20180804_both_BelSAR_agriculture_database"]     # OK
 
 
-ALL_BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
+ALL_BELSAR_FILENAMES = [
+                        "2B_20180225_both_BelSAR_agriculture_database",
+                        "2A_20180418_both_BelSAR_agriculture_database",
+                        "2A_20180421_both_BelSAR_agriculture_database",
+                        "2B_20180506_both_BelSAR_agriculture_database",
+                        "2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
                     "2B_20180526_both_BelSAR_agriculture_database",
                     "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
@@ -50,9 +55,24 @@ ALL_BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
                     "2B_20180725_both_BelSAR_agriculture_database",
                     "2A_20180727_both_BelSAR_agriculture_database",     # OK
-                    "2B_20180804_both_BelSAR_agriculture_database"] 
+                    "2B_20180801_both_BelSAR_agriculture_database", #??
+                    "2B_20180804_both_BelSAR_agriculture_database",
+                    "2A_20180806_both_BelSAR_agriculture_database",
+                    "2B_20180930_both_BelSAR_agriculture_database",
+                    "2A_20180918_both_BelSAR_agriculture_database",
+                    "2B_20181010_both_BelSAR_agriculture_database",
+                    "2B_20181013_both_BelSAR_agriculture_database",
+                    "2A_20181117_both_BelSAR_agriculture_database",
+                    "2A_20181005_both_BelSAR_agriculture_database",
+                    "2A_20181104_both_BelSAR_agriculture_database"] 
+                    
+                        
+                                   
 
-all_filename_dict = {""
+all_filename_dict = {"2018-02-25":"2B_20180225_both_BelSAR_agriculture_database",
+                    "2018-04-18":"2A_20180418_both_BelSAR_agriculture_database",
+                    "2018-04-21":"2A_20180421_both_BelSAR_agriculture_database",
+                    "2018-05-06":"2B_20180506_both_BelSAR_agriculture_database",
                     "2018-05-08": "2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2018-05-18": "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
                     "2018-05-26": "2B_20180526_both_BelSAR_agriculture_database",
@@ -65,7 +85,16 @@ all_filename_dict = {""
                     "2018-07-22": "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
                     "2018-07-25": "2B_20180725_both_BelSAR_agriculture_database",
                     "2018-07-27": "2A_20180727_both_BelSAR_agriculture_database",     # OK
-                    "2018-08-04": "2B_20180804_both_BelSAR_agriculture_database"}  
+                    "2018-08-01":"2B_20180801_both_BelSAR_agriculture_database", 
+                    "2018-08-04": "2B_20180804_both_BelSAR_agriculture_database",
+                    "2018-08-06": "2A_20180806_both_BelSAR_agriculture_database",
+                    "2018-09-30": "2B_20180930_both_BelSAR_agriculture_database",
+                    "2018-09-18": "2A_20180918_both_BelSAR_agriculture_database",
+                    "2018-10-10": "2B_20181010_both_BelSAR_agriculture_database",
+                    "2018-10-13": "2B_20181013_both_BelSAR_agriculture_database",
+                    "2018-11-17": "2A_20181117_both_BelSAR_agriculture_database",
+                    "2018-10-05": "2A_20181005_both_BelSAR_agriculture_database",
+                    "2018-11-04": "2A_20181104_both_BelSAR_agriculture_database"}  
 
 
 

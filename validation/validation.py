@@ -145,13 +145,13 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                          barrax_2021_results[f"{frm4veg_ccc}_std"].reshape(-1),
                          wytham_results[f"{frm4veg_ccc}_std"].reshape(-1)]
     
-    site_list = (  ['Spain'] * len(ref_lai_std_list[1]) 
-                 + ['Spain'] * len(ref_lai_std_list[2]) 
-                 + ['England'] * len(ref_lai_std_list[3]))
+    site_list = (  ['Spain'] * len(ref_lai_std_list[0]) 
+                 + ['Spain'] * len(ref_lai_std_list[1]) 
+                 + ['England'] * len(ref_lai_std_list[2]))
     campaign_list = (
-                   ['FRM4VEG (Barrax - 2018)'] * len(ref_lai_std_list[1]) 
-                 + ['FRM4VEG (Barrax - 2021)'] * len(ref_lai_std_list[2]) 
-                 + ['FRM4VEG (Wytham - 2018)'] * len(ref_lai_std_list[3]))    
+                   ['FRM4VEG (Barrax - 2018)'] * len(ref_lai_std_list[0]) 
+                 + ['FRM4VEG (Barrax - 2021)'] * len(ref_lai_std_list[1]) 
+                 + ['FRM4VEG (Wytham - 2018)'] * len(ref_lai_std_list[2]))    
     land_cover_list = [
                        barrax_results[f'{frm4veg_ccc}_land_cover'].reshape(-1),
                        barrax_2021_results[f'{frm4veg_ccc}_land_cover'].reshape(-1),

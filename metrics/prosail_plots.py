@@ -1057,7 +1057,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     cyclical_piw = n_sigma * cyclical_lai_sigma
     cyclical_mpiw = torch.mean(cyclical_piw)
     cyclical_pic = torch.logical_and(cyclical_ref_lai < cyclical_lai + n_sigma / 2 * cyclical_lai_sigma, 
-                         cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma).int()
+                         cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma).int().float()
     cyclical_picp = torch.mean(cyclical_pic)
     # fig, ax = lai_validation_pred_vs_snap(all_lai, all_weiss_lai, gdf_lai, model_patch_pred, 
     #                                       snap_patch_pred, variable='lai', legend=True)

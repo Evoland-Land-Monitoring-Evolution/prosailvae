@@ -597,7 +597,7 @@ def main():
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs)
-        if not socket.gethostname()=='CELL200973':
+        if True:#not socket.gethostname()=='CELL200973':
             validation_dir = os.path.join(res_dir, "validation")
             os.makedirs(validation_dir)
             save_validation_results(prosail_vae, validation_dir,

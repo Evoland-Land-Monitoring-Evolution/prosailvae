@@ -1075,6 +1075,12 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
     ax.set_ylabel('LAI latent sigma')
     fig.savefig(f"{plot_dir}/lai_err_vs_sigma.png")
+    fig, ax = plt.subplots()
+
+    ax.scatter(all_lai, all_sigma[6,:], s=0.5)
+    ax.set_xlabel('Predicted LAI')
+    ax.set_ylabel('LAI std')
+    fig.savefig(f"{plot_dir}/lai_vs_lai_std.png")
 
     fig, ax = plt.subplots()
     ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)

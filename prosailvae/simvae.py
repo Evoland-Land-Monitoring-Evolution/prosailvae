@@ -117,12 +117,14 @@ class SimVAE(nn.Module):
         y, angles = self.encoder.encode(s2_r, s2_a)
         return y, angles
 
-    def encode2lat_params(self, s2_r, s2_a):
+    def encode2lat_params(self, s2_r, s2_a, deterministic=False):
         """
         Uses encoder to encode data into latent distribution parameters
         """
         y, _ = self.encode(s2_r, s2_a)
         dist_params = self.lat_space.get_params_from_encoder(y)
+        if deterministic:
+            dist_params[...,1] = 0.0
         return dist_params
 
     def sample_latent_from_params(self, dist_params, n_samples=1, deterministic=False):

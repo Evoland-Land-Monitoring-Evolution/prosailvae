@@ -19,9 +19,9 @@ from utils.utils import load_dict, save_dict
 from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
-from validation.validation import (get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, 
+from validation.validation import (get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_frm4veg_ccc_results, 
                                    get_validation_global_metrics, get_all_campaign_lai_results_SNAP)
-from article_plots.belsar_plots import get_belsar_sites_time_series
+from article_plots.belsar_plots import get_belsar_sites_time_series, get_belsar_lai_vs_hspot
 from datetime import datetime 
 import shutil
 from time import sleep
@@ -152,55 +152,81 @@ def save_validation_results(model, res_dir,
         fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], label="SNAP")
     axs[-1].set_ylabel("Date")
     fig.savefig(os.path.join(res_dir, f"belSAR_LAI_time_series_Maize.png"))
+    fig, ax = get_belsar_lai_vs_hspot(all_belsar, belsar_data_dir, sites=[f"W{i+1}" for i in range(10)], fig=None, ax=None, label="")
+    fig.savefig(os.path.join(res_dir, f"belSAR_LAI_vs_hspot_Wheat.png"))
+    fig, ax = get_belsar_lai_vs_hspot(all_belsar, belsar_data_dir, sites=[f"M{i+1}" for i in range(10)], fig=None, ax=None, label="")
+    fig.savefig(os.path.join(res_dir, f"belSAR_LAI_vs_hspot_Maize.png"))
 
-    df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
-                                                  frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
-    df_results['LAI error'] = df_results['Predicted LAI'] - df_results['LAI']
-    df_results.to_csv(os.path.join(res_dir, f"all_campaigns_{mode}_{method}.csv"))
-    fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Site",
-                              legend_col=3, error_x="LAI std", 
-                              error_y="Predicted LAI std", hue_perfs=True)
-    fig.savefig(os.path.join(res_dir, f"LAI_regression_sites.png"))
-    fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Campaign",
-                              legend_col=2, error_x="LAI std", 
-                              error_y="Predicted LAI std", hue_perfs=True)
-    fig.savefig(os.path.join(res_dir, f"LAI_regression_campaign.png"))
-    fig, ax = regression_plot(df_results, x="LAI", y="Predicted LAI", fig=None, ax=None, hue="Land cover",
-                              legend_col=3, error_x="LAI std", 
-                              error_y="Predicted LAI std", hue_perfs=False)
-    fig.savefig(os.path.join(res_dir, f"LAI_regression_land_cover.png"))
+    results = {}
+    results["LAI"] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
+                                                      frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
+    results["CCC"] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
+                                             frm4veg_ccc="ccc", get_reconstruction_error=save_reconstruction)
+    for variable in ["LAI", "CCC"]
+        results[variable][f'{variable} error'] = results[variable][f'Predicted {variable}'] - results[variable][f'{variable}']
+        results[variable].to_csv(os.path.join(res_dir, f"all_campaigns_{variable}_{mode}_{method}.csv"))
+
+        fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Site",
+                                legend_col=3, error_x=f"{variable} std", 
+                                error_y=f"Predicted {variable} std", hue_perfs=True)
+        fig.savefig(os.path.join(res_dir, f"{variable}_regression_sites.png"))
+        
+        fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Campaign",
+                                legend_col=2, error_x=f"{variable} std", 
+                                error_y=f"Predicted {variable} std", hue_perfs=True)
+        fig.savefig(os.path.join(res_dir, f"{variable}_regression_campaign.png"))
+        fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Land cover",
+                                legend_col=3, error_x=f"{variable} std", 
+                                error_y=f"Predicted {variable} std", hue_perfs=False)
+        fig.savefig(os.path.join(res_dir, f"{variable}_regression_land_cover.png"))
 
 
-    fig, ax = plt.subplots(dpi=150)
-    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
-    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error.png"))
+        fig, ax = plt.subplots(dpi=150)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Site", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error.png"))
 
-    fig, ax = plt.subplots(dpi=150)
-    sns.scatterplot(data = df_results, x="LAI error", y="Predicted LAI std",  hue="Campaign", ax=ax)
-    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_sigma_campaign.png"))
+        fig, ax = plt.subplots(dpi=150)
+        sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot.png"))
 
-    fig, ax = plt.subplots(dpi=150)
-    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Land cover", ax=ax)
-    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_land_cover.png"))
+        fig, ax = plt.subplots(dpi=150)
+        sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", hue="Campaign" ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot_campaign.png"))
 
-    fig, ax = plt.subplots(dpi=150)
-    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Time delta", ax=ax)
-    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_dt.png"))
+        fig, ax = plt.subplots(dpi=150)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Predicted {variable} std",  hue="Campaign", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_sigma_campaign.png"))
 
-    fig, ax = plt.subplots(dpi=150)
-    sns.scatterplot(data = df_results, x="LAI error", y="Reconstruction error",  hue="Site", ax=ax)
-    fig.savefig(os.path.join(res_dir, f"LAI_error_vs_reconstruction_error_site.png"))
+        fig, ax = plt.subplots(dpi=150)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Land cover", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error_land_cover.png"))
 
-    fig, ax = regression_plot(df_results, x="LAI error", y="Reconstruction error", fig=None, ax=None, hue="Site",
-                              legend_col=3, error_x=None, 
-                              error_y=None, hue_perfs=True)
-    global_rmse_dict, global_picp_dict = get_validation_global_metrics(df_results, 
-                                                                       decompose_along_columns = ["Site", "Land cover", "Campaign"], 
-                                                                       n_sigma=3)
-    for key, rmse_df in global_rmse_dict.items():
-        rmse_df.to_csv(os.path.join(res_dir, f"{key}_validation_rmse.csv"))
-    for key, pcip_df in global_picp_dict.items():
-        pcip_df.to_csv(os.path.join(res_dir, f"{key}_validation_picp.csv"))
+        fig, ax = plt.subplots(dpi=150)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Time delta", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error_dt.png"))
+
+        fig, ax = plt.subplots(dpi=150)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Site", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error_site.png"))
+        fig, ax = plt.subplots(dpi=150)
+
+        sns.scatterplot(data = results[variable], x=f"{variable}", y=f"{variable} error", hue="Campaign", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_{variable}_campaign.png"))
+
+        sns.scatterplot(data = results[variable], x=f"{variable} std", y=f"Predicted {variable} std", hue="Campaign", ax=ax)
+        fig.savefig(os.path.join(res_dir, f"{variable}_std_vs_{variable}_pred_std_campaign.png"))
+        fig, ax = regression_plot(results[variable], x=f"{variable} error", 
+                                  y="Reconstruction error", fig=None, ax=None, hue="Campaign",
+                                legend_col=2, error_x=None, 
+                                error_y=None, hue_perfs=True)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error_Campaign.png"))
+        global_rmse_dict, global_picp_dict = get_validation_global_metrics(results[variable], 
+                                                                        decompose_along_columns = ["Site", "Land cover", "Campaign"], 
+                                                                        n_sigma=3)
+        for key, rmse_df in global_rmse_dict.items():
+            rmse_df.to_csv(os.path.join(res_dir, f"{key}_{variable}_validation_rmse.csv"))
+        for key, pcip_df in global_picp_dict.items():
+            pcip_df.to_csv(os.path.join(res_dir, f"{key}_{variable}_validation_picp.csv"))
     
 def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10):
     with torch.no_grad():

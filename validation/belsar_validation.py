@@ -66,7 +66,24 @@ ALL_BELSAR_FILENAMES = [
                     "2A_20181005_both_BelSAR_agriculture_database",
                     "2A_20181104_both_BelSAR_agriculture_database"] 
                     
-                        
+ALL_BELSAR_SUMMER_FILENAMES = [
+                        "2B_20180506_both_BelSAR_agriculture_database",
+                        "2A_20180508_both_BelSAR_agriculture_database",     # OK
+                    "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
+                    "2B_20180526_both_BelSAR_agriculture_database",
+                    "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
+                    "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés  => A retirer !  
+                    "2A_20180627_both_BelSAR_agriculture_database",     # OK
+                    "2A_20180630_both_BelSAR_agriculture_database",
+                    "2B_20180702_both_BelSAR_agriculture_database",
+                    "2B_20180715_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
+                    "2B_20180725_both_BelSAR_agriculture_database",
+                    "2A_20180727_both_BelSAR_agriculture_database",     # OK
+                    "2B_20180801_both_BelSAR_agriculture_database", #??
+                    "2B_20180804_both_BelSAR_agriculture_database",
+                    "2A_20180806_both_BelSAR_agriculture_database",
+                    "2B_20180930_both_BelSAR_agriculture_database"]                         
                                    
 
 all_filename_dict = {"2018-02-25":"2B_20180225_both_BelSAR_agriculture_database",
@@ -85,7 +102,7 @@ all_filename_dict = {"2018-02-25":"2B_20180225_both_BelSAR_agriculture_database"
                     "2018-07-22": "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
                     "2018-07-25": "2B_20180725_both_BelSAR_agriculture_database",
                     "2018-07-27": "2A_20180727_both_BelSAR_agriculture_database",     # OK
-                    "2018-08-01":"2B_20180801_both_BelSAR_agriculture_database", 
+                    "2018-08-01": "2B_20180801_both_BelSAR_agriculture_database", 
                     "2018-08-04": "2B_20180804_both_BelSAR_agriculture_database",
                     "2018-08-06": "2A_20180806_both_BelSAR_agriculture_database",
                     "2018-09-30": "2B_20180930_both_BelSAR_agriculture_database",
@@ -96,6 +113,26 @@ all_filename_dict = {"2018-02-25":"2B_20180225_both_BelSAR_agriculture_database"
                     "2018-10-05": "2A_20181005_both_BelSAR_agriculture_database",
                     "2018-11-04": "2A_20181104_both_BelSAR_agriculture_database"}  
 
+
+all_filename_summer_dict = {
+                    "2018-05-06":"2B_20180506_both_BelSAR_agriculture_database",
+                    "2018-05-08": "2A_20180508_both_BelSAR_agriculture_database",     # OK
+                    "2018-05-18": "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
+                    "2018-05-26": "2B_20180526_both_BelSAR_agriculture_database",
+                    "2018-05-28": "2A_20180528_both_BelSAR_agriculture_database",     # Nuages sur l'image => A retirer !
+                    "2018-06-20": "2A_20180620_both_BelSAR_agriculture_database",     # Nuageuse + nuages non détectés  => A retirer !  
+                    "2018-06-27": "2A_20180627_both_BelSAR_agriculture_database",     # OK
+                    "2018-06-30": "2A_20180630_both_BelSAR_agriculture_database",
+                    "2018-07-02": "2B_20180702_both_BelSAR_agriculture_database",
+                    "2018-07-15": "2B_20180715_both_BelSAR_agriculture_database",     # OK
+                    "2018-07-22": "2B_20180722_both_BelSAR_agriculture_database",     # Nuageuse Mais
+                    "2018-07-25": "2B_20180725_both_BelSAR_agriculture_database",
+                    "2018-07-27": "2A_20180727_both_BelSAR_agriculture_database",     # OK
+                    "2018-08-01": "2B_20180801_both_BelSAR_agriculture_database", 
+                    "2018-08-04": "2B_20180804_both_BelSAR_agriculture_database",
+                    "2018-08-06": "2A_20180806_both_BelSAR_agriculture_database",
+                    "2018-09-30": "2B_20180930_both_BelSAR_agriculture_database",
+                    }  
 
 
 def plot_belsar_site(data_dir, filename):
@@ -307,7 +344,7 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
     """
     Get metrics df for single image prediction for all sites
     """
-    pred_array_idx = {"lai":{"mean":0, "sigma":2}, "cm":{"mean":1, "sigma":3}}
+    pred_array_idx = {"lai":{"mean":0, "sigma":3}, "cm":{"mean":1, "sigma":4}, "hspot":{"mean":2, "sigma":5}}
     metrics = pd.DataFrame()
     for i in range(len(sites_geometry)):
         line = sites_geometry.iloc[i]
@@ -347,13 +384,17 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
                 # N = np.sum(np.logical_not(np.isnan(sigma_pred)).astype(int))
                 # var_sum = np.sum(sigma_pred[np.logical_not(np.isnan(sigma_pred))] ** 2)
                 # d[f"{variable}_mean_std"] = np.sqrt(var_sum) / N
-                d[f"{variable}_sigma_mean"] = np.nanmean(masked_array[pred_array_idx[variable]['sigma'],...])
-                d[f"{variable}_sigma_std"] = np.nanstd(masked_array[pred_array_idx[variable]['sigma'],...])
+                d[f"{variable}_sigma_mean"] = np.nanmean(sigma_pred)
+                d[f"{variable}_sigma_std"] = np.nanstd(sigma_pred)
             if get_error:
                 if not np.isnan(masked_err).all():
                     d[f"rec_err_mean"] = np.nanmean(masked_err)
                     d[f"rec_err_std"] = np.nanstd(masked_err)
-
+        if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():
+            d[f"hspot_mean"] = np.nanmean(masked_array[pred_array_idx["hspot"]['mean'],...])
+            d[f"hspot_std"] = np.nanstd(masked_array[pred_array_idx["hspot"]['mean'],...])
+            d[f"hspot_sigma_mean"] = np.nanmean(masked_array[pred_array_idx["hspot"]['sigma'],...])
+            d[f"hspot_sigma_std"] = np.nanstd(masked_array[pred_array_idx["hspot"]['sigma'],...])
         metrics = pd.concat((metrics, pd.DataFrame(d, index=[0])))
     return metrics.reset_index(drop=True)
 
@@ -451,8 +492,10 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
         # cm_validation_pred = sim_image[5,...].unsqueeze(0)
         tensor = torch.cat((sim_image[6,...].unsqueeze(0),
                             sim_image[5,...].unsqueeze(0),
+                            sim_image[8,...].unsqueeze(0),
                             sigma_image[6,...].unsqueeze(0), 
-                            sigma_image[5,...].unsqueeze(0)), 0)
+                            sigma_image[5,...].unsqueeze(0),
+                            sigma_image[8,...].unsqueeze(0)), 0)
         if save_reconstruction:
             err_tensor = (rec - s2_r.squeeze(0)).abs().mean(0, keepdim=True)
             tensor = torch.cat((tensor, err_tensor), 0)
@@ -486,7 +529,7 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
         s2_data = torch.concat((s2_r, s2_a_permutated), 0)
         with torch.no_grad():
             lai_pred = model_lai.forward(s2_data, spatial_mode=True)
-        dummy_tensor = 0 * NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
+        dummy_tensor = 0 * NO_DATA * torch.ones(5, lai_pred.size(1), lai_pred.size(2))
         tensor = torch.cat((lai_pred, dummy_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
         resolution = 10

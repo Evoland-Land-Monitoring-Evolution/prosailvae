@@ -22,7 +22,7 @@ from validation.frm4veg_validation import (load_frm4veg_data, interpolate_frm4ve
                                            BARRAX_2021_FILENAME, get_frm4veg_results_at_date)
 from tqdm import trange, tqdm
 from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
-from validation.validation import get_belsar_x_frm4veg_lai_results, get_validation_global_metrics
+from validation.validation import get_belsar_x_frm4veg_lai_results, get_validation_global_metrics, get_frm4veg_ccc_results
 
 def get_parser():
     """
@@ -569,6 +569,21 @@ def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barr
                                                                 frm4veg_lai=frm4veg_lai, 
                                                                 get_reconstruction_error=get_reconstruction_error)
     results["SNAP"] = get_belsar_x_frm4veg_lai_results(belsar_results["SNAP"],  barrax_results["SNAP"], 
+                                                       barrax_2021_results["SNAP"], 
+                                                        wytham_results["SNAP"], frm4veg_lai=frm4veg_lai,
+                                                        get_reconstruction_error=False)
+    return results
+
+def get_frm4veg_ccc_validation_results(model_dict, barrax_results, barrax_2021_results, wytham_results,
+                                                frm4veg_lai="lai", get_reconstruction_error=False):
+    results = {}
+    for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
+        results[model_name] = get_frm4veg_ccc_results(barrax_results[model_name], 
+                                                                barrax_2021_results[model_name],
+                                                                wytham_results[model_name],
+                                                                frm4veg_lai=frm4veg_lai, 
+                                                                get_reconstruction_error=get_reconstruction_error)
+    results["SNAP"] = get_frm4veg_ccc_results(barrax_results["SNAP"], 
                                                        barrax_2021_results["SNAP"], 
                                                         wytham_results["SNAP"], frm4veg_lai=frm4veg_lai,
                                                         get_reconstruction_error=False)

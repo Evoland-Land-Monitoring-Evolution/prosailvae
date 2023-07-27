@@ -120,24 +120,79 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                                 })
     return results
 
-def get_validation_global_metrics(df_results, decompose_along_columns = ["Site", "Land cover"], n_sigma=3):
+def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
+                                     frm4veg_ccc="ccc", get_reconstruction_error=False):
+
+    
+    date_list = [barrax_results[f'{frm4veg_ccc}_date'].reshape(-1),
+                 barrax_2021_results[f'{frm4veg_ccc}_date'].reshape(-1),
+                 wytham_results[f"{frm4veg_ccc}_date"].reshape(-1)]
+    
+    ref_ccc = np.concatenate([
+                    barrax_results[f'ref_{frm4veg_ccc}'].reshape(-1),
+                    barrax_2021_results[f'ref_{frm4veg_ccc}'].reshape(-1),
+                    wytham_results[f'ref_{frm4veg_ccc}'].reshape(-1)])
+    
+    ref_lai_std_list = [barrax_results[f'ref_{frm4veg_ccc}_std'].reshape(-1),
+                        barrax_2021_results[f'ref_{frm4veg_ccc}_std'].reshape(-1),
+                        wytham_results[f'ref_{frm4veg_ccc}_std'].reshape(-1)]
+    
+    pred_ccc_list = [barrax_results[frm4veg_ccc].reshape(-1),
+                     barrax_2021_results[frm4veg_ccc].reshape(-1),
+                     wytham_results[frm4veg_ccc].reshape(-1)]
+    
+    pred_ccc_std_list = [barrax_results[f"{frm4veg_ccc}_std"].reshape(-1),
+                         barrax_2021_results[f"{frm4veg_ccc}_std"].reshape(-1),
+                         wytham_results[f"{frm4veg_ccc}_std"].reshape(-1)]
+    
+    site_list = (+ ['Spain'] * len(ref_lai_std_list[1]) 
+                 + ['Spain'] * len(ref_lai_std_list[2]) 
+                 + ['England'] * len(ref_lai_std_list[3]))
+    campaign_list = (
+                 + ['FRM4VEG (Barrax - 2018)'] * len(ref_lai_std_list[1]) 
+                 + ['FRM4VEG (Barrax - 2021)'] * len(ref_lai_std_list[2]) 
+                 + ['FRM4VEG (Wytham - 2018)'] * len(ref_lai_std_list[3]))    
+    land_cover_list = [
+                       barrax_results[f'{frm4veg_ccc}_land_cover'].reshape(-1),
+                       barrax_2021_results[f'{frm4veg_ccc}_land_cover'].reshape(-1),
+                       wytham_results[f'{frm4veg_ccc}_land_cover'].reshape(-1)]
+    if get_reconstruction_error:
+        rec_err = np.concatenate([barrax_results[f'{frm4veg_ccc}_rec_err'].reshape(-1),
+                                    barrax_2021_results[f'{frm4veg_ccc}_rec_err'].reshape(-1),
+                                    wytham_results[f'{frm4veg_ccc}_rec_err'].reshape(-1)])
+    else:
+        rec_err = np.zeros_like(ref_ccc)
+
+    results = pd.DataFrame(data={'CCC':ref_ccc,
+                                'CCC std':np.concatenate(ref_ccc_std_list),
+                                'Predicted CCC': np.concatenate(pred_ccc_list),
+                                'Predicted CCC std':np.concatenate(pred_ccc_std_list),
+                                "Site": np.array(site_list),
+                                "Land cover": np.concatenate(land_cover_list),
+                                "Reconstruction error": rec_err,
+                                "Time delta": np.concatenate(date_list),
+                                "Campaign": np.array(campaign_list),
+                                })
+    return results
+
+def get_validation_global_metrics(df_results, decompose_along_columns = ["Site", "Land cover"], n_sigma=3, variable="LAI"):
     global_rmse_dict = {}
     global_picp_dict = {}
     for column in decompose_along_columns:
         rmse = {}
         for _, element in enumerate(pd.unique(df_results[column])):
             results = df_results[df_results[column]==element]
-            rmse[element] = np.sqrt((results['Predicted LAI'] - results['LAI']).pow(2).mean())
-        rmse["All"] = np.sqrt((df_results['Predicted LAI'] - df_results['LAI']).pow(2).mean())
+            rmse[element] = np.sqrt((results[f'Predicted {variable}'] - results[variable]).pow(2).mean())
+        rmse["All"] = np.sqrt((df_results[f'Predicted {variable}'] - df_results[variable]).pow(2).mean())
         global_rmse_dict[column] = pd.DataFrame(data=rmse, index=[0])
     if n_sigma>0:
         for column in decompose_along_columns:
             picp = {}
             for _, element in enumerate(pd.unique(df_results[column])):
                 results = df_results[df_results[column]==element]
-                picp[element] = np.logical_and(results['LAI'] < results['Predicted LAI'] + n_sigma/2 * results['Predicted LAI std'],
-                                               results['LAI'] > results['Predicted LAI'] - n_sigma/2 * results['Predicted LAI std']).astype(int).mean()
-            picp["All"] = np.logical_and(df_results['LAI'] < df_results['Predicted LAI'] + n_sigma/2 * df_results['Predicted LAI std'],
-                                         df_results['LAI'] > df_results['Predicted LAI'] - n_sigma/2 * df_results['Predicted LAI std']).astype(int).mean()
+                picp[element] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma/2 * results[f'Predicted {variable} std'],
+                                               results[variable] > results[f'Predicted {variable}'] - n_sigma/2 * results[f'Predicted {variable} std']).astype(int).mean()
+            picp["All"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma/2 * df_results[f'Predicted {variable} std'],
+                                         df_results[variable] > df_results[f'Predicted {variable}'] - n_sigma/2 * df_results[f'Predicted {variable} std']).astype(int).mean()
             global_picp_dict[column] = pd.DataFrame(data=picp, index=[0])
     return global_rmse_dict, global_picp_dict

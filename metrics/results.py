@@ -190,11 +190,11 @@ def save_validation_results(model, res_dir,
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot.png"))
 
         fig, ax = plt.subplots(dpi=150)
-        sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", hue="Campaign" ax=ax)
+        sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot_campaign.png"))
 
         fig, ax = plt.subplots(dpi=150)
-        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Predicted {variable} std",  hue="Campaign", ax=ax)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"Predicted {variable} std",  hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_sigma_campaign.png"))
 
         fig, ax = plt.subplots(dpi=150)

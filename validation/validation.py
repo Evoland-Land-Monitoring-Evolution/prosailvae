@@ -133,7 +133,7 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                     barrax_2021_results[f'ref_{frm4veg_ccc}'].reshape(-1),
                     wytham_results[f'ref_{frm4veg_ccc}'].reshape(-1)])
     
-    ref_lai_std_list = [barrax_results[f'ref_{frm4veg_ccc}_std'].reshape(-1),
+    ref_ccc_std_list = [barrax_results[f'ref_{frm4veg_ccc}_std'].reshape(-1),
                         barrax_2021_results[f'ref_{frm4veg_ccc}_std'].reshape(-1),
                         wytham_results[f'ref_{frm4veg_ccc}_std'].reshape(-1)]
     

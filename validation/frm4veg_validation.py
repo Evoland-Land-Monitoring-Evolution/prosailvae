@@ -285,8 +285,8 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
 
         model_pred[f"{lai_variable}_rec_err"] = rec_err[..., site_idx_dict[lai_variable]['y_idx'], 
                                                              site_idx_dict[lai_variable]['x_idx']].numpy()
-        for band in BANDS:
-            model_pred[f"{lai_variable}_{band}_rec_err"] = band_rec_err[..., site_idx_dict[lai_variable]['y_idx'], 
+        for i, band in enumerate(BANDS):
+            model_pred[f"{lai_variable}_{band}_rec_err"] = band_rec_err[i, site_idx_dict[lai_variable]['y_idx'], 
                                                                              site_idx_dict[lai_variable]['x_idx']].numpy()
     for ccc_variable in ['ccc', 'ccc_eff']:
         model_pred[ccc_variable] = (sim_image[1, site_idx_dict[ccc_variable]['y_idx'], 
@@ -302,8 +302,8 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
         model_pred[f"ref_{ccc_variable}_std"] = ref_dict[f"{ccc_variable}_std"]
         model_pred[f"{ccc_variable}_rec_err"] = rec_err[..., site_idx_dict[ccc_variable]['y_idx'], 
                                                              site_idx_dict[ccc_variable]['x_idx']].numpy()
-        for band in BANDS:
-            model_pred[f"{ccc_variable}_{band}_rec_err"] = band_rec_err[..., site_idx_dict[ccc_variable]['y_idx'], 
+        for i, band in enumerate(BANDS):
+            model_pred[f"{ccc_variable}_{band}_rec_err"] = band_rec_err[i, site_idx_dict[ccc_variable]['y_idx'], 
                                                                         site_idx_dict[ccc_variable]['x_idx']].numpy()
                                                              
     return model_pred #, rec, cropped_s2_r

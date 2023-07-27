@@ -162,7 +162,7 @@ def save_validation_results(model, res_dir,
                                                       frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
     results["CCC"] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                              frm4veg_ccc="ccc", get_reconstruction_error=save_reconstruction)
-    for variable in ["LAI", "CCC"]
+    for variable in ["LAI", "CCC"]:
         results[variable][f'{variable} error'] = results[variable][f'Predicted {variable}'] - results[variable][f'{variable}']
         results[variable].to_csv(os.path.join(res_dir, f"all_campaigns_{variable}_{mode}_{method}.csv"))
 

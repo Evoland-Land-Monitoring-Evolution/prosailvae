@@ -22,6 +22,7 @@ import torch
 from snap_regression.snap_nn import SnapNN
 from sensorsio import utils
 import matplotlib.pyplot as plt
+from prosailvae.ProsailSimus import BANDS
 
 BELSAR_FILENAMES = ["2A_20180508_both_BelSAR_agriculture_database",     # OK
                     "2A_20180518_both_BelSAR_agriculture_database",     # Nuages mais + non détectés => A retirer !
@@ -355,7 +356,8 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
             masked_array, _ = mask(src, [polygon], invert=False)
             masked_array[masked_array==NO_DATA] = np.nan
             if get_error:
-                masked_err = masked_array[-1,...] 
+                masked_err = masked_array[6,...] 
+                masked_bands_err = masked_array[7:,...] 
 
         site_samples = validation_df[validation_df["Field ID"]==site_name]
 
@@ -386,10 +388,14 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
                 # d[f"{variable}_mean_std"] = np.sqrt(var_sum) / N
                 d[f"{variable}_sigma_mean"] = np.nanmean(sigma_pred)
                 d[f"{variable}_sigma_std"] = np.nanstd(sigma_pred)
-            if get_error:
-                if not np.isnan(masked_err).all():
-                    d[f"rec_err_mean"] = np.nanmean(masked_err)
-                    d[f"rec_err_std"] = np.nanstd(masked_err)
+        if get_error:
+            if not np.isnan(masked_err).all():
+                d[f"rec_err_mean"] = np.nanmean(masked_err)
+                d[f"rec_err_std"] = np.nanstd(masked_err)
+            if not np.isnan(masked_bands_err).all():
+                for i, band in enumerate(BANDS):
+                    d[f"{band}_rec_err_mean"] = np.nanmean(masked_bands_err[i,...])
+                    d[f"{band}_rec_err_std"] = np.nanstd(masked_bands_err[i,...])
         if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():
             d[f"hspot_mean"] = np.nanmean(masked_array[pred_array_idx["hspot"]['mean'],...])
             d[f"hspot_std"] = np.nanstd(masked_array[pred_array_idx["hspot"]['mean'],...])
@@ -498,7 +504,8 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
                             sigma_image[8,...].unsqueeze(0)), 0)
         if save_reconstruction:
             err_tensor = (rec - s2_r.squeeze(0)).abs().mean(0, keepdim=True)
-            tensor = torch.cat((tensor, err_tensor), 0)
+            full_err_tensor = (rec - s2_r.squeeze(0)).abs()
+            tensor = torch.cat((tensor, err_tensor, full_err_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
         tensor_to_raster(tensor, res_dir + f"/{filename}_{model_name}_{mode}.tif",
                          crs=crs, resolution=10, dtype=np.float32, bounds=None,

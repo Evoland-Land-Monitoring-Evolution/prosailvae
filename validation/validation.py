@@ -6,6 +6,7 @@ from validation.frm4veg_validation import (interpolate_frm4veg_pred,
 from validation.belsar_validation import (interpolate_belsar_metrics, save_belsar_predictions, 
                                           BELSAR_FILENAMES, ALL_BELSAR_FILENAMES, get_all_belsar_predictions,
                                           save_snap_belsar_predictions)
+from prosailvae.ProsailSimus import BANDS
 
 def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
                                       method="simple_interpolate", get_all_belsar=False):
@@ -62,7 +63,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
 def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                      frm4veg_lai="lai", get_reconstruction_error=False):
 
-    
+
     date_list = [belsar_results['date'].values.reshape(-1),
                  barrax_results[f'{frm4veg_lai}_date'].reshape(-1),
                  barrax_2021_results[f'{frm4veg_lai}_date'].reshape(-1),
@@ -108,6 +109,16 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
     else:
         rec_err = np.zeros_like(ref_lai)
 
+    bands_rec_err = {}
+    for band in BANDS:
+        if get_reconstruction_error:
+            bands_rec_err[band] = np.concatenate([belsar_results[f'{band}_rec_err_mean'].values.reshape(-1),
+                                                    barrax_results[f'{frm4veg_lai}_{band}_rec_err'].reshape(-1),
+                                                    barrax_2021_results[f'{frm4veg_lai}_{band}_rec_err'].reshape(-1),
+                                                    wytham_results[f'{frm4veg_lai}_{band}_rec_err'].reshape(-1)])
+        else:
+            bands_rec_err[band] = np.zeros_like(ref_lai)
+
     results = pd.DataFrame(data={'LAI':ref_lai,
                                 'LAI std':np.concatenate(ref_lai_std_list),
                                 'Predicted LAI': np.concatenate(pred_lai_list),
@@ -118,12 +129,14 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                                 "Time delta": np.concatenate(date_list),
                                 "Campaign": np.array(campaign_list),
                                 })
+    for band in BANDS:
+        results[f"{band} error"] = bands_rec_err[band]
     return results
 
 def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                      frm4veg_ccc="ccc", get_reconstruction_error=False):
 
-    
+
     date_list = [barrax_results[f'{frm4veg_ccc}_date'].reshape(-1),
                  barrax_2021_results[f'{frm4veg_ccc}_date'].reshape(-1),
                  wytham_results[f"{frm4veg_ccc}_date"].reshape(-1)]

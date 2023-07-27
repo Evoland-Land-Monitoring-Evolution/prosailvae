@@ -171,7 +171,7 @@ def get_belsar_sites_time_series(metrics, belsar_data_dir, site="W1", fig=None, 
                                     "lai_std":lai_std,
                                     "name":fields,
                                     "type":["Measurement" for d in measurement_dates]})
-        ax.scatter(ref_metrics["Date"].values, ref_metrics['LAI'].values, label="Measurement", s=1)
+        ax.scatter(ref_metrics["Date"].values, ref_metrics['LAI'].values, label="Measurement")
         ax.errorbar(ref_metrics['Date'].values, ref_metrics['LAI'].values, yerr=ref_metrics['lai_std'],
                 ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,
                 elinewidth=0.5, zorder=0)
@@ -214,7 +214,7 @@ def get_belsar_lai_vs_hspot(metrics, belsar_data_dir, sites=["W1"], fig=None, ax
     if fig is None or ax is None:
         fig, ax = plt.subplots(dpi=150)
     # sns.scatterplot(data=all_metrics, x="Date", y="LAI",ax=ax, hue="type")
-    ax.scatter(all_metrics["LAI"].values, all_metrics['hspot'].values, label=label, s=1)
+    ax.scatter(all_metrics["LAI"].values, all_metrics['hspot'].values, label=label)
     ax.errorbar(all_metrics['LAI'].values, all_metrics['hspot'].values, 
                 xerr=all_metrics['lai_std'], yerr=all_metrics['hspot_std'],
                 ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,

@@ -185,12 +185,12 @@ def save_validation_results(model, res_dir,
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Site", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error.png"))
 
-        fig, ax = plt.subplots(dpi=150)
-        sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot.png"))
+        # fig, ax = plt.subplots(dpi=150)
+        # sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", ax=ax)
+        # fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot.png"))
 
         fig, ax = plt.subplots(dpi=150)
-        sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", hue="Campaign", ax=ax)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y="Time delta", hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_dt_boxplot_campaign.png"))
 
         fig, ax = plt.subplots(dpi=150)
@@ -208,25 +208,27 @@ def save_validation_results(model, res_dir,
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Site", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error_site.png"))
-        fig, ax = plt.subplots(dpi=150)
 
+        fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable}", y=f"{variable} error", hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_{variable}_campaign.png"))
 
+        fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} std", y=f"Predicted {variable} std", hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_std_vs_{variable}_pred_std_campaign.png"))
-        fig, ax = regression_plot(results[variable], x=f"{variable} error", 
-                                  y="Reconstruction error", fig=None, ax=None, hue="Campaign",
-                                legend_col=2, error_x=None, 
-                                error_y=None, hue_perfs=True)
+
+        fig, ax = fig, ax = plt.subplots(dpi=150)
+        sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"Reconstruction error", hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_reconstruction_error_Campaign.png"))
         global_rmse_dict, global_picp_dict = get_validation_global_metrics(results[variable], 
-                                                                        decompose_along_columns = ["Site", "Land cover", "Campaign"], 
-                                                                        n_sigma=3)
+                                                                            decompose_along_columns = ["Site", "Land cover", "Campaign"], 
+                                                                            n_sigma=3,
+                                                                            variable=variable)
         for key, rmse_df in global_rmse_dict.items():
             rmse_df.to_csv(os.path.join(res_dir, f"{key}_{variable}_validation_rmse.csv"))
         for key, pcip_df in global_picp_dict.items():
             pcip_df.to_csv(os.path.join(res_dir, f"{key}_{variable}_validation_picp.csv"))
+        plt.close('all')
     
 def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10):
     with torch.no_grad():

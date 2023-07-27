@@ -179,10 +179,10 @@ class EncoderResBlock(nn.Module):
                  last_activation=None, device:str='cpu'):
         super().__init__()
         layers = []
-        for _ in range(depth):
+        for i in range(depth):
             layers.append(nn.Linear(in_features=hidden_layers_size, out_features=hidden_layers_size))
-            layers.append(nn.ReLU())
-
+            if i < depth - 1:
+                layers.append(nn.ReLU())
         if last_activation is not None :
             layers.append(last_activation)
         self.device=device
@@ -233,6 +233,7 @@ class ProsailRNNEncoder(Encoder):
                                            depth=config.block_layer_depths[i],
                                            last_activation=None, device=device)
                 resnet.append(resblock)
+                resnet.append(nn.ReLU())
         # Last layer
         resnet.append(nn.Linear(in_features=config.block_layer_sizes[-1],
                                 out_features=config.n_latent_params * config.output_size))

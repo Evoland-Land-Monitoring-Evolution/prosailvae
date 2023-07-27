@@ -176,6 +176,14 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
     else:
         rec_err = np.zeros_like(ref_ccc)
 
+    bands_rec_err = {}
+    for band in BANDS:
+        if get_reconstruction_error:
+            bands_rec_err[band] = np.concatenate([  barrax_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1),
+                                                    barrax_2021_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1),
+                                                    wytham_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1)])
+        else:
+            bands_rec_err[band] = np.zeros_like(ref_ccc)
     results = pd.DataFrame(data={'CCC':ref_ccc,
                                 'CCC std':np.concatenate(ref_ccc_std_list),
                                 'Predicted CCC': np.concatenate(pred_ccc_list),
@@ -186,6 +194,8 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                 "Time delta": np.concatenate(date_list),
                                 "Campaign": np.array(campaign_list),
                                 })
+    for band in BANDS:
+        results[f"{band} error"] = bands_rec_err[band]
     return results
 
 def get_validation_global_metrics(df_results, decompose_along_columns = ["Site", "Land cover"], n_sigma=3, variable="LAI"):

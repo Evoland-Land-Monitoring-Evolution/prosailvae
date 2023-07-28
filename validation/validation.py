@@ -36,6 +36,10 @@ def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, be
 def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
                                  mode="sim_tg_mean", method="simple_interpolate", model_name="pvae",
                                  save_reconstruction=False, get_all_belsar=False):
+
+    barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
+                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
+                                              get_reconstruction=save_reconstruction)
     
     all_belsar = None
     list_belsar_filenames = BELSAR_FILENAMES
@@ -46,9 +50,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
     
     if get_all_belsar:
         all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")   
-    barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
-                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
-                                              get_reconstruction=save_reconstruction)
+
     barrax_2021_results = get_frm4veg_results_at_date(model, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
                                                       is_SNAP=False, get_reconstruction=save_reconstruction)
     wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 

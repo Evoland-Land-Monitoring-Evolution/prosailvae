@@ -373,9 +373,14 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             model_results[variable] = simple_interpolate(validation_results_after[variable].squeeze(),
                                                          validation_results_before[variable].squeeze(),
                                                          dt_after, dt_before).squeeze()
+            
             model_results[f"{variable}_rec_err"] = simple_interpolate(validation_results_after[f"{variable}_rec_err"].squeeze(),
                                                                       validation_results_before[f"{variable}_rec_err"].squeeze(),
                                                     dt_after, dt_before).squeeze()
+            for band in BANDS:
+                model_results[f"{variable}_{band}_rec_err"] = simple_interpolate(validation_results_after[f"{variable}_{band}_rec_err"].squeeze(),
+                                                                                 validation_results_before[f"{variable}_{band}_rec_err"].squeeze(),
+                                                                                 dt_after, dt_before).squeeze()
             model_results[f"{variable}_std"] = simple_interpolate(validation_results_after[f"{variable}_std"].squeeze(),
                                                                     validation_results_before[f"{variable}_std"].squeeze(),
                                                                     dt_after, dt_before).squeeze()
@@ -390,17 +395,26 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_rec_err = np.zeros_like(ref)
             err_1_le_err_2 = (err_1 <= err_2).reshape(-1)
             results[err_1_le_err_2] = validation_results_before[f"{variable}"].reshape(-1)[err_1_le_err_2]
+            results[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+            model_results[variable] = results
+
             date[err_1_le_err_2] = abs(dt_before[err_1_le_err_2])
             date[np.logical_not(err_1_le_err_2)] = abs(dt_after[np.logical_not(err_1_le_err_2)])
-            results[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-            results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+            model_results[f"{variable}_date"] = date
+
             results_std[err_1_le_err_2] = validation_results_before[f"{variable}_std"].reshape(-1)[err_1_le_err_2]
             results_std[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-            results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-            model_results[variable] = results
             model_results[f"{variable}_std"] = results_std
+
+            results_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[err_1_le_err_2]
+            results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             model_results[f"{variable}_rec_err"] = results_rec_err
-            model_results[f"{variable}_date"] = date
+            
+            for band in BANDS:
+                results_band_rec_err = np.zeros_like(ref)
+                results_band_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[err_1_le_err_2]
+                results_band_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+                model_results[f"{variable}_{band}_rec_err"] = results_band_rec_err
         elif method == "worst":
             ref = validation_results_before[f"ref_{variable}"]
             err_1 = np.abs(validation_results_before[f"{variable}"] - ref)
@@ -412,16 +426,25 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             date = np.zeros_like(ref)
             date[err_1_le_err_2] = abs(dt_after[err_1_le_err_2])
             date[np.logical_not(err_1_le_err_2)] = abs(dt_before[np.logical_not(err_1_le_err_2)])
-            results[err_1_le_err_2] = validation_results_after[f"{variable}"].reshape(-1)[err_1_le_err_2]
-            results_std[err_1_le_err_2] = validation_results_after[f"{variable}_std"].reshape(-1)[err_1_le_err_2]
-            results_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[err_1_le_err_2]
-            results[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-            results_std[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-            results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
-            model_results[variable] = results
-            model_results[f"{variable}_std"] = results_std
-            model_results[f"{variable}_rec_err"] = results_rec_err
             model_results[f"{variable}_date"] = date
+
+            results[err_1_le_err_2] = validation_results_after[f"{variable}"].reshape(-1)[err_1_le_err_2]
+            results[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+            model_results[variable] = results
+
+            results_std[err_1_le_err_2] = validation_results_after[f"{variable}_std"].reshape(-1)[err_1_le_err_2]
+            results_std[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_std"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+            model_results[f"{variable}_std"] = results_std
+
+            results_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[err_1_le_err_2]
+            results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+            model_results[f"{variable}_rec_err"] = results_rec_err
+            
+            for band in BANDS:
+                results_band_rec_err = np.zeros_like(ref)
+                results_band_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[err_1_le_err_2]
+                results_band_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_{band}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
+                model_results[f"{variable}_{band}_rec_err"] = results_band_rec_err
         elif method == "dist_interpolate":
             raise NotImplementedError
         else:

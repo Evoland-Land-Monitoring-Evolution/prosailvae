@@ -200,12 +200,12 @@ def get_belsar_lai_vs_hspot(metrics, belsar_data_dir, sites=["W1"], fig=None, ax
                 lai_std.append(np.std(sub_val_df[sub_val_df["Field ID"]==site]["lai"].values))
                 fields.append(site)
     site_metrics = metrics[metrics["name"]==site]
-    all_metrics = site_metrics[["lai_mean", "lai_sigma_mean", "hspot_mean", "hspot_sigma_mean", "name"]]
+    all_metrics = site_metrics[["lai_mean", "lai_sigma_mean", "hspot_mean", "hspot_sigma_mean", "name"]].copy()
     all_metrics['type'] = [label for _ in range(len(all_metrics))]
-    all_metrics.rename(columns={'lai_mean': 'LAI'}, inplace=True)
-    all_metrics.rename(columns={'lai_sigma_mean': 'lai_std'}, inplace=True)
-    all_metrics.rename(columns={'hspot_mean': 'hspot'}, inplace=True)
-    all_metrics.rename(columns={'hspot_sigma_mean': 'hspot_std'}, inplace=True)
+    all_metrics = all_metrics.rename(columns={'lai_mean': 'LAI'})
+    all_metrics = all_metrics.rename(columns={'lai_sigma_mean': 'lai_std'})
+    all_metrics = all_metrics.rename(columns={'hspot_mean': 'hspot'})
+    all_metrics = all_metrics.rename(columns={'hspot_sigma_mean': 'hspot_std'})
     dates_pred = site_metrics["date"].values
     dates_pred = [datetime.strptime(d, "%Y-%m-%d") for d in dates_pred]
     all_metrics["Date"] = dates_pred

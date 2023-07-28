@@ -319,6 +319,8 @@ def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
         snap_results[f"{variable}_rec_err"] = np.zeros_like(snap_results[variable])
         snap_results[f"ref_{variable}"] = ref_dict[variable]
         snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
+        for i, band in enumerate(BANDS):
+            snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
     for variable in ['ccc', 'ccc_eff']:
         snap_results[variable] = snap_ccc[..., site_idx_dict[variable]['y_idx'], 
                                                 site_idx_dict[variable]['x_idx']].numpy()
@@ -326,6 +328,8 @@ def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
         snap_results[f"{variable}_rec_err"] = np.zeros_like(snap_results[variable])
         snap_results[f"ref_{variable}"] = ref_dict[variable]
         snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
+        for i, band in enumerate(BANDS):
+            snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
     return snap_results
 
 def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, 

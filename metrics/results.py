@@ -194,6 +194,12 @@ def save_validation_results(model, res_dir,
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error",  
                             hue="Campaign", ax=axs[row,col], s=5)
         fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_band_rec_error_Campaign.png"))
+        fig, axs = plt.subplots(2, 5, dpi=150, figsize=(2*3, 5*3))
+        for i, band in enumerate(BANDS):
+            row = i // 5
+            col = i % 5
+            sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error", ax=axs[row,col], s=5)
+        fig.savefig(os.path.join(res_dir, f"{variable}_error_vs_band_rec_error.png"))
 
         # fig, ax = plt.subplots(dpi=150)
         # sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", ax=ax)

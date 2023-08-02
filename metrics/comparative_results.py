@@ -60,6 +60,7 @@ def get_model_and_dataloader(parser):
             norm_std = torch.load(os.path.join(model_info["dir_path"], "norm_std.pt"))
             params_path = os.path.join(model_info["dir_path"], "prosailvae_weights.tar")
             config["load_model"] = True
+            model_info["supervised"] = config["supervised"]
             config["vae_load_file_path"] = params_path
             # if "disabled_latent" not in config.keys():
             #     config["disabled_latent"] = []
@@ -685,11 +686,14 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
 
 def get_models_validation_rec_loss(model_dict, loader):
     for model_name, model_info in model_dict.items(): 
-        loss_dict = model_info["model"].validate(loader, n_samples=10 if not socket.gethostname()=='CELL200973' else 2)
-        if "rec_loss" in loss_dict.keys():
-            model_info['loss'] = loss_dict["rec_loss"]
+        if model_info["supervised"]:
+            model_info['loss'] = 0.0
         else:
-            model_info['loss'] = loss_dict["loss_sum"]
+            loss_dict = model_info["model"].validate(loader, n_samples=10 if not socket.gethostname()=='CELL200973' else 2)
+            if "rec_loss" in loss_dict.keys():
+                model_info['loss'] = loss_dict["rec_loss"]
+            else:
+                model_info['loss'] = loss_dict["loss_sum"]
     return
 
 def main():

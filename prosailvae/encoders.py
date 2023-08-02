@@ -26,7 +26,6 @@ class EncoderConfig:
     last_activation:nn.Module|None = None
     n_latent_params:int=2
     layer_sizes:list[int]|None = field(default_factory=lambda: [128])
-
     kernel_sizes: list[int] = field(default_factory=lambda: [3])
     padding:str = "valid"
 

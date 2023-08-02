@@ -425,11 +425,11 @@ def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_d
         metrics = pd.concat((metrics, image_metrics))
     return metrics.reset_index(drop=True)
 
-def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest", file_suffix=""):
+def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest", file_suffix="", get_error=True):
     
     if method == "simple_interpolate":
-        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix)
-        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix)
+        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
         metrics = before_metrics.copy()
         metrics.drop(columns=["delta"], inplace=True)
         for variable in ['lai_mean', 'cm_mean', 'lai_std', 'cm_std',
@@ -441,10 +441,10 @@ def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest
         metrics['delta_after'] = after_metrics['delta']
         metrics["date"] = (abs(metrics['delta_after']) + abs(metrics['delta_before'])) / 2
     elif method == "closest":
-        metrics = get_belsar_campaign_metrics_df(belsar_data_dir, closest_filename_dict, belsar_pred_dir, file_suffix)
+        metrics = get_belsar_campaign_metrics_df(belsar_data_dir, closest_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
     elif method == 'best':
-        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix)
-        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix)
+        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
         metrics = before_metrics.copy()
         metrics["date"] = abs(before_metrics['delta'])
         for i in range(len(metrics)):
@@ -454,8 +454,8 @@ def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest
                 metrics.iloc[i] = after_metrics.iloc[i]
                 metrics["date"].iloc[i] = abs(metrics['delta'].iloc[i])
     elif method =="worst":
-        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix)
-        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix)
+        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
         metrics = before_metrics.copy()
         metrics["date"] = abs(before_metrics['delta'])
         for i in range(len(metrics)):

@@ -56,8 +56,8 @@ def get_model_and_dataloader(parser):
         if model_info["type"] == "simvae":
             config = load_params(model_info["dir_path"], "config.json")
             bands, prosail_bands = get_bands_idx(config["weiss_bands"])
-            norm_mean = torch.load(os.path.join(model_info["dir_path"], "norm_mean.pt"))
-            norm_std = torch.load(os.path.join(model_info["dir_path"], "norm_std.pt"))
+            # norm_mean = torch.load(os.path.join(model_info["dir_path"], "norm_mean.pt"))
+            # norm_std = torch.load(os.path.join(model_info["dir_path"], "norm_std.pt"))
             params_path = os.path.join(model_info["dir_path"], "prosailvae_weights.tar")
             config["load_model"] = True
             model_info["supervised"] = config["supervised"]

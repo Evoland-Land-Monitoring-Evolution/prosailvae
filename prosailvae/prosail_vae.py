@@ -89,6 +89,9 @@ def load_params(config_dir, config_file, parser=None):
         params["beta_cyclical"] = 0
     if "lat_loss_type" not in params.keys():
         params["lat_loss_type"] = ""
+    lrs_threshold
+    if "lrs_threshold" not in params.keys():
+        params["lrs_threshold"] = 5e-3
     return params
 
 @dataclass

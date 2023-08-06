@@ -192,7 +192,8 @@ def initialize_by_training(n_models:int,
                                                 plot_gradient=False,#parser.plot_results,
                                                 lr_recompute_mode=False,
                                                 cycle_training = False, 
-                                                accum_iter=1)
+                                                accum_iter=1,
+                                                lrs_threshold=0.01)
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
             min_valid_loss = model_min_loss
@@ -214,7 +215,7 @@ def initialize_by_training(n_models:int,
 def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
                   plot_gradient=False, lr_recompute_mode=True, cycle_training=False,
-                  accum_iter=1):
+                  accum_iter=1, lrs_threshold=0.01):
     logger = logging.getLogger(LOGGER_NAME)
     tbeg = time.time()
     if prosail_vae.decoder.loss_type=='mse':
@@ -234,7 +235,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
             if lr_recompute is not None:
                 lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                                            patience=lr_recompute,
-                                                                           threshold=0.01, threshold_mode='abs')
+                                                                           threshold=lrs_threshold, threshold_mode='abs')
 
     max_train_samples_per_epoch = 50
     max_valid_samples_per_epoch = 200
@@ -559,7 +560,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                          plot_gradient=False,#parser.plot_results,
                                                          lr_recompute_mode=lr_recompute_mode,
                                                          cycle_training=params["cycle_training"], 
-                                                         accum_iter=params["accum_iter"])
+                                                         accum_iter=params["accum_iter"],
+                                                         lrs_threshold=params['lrs_threshold'])
     logger.info("Training Completed !")
 
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df

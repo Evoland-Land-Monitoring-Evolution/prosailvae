@@ -606,11 +606,14 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
     barrax_2021_results = {}
     wytham_results = {}
     validation_lai_results = {}
-    picp_dict = {}
-    rmse_dict = {}
+    validation_ccc_results = {}
+    lai_picp_dict = {}
+    lai_rmse_dict = {}
+    ccc_picp_dict = {}
+    ccc_rmse_dict = {}
     for method in ["simple_interpolate"]:#, "best", "worst"]: #'closest', 
-        picp_dict[method] = {}
-        rmse_dict[method] = {}
+        lai_picp_dict[method] = {}
+        lai_rmse_dict[method] = {}
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode, get_error=get_error)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 
@@ -627,23 +630,62 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
         # plot_frm4veg_results_comparison(model_dict, wytham_results[method], frm4veg_data_dir, wytham_filenames[0],
         #                                 res_dir=res_dir, prefix= "wytham_"+method+"_")
         validation_lai_results[method] = {}
-
+        validation_ccc_results[method] = {}
         for variable in ['lai', "lai_eff"]:
             print(method, variable)
-            picp_dict[method][variable] = {}
-            rmse_dict[method][variable] = {}
+            lai_picp_dict[method][variable] = {}
+            lai_rmse_dict[method][variable] = {}
             validation_lai_results[method][variable] = get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results[method],
                                                                                                    barrax_results[method],
                                                                                                    barrax_2021_results[method],
                                                                                                    wytham_results=wytham_results[method],
                                                                                                    frm4veg_lai=variable,
                                                                                                    get_reconstruction_error=True)
-            
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
                 rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
-                picp_dict[method][variable][model] = picp
-                rmse_dict[method][variable][model] = rmse
+                lai_picp_dict[method][variable][model] = picp
+                lai_rmse_dict[method][variable][model] = rmse
+            if not len(model_dict) > 6: 
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
+                                            margin = 0.02, hue_perfs=True)
+                
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
+                                            margin = 0.02, hue="Land cover")
+                
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Time_delta",
+                                            margin = 0.02, hue="Time delta")
+                
+                plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
+                                            res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
+                                            margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True)
+            plt.close('all')
+            
+            # get_models_global_metrics(model_dict, validation_lai_results, 
+            #                                        sites=["Spain", "England", "Belgium"], 
+            #                                        variable=variable, n_models=len(model_dict)+1, n_sigma=3)
+
+            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_rmse.npy"), rmse)
+            np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_picp.npy"), picp)
+
+        for variable in ['ccc', "ccc_eff"]:
+            print(method, variable)
+            ccc_picp_dict[method][variable] = {}
+            ccc_rmse_dict[method][variable] = {}
+            validation_lai_results[method][variable] = get_frm4veg_ccc_validation_results(model_dict, belsar_results[method],
+                                                                                                   barrax_results[method],
+                                                                                                   barrax_2021_results[method],
+                                                                                                   wytham_results=wytham_results[method],
+                                                                                                   frm4veg_lai=variable,
+                                                                                                   get_reconstruction_error=True)
+            for model, df_results in validation_lai_results[method][variable].items():
+                df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
+                rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
+                ccc_picp_dict[method][variable][model] = picp
+                ccc_rmse_dict[method][variable][model] = rmse
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
@@ -670,7 +712,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_picp.npy"), picp)
     # save_dict(rmse_dict, os.path.join(res_dir, f"LAI_Campaign_rmse.json"))
     # save_dict(picp_dict, os.path.join(res_dir, f"LAI_Campaign_picp.json"))
-    return rmse_dict, picp_dict
+    return lai_rmse_dict, lai_picp_dict, ccc_rmse_dict, ccc_picp_dict
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"
@@ -729,7 +771,8 @@ def main():
     get_models_validation_rec_loss(model_dict, valid_loader)
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
-        rmse_dict, picp_dict = compare_validation_regressions(model_dict, belsar_dir, 
+        (lai_rmse_dict, lai_picp_dict, 
+         ccc_rmse_dict, ccc_picp_dict) = compare_validation_regressions(model_dict, belsar_dir, 
                                                               frm4veg_data_dir, frm4veg_2021_data_dir, 
                                                               res_dir, list_belsar_filenames, 
                                                               recompute=recompute, mode=mode)
@@ -738,7 +781,7 @@ def main():
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 
                                       max_patch=30 if not socket.gethostname()=='CELL200973' else 2)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, 
-                             rmse_dict, picp_dict, res_dir,
+                             lai_rmse_dict, lai_picp_dict, res_dir,
                              )
     # compare_snap_versions_on_real_data(test_loader, res_dir)
     # compare_snap_versions_on_weiss_data(res_dir)

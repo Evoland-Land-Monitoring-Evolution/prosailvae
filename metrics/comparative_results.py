@@ -614,6 +614,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
     for method in ["simple_interpolate"]:#, "best", "worst"]: #'closest', 
         lai_picp_dict[method] = {}
         lai_rmse_dict[method] = {}
+        ccc_picp_dict[method] = {}
+        ccc_rmse_dict[method] = {}
         belsar_results[method] = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode, get_error=get_error)
         # plot_belsar_validation_results_comparison(model_dict, belsar_results[method], res_dir, suffix="_" + method)
 

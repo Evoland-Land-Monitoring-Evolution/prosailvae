@@ -87,6 +87,8 @@ def load_params(config_dir, config_file, parser=None):
         params["accum_iter"] = 1
     if "beta_cyclical"not in params.keys():
         params["beta_cyclical"] = 0
+    if "snap_cyclical"not in params.keys():
+        params["snap_cyclical"] = False
     if "lat_loss_type" not in params.keys():
         params["lat_loss_type"] = ""
     if "lrs_threshold" not in params.keys():
@@ -148,6 +150,7 @@ def get_prosail_vae_config(params, bands, io_coeffs,
                              beta_index=params['beta_index'],
                              beta_kl=params["beta_kl"],
                              beta_cyclical=params["beta_cyclical"],
+                             snap_cyclical=params["snap_cyclical"],
                              loss_type=params["loss_type"],
                              lat_loss_type=params["lat_loss_type"],
                              reconstruction_bands_coeffs=reconstruction_bands_coeffs)
@@ -227,6 +230,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         beta_kl=pv_config.loss_config.beta_kl,
                         beta_index=pv_config.loss_config.beta_index,
                         beta_cyclical=pv_config.loss_config.beta_cyclical,
+                        snap_cyclical=pv_config.loss_config.snap_cyclical,
                         logger_name=logger_name, inference_mode=pv_config.inference_mode,
                         lat_nll=pv_config.loss_config.lat_loss_type)
     prosail_vae.set_hyper_prior(hyper_prior)

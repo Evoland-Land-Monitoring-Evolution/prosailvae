@@ -14,6 +14,7 @@ class LossConfig:
     beta_kl:float = 0.0
     beta_index:float = 0.0
     beta_cyclical:float = 0.0
+    snap_cyclical:bool = False
     loss_type: str = 'diag_nll'
     lat_loss_type:str = ""
     reconstruction_bands_coeffs:list[int]|None=None

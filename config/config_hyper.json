@@ -1,0 +1,68 @@
+{
+    "batch_size": 2,
+    "epochs": 10,
+    "lr": 0.001,
+    "test_size": 0.01,
+    "valid_ratio": 0.01,
+    "workers": 0,
+    "encoder_last_activation": null,
+    "n_samples": 2,
+    "supervised": false,
+    "beta_kl": 1,
+    "beta_index": 0,
+    "beta_cyclical": 1,
+    "k_fold": 1,
+    "dataset_file_prefix": "train_",
+    "n_fold": null,
+    "simulated_dataset": false,
+    "lr_recompute": 10,
+    "loss_type": "diag_nll",
+    "apply_norm_rec": true,
+    "exp_lr_decay": 0.98,
+    "encoder_type": "rnn",
+    "load_model": false,
+    "vae_load_dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/2/",
+    "data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+    "lr_recompute_mode": false,
+    "first_layer_kernel": 3,
+    "first_layer_size": 512,
+    "block_layer_sizes": [
+        512
+    ],
+    "block_layer_depths": [
+        2
+    ],
+    "block_kernel_sizes": [
+        1
+    ],
+    "block_n": [
+        2
+    ],
+    "weiss_bands": false,
+    "init_model": false,
+    "supervised_kl": true,
+    "supervised_config_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/2/config.json",
+    "supervised_weight_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/2/prosailvae_weights.tar",
+    "n_init_models": 10,
+    "n_init_epochs": 9,
+    "init_lr": 0.0005,
+    "accum_iter": 5,
+    "cycle_training": true,
+    "lat_loss_type": "lai_nll",
+    "layer_sizes": [
+        512,
+        512
+    ],
+    "kernel_sizes": [
+        3,
+        3
+    ],
+    "vae_save_file_path": null,
+    "disabled_latent": [],
+    "disabled_latent_values": [],
+    "R_down": 7,
+    "break_init_at_rec_loss": null,
+    "rec_bands_loss_coeffs": null,
+    "deterministic": false,
+    "snap_cyclical": true
+}

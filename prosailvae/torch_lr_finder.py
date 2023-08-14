@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 
 from packaging import version
 
-from prosailvae.loss import lr_finder_elbo, lr_finder_sup_nll
+# from prosailvae.loss import lr_finder_elbo, lr_finder_sup_nll
 from dataset.loaders import lr_finder_loader
 import torch.optim as optim
 
@@ -748,8 +748,8 @@ if __name__ == "__main__":
     
     from dataset.loaders import get_norm_coefs
     import prosailvae
-    from prosailvae.utils import load_dict
-    from prosailvae.prosail_vae import get_prosail_VAE
+    from utils.utils import load_dict
+    from prosail_vae import get_prosail_VAE
     
     parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__),os.pardir)

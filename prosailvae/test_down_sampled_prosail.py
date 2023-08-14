@@ -15,11 +15,11 @@ import logging
 import logging.config
 import traceback
 import time
-from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig)
-from torch_lr_finder import get_PROSAIL_VAE_lr
+from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig, load_params)
+# from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import  (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
 from metrics.results import save_results, save_results_2d, get_res_dir_path
-from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow
+from utils.utils import load_dict, save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow, load_standardize_coeffs
 from ProsailSimus import get_bands_idx, BANDS
 import argparse
 import pandas as pd
@@ -35,6 +35,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 torch.autograd.set_detect_anomaly(True)
 import matplotlib.pyplot as plt
+import tikzplotlib
 
 CUDA_LAUNCH_BLOCKING=1
 LOGGER_NAME = 'PROSAIL-VAE logger'
@@ -151,60 +152,6 @@ def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
         if epoch > swith_ratio * n_epoch:
             PROSAIL_VAE.decoder.loss_type = "full_nll"
 
-
-def load_params(config_dir, config_file, parser=None):
-    """
-    Load parameter dict form prosail vae and training
-    """
-    params = load_dict(config_dir + config_file)
-    if params["supervised"]:
-        params["simulated_dataset"]=True
-    if not "load_model" in params.keys():
-        params["load_model"]=False
-    if not "vae_load_dir_path" in params.keys():
-        params["vae_load_dir_path"]=None
-    if not "lr_recompute_mode" in params.keys():
-        params["lr_recompute_mode"]=False
-    if not "init_model" in params.keys():
-        params["init_model"] = False
-    if parser is not None:
-        params["k_fold"] = parser.n_xp
-        params["n_fold"] = parser.n_fold if params["k_fold"] > 1 else None
-    if "layer_sizes" not in params.keys():
-        params["layer_sizes"] = [512, 512]
-    if "kernel_sizes" not in params.keys():
-        params['kernel_sizes'] = [3, 3]
-    if "first_layer_kernel" not in params.keys():
-        params["first_layer_kernel"] = 3
-    if "first_layer_size" not in params.keys():
-        params["first_layer_size"] = 128
-    if "block_layer_sizes" not in params.keys():
-        params["block_layer_sizes"] = [128, 128]
-    if "block_layer_depths" not in params.keys():
-        params["block_layer_depths"] = [2, 2]
-    if "block_kernel_sizes" not in params.keys():
-        params["block_kernel_sizes"] = [3, 1]
-    if "block_n" not in params.keys():
-        params["block_n"] = [1,3]
-    if "supervised_kl" not in params.keys():
-        params["supervised_kl"] = False
-    if "weiss_bands" not in params.keys():
-        params["weiss_bands"] = False
-    params["vae_save_file_path"] = None
-    if "supervised_config_file" not in params.keys():
-        params["supervised_config_file"] = None
-    if "supervised_weight_file" not in params.keys():
-        params["supervised_weight_file"] = None
-    if "disabled_latent" not in params.keys():
-        params["disabled_latent"] = []
-    if "disabled_latent_values" not in params.keys():
-        params["disabled_latent_values"] = []
-    if "cycle_training" not in params.keys():
-        params["cycle_training"] = False
-    if "R_down" not in params.keys():
-        params["R_down"] = 1
-    return params
-
 def setup_training():
     """
     Read parser and config files to launch training
@@ -298,7 +245,16 @@ def setup_training():
             sup_norm_std, frm4veg_data_dir, frm4veg_barrax_filename, frm4veg_wytham_filename, 
             belsar_dir, list_belsar_filenames)
 
-def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
+def tikzplotlib_fix_ncols(obj):
+    """
+    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
+    """
+    if hasattr(obj, "_ncols"):
+        obj._ncol = obj._ncols
+    for child in obj.get_children():
+        tikzplotlib_fix_ncols(child)
+
+def down_sample_prosail(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_norm_mean=None, sup_norm_std=None):
     """
     Intializes and trains a prosail instance
@@ -346,25 +302,21 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     params["vae_load_file_path"] = vae_load_file_path
     training_config = get_training_config(params)
     params["R_down"]=1
-    pv_config_1 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
-                                       inference_mode = False, rsr_dir=parser.rsr_dir,
-                                       norm_mean = norm_mean, norm_std=norm_std)
+    if params["apply_norm_rec"]:
+        io_coeffs = load_standardize_coeffs(data_dir, params["dataset_file_prefix"])
+    else:
+        io_coeffs = load_standardize_coeffs(None, params["dataset_file_prefix"])
+    pv_config_1 = get_prosail_vae_config(params, bands = bands, io_coeffs=io_coeffs, prosail_bands=prosail_bands,
+                                       inference_mode = False, rsr_dir=parser.rsr_dir)
     pv_config_hyper=None
-    if params_sup_kl_model is not None:
-        bands_hyper, prosail_bands_hyper = get_bands_idx(params_sup_kl_model["weiss_bands"])
-        pv_config_hyper = get_prosail_vae_config(params_sup_kl_model, bands=bands_hyper,
-                                                prosail_bands=prosail_bands_hyper,
-                                                inference_mode=True, rsr_dir=parser.rsr_dir,
-                                                norm_mean=sup_norm_mean, norm_std=sup_norm_std)
     prosail_vae_1 = load_prosail_vae_with_hyperprior(pv_config=pv_config_1,
                                                      pv_config_hyper=pv_config_hyper,
                                                      logger_name=LOGGER_NAME)
     pvae_down = {}
-    for R_down in [2,3,4,5,6,7,10,12,14,15,20]:
+    for R_down in [2,3,4,5,6,7,10,12,]:#14,15,20]:
         params["R_down"]=R_down
-        pv_config_2 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands,
-                                        inference_mode = False, rsr_dir=parser.rsr_dir,
-                                        norm_mean = norm_mean, norm_std=norm_std)
+        pv_config_2 = get_prosail_vae_config(params, bands = bands, prosail_bands=prosail_bands, io_coeffs=io_coeffs,
+                                        inference_mode = False, rsr_dir=parser.rsr_dir)
 
 
 
@@ -382,7 +334,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     # # transfer to simulator variable
     # sim = prosail_vae_1.transfer_latent(z.unsqueeze(2))
 
-    p_vars, p_s2r = np_simulate_prosail_dataset(nb_simus=1024, noise=0, psimulator=prosail_vae_1.decoder.prosailsimulator,
+    p_vars, p_s2r = np_simulate_prosail_dataset(nb_simus=5*1024, noise=0, psimulator=prosail_vae_1.decoder.prosailsimulator,
                                                 ssimulator=prosail_vae_1.decoder.ssimulator,
                                                 n_samples_per_batch=1024, uniform_mode=False, lai_corr=True)
 
@@ -423,35 +375,52 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     rec_1 = prosail_vae_1.decode(sim, angles, apply_norm=False).detach()
     soil_spectrum1 = prosail_vae_1.decoder.prosailsimulator.soil_spectrum1
     lambda1 = prosail_vae_1.decoder.prosailsimulator.lambdas
-    fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
-    ax.plot(lambda1, soil_spectrum1, label = f"R_down = 1")
-    for j, (key, pvae) in enumerate(pvae_down.items()):
-        ax.plot(lambdas[key], soil_spectrums[key], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
-    ax.legend()
-    fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
-    ax.plot(lambda1, prosail_vae_1.decoder.ssimulator.s2norm_factor_n[0,0,:], label = f"R_down = 1")
-    for j, (key, pvae) in enumerate(pvae_down.items()):
-        ax.plot(lambdas[key], n_s2[key][0,0,:], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
-    ax.legend()
-    fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
-    ax.plot(rec_1[0,:,0], label = f"R_down = 1")
-    for j, (key, pvae) in enumerate(pvae_down.items()):
-        ax.plot(recs_rdown[key][0,:,0], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
-    ax.legend()
+    # fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+    # ax.plot(lambda1, soil_spectrum1, label = f"R_down = 1")
+    # for j, (key, pvae) in enumerate(pvae_down.items()):
+    #     ax.plot(lambdas[key], soil_spectrums[key], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
+    # ax.legend()
 
-    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6))
+
+
+    # fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+    # ax.plot(lambda1, prosail_vae_1.decoder.ssimulator.s2norm_factor_n[0,0,:], label = f"R_down = 1")
+    # for j, (key, pvae) in enumerate(pvae_down.items()):
+    #     ax.plot(lambdas[key], n_s2[key][0,0,:]/pvae.decoder.prosailsimulator.R_down, label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
+    # ax.legend()
+
+    # fig, ax = plt.subplots(dpi=150, tight_layout=True, figsize = (12,6))
+    # ax.plot(rec_1[0,:,0], label = f"R_down = 1")
+    # for j, (key, pvae) in enumerate(pvae_down.items()):
+    #     ax.plot(recs_rdown[key][0,:,0], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
+    # ax.legend()
+
+    fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6), sharey=True, sharex='col')#)
     for i in range(10):
         row = i % 2
         col = i // 2
         for j, (key, rec) in enumerate(recs_rdown.items()):
             err = (rec_1[:,i,:] - rec[:,i,:]).abs().squeeze()
-            axs[row, col].boxplot(err,positions=[j], showfliers=False)
+            axs[row, col].boxplot(err ,positions=[j], showfliers=False)
         axs[1, col].set_xlabel("Down-sampling")
-        axs[row, col].set_xticklabels(recs_rdown.keys())
-        axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
+        # axs[1, col].set_xticks(range(len(recs_rdown.keys())))
+        
+        # axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
         axs[row, col].set_title(BANDS[i])
-    axs[0, 0].set_ylabel('Absolute Error')
-    axs[1, 0].set_ylabel('Absolute Error')
+    for i in range(10):
+        row = i % 2
+        col = i // 2
+        axs[row, col].set_yscale('log')
+        axs[row, col].grid(axis='y')
+        axs[row, col].set_xticks(range(len(recs_rdown.keys())))
+        axs[row, col].set_xticklabels(recs_rdown.keys())
+        
+        # axs[row, col].set_ylim(1e-8, 1e-1)
+    axs[0, 0].set_ylabel('Absolute error')
+    axs[1, 0].set_ylabel('Absolute error')
+
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/rdown_prosail.tex")
     fig.savefig("Prosail_down_sampling_error_boxplot.png")
     # n_samples = sim.size(2)
     # batch_size = sim.size(0)
@@ -510,7 +479,7 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
-        train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
+        down_sample_prosail(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_norm_mean=sup_norm_mean, sup_norm_std=sup_norm_std)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)

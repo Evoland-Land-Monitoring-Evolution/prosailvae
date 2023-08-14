@@ -13,6 +13,7 @@ from utils.utils import NaN_model_params, unstandardize
 from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
 # from sensorsio.utils import rgb_render
 # import matplotlib.pyplot as plt
+from dataset.weiss_utils import get_weiss_biophyiscal_from_batch, get_weiss_biophyiscal_from_pixellic_batch
 
 class SimVAE(nn.Module):
     """
@@ -65,7 +66,10 @@ class SimVAE(nn.Module):
     def __init__(self, encoder, decoder, lat_space, sim_space, reconstruction_loss, 
                   config, index_loss=None,
                  supervised:bool=False,  device:str='cpu',
-                 beta_kl:float=0, beta_index:float=0, logger_name:str='PROSAIL-VAE logger',beta_cyclical:float=0.0,
+                 beta_kl:float=0, beta_index:float=0, 
+                 logger_name:str='PROSAIL-VAE logger',
+                 beta_cyclical:float=0.0,
+                 snap_cyclical:bool=False,
                  inference_mode:bool=False,
                  lat_nll:str="", disabled_latent=[], 
                  disabled_latent_values=[],):
@@ -93,6 +97,7 @@ class SimVAE(nn.Module):
         self.spatial_mode = self.encoder.get_spatial_encoding()
         self.deterministic = config.deterministic
         self.beta_cyclical = beta_cyclical
+        self.snap_cyclical = snap_cyclical
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior
@@ -328,25 +333,56 @@ class SimVAE(nn.Module):
             rec_loss = self.reconstruction_loss(s2_r, rec) # self.decoder.loss(s2_r, rec)           
         loss_dict = {'rec_loss': rec_loss.item()}
         loss_sum = rec_loss
+
         if self.beta_cyclical > 0:
             sample_dim = self.reconstruction_loss.sample_dim   
             feature_dim = self.reconstruction_loss.feature_dim 
-            rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
-            rec_cyc = rec_cyc.transpose(sample_dim, 1)
-            rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
-            s2_a_cyc = s2_a.unsqueeze(sample_dim)
-            s2_a_cyc = s2_a_cyc.tile([(n_samples if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])
-            s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
-            s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
-            # z_cyc = z.transpose(sample_dim, 1)
-            # z_cyc = z_cyc.reshape(-1, *z_cyc.shape[2:])
-            # z_cyc = batchify_batch_latent(z_cyc)
-            z_cyc = z.transpose(feature_dim, -1)
-            z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
-            cyclical_batch = (rec_cyc, s2_a_cyc, z_cyc)
+
+            if self.snap_cyclical:
+                if self.spatial_mode:
+                    raise NotImplementedError
+                    snap_s2_r = s2_r 
+                    snap_s2_a = s2_a
+                    if batch_size>1:
+                        snap_s2_r = torch.cat(snap_s2_r.split(1,dim=0),-1)
+                        snap_s2_a = torch.cat(snap_s2_a.split(1,dim=0),-1)
+                    (snap_lai, snap_cab,
+                    snap_cw) = get_weiss_biophyiscal_from_batch((snap_s2_r, snap_s2_a),
+                                                                patch_size=s2_r.size(-1), 
+                                                                sensor="2A")
+                    snap_lai = snap_lai.reshape(-1, 1)
+                else:
+                    (snap_lai, snap_cab,
+                    snap_cw) = get_weiss_biophyiscal_from_pixellic_batch((s2_r, s2_a), sensor="2A")
+                snap_sim = torch.cat((torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      snap_lai,
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai),), 1).to(self.device)
+                snap_z = self.sim_space.sim2z(snap_sim)
+                cyclical_batch = (s2_r, s2_a, snap_z)
+                
+            else:
+                rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+                rec_cyc = rec_cyc.transpose(sample_dim, 1)
+                rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
+                s2_a_cyc = s2_a.unsqueeze(sample_dim)
+                s2_a_cyc = s2_a_cyc.tile([(n_samples if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])
+                s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
+                s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
+                z_cyc = z.transpose(feature_dim, -1)
+                z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
+                cyclical_batch = (rec_cyc, s2_a_cyc, z_cyc)
             cyclical_loss, _ = self.supervised_batch_loss(cyclical_batch, {}, ref_is_lat=True)
             loss_sum += self.beta_cyclical * cyclical_loss
-            loss_dict['cyclical_loss'] = cyclical_loss.item()            
+            loss_dict['cyclical_loss'] = cyclical_loss.item()           
+
         # Kl term
         if self.beta_kl > 0:
             if self.hyper_prior is None: # KL Truncated Normal latent || Uniform prior
@@ -365,7 +401,7 @@ class SimVAE(nn.Module):
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
                 params_hyper = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
-                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper).sum(1).mean()
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper).sum(1).mean() #sum over latent and mean over batch
 
             loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()

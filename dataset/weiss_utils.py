@@ -102,3 +102,34 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
     cab_image = unpatchify(patched_cab_image)[:,:s2_r.size(2),:s2_r.size(3)]
     cw_image = unpatchify(patched_cw_image)[:,:s2_r.size(2),:s2_r.size(3)]
     return lai_image, cab_image, cw_image
+
+
+def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None):
+    if ver is None:
+        if sensor is None:
+            ver = "2.1"
+        elif sensor =="2A":
+            ver = "3A"
+        elif sensor == "2B":
+            ver = "3B"
+        else:
+            raise ValueError
+    elif ver not in ["2.1", "3A", "3B"]:
+        raise ValueError
+    weiss_bands = torch.tensor([1,2,3,4,5,7,8,9])
+    weiss_angles = torch.tensor([1,0,2])
+    s2_r, s2_a = batch
+    x = s2_r[:, weiss_bands]
+    angles = torch.cos(torch.deg2rad(s2_a[:, weiss_angles]))
+    s2_data = torch.cat((x, angles), 1)
+    with torch.no_grad():
+        lai_snap = SnapNN(variable='lai', ver=ver)
+        lai_snap.set_weiss_weights()
+        lai = lai_snap.forward(s2_data, spatial_mode=False)
+        cab_snap = SnapNN(variable='cab', ver=ver)
+        cab_snap.set_weiss_weights()
+        cab = torch.clip(cab_snap.forward(s2_data, spatial_mode=False), min=0) 
+        cw_snap = SnapNN(variable='cw', ver=ver)
+        cw_snap.set_weiss_weights()
+        cw = torch.clip(cw_snap.forward(s2_data, spatial_mode=False), min=0) 
+    return lai, cab, cw

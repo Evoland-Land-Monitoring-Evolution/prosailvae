@@ -677,12 +677,12 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             print(method, variable)
             ccc_picp_dict[method][variable] = {}
             ccc_rmse_dict[method][variable] = {}
-            validation_lai_results[method][variable] = get_frm4veg_ccc_validation_results(model_dict, belsar_results[method],
-                                                                                                   barrax_results[method],
-                                                                                                   barrax_2021_results[method],
-                                                                                                   wytham_results=wytham_results[method],
-                                                                                                   frm4veg_lai=variable,
-                                                                                                   get_reconstruction_error=True)
+            validation_lai_results[method][variable] = get_frm4veg_ccc_validation_results(model_dict,
+                                                                                            barrax_results[method],
+                                                                                            barrax_2021_results[method],
+                                                                                            wytham_results=wytham_results[method],
+                                                                                            frm4veg_lai=variable,
+                                                                                            get_reconstruction_error=True)
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
                 rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])

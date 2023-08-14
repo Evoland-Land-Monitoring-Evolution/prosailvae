@@ -59,7 +59,7 @@ def load_weiss_dataset(path_to_data_dir):
     return s2_r, prosail_vars
 
 
-def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None):
+def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None, device='cpu'):
     if ver is None:
         if sensor is None:
             ver = "2.1"
@@ -85,13 +85,13 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
             angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, weiss_angles, ...]))
             s2_data = torch.cat((x, angles),0)
             with torch.no_grad():
-                lai_snap = SnapNN(variable='lai', ver=ver)
+                lai_snap = SnapNN(variable='lai', ver=ver, device=device)
                 lai_snap.set_weiss_weights()
                 lai = lai_snap.forward(s2_data, spatial_mode=True)
-                cab_snap = SnapNN(variable='cab', ver=ver)
+                cab_snap = SnapNN(variable='cab', ver=ver, device=device)
                 cab_snap.set_weiss_weights()
                 cab = torch.clip(cab_snap.forward(s2_data, spatial_mode=True), min=0) # torch.clip(cab_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0.1)
-                cw_snap = SnapNN(variable='cw', ver=ver)
+                cw_snap = SnapNN(variable='cw', ver=ver, device=device)
                 cw_snap.set_weiss_weights()
                 cw = torch.clip(cw_snap.forward(s2_data, spatial_mode=True), min=0) # torch.clip(cw_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0. 1)
                 # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
@@ -104,7 +104,7 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
     return lai_image, cab_image, cw_image
 
 
-def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None):
+def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None, device='cpu'):
     if ver is None:
         if sensor is None:
             ver = "2.1"
@@ -123,13 +123,13 @@ def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None):
     angles = torch.cos(torch.deg2rad(s2_a[:, weiss_angles]))
     s2_data = torch.cat((x, angles), 1)
     with torch.no_grad():
-        lai_snap = SnapNN(variable='lai', ver=ver)
+        lai_snap = SnapNN(variable='lai', ver=ver, device=device)
         lai_snap.set_weiss_weights()
         lai = lai_snap.forward(s2_data, spatial_mode=False)
-        cab_snap = SnapNN(variable='cab', ver=ver)
+        cab_snap = SnapNN(variable='cab', ver=ver, device=device)
         cab_snap.set_weiss_weights()
         cab = torch.clip(cab_snap.forward(s2_data, spatial_mode=False), min=0) 
-        cw_snap = SnapNN(variable='cw', ver=ver)
+        cw_snap = SnapNN(variable='cw', ver=ver, device=device)
         cw_snap.set_weiss_weights()
         cw = torch.clip(cw_snap.forward(s2_data, spatial_mode=False), min=0) 
     return lai, cab, cw

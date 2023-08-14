@@ -349,11 +349,14 @@ class SimVAE(nn.Module):
                     (snap_lai, snap_cab,
                     snap_cw) = get_weiss_biophyiscal_from_batch((snap_s2_r, snap_s2_a),
                                                                 patch_size=s2_r.size(-1), 
-                                                                sensor="2A")
+                                                                sensor="2A",
+                                                                device=self.device)
                     snap_lai = snap_lai.reshape(-1, 1)
                 else:
                     (snap_lai, snap_cab,
-                    snap_cw) = get_weiss_biophyiscal_from_pixellic_batch((s2_r, s2_a), sensor="2A")
+                    snap_cw) = get_weiss_biophyiscal_from_pixellic_batch((s2_r, s2_a), 
+                                                                         sensor="2A",
+                                                                         device=self.device)
                 snap_sim = torch.cat((torch.zeros_like(snap_lai),
                                       torch.zeros_like(snap_lai),
                                       torch.zeros_like(snap_lai),

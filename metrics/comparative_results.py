@@ -227,15 +227,15 @@ def plot_frm4veg_results_comparison(model_dict, model_results, data_dir, filenam
 
 
 def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, prefix="", margin = 0.02, 
-                                   hue="Site", legend_col=3, hue_perfs=False):
+                                   hue="Site", legend_col=3, hue_perfs=False, variable="LAI"):
     n_models = len(model_dict) + 1
-    xmin = np.min(model_results["SNAP"]["Predicted LAI"])
-    xmax = np.max(model_results["SNAP"]["Predicted LAI"])
+    xmin = np.min(model_results["SNAP"][f"Predicted {variable}"])
+    xmax = np.max(model_results["SNAP"][f"Predicted {variable}"])
     for i, (model_name, model_info) in enumerate(model_dict.items()):
-        pred_at_site = model_results[model_name]["Predicted LAI"]
+        pred_at_site = model_results[model_name][f"Predicted {variable}"]
         xmax = max(np.max(pred_at_site), xmax)
         xmin = min(np.min(pred_at_site), xmin)
-    ref_lai = model_results[model_name]['LAI']
+    ref_lai = model_results[model_name][variable]
     xmax = max(np.max(ref_lai), xmax)
     xmin = min(np.min(ref_lai), xmin)
     xmin = xmin - margin * (xmax - xmin)
@@ -244,16 +244,16 @@ def plot_lai_validation_comparison(model_dict, model_results, res_dir=None, pref
     fig, axs = plt.subplots(nrows=1, ncols=n_models, dpi=150, figsize=(6*n_models, 6))
     for i, (model_name, model_info) in enumerate(model_dict.items()):
         df_metrics = model_results[model_name]
-        fig, ax = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[i], hue=hue,
-                                  legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", 
-                                  error_y="Predicted LAI std", hue_perfs=hue_perfs)
+        fig, ax = regression_plot(df_metrics, x=f"{variable}", y=f"Predicted {variable}", fig=fig, ax=axs[i], hue=hue,
+                                  legend_col=legend_col, xmin=xmin, xmax=xmax, error_x=f"{variable} std", 
+                                  error_y=f"Predicted {variable} std", hue_perfs=hue_perfs)
         ax.set_title(model_info["plot_name"] + "\n loss: {:.2f}".format(model_info['loss']))
     df_metrics = model_results["SNAP"]
-    fig, _ = regression_plot(df_metrics, x="LAI", y="Predicted LAI", fig=fig, ax=axs[-1], hue=hue,
-                             legend_col=legend_col, xmin=xmin, xmax=xmax, error_x="LAI std", hue_perfs=hue_perfs)
+    fig, _ = regression_plot(df_metrics, x=f"{variable}", y=f"Predicted {variable}", fig=fig, ax=axs[-1], hue=hue,
+                             legend_col=legend_col, xmin=xmin, xmax=xmax, error_x=f"{variable} std", hue_perfs=hue_perfs)
     axs[-1].set_title("SNAP")
     if res_dir is not None:
-        fig.savefig(os.path.join(res_dir, f"{prefix}_validation.png"), transparent=False)
+        fig.savefig(os.path.join(res_dir, f"{prefix}_{variable}_validation.png"), transparent=False)
 
 def get_belsar_validation_results(model_dict: dict, belsar_dir, res_dir, method="closest", mode=None, get_error=True):
     model_results = {}
@@ -692,19 +692,19 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
-                                            margin = 0.02, hue_perfs=True)
+                                            margin = 0.02, hue_perfs=True, variable='CCC')
                 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Land_cover",
-                                            margin = 0.02, hue="Land cover")
+                                            margin = 0.02, hue="Land cover", variable='CCC')
                 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Time_delta",
-                                            margin = 0.02, hue="Time delta")
+                                            margin = 0.02, hue="Time delta", variable='CCC')
                 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}_Campaign",
-                                            margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True)
+                                            margin = 0.02, hue="Campaign", legend_col=2, hue_perfs=True, variable='CCC')
             plt.close('all')
             
             # get_models_global_metrics(model_dict, validation_lai_results, 

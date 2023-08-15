@@ -650,8 +650,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
                 lai_picp_dict[method][variable][model] = picp
                 lai_rmse_dict[method][variable][model] = rmse
-                all_rmse.append(rmse['All'].values.reshape(-1)[0])
-                all_picp.append(picp['All'].values.reshape(-1)[0])
+                all_rmse.append(rmse["Campaign"]['All'].values.reshape(-1)[0])
+                all_picp.append(picp["Campaign"]['All'].values.reshape(-1)[0])
             pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_all.csv"))
             pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_all.csv"))
             if not len(model_dict) > 6: 
@@ -697,8 +697,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="CCC")
                 ccc_picp_dict[method][variable][model] = picp
                 ccc_rmse_dict[method][variable][model] = rmse
-                all_rmse.append(rmse['All'].values.reshape(-1)[0])
-                all_picp.append(picp['All'].values.reshape(-1)[0])
+                all_rmse.append(rmse["Campaign"]['All'].values.reshape(-1)[0])
+                all_picp.append(picp["Campaign"]['All'].values.reshape(-1)[0])
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",

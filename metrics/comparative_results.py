@@ -685,9 +685,10 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                                                                                             get_reconstruction_error=True)
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
-                rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
+                rmse, picp = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="CCC")
                 ccc_picp_dict[method][variable][model] = picp
                 ccc_rmse_dict[method][variable][model] = rmse
+
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",

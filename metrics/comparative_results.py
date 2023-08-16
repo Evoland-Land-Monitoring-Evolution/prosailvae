@@ -652,8 +652,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 lai_rmse_dict[method][variable][model] = rmse
                 all_rmse.append(rmse["Campaign"]['All'].values.reshape(-1)[0])
                 all_picp.append(picp["Campaign"]['All'].values.reshape(-1)[0])
-            pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_all.csv"))
-            pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_all.csv"))
+            pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_rmse_all.csv"))
+            pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_picp_all.csv"))
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
@@ -678,8 +678,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
 
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_rmse.npy"), rmse)
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_picp.npy"), picp)
-            pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_all.csv"))
-            pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_all.csv"))
+            pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_rmse_all.csv"))
+            pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_picp_all.csv"))
         for variable in ['ccc', "ccc_eff"]:
             print(method, variable)
             ccc_picp_dict[method][variable] = {}

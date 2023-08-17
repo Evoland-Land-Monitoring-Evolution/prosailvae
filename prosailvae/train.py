@@ -215,7 +215,7 @@ def initialize_by_training(n_models:int,
 def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
                   plot_gradient=False, lr_recompute_mode=True, cycle_training=False,
-                  accum_iter=1, lrs_threshold=0.01):
+                  accum_iter=1, lrs_threshold=0.01, lr_init=5e-4):
     logger = logging.getLogger(LOGGER_NAME)
     tbeg = time.time()
     if prosail_vae.decoder.loss_type=='mse':
@@ -249,7 +249,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                 if not cycle_training:
                     break #stop training if lr too low
                 for g in optimizer.param_groups:
-                    g['lr'] = 1e-4
+                    g['lr'] = lr_init
                 lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                             patience=lr_recompute,
                                                             threshold=0.01, threshold_mode='abs')
@@ -548,20 +548,21 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
     all_train_loss_df, all_valid_loss_df, info_df = training_loop(prosail_vae,
-                                                         optimizer,
-                                                         params['epochs'],
-                                                         train_loader,
-                                                         valid_loader,
-                                                         lrtrainloader,
-                                                         res_dir=res_dir,
-                                                         n_samples=params["n_samples"],
-                                                         lr_recompute=params['lr_recompute'],
-                                                         exp_lr_decay=params["exp_lr_decay"],
-                                                         plot_gradient=False,#parser.plot_results,
-                                                         lr_recompute_mode=lr_recompute_mode,
-                                                         cycle_training=params["cycle_training"], 
-                                                         accum_iter=params["accum_iter"],
-                                                         lrs_threshold=params['lrs_threshold'])
+                                                                    optimizer,
+                                                                    params['epochs'],
+                                                                    train_loader,
+                                                                    valid_loader,
+                                                                    lrtrainloader,
+                                                                    res_dir=res_dir,
+                                                                    n_samples=params["n_samples"],
+                                                                    lr_recompute=params['lr_recompute'],
+                                                                    exp_lr_decay=params["exp_lr_decay"],
+                                                                    plot_gradient=False,#parser.plot_results,
+                                                                    lr_recompute_mode=lr_recompute_mode,
+                                                                    cycle_training=params["cycle_training"], 
+                                                                    accum_iter=params["accum_iter"],
+                                                                    lrs_threshold=params['lrs_threshold'], 
+                                                                    lr_init=params['lr'])
     logger.info("Training Completed !")
 
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df

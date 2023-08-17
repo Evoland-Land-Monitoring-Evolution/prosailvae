@@ -228,3 +228,6 @@ def torch_select_unsqueeze(tensor, select_dim, nb_dim):
         view_dims = [1 for _ in range(nb_dim)]
         view_dims[select_dim] = -1
         return tensor.squeeze().view(view_dims)
+    
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

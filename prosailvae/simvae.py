@@ -9,7 +9,7 @@ Created on Thu Sep  1 08:25:49 2022
 import logging
 import torch.nn as nn
 import torch
-from utils.utils import NaN_model_params, unstandardize
+from utils.utils import NaN_model_params, unstandardize, count_parameters
 from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
 # from sensorsio.utils import rgb_render
 # import matplotlib.pyplot as plt
@@ -90,6 +90,7 @@ class SimVAE(nn.Module):
         self.beta_kl = beta_kl
         self.eval()
         self.logger = logging.getLogger(logger_name)
+        self.logger.info(f"Number of trainable parameters: {count_parameters(self.encoder)}")
         self.beta_index = beta_index
         self.inference_mode = inference_mode
         self.hyper_prior = None
@@ -98,6 +99,7 @@ class SimVAE(nn.Module):
         self.deterministic = config.deterministic
         self.beta_cyclical = beta_cyclical
         self.snap_cyclical = snap_cyclical
+        
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
         self.hyper_prior = hyper_prior

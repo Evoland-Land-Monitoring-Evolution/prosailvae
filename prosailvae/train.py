@@ -248,15 +248,16 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             if validation_at_every_epoch is not None:
-                validation_dir_at_epoch = os.path.join(validation_dir, f"epoch_{epoch}")
-                os.makedirs(validation_dir_at_epoch)
-                save_validation_results(prosail_vae, validation_dir_at_epoch,
-                                        frm4veg_data_dir=frm4veg_data_dir,
-                                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                                        belsar_data_dir=belsar_data_dir,
-                                        model_name=f"pvae_{epoch}",
-                                        method="simple_interpolate",
-                                        mode="sim_tg_mean", remove_files=True)
+                if epoch % validation_at_every_epoch == 0:
+                    validation_dir_at_epoch = os.path.join(validation_dir, f"epoch_{epoch}")
+                    os.makedirs(validation_dir_at_epoch)
+                    save_validation_results(prosail_vae, validation_dir_at_epoch,
+                                            frm4veg_data_dir=frm4veg_data_dir,
+                                            frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                            belsar_data_dir=belsar_data_dir,
+                                            model_name=f"pvae_{epoch}",
+                                            method="simple_interpolate",
+                                            mode="sim_tg_mean", remove_files=True)
             t0=time.time()
             if optimizer.param_groups[0]['lr'] < 5e-8:
                 if not cycle_training:
@@ -616,6 +617,8 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
+        validation_dir = os.path.join(res_dir, "validation")
+        os.makedirs(validation_dir)
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs, 
@@ -624,8 +627,6 @@ def main():
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir)
         if True:#not socket.gethostname()=='CELL200973':
-            validation_dir = os.path.join(res_dir, "validation")
-            os.makedirs(validation_dir)
             save_validation_results(prosail_vae, validation_dir,
                                     frm4veg_data_dir=frm4veg_data_dir,
                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,

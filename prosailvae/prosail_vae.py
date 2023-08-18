@@ -93,6 +93,8 @@ def load_params(config_dir, config_file, parser=None):
         params["lat_loss_type"] = ""
     if "lrs_threshold" not in params.keys():
         params["lrs_threshold"] = 5e-3
+    if "validation_at_every_epoch" not in params.keys():
+        params["validation_at_every_epoch"] = None
     return params
 
 @dataclass

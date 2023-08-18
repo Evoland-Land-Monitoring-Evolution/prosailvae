@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 from validation.frm4veg_validation import (interpolate_frm4veg_pred, 
@@ -9,7 +10,7 @@ from validation.belsar_validation import (interpolate_belsar_metrics, save_belsa
 from prosailvae.ProsailSimus import BANDS
 
 def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
-                                      method="simple_interpolate", get_all_belsar=False):
+                                      method="simple_interpolate", get_all_belsar=False, remove_files=False):
     
     all_belsar = None
     list_belsar_filenames = BELSAR_FILENAMES
@@ -30,12 +31,15 @@ def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, be
 
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix="_SNAP", method=method)
-
+    if remove_files:
+        for filename in list_belsar_filenames:
+            if os.path.isfile(os.path.join(belsar_pred_dir, f"{filename}_SNAP.tif")):
+                os.remove(os.path.join(belsar_pred_dir, f"{filename}_SNAP.tif"))
     return barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
 
 def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
                                  mode="sim_tg_mean", method="simple_interpolate", model_name="pvae",
-                                 save_reconstruction=False, get_all_belsar=False):
+                                 save_reconstruction=False, get_all_belsar=False, remove_files=False):
 
     barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
                                               BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
@@ -45,11 +49,13 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
     list_belsar_filenames = BELSAR_FILENAMES
     if get_all_belsar:
         list_belsar_filenames = ALL_BELSAR_FILENAMES
-    save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, list_belsar_filenames, model_name=model_name, mode=mode, 
+    save_belsar_predictions(belsar_data_dir, model, belsar_pred_dir, list_belsar_filenames, 
+                            model_name=model_name, mode=mode, 
                             save_reconstruction=save_reconstruction)
     
     if get_all_belsar:
         all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_{model_name}_{mode}")   
+    
 
     barrax_2021_results = get_frm4veg_results_at_date(model, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
                                                       is_SNAP=False, get_reconstruction=save_reconstruction)
@@ -59,7 +65,10 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
 
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix=f"_{model_name}_{mode}", method=method)
-
+    if remove_files:
+        for filename in list_belsar_filenames:
+            if os.path.isfile(os.path.join(belsar_pred_dir, f"{filename}_{model_name}_{mode}.tif")):
+                os.remove(os.path.join(belsar_pred_dir, f"{filename}_{model_name}_{mode}.tif"))
     return barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
 
 def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,

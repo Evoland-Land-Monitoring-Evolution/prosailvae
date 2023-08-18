@@ -194,6 +194,7 @@ def initialize_by_training(n_models:int,
                                                 cycle_training = False, 
                                                 accum_iter=1,
                                                 lrs_threshold=0.01)
+        
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
             min_valid_loss = model_min_loss
@@ -215,7 +216,9 @@ def initialize_by_training(n_models:int,
 def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
                   plot_gradient=False, lr_recompute_mode=True, cycle_training=False,
-                  accum_iter=1, lrs_threshold=0.01, lr_init=5e-4):
+                  accum_iter=1, lrs_threshold=0.01, lr_init=5e-4, validation_at_every_epoch=None,
+                  validation_dir=None, frm4veg_data_dir=None, frm4veg_2021_data_dir=None,
+                  belsar_data_dir=None):
     logger = logging.getLogger(LOGGER_NAME)
     tbeg = time.time()
     if prosail_vae.decoder.loss_type=='mse':
@@ -244,6 +247,16 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
         max_valid_samples_per_epoch = 2
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
+            if validation_at_every_epoch is not None:
+                validation_dir_at_epoch = os.path.join(validation_dir, f"epoch_{epoch}")
+                os.makedirs(validation_dir_at_epoch)
+                save_validation_results(prosail_vae, validation_dir_at_epoch,
+                                        frm4veg_data_dir=frm4veg_data_dir,
+                                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                        belsar_data_dir=belsar_data_dir,
+                                        model_name=f"pvae_{epoch}",
+                                        method="simple_interpolate",
+                                        mode="sim_tg_mean", remove_files=True)
             t0=time.time()
             if optimizer.param_groups[0]['lr'] < 5e-8:
                 if not cycle_training:
@@ -416,7 +429,8 @@ def setup_training():
             frm4veg_data_dir, frm4veg_2021_data_dir, belsar_dir)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
-                     sup_kl_io_coeffs):
+                     sup_kl_io_coeffs, validation_dir=None,frm4veg_data_dir=None,
+                     frm4veg_2021_data_dir=None, belsar_data_dir=None):
     """
     Intializes and trains a prosail instance
     """
@@ -562,7 +576,12 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                     cycle_training=params["cycle_training"], 
                                                                     accum_iter=params["accum_iter"],
                                                                     lrs_threshold=params['lrs_threshold'], 
-                                                                    lr_init=params['lr'])
+                                                                    lr_init=params['lr'], 
+                                                                    validation_at_every_epoch=params["validation_at_every_epoch"],
+                                                                    validation_dir=validation_dir,
+                                                                    frm4veg_data_dir=frm4veg_data_dir,
+                                                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                                                    belsar_data_dir=belsar_data_dir)
     logger.info("Training Completed !")
 
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df
@@ -599,7 +618,11 @@ def main():
     try:
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
          info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
-                                     sup_kl_io_coeffs=sup_kl_io_coeffs)
+                                     sup_kl_io_coeffs=sup_kl_io_coeffs, 
+                                     validation_dir=validation_dir,
+                                     frm4veg_data_dir=frm4veg_data_dir,
+                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                     belsar_data_dir=belsar_data_dir)
         if True:#not socket.gethostname()=='CELL200973':
             validation_dir = os.path.join(res_dir, "validation")
             os.makedirs(validation_dir)

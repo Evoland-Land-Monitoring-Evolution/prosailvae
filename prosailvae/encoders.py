@@ -518,6 +518,7 @@ class ProsailResCNNEncoder(nn.Module):
         network = []
         network.append(nn.Conv2d(config.input_size, config.first_layer_size,
                                  config.first_layer_kernel, padding=config.padding))
+        network.append(nn.ReLU)
         input_sizes = [config.first_layer_size] + config.block_layer_sizes
         assert len(config.block_layer_sizes) == len(config.block_layer_depths)
         assert len(config.block_layer_depths) == len(config.block_kernel_sizes)

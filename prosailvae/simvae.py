@@ -243,10 +243,11 @@ class SimVAE(nn.Module):
             raise NotImplementedError()
         rec = self.decode(sim, angles, apply_norm=apply_norm)
         if is_patch:# and mode != 'random':
-            rec = unbatchify(rec)
-            sim = unbatchify(sim)
+            batch_size=x.size(0)
+            rec = unbatchify(rec, batch_size=batch_size)
+            sim = unbatchify(sim, batch_size=batch_size)
             if not mode=='random':
-                dist_params = unbatchify(dist_params)
+                dist_params = unbatchify(dist_params, batch_size=batch_size)
         return dist_params, z, sim, rec
     
     def point_estimate_sim(self, x, angles, mode='random', unbatch=True):
@@ -299,9 +300,10 @@ class SimVAE(nn.Module):
             raise NotImplementedError()
 
         if is_patch and unbatch:# and mode != 'random':
+            batch_size=x.size(0)
             if mode == 'random':
-                return unbatchify(dist_params), z, sim
-            return unbatchify(dist_params), z, unbatchify(sim)
+                return unbatchify(dist_params, batch_size=batch_size), z, sim
+            return unbatchify(dist_params, batch_size=batch_size), z, unbatchify(sim, batch_size=batch_size)
         return dist_params, z, sim
 
     def unsupervised_batch_loss(self, batch, normalized_loss_dict, len_loader=1,
@@ -592,7 +594,7 @@ class SimVAE(nn.Module):
         with torch.no_grad():
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
-            for i, batch in zip(range(min(len(dataloader),batch_per_epoch)), dataloader):
+            for i, batch in zip(range(min(len(dataloader), batch_per_epoch)), dataloader):
                 n_batches += batch[0].size(0)
                 if max_samples is not None:
                     if i == max_samples:
@@ -609,3 +611,89 @@ class SimVAE(nn.Module):
         for loss_type, loss in valid_loss_dict.items():
             valid_loss_dict[loss_type] = loss / n_batches 
         return valid_loss_dict
+
+    def get_cyclical_loss_from_batch(self, batch, n_samples=1):
+        s2_r = batch[0].to(self.device)
+        s2_a = batch[1].to(self.device)
+        input_is_patch = check_is_patch(s2_r)
+        batch_size = s2_r.size(0)
+        if self.spatial_mode: # self.decoder.loss_type=='spatial_nll':
+            assert input_is_patch
+        else: # encoder is pixellic
+            if input_is_patch: # converting patch into batch
+                s2_r = batchify_batch_latent(s2_r)
+                s2_a = batchify_batch_latent(s2_a)
+        # Forward Pass
+        _, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
+        if self.spatial_mode:
+            assert check_is_patch(rec)
+            s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
+            z = crop_s2_input(z, self.encoder.nb_enc_cropped_hw)
+        sample_dim = self.reconstruction_loss.sample_dim   
+        feature_dim = self.reconstruction_loss.feature_dim 
+        rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+        rec_cyc = rec_cyc.transpose(sample_dim, 1)
+        rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
+        s2_a_cyc = s2_a.unsqueeze(sample_dim)
+        s2_a_cyc = s2_a_cyc.tile([(n_samples if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])
+        s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
+        s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
+        z_cyc = z.transpose(feature_dim, -1)
+        z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
+        cyclical_batch = (rec_cyc, s2_a_cyc, z_cyc)
+        cyclical_loss, _ = self.supervised_batch_loss(cyclical_batch, {}, ref_is_lat=True)
+        return cyclical_loss
+
+    def get_cyclical_rmse_from_batch(self, batch, mode="lat_mode"):
+        s2_r = batch[0].to(self.device)
+        s2_a = batch[1].to(self.device)
+        input_is_patch = check_is_patch(s2_r)
+        batch_size = s2_r.size(0)
+        if self.spatial_mode: # self.decoder.loss_type=='spatial_nll':
+            assert input_is_patch
+        else: # encoder is pixellic
+            if input_is_patch: # converting patch into batch
+                s2_r = batchify_batch_latent(s2_r)
+                s2_a = batchify_batch_latent(s2_a)
+        # Forward Pass
+        _, z, sim, rec = self.point_estimate_rec(s2_r, angles=s2_a, mode=mode)
+        if self.spatial_mode:
+            assert check_is_patch(rec)
+            s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
+            sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
+        sample_dim = self.reconstruction_loss.sample_dim   
+        feature_dim = self.reconstruction_loss.feature_dim 
+        rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+        rec_cyc = rec_cyc.transpose(sample_dim, 1)
+        rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
+        s2_a_cyc = s2_a.unsqueeze(sample_dim)
+        s2_a_cyc = s2_a_cyc.tile([(1 if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])
+        s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
+        s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
+        # z_cyc = z.transpose(feature_dim, -1)
+        # z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
+        _, _, sim_cyc = self.point_estimate_sim(rec_cyc, s2_a_cyc, mode=mode)
+        return (sim_cyc.select(feature_dim,6) - sim.select(feature_dim,6)).pow(2).mean().sqrt()
+    
+    def get_cyclical_metrics_from_loader(self, dataloader, n_samples=1, batch_per_epoch=None, max_samples=None):
+        """
+        Computes loss for a whole epoch
+        """
+        self.eval()
+        len_loader = len(dataloader.dataset)
+        n_batches=0
+        with torch.no_grad():
+            if batch_per_epoch is None:
+                batch_per_epoch = len(dataloader)
+                cyclical_loss=[]
+                cyclical_rmse=[]
+            for i, batch in zip(range(min(len(dataloader),batch_per_epoch)), dataloader):
+                n_batches += batch[0].size(0)
+                if max_samples is not None:
+                    if i == max_samples:
+                        break
+                cyclical_loss.append(self.get_cyclical_loss_from_batch(batch, n_samples=n_samples).unsqueeze(0))
+                cyclical_rmse.append(self.get_cyclical_rmse_from_batch(batch, mode="lat_mode").unsqueeze(0))
+        cyclical_loss = torch.cat(cyclical_loss).mean()
+        cyclical_rmse = torch.cat(cyclical_rmse).mean()
+        return cyclical_loss, cyclical_rmse

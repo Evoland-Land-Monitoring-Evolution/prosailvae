@@ -1065,7 +1065,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     fig, ax = regression_plot(pd.DataFrame({"Simulated LAI":cyclical_ref_lai.detach().cpu().numpy(), 
                                             "Predicted LAI":cyclical_lai.detach().cpu().numpy()}), 
-                              "Simulated LAI", "Predicted LAI", hue=None)
+                                            "Simulated LAI", "Predicted LAI", hue=None)
     ax.set_title(f"PICP: {cyclical_picp}")
     fig.savefig(f"{plot_dir}/cyclical_lai_scatter.png")
     pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,

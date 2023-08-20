@@ -179,7 +179,7 @@ def initialize_by_training(n_models:int,
                                                        pv_config_hyper=pv_config_hyper,
                                                        logger_name=LOGGER_NAME)
         optimizer = optim.Adam(prosail_vae.parameters(), lr=lr, weight_decay=1e-2)
-        _, all_valid_loss_df, _ = training_loop(prosail_vae,
+        _, all_valid_loss_df, _,_,_ = training_loop(prosail_vae,
                                                 optimizer,
                                                 n_epochs,
                                                 train_loader,
@@ -245,6 +245,8 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
     if socket.gethostname()=='CELL200973':
         max_train_samples_per_epoch = 5
         max_valid_samples_per_epoch = 2
+    all_cyclical_loss = []
+    all_cyclical_rmse = []
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
             if validation_at_every_epoch is not None:
@@ -258,6 +260,10 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                                             model_name=f"pvae_{epoch}",
                                             method="simple_interpolate",
                                             mode="sim_tg_mean", remove_files=True)
+                    cyclical_loss, cyclical_rmse = prosail_vae.get_cyclical_metrics_from_loader(valid_loader)
+                    all_cyclical_loss.append(cyclical_loss.cpu().item())
+                    all_cyclical_rmse.append(cyclical_rmse.cpu().item())
+
             t0=time.time()
             if optimizer.param_groups[0]['lr'] < 5e-8:
                 if not cycle_training:
@@ -277,6 +283,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
             info_df = pd.concat([info_df, pd.DataFrame({'epoch':epoch,
                                                         "lr": optimizer.param_groups[0]['lr']}, 
                                                         index=[0])],ignore_index=True)
+            
             try:
                 train_loss_dict = prosail_vae.fit(train_loader, optimizer,
                                                   n_samples=n_samples,
@@ -338,7 +345,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
         info_df = pd.DataFrame(data={"lr":10000, "epoch":0}, index=[0])
     tend = time.time()
     logger.info('Total training time: {:.1f} seconds'.format(tend-tbeg))
-    return all_train_loss_df, all_valid_loss_df, info_df
+    return all_train_loss_df, all_valid_loss_df, info_df, all_cyclical_loss, all_cyclical_rmse
 
 def setup_training():
     """
@@ -562,7 +569,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     # Training
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
-    all_train_loss_df, all_valid_loss_df, info_df = training_loop(prosail_vae,
+    (all_train_loss_df, all_valid_loss_df, info_df,
+     all_cyclical_loss, all_cyclical_rmse) = training_loop(prosail_vae,
                                                                     optimizer,
                                                                     params['epochs'],
                                                                     train_loader,
@@ -584,7 +592,10 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                                                     belsar_data_dir=belsar_data_dir)
     logger.info("Training Completed !")
-
+    
+    if len(all_cyclical_loss):
+        pd.DataFrame(all_cyclical_loss).to_csv(os.path.join(res_dir, "cyclical_loss.csv"))
+        pd.DataFrame(all_cyclical_rmse).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df
 
 def configureEmissionTracker(parser):

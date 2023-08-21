@@ -652,14 +652,18 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 lai_rmse_dict[method][variable][model] = rmse
                 # all_rmse.append(rmse["Campaign"]['All'].values.reshape(-1)[0])
                 # all_picp.append(picp["Campaign"]['All'].values.reshape(-1)[0])
+            rmse_dict = {}
+            picp_dict = {}
             for key, values in rmse["Campaign"].items():
                 all_rmse = []
                 all_picp = []
                 for model, df_results in validation_lai_results[method][variable].items():
                     all_rmse.append(lai_rmse_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
                     all_picp.append(lai_picp_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
-                pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{key}_rmse.csv"))
-                pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{key}_picp.csv"))
+                rmse_dict[key] = all_rmse
+                picp_dict[key] = all_picp
+            pd.DataFrame(data=rmse_dict).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_campaign_rmse.csv"))
+            pd.DataFrame(data=picp_dict).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_campaign_picp.csv"))
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],
                                             res_dir=res_dir, prefix=f"{mode}_{method}_{variable}",
@@ -705,15 +709,18 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 ccc_rmse_dict[method][variable][model] = rmse
                 # all_rmse.append(rmse["Campaign"]['All'].values.reshape(-1)[0])
                 # all_picp.append(picp["Campaign"]['All'].values.reshape(-1)[0])
-
+            rmse_dict = {}
+            picp_dict = {}
             for key, values in rmse["Campaign"].items():
                 all_rmse = []
                 all_picp = []
                 for model, df_results in validation_lai_results[method][variable].items():
                     all_rmse.append(ccc_rmse_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
                     all_picp.append(ccc_picp_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
-                pd.DataFrame(data={"rmse":all_rmse}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{key}_rmse.csv"))
-                pd.DataFrame(data={"picp":all_picp}).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{key}_picp.csv"))
+                rmse_dict[key] = all_rmse
+                picp_dict[key] = all_picp
+            pd.DataFrame(data=rmse_dict).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_campaign_rmse.csv"))
+            pd.DataFrame(data=picp_dict).to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_campaign_picp.csv"))
 
             if not len(model_dict) > 6: 
                 plot_lai_validation_comparison(model_dict, validation_lai_results[method][variable],

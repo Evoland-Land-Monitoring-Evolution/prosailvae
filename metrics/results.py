@@ -242,7 +242,7 @@ def save_validation_results(model, res_dir,
         fig, ax = fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"Reconstruction error", hue="Campaign", ax=ax)
         fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_reconstruction_error_Campaign.png"))
-        global_rmse_dict, global_picp_dict = get_validation_global_metrics(results[variable], 
+        global_rmse_dict, global_picp_dict, global_mestdr_dict = get_validation_global_metrics(results[variable], 
                                                                             decompose_along_columns = ["Site", "Land cover", "Campaign"], 
                                                                             n_sigma=3,
                                                                             variable=variable)
@@ -250,6 +250,8 @@ def save_validation_results(model, res_dir,
             rmse_df.to_csv(os.path.join(res_dir, f"{model_name}_{key}_{variable}_validation_rmse.csv"))
         for key, pcip_df in global_picp_dict.items():
             pcip_df.to_csv(os.path.join(res_dir, f"{model_name}_{key}_{variable}_validation_picp.csv"))
+        for key, mestdr_df in global_mestdr_dict.items():
+            mestdr_df.to_csv(os.path.join(res_dir, f"{model_name}_{key}_{variable}_validation_mestdr.csv"))
         plt.close('all')
     
 def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10):
@@ -399,25 +401,25 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     all_weiss_cab = []
     all_weiss_cw = []
     all_s2_r = []
-    all_sigma = []
+    all_std = []
     cyclical_ref_lai = []
     cyclical_lai = []
-    cyclical_lai_sigma = []
+    cyclical_lai_std = []
     with torch.no_grad():
         for i, batch in enumerate(loader):
             (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
-                sigma_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
+                std_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                                                             bands=torch.arange(10),
                                                             mode=rec_mode, no_rec=False)
             (_, cyclical_sim_image, cyclical_cropped_s2_r, cyclical_cropped_s2_a,
-                cyclical_sigma_image) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
+                cyclical_std_image) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
                                                                         PROSAIL_VAE, patch_size=32,
                                                                         bands=torch.arange(10),
                                                                         mode=rec_mode, no_rec=True)
             hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
             cyclical_ref_lai.append(crop_s2_input(sim_image, hw)[6,...].reshape(-1))
             cyclical_lai.append(cyclical_sim_image[6,...].reshape(-1))
-            cyclical_lai_sigma.append(cyclical_sigma_image[6,...].reshape(-1))
+            cyclical_lai_std.append(cyclical_std_image[6,...].reshape(-1))
             info = info_test_data[i,:]
             (weiss_lai, weiss_cab,
                 weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
@@ -429,7 +431,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             if not os.path.isdir(patch_plot_dir):
                 os.makedirs(patch_plot_dir)
             PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,
-                                 weiss_lai, weiss_cab, weiss_cw, sigma_image, i, info=info)
+                                 weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info)
             all_rec.append(rec_image.reshape(10,-1))
             all_lai.append(sim_image[6,...].reshape(-1))
             all_cab.append(sim_image[1,...].reshape(-1))
@@ -441,7 +443,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             all_weiss_cab.append(weiss_cab.reshape(-1))
             all_weiss_cw.append(weiss_cw.reshape(-1))
             all_s2_r.append(cropped_s2_r.reshape(10,-1))
-            all_sigma.append(sigma_image.reshape(11,-1))
+            all_std.append(std_image.reshape(11,-1))
             if i == max_test_patch-1:
                 break
         all_rec = torch.cat(all_rec, axis=1)
@@ -456,13 +458,13 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
         all_weiss_cab = torch.cat(all_weiss_cab)
         all_weiss_cw = torch.cat(all_weiss_cw)
         all_s2_r = torch.cat(all_s2_r, axis=1)
-        all_sigma = torch.cat(all_sigma, axis=1)
+        all_std = torch.cat(all_std, axis=1)
         cyclical_ref_lai = torch.cat(cyclical_ref_lai)
         cyclical_lai = torch.cat(cyclical_lai)
-        cyclical_lai_sigma = torch.cat(cyclical_lai_sigma)
+        cyclical_lai_std = torch.cat(cyclical_lai_std)
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc, all_cw_rel, 
-                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma
+                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
+                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_std
                                     #   gdf_lai, lai_validation_pred, snap_validation_lai
                                       )
 

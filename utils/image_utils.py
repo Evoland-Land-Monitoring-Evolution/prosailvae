@@ -101,7 +101,7 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                                      11, patch_size, patch_size)).to(PROSAIL_VAE.device)
     patched_rec_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
                                      len(bands), patch_size, patch_size)).to(PROSAIL_VAE.device)
-    patched_sigma_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11,
+    patched_std_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11,
                                        patch_size, patch_size)).to(PROSAIL_VAE.device)
     for i in range(patched_s2_r.size(0)):
         for j in range(patched_s2_r.size(1)):
@@ -115,11 +115,11 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                     patched_rec_image[i,j,:,:,:] = rec
             
             patched_sim_image[i,j,:,:,:] = sim.squeeze(0)
-            sigma_sim = PROSAIL_VAE.sim_space.get_distribution_from_lat_params(dist_params).variance.sqrt()
-            patched_sigma_image[i,j,:,:,:] = sigma_sim# dist_params.squeeze(0)[1,...]
+            std_sim = PROSAIL_VAE.sim_space.get_distribution_from_lat_params(dist_params).variance.sqrt()
+            patched_std_image[i,j,:,:,:] = std_sim# dist_params.squeeze(0)[1,...]
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)]
     rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)]
-    sigma_image = unpatchify(patched_sigma_image)[:,:s2_r.size(2),:s2_r.size(3)]
+    std_image = unpatchify(patched_std_image)[:,:s2_r.size(2),:s2_r.size(3)]
 
     if not padding:
         # doesn't remove invalid pixels on image borders that were lost to convolutions
@@ -127,8 +127,8 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
         rec_image = crop_s2_input(rec_image, hw)
         s2_a = crop_s2_input(s2_a, hw)
         s2_r = crop_s2_input(s2_r, hw)
-        sigma_image = crop_s2_input(sigma_image, hw)
-    return rec_image, sim_image, s2_r, s2_a, sigma_image
+        std_image = crop_s2_input(std_image, hw)
+    return rec_image, sim_image, s2_r, s2_a, std_image
 
 def check_is_patch(tensor:torch.Tensor):
     """

@@ -763,6 +763,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
     #                                    res_dir=res_dir)
 
 def get_models_validation_rec_loss(model_dict, loader):
+    losses = []
     for model_name, model_info in model_dict.items(): 
         if model_info["supervised"]:
             model_info['loss'] = 0.0
@@ -772,7 +773,8 @@ def get_models_validation_rec_loss(model_dict, loader):
                 model_info['loss'] = loss_dict["rec_loss"]
             else:
                 model_info['loss'] = loss_dict["loss_sum"]
-    return
+        losses.append(model_info['loss'])
+    return losses
 
 def main():
     """
@@ -804,7 +806,8 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
-    get_models_validation_rec_loss(model_dict, valid_loader)
+    losses = get_models_validation_rec_loss(model_dict, valid_loader)
+    pd.DataFrame(data={"loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
         (lai_rmse_dict, lai_picp_dict, 
@@ -817,8 +820,7 @@ def main():
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 
                                       max_patch=30 if not socket.gethostname()=='CELL200973' else 2)
     plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw, info_test_data, 
-                             lai_rmse_dict, lai_picp_dict, res_dir,
-                             )
+                             lai_rmse_dict, lai_picp_dict, res_dir)
     # compare_snap_versions_on_real_data(test_loader, res_dir)
     # compare_snap_versions_on_weiss_data(res_dir)
     

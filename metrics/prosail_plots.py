@@ -1050,8 +1050,8 @@ def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf,
 
 def plot_hist_and_cumhist_from_samples(samples, bins=50):
     fig, ax = plt.subplots(dpi=150)
-    ax.hist(samples.reshape(-1), bins=bins)
-    ax.hist(samples.reshape(-1), bins=bins, cumulative=True)
+    ax.hist(samples.reshape(-1), bins=bins, density=True)
+    ax.hist(samples.reshape(-1), bins=bins, cumulative=True, histtype='step', density=True)
     return fig, ax
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,

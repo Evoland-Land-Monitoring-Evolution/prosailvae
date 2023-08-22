@@ -298,6 +298,19 @@ def plot_belsar_validation_results_comparison(model_dict, model_results, res_dir
     if res_dir is not None:
         fig.savefig(os.path.join(res_dir, f"cm_belsar_validation{suffix}.png"))
 
+def get_training_metrics_df(model_dict, rmse_dict, picp_dict, mestdr_dict, method='simple_interpolate', variable='lai'):
+    training_metrics = {'name':[], 'rmse':[], 'picp':[], 'mestdr':[], "cyclical_rmse":[], 'loss':[]}
+    for i, (model_name, model_info) in enumerate(model_dict.items()):
+        training_metrics['rmse'].append(rmse_dict[method][variable][model_name]['Campaign']['All'].values[0])
+        training_metrics['picp'].append(picp_dict[method][variable][model_name]['Campaign']['All'].values[0])
+        training_metrics['mestdr'].append(mestdr_dict[method][variable][model_name]['Campaign']['All'].values[0])
+        training_metrics['loss'].append(model_info['loss'])
+        _, _, r2_cyclical, rmse_cyclical = regression_metrics(model_info["cyclical_ref_lai"].detach().cpu().numpy(), 
+                                                                model_info["cyclical_lai"].detach().cpu().numpy())
+        training_metrics['cyclical_rmse'].append(rmse_cyclical)
+        training_metrics['name'].append(model_name)
+    return pd.DataFrame(data=training_metrics)
+
 def plot_comparative_results(model_dict, all_s2_r, all_snap_lai, all_snap_cab,
                              all_snap_cw, info_test_data, rmse_dict, picp_dict, res_dir=None):
     if len(model_dict) < 7:
@@ -767,7 +780,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             np.save(os.path.join(res_dir, f"{mode}_{method}_{variable}_Campaign_picp.npy"), picp)
     # save_dict(rmse_dict, os.path.join(res_dir, f"LAI_Campaign_rmse.json"))
     # save_dict(picp_dict, os.path.join(res_dir, f"LAI_Campaign_picp.json"))
-    return lai_rmse_dict, lai_picp_dict, ccc_rmse_dict, ccc_picp_dict
+    return lai_rmse_dict, lai_picp_dict, lai_mestdr_dict, ccc_rmse_dict, ccc_picp_dict, ccc_mestdr_dict
     # else:
     # barrax_filename_before = "2B_20180516_FRM_Veg_Barrax_20180605"
     # sensor = "2B"
@@ -830,11 +843,15 @@ def main():
     for mode in ["sim_tg_mean"]: # , "lat_mode"]
         recompute = True if not socket.gethostname()=='CELL200973' else False
         (lai_rmse_dict, lai_picp_dict, 
-         ccc_rmse_dict, ccc_picp_dict) = compare_validation_regressions(model_dict, belsar_dir, 
+         lai_mestdr_dict, ccc_rmse_dict, 
+         ccc_picp_dict, ccc_mestdr_dict) = compare_validation_regressions(model_dict, belsar_dir, 
                                                               frm4veg_data_dir, frm4veg_2021_data_dir, 
                                                               res_dir, list_belsar_filenames, 
                                                               recompute=recompute, mode=mode)
-    
+    df_lai_training_metrics = get_training_metrics_df(model_dict, lai_rmse_dict, lai_picp_dict, 
+                                                      lai_mestdr_dict, method='simple_interpolate', variable='lai')
+    df_lai_training_metrics.to_csv(os.path.join(res_dir, "lai_training_metrics.csv"))
+
     (model_dict, all_s2_r, all_snap_lai, all_snap_cab,
      all_snap_cw) = get_model_results(model_dict, test_loader, info_test_data, 
                                       max_patch=30 if not socket.gethostname()=='CELL200973' else 2)

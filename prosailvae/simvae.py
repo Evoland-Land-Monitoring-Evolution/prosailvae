@@ -98,7 +98,10 @@ class SimVAE(nn.Module):
         self.spatial_mode = self.encoder.get_spatial_encoding()
         self.deterministic = config.deterministic
         self.beta_cyclical = beta_cyclical
+        
         self.snap_cyclical = snap_cyclical
+        if self.snap_cyclical:
+            self.lat_nll == "lai_nll"
         
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):

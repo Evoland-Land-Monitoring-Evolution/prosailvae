@@ -747,7 +747,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                 for model, df_results in validation_lai_results[method][variable].items():
                     all_rmse.append(ccc_rmse_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
                     all_picp.append(ccc_picp_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
-                    all_mestdr.append(ccc_picp_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
+                    all_mestdr.append(ccc_mestdr_dict[method][variable][model]["Campaign"][key].values.reshape(-1)[0])
                 rmse_dict[key] = all_rmse
                 picp_dict[key] = all_picp
                 mestdr_dict[key] = all_mestdr

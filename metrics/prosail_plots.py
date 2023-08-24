@@ -26,16 +26,34 @@ import seaborn as sns
 import os
 from math import ceil, log10
 from metrics.metrics_utils import regression_metrics
+import tikzplotlib
+from validation.validation_utils import var_of_product
+def tikzplotlib_fix_ncols(obj):
+    """
+    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
+    """
+    if hasattr(obj, "_ncols"):
+        obj._ncol = obj._ncols
+    for child in obj.get_children():
+        tikzplotlib_fix_ncols(child)
 
 def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
-    fig, axs = plt.subplots(1, len(patch_list), figsize=(3*len(patch_list), 3), dpi=200)
+    if len(patch_list[0].size())==3:
+        w = patch_list[0].shape[1]
+        h = patch_list[0].shape[2]
+    else:
+        w = patch_list[0].shape[0]
+        h = patch_list[0].shape[1]
+    fig, axs = plt.subplots(1, len(patch_list), figsize=(4*len(patch_list), 4), dpi=min(w, h))
+    if len(patch_list)==1:
+        axs = [axs]
     minvisu = None
     maxvisu = None
     for i, patch in enumerate(patch_list):
         # patch = patch.squeeze()
         if patch.size(0)==1:
             tensor_visu = patch_list[i].squeeze()
-            im = axs[i].imshow(tensor_visu, vmin=vmin, vmax=vmax)#, cmap='YlGn')
+            im = axs[i].imshow(tensor_visu, vmin=vmin, vmax=vmax, aspect='auto')#, cmap='YlGn')
             divider = make_axes_locatable(axs[i])
             cax = divider.append_axes('right', size='5%', pad=0.05)
             if colorbar:
@@ -1374,6 +1392,71 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     # fig.savefig(f"{plot_dir}/all_cwrel_scatter_true_vs_pred.png")
     return
 
+def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
+                             weiss_cw, sigma_image, i, info=None):
+    art_plot_dir = os.path.join(plot_dir, 'article_plots')
+    os.makedirs(art_plot_dir)
+    fig, _ = plot_patches([cropped_image.cpu()])
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_rgb.tex')
+    fig, _ = plot_patches([cropped_image.cpu()])
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_rgb.tex')
+    fig, _ = plot_patches([cropped_image[torch.tensor([8,6,3]),...].cpu()])
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_B11-8-5.tex')
+    fig, _ = plot_patches([rec_image[torch.tensor([8,6,3]),...].cpu()])
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_B11-8-5.tex')
+
+    vmin_lai = min(sim_image[6,...].unsqueeze(0).cpu().min().item(), weiss_lai.unsqueeze(0).cpu().min().item())
+    vmax_lai = max(sim_image[6,...].unsqueeze(0).cpu().max().item(), weiss_lai.unsqueeze(0).cpu().max().item())
+    fig, _ = plot_patches((weiss_lai.unsqueeze(0).cpu()), vmin=vmin_lai, vmax=vmax_lai)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_LAI.tex')
+
+    fig, _ = plot_patches([sim_image[6,...].unsqueeze(0).cpu()], vmin=vmin_lai, vmax=vmax_lai)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI.tex')
+
+    ccc = sim_image[1,...] * sim_image[6,...]
+    ccc_std = var_of_product(sigma_image[1,...].pow(2),  sigma_image[6,...].pow(2), 
+                             sim_image[1,...],  sim_image[6,...]).sqrt()
+    vmin_ccc = min(ccc.unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item())
+    vmax_ccc = max(ccc.unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item())
+    fig, _ = plot_patches((weiss_cab.unsqueeze(0).cpu()), vmin=vmin_ccc, vmax=vmax_ccc)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_CCC.tex')
+
+    fig, _ = plot_patches([ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC.tex')
+
+    cwc = sim_image[4,...] * sim_image[6,...]
+    cwc_std = var_of_product(sigma_image[4,...].pow(2),  sigma_image[6,...].pow(2), 
+                             sim_image[4,...],  sim_image[6,...]).sqrt()
+    vmin_cwc = min(cwc.unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item())
+    vmax_cwc = max(cwc.unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item())
+
+    fig, _ = plot_patches((weiss_cw.unsqueeze(0).cpu()), vmin=vmin_cwc, vmax=vmax_cwc)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_CWC.tex')
+
+    fig, _ = plot_patches([cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC.tex')
+
+    for j, varname in enumerate(PROSAILVARS):
+        if j==6:
+            continue
+        fig, _ = plot_patches([sim_image[j,...].unsqueeze(0).cpu()])
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}.tex')
+        fig, _ = plot_patches([sigma_image[j,...].unsqueeze(0).cpu()])
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}-std.tex')
+        plt.close('all')
+    return
+
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
                          weiss_cw, sigma_image, i, info=None):
     if info is None:
@@ -1427,7 +1510,7 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
     fig.savefig(f'{plot_dir}/{i}_{info[1]}_{info[2]}_bands_hist_true_vs_pred.png')
 
     fig, _ = plot_patches((cropped_image.cpu(), rec_image.cpu(),
-            (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0).unsqueeze(0)),
+            (cropped_image[:10,...].cpu() - rec_image.cpu()).abs().mean(0, keepdim=True)),
             title_list=[f'original patch \n {info[1]} {info[2]}', 'reconstruction', 'mean absolute\n reconstruction error'])
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_patch_rec_rgb.png")
 

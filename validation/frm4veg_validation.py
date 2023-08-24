@@ -387,7 +387,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
                                                                                  dt_after, dt_before).squeeze()
             model_results[f"{variable}_std"] = simple_interpolate(validation_results_after[f"{variable}_std"].squeeze(),
                                                                     validation_results_before[f"{variable}_std"].squeeze(),
-                                                                    dt_after, dt_before).squeeze()
+                                                                    dt_after, dt_before, is_std=True).squeeze()
             model_results[f"{variable}_date"] = (abs(dt_before) + abs(dt_after)) / 2
         elif method == "best":
             ref = validation_results_before[f"ref_{variable}"]

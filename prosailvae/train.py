@@ -637,14 +637,14 @@ def main():
                                      frm4veg_data_dir=frm4veg_data_dir,
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir)
-        # if True:#not socket.gethostname()=='CELL200973':
-            # save_validation_results(prosail_vae, validation_dir,
-            #                         frm4veg_data_dir=frm4veg_data_dir,
-            #                         frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-            #                         belsar_data_dir=belsar_data_dir,
-            #                         model_name="pvae",
-            #                         method="simple_interpolate",
-            #                         mode="sim_tg_mean")
+        if True:#not socket.gethostname()=='CELL200973':
+            save_validation_results(prosail_vae, validation_dir,
+                                    frm4veg_data_dir=frm4veg_data_dir,
+                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                    belsar_data_dir=belsar_data_dir,
+                                    model_name="pvae",
+                                    method="simple_interpolate",
+                                    mode="sim_tg_mean")
         if not params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                          batch_size=1, num_workers=0)

@@ -225,10 +225,10 @@ def get_validation_global_metrics(df_results, decompose_along_columns = ["Site",
             picp = {}
             for _, element in enumerate(pd.unique(df_results[column])):
                 results = df_results[df_results[column]==element]
-                picp[element] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma/2 * results[f'Predicted {variable} std'],
-                                               results[variable] > results[f'Predicted {variable}'] - n_sigma/2 * results[f'Predicted {variable} std']).astype(int).mean()
-            picp["All"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma/2 * df_results[f'Predicted {variable} std'],
-                                         df_results[variable] > df_results[f'Predicted {variable}'] - n_sigma/2 * df_results[f'Predicted {variable} std']).astype(int).mean()
+                picp[element] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma * results[f'Predicted {variable} std'],
+                                               results[variable] > results[f'Predicted {variable}'] - n_sigma * results[f'Predicted {variable} std']).astype(int).mean()
+            picp["All"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma * df_results[f'Predicted {variable} std'],
+                                         df_results[variable] > df_results[f'Predicted {variable}'] - n_sigma * df_results[f'Predicted {variable} std']).astype(int).mean()
             global_picp_dict[column] = pd.DataFrame(data=picp, index=[0])
 
     for column in decompose_along_columns:

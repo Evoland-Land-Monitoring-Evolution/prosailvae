@@ -688,7 +688,7 @@ class SimVAE(nn.Module):
                 pass
         _, _, sim_cyc = self.point_estimate_sim(s2_r, s2_a, mode=mode) # Predicting PROSAIL vars from reconstruction
         if self.spatial_mode:
-            sim_cyc = sim_cyc.squeeze(1)
+            sim = sim.unsqueeze(1)
         
         return (sim_cyc.select(feature_dim, lai_idx) - sim.select(feature_dim, lai_idx)).pow(2)
     

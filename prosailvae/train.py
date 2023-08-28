@@ -637,7 +637,7 @@ def main():
                                      frm4veg_data_dir=frm4veg_data_dir,
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir, lai_cyclical_loader=lai_cyclical_loader)
-        if True:#not socket.gethostname()=='CELL200973':
+        if True and not socket.gethostname()=='CELL200973':
             save_validation_results(prosail_vae, validation_dir,
                                     frm4veg_data_dir=frm4veg_data_dir,
                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,

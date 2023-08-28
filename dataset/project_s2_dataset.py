@@ -56,13 +56,13 @@ def get_model_and_dataloader(parser):
     info_test_data = np.load(os.path.join(parser.data_dir, "test_info.npy"))
     return model_dict, train_loader, test_loader, valid_loader, info_test_data
    
-def project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1):
+def project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1, max_batches=50):
     inferred_BV = []
     projected_images = []
     angles = []
     for i, batch in tqdm(enumerate(loader)):
         if socket.gethostname()=='CELL200973':
-            if i==50:
+            if i==max_batches:
                 break
         (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 sigma_image) = get_encoded_image_from_batch(batch, model, patch_size=32,

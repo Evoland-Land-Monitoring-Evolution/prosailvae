@@ -722,7 +722,7 @@ class SimVAE(nn.Module):
                                          max_samples=None, 
                                          lai_precomputed=False):
         """
-        Computes loss for a whole epoch
+        
         """
         self.eval()
         n_batches = 0
@@ -736,7 +736,7 @@ class SimVAE(nn.Module):
                     if i == max_samples:
                         break
                 cyclical_rmse.append(self.get_cyclical_lai_squared_error_from_batch(batch, mode="lat_mode", 
-                                                                                    lai_precomputed=lai_precomputed).unsqueeze(0))
+                                                                                    lai_precomputed=lai_precomputed).reshape(-1))
        
-        cyclical_rmse = torch.cat(cyclical_rmse).mean().sqrt()
+        cyclical_rmse = torch.cat(cyclical_rmse, 0).mean().sqrt()
         return cyclical_rmse

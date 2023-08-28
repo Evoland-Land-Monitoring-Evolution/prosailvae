@@ -237,7 +237,8 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         lat_nll=pv_config.loss_config.lat_loss_type)
     prosail_vae.set_hyper_prior(hyper_prior)
     if pv_config.load_vae is not None and pv_config.vae_load_file_path is not None:
-        _, _ = prosail_vae.load_ae(pv_config.vae_load_file_path, optimizer)
+        if pv_config.load_vae:
+            _, _ = prosail_vae.load_ae(pv_config.vae_load_file_path, optimizer)
 
     prosail_vae.change_device(device)
     if freeze_weights:

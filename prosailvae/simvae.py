@@ -350,9 +350,9 @@ class SimVAE(nn.Module):
                     raise NotImplementedError
                     snap_s2_r = s2_r 
                     snap_s2_a = s2_a
-                    if batch_size>1:
-                        snap_s2_r = torch.cat(snap_s2_r.split(1,dim=0),-1)
-                        snap_s2_a = torch.cat(snap_s2_a.split(1,dim=0),-1)
+                    if batch_size > 1:
+                        snap_s2_r = torch.cat(snap_s2_r.split(1, dim=0),-1)
+                        snap_s2_a = torch.cat(snap_s2_a.split(1, dim=0),-1)
                     (snap_lai, snap_cab,
                     snap_cw) = get_weiss_biophyiscal_from_batch((snap_s2_r, snap_s2_a),
                                                                 patch_size=s2_r.size(-1), 
@@ -362,24 +362,20 @@ class SimVAE(nn.Module):
                 else:
                     (snap_lai, snap_cab,
                     snap_cw) = get_weiss_biophyiscal_from_pixellic_batch((s2_r, s2_a), 
-                                                                         sensor="2A",
-                                                                         device=self.device)
-                snap_sim = torch.cat((torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
+                                                                          sensor="2A",
+                                                                          device=self.device)
+                snap_sim = torch.cat((torch.zeros_like(snap_lai), torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai), torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai), torch.zeros_like(snap_lai),
                                       snap_lai,
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),
-                                      torch.zeros_like(snap_lai),), 1).to(self.device)
+                                      torch.zeros_like(snap_lai), torch.zeros_like(snap_lai),
+                                      torch.zeros_like(snap_lai), torch.zeros_like(snap_lai),), 1).to(self.device)
                 snap_z = self.sim_space.sim2z(snap_sim)
                 cyclical_batch = (s2_r, s2_a, snap_z)
                 
             else:
-                rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+                rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim) 
+                # Fusing samples and batch dimensions together 
                 rec_cyc = rec_cyc.transpose(sample_dim, 1)
                 rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
                 s2_a_cyc = s2_a.unsqueeze(sample_dim)
@@ -632,6 +628,7 @@ class SimVAE(nn.Module):
             assert check_is_patch(rec)
             s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
             z = crop_s2_input(z, self.encoder.nb_enc_cropped_hw)
+
         sample_dim = self.reconstruction_loss.sample_dim   
         feature_dim = self.reconstruction_loss.feature_dim 
         rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
@@ -647,9 +644,10 @@ class SimVAE(nn.Module):
         cyclical_loss, _ = self.supervised_batch_loss(cyclical_batch, {}, ref_is_lat=True)
         return cyclical_loss
 
-    def get_cyclical_rmse_from_batch(self, batch, mode="lat_mode"):
+    def get_cyclical_lai_squared_error_from_batch(self, batch, mode="lat_mode", lai_precomputed=False):
         s2_r = batch[0].to(self.device)
         s2_a = batch[1].to(self.device)
+        lai_idx = 6
         input_is_patch = check_is_patch(s2_r)
         batch_size = s2_r.size(0)
         if self.spatial_mode: # self.decoder.loss_type=='spatial_nll':
@@ -658,45 +656,79 @@ class SimVAE(nn.Module):
             if input_is_patch: # converting patch into batch
                 s2_r = batchify_batch_latent(s2_r)
                 s2_a = batchify_batch_latent(s2_a)
-        # Forward Pass
-        _, z, sim, rec = self.point_estimate_rec(s2_r, angles=s2_a, mode=mode)
-        if self.spatial_mode:
-            assert check_is_patch(rec)
-            s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
-            sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
         sample_dim = self.reconstruction_loss.sample_dim   
         feature_dim = self.reconstruction_loss.feature_dim 
-        rec_cyc = unstandardize(rec, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
-        rec_cyc = rec_cyc.transpose(sample_dim, 1)
-        rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
-        s2_a_cyc = s2_a.unsqueeze(sample_dim)
-        s2_a_cyc = s2_a_cyc.tile([(1 if i == sample_dim else 1) for i in range(len(s2_a_cyc.size()))])
-        s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
-        s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
-        # z_cyc = z.transpose(feature_dim, -1)
-        # z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
-        _, _, sim_cyc = self.point_estimate_sim(rec_cyc, s2_a_cyc, mode=mode)
-        return (sim_cyc.select(feature_dim,6) - sim.select(feature_dim,6)).pow(2).mean().sqrt()
+        # Forward Pass
+        if not lai_precomputed:
+
+            _, z, sim, s2_r = self.point_estimate_rec(s2_r, angles=s2_a, mode=mode) # computing reconstruction and prosail vars
+            
+            if self.spatial_mode: # cropping encoder output due to padding
+                assert check_is_patch(s2_r)
+                s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
+                sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
+
+            s2_r = unstandardize(s2_r, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+            s2_r = s2_r.transpose(sample_dim, 1)
+            s2_r = s2_r.reshape(-1, *s2_r.shape[2:])
+
+            s2_a = s2_a.unsqueeze(sample_dim)
+            s2_a = s2_a.tile([1 for i in range(len(s2_a.size()))])
+            s2_a = s2_a.transpose(sample_dim, 1)
+            s2_a = s2_a.reshape(-1, *s2_a.shape[2:])
+        else: 
+            sim = batch[2].to(self.device)
+            if self.spatial_mode:
+                sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
+        _, _, sim_cyc = self.point_estimate_sim(s2_r, s2_a, mode=mode) # Predicting PROSAIL vars from reconstruction
+        
+        return (sim_cyc.squeeze(1).select(feature_dim, lai_idx) - sim.select(feature_dim, lai_idx).squeeze()).pow(2)
     
-    def get_cyclical_metrics_from_loader(self, dataloader, n_samples=1, batch_per_epoch=None, max_samples=None):
+    def get_cyclical_metrics_from_loader(self, dataloader, n_samples=1, 
+                                         batch_per_epoch=None, 
+                                         max_samples=None, 
+                                         lai_precomputed=False):
         """
         Computes loss for a whole epoch
         """
         self.eval()
-        len_loader = len(dataloader.dataset)
-        n_batches=0
+        n_batches = 0
         with torch.no_grad():
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
                 cyclical_loss=[]
                 cyclical_rmse=[]
-            for i, batch in zip(range(min(len(dataloader),batch_per_epoch)), dataloader):
+            for i, batch in zip(range(min(len(dataloader), batch_per_epoch)), dataloader):
                 n_batches += batch[0].size(0)
                 if max_samples is not None:
                     if i == max_samples:
                         break
-                cyclical_loss.append(self.get_cyclical_loss_from_batch(batch, n_samples=n_samples).unsqueeze(0))
-                cyclical_rmse.append(self.get_cyclical_rmse_from_batch(batch, mode="lat_mode").unsqueeze(0))
-        cyclical_loss = torch.cat(cyclical_loss).mean()
-        cyclical_rmse = torch.cat(cyclical_rmse).mean()
+                # cyclical_loss.append(self.get_cyclical_loss_from_batch(batch, n_samples=n_samples).unsqueeze(0))
+                cyclical_rmse.append(self.get_cyclical_lai_squared_error_from_batch(batch, mode="lat_mode", 
+                                                                                    lai_precomputed=lai_precomputed).unsqueeze(0))
+        # cyclical_loss = torch.cat(cyclical_loss).mean()
+        cyclical_rmse = torch.cat(cyclical_rmse).mean().sqrt()
         return cyclical_loss, cyclical_rmse
+    def get_cyclical_rmse_from_loader(self, dataloader,
+                                         batch_per_epoch=None, 
+                                         max_samples=None, 
+                                         lai_precomputed=False):
+        """
+        Computes loss for a whole epoch
+        """
+        self.eval()
+        n_batches = 0
+        with torch.no_grad():
+            if batch_per_epoch is None:
+                batch_per_epoch = len(dataloader)
+                cyclical_rmse=[]
+            for i, batch in zip(range(min(len(dataloader), batch_per_epoch)), dataloader):
+                n_batches += batch[0].size(0)
+                if max_samples is not None:
+                    if i == max_samples:
+                        break
+                cyclical_rmse.append(self.get_cyclical_lai_squared_error_from_batch(batch, mode="lat_mode", 
+                                                                                    lai_precomputed=lai_precomputed).unsqueeze(0))
+       
+        cyclical_rmse = torch.cat(cyclical_rmse).mean().sqrt()
+        return cyclical_rmse

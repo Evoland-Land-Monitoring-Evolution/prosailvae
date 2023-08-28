@@ -23,6 +23,7 @@ from validation.frm4veg_validation import (load_frm4veg_data, interpolate_frm4ve
 from tqdm import trange, tqdm
 from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
 from validation.validation import get_belsar_x_frm4veg_lai_results, get_validation_global_metrics, get_frm4veg_ccc_results
+from dataset.project_s2_dataset import save_common_cyclical_dataset, load_cyclical_data_set
 
 def get_parser():
     """
@@ -42,6 +43,9 @@ def get_parser():
     parser.add_argument("-r", dest="res_dir",
                         help="path to results directory",
                         type=str, default="")
+    parser.add_argument("-sp", dest="save_projected",
+                        help="save projected data_set from_all_models",
+                        type=bool, default=False)
     return parser
 
 def get_model_and_dataloader(parser):
@@ -56,18 +60,10 @@ def get_model_and_dataloader(parser):
         if model_info["type"] == "simvae":
             config = load_params(model_info["dir_path"], "config.json")
             bands, prosail_bands = get_bands_idx(config["weiss_bands"])
-            # norm_mean = torch.load(os.path.join(model_info["dir_path"], "norm_mean.pt"))
-            # norm_std = torch.load(os.path.join(model_info["dir_path"], "norm_std.pt"))
             params_path = os.path.join(model_info["dir_path"], "prosailvae_weights.tar")
             config["load_model"] = True
             model_info["supervised"] = config["supervised"]
             config["vae_load_file_path"] = params_path
-            # if "disabled_latent" not in config.keys():
-            #     config["disabled_latent"] = []
-            # if "disabled_latent_values" not in config.keys():
-            #     config["disabled_latent_values"] = []
-            # if "R_down" not in config.keys():
-            #     config["R_down"] = 1
             io_coeffs = load_standardize_coeffs(model_info["dir_path"])
             pv_config = get_prosail_vae_config(config, bands=bands, prosail_bands=prosail_bands,
                                                 inference_mode = False, rsr_dir=parser.rsr_dir,
@@ -78,7 +74,7 @@ def get_model_and_dataloader(parser):
     info_test_data = np.load(os.path.join(parser.data_dir,"test_info.npy"))
     return model_dict, test_loader, valid_loader, info_test_data
 
-def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50, mode = 'lat_mode'):
+def get_model_results(model_dict: dict, test_loader, cyclical_dataloader, info_test_data, max_patch = 50, mode = 'lat_mode'):
     """
     Compute results for all models
     """
@@ -120,8 +116,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
                                                        "latent_sigma": sigma_image,
                                                        "cropped_s2_r" : cropped_s2_r,
                                                        "cropped_s2_a": cropped_s2_a,
-                                                       "cyclical_ref_lai":crop_s2_input(sim_image, hw)[6,...].reshape(-1),
-                                                       "cyclical_lai":cyclical_sim_image[6,...].reshape(-1),
+                                                    #    "cyclical_ref_lai":crop_s2_input(sim_image, hw)[6,...].reshape(-1),
+                                                    #    "cyclical_lai":cyclical_sim_image[6,...].reshape(-1),
                                                        "hw":hw}
             for model_name, model_info in model_dict.items():
                 delta_hw = largest_hw - current_patch_results[model_name]['hw']
@@ -130,22 +126,22 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
                 sigma_image = current_patch_results[model_name]["latent_sigma"]
                 cropped_s2_r = current_patch_results[model_name]["cropped_s2_r"]
                 cropped_s2_a = current_patch_results[model_name]["cropped_s2_a"]
-                cyclical_ref_lai = current_patch_results[model_name]["cyclical_ref_lai"]
-                cyclical_lai = current_patch_results[model_name]["cyclical_lai"]
+                # cyclical_ref_lai = current_patch_results[model_name]["cyclical_ref_lai"]
+                # cyclical_lai = current_patch_results[model_name]["cyclical_lai"]
                 if delta_hw > 0 :
                     rec_image = crop_s2_input(rec_image, delta_hw)
                     sim_image = crop_s2_input(sim_image, delta_hw)
                     sigma_image = crop_s2_input(sigma_image, delta_hw)
                     cropped_s2_r = crop_s2_input(cropped_s2_r, delta_hw)
                     cropped_s2_a = crop_s2_input(cropped_s2_a, delta_hw)
-                    cyclical_ref_lai = cyclical_ref_lai
-                    cyclical_lai = cyclical_lai
+                    # cyclical_ref_lai = cyclical_ref_lai
+                    # cyclical_lai = cyclical_lai
 
                 model_info["reconstruction"].append(rec_image)
                 model_info["prosail_vars"].append(sim_image)
                 model_info["latent_sigma"].append(sigma_image)
-                model_info["cyclical_ref_lai"].append(cyclical_ref_lai)
-                model_info["cyclical_lai"].append(cyclical_lai)
+                # model_info["cyclical_ref_lai"].append(cyclical_ref_lai)
+                # model_info["cyclical_lai"].append(cyclical_lai)
             all_s2_r.append(cropped_s2_r.squeeze())
             info = info_test_data[i,:]
             try:
@@ -169,8 +165,8 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
             model_info["reconstruction"] = torch.stack(model_info["reconstruction"], 0)
             model_info["prosail_vars"] = torch.stack(model_info["prosail_vars"], 0)
             model_info["latent_sigma"] = torch.stack(model_info["latent_sigma"], 0)
-            model_info["cyclical_ref_lai"] = torch.cat(model_info["cyclical_ref_lai"], 0)
-            model_info["cyclical_lai"] = torch.cat(model_info["cyclical_lai"], 0)
+            # model_info["cyclical_ref_lai"] = torch.cat(model_info["cyclical_ref_lai"], 0)
+            # model_info["cyclical_lai"] = torch.cat(model_info["cyclical_lai"], 0)
         all_s2_r = torch.stack(all_s2_r, axis=0)
     return model_dict, all_s2_r, all_snap_lai, all_snap_cab, all_snap_cw
 
@@ -305,9 +301,9 @@ def get_training_metrics_df(model_dict, rmse_dict, picp_dict, mestdr_dict, metho
         training_metrics['picp'].append(picp_dict[method][variable][model_name]['Campaign']['All'].values[0])
         training_metrics['mestdr'].append(mestdr_dict[method][variable][model_name]['Campaign']['All'].values[0])
         training_metrics['loss'].append(model_info['loss'])
-        _, _, r2_cyclical, rmse_cyclical = regression_metrics(model_info["cyclical_ref_lai"].detach().cpu().numpy(), 
-                                                                model_info["cyclical_lai"].detach().cpu().numpy())
-        training_metrics['cyclical_rmse'].append(rmse_cyclical)
+        # _, _, r2_cyclical, rmse_cyclical = regression_metrics(model_info["cyclical_ref_lai"].detach().cpu().numpy(), 
+        #                                                         model_info["cyclical_lai"].detach().cpu().numpy())
+        training_metrics['cyclical_rmse'].append(model_info["cyclical_rmse"])
         training_metrics['name'].append(model_name)
     return pd.DataFrame(data=training_metrics)
 
@@ -808,6 +804,13 @@ def get_models_validation_rec_loss(model_dict, loader):
         losses.append(model_info['loss'])
     return losses
 
+def get_models_validation_cyclical_rmse(model_dict, loader):
+    cyclical_rmse = []
+    for _, model_info in model_dict.items(): 
+        model_info['cyclical_rmse'] = model_info["model"].get_cyclical_rmse_from_loader(loader, lai_precomputed=True)
+        cyclical_rmse.append(model_info['cyclical_rmse'])
+    return cyclical_rmse
+
 def main():
     """
     main.
@@ -815,16 +818,20 @@ def main():
     if socket.gethostname()=='CELL200973':
         args = ["-m","/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config/model_dict_dev.json",
                 "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
-                "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/"]
+                "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/comparaison/",
+                # "-sp", "True",
+                ]
         parser = get_parser().parse_args(args)
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
+        projected_data_dir =  "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/projected_data"
     else:
         parser = get_parser().parse_args()
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
+        projected_data_dir =  "/work/scratch/zerahy/prosailvae/data/projected_data"
     res_dir = parser.res_dir
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
@@ -838,9 +845,14 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
+    if parser.save_projected:
+        save_common_cyclical_dataset(model_dict, valid_loader, projected_data_dir)
+    cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
     losses = get_models_validation_rec_loss(model_dict, valid_loader)
     pd.DataFrame(data={"loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
-    for mode in ["sim_tg_mean"]: # , "lat_mode"]
+    cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader)
+    pd.DataFrame(data={"cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
+    for mode in ["sim_tg_mean"]:
         recompute = True if not socket.gethostname()=='CELL200973' else False
         (lai_rmse_dict, lai_picp_dict, 
          lai_mestdr_dict, ccc_rmse_dict, 

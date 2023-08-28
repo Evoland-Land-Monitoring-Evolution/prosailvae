@@ -1,5 +1,5 @@
 {
-    "rcnn_pvae_b05_i0_c1_lai_R7": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/1/",
+    "rcnn_pvae_b05_i0_c1_lai_R7": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/1_d2023_08_28_14_12_54_supervised_False_train_/",
     		"type":"simvae",
     		"plot_name":"PROSAIL-VAE"
     }

@@ -276,7 +276,9 @@ def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, b
 
 def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
-                    plot_results=False, info_test_data=None, max_test_patch=50):
+                    plot_results=False, info_test_data=None, max_test_patch=50, 
+                    lai_cyclical_loader=None):
+    cyclical_lai_precomputed=True
     rec_mode = 'lat_mode' 
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -304,13 +306,14 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     
     # Computing metrics
     PROSAIL_VAE.eval()
-    logger.info("Computing inference metrics with test dataset...")
+    cyclical_rmse = PROSAIL_VAE.get_cyclical_rmse_from_loader(lai_cyclical_loader, 
+                                                                    lai_precomputed=cyclical_lai_precomputed)
+    pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
+    # logger.info("Computing inference metrics with test dataset...")
     # test_loss = PROSAIL_VAE.validate(loader, mmdc_dataset=True, n_samples=10)
     # pd.DataFrame(test_loss, index=[0]).to_csv(loss_dir + "/test_loss.csv")
     if not plot_results:
         return
-
-    
     
     plot_dir = res_dir + "/plots/"
     if not os.path.isdir(plot_dir):

@@ -1,6 +1,6 @@
 {
     "batch_size": 2,
-    "epochs": 0,
+    "epochs": 1,
     "lr": 0.001,
     "test_size": 0.01,
     "valid_ratio": 0.01,
@@ -8,9 +8,9 @@
     "encoder_last_activation": null,
     "n_samples": 2,
     "supervised": false,
-    "beta_kl": 1,
+    "beta_kl": 0,
     "beta_index": 0,
-    "beta_cyclical": 1,
+    "beta_cyclical": 0,
     "k_fold": 1,
     "dataset_file_prefix": "train_",
     "n_fold": null,
@@ -64,5 +64,5 @@
     "break_init_at_rec_loss": null,
     "rec_bands_loss_coeffs": null,
     "deterministic": false,
-    "snap_cyclical": true
+    "snap_cyclical": false
 }

@@ -7,9 +7,10 @@ from prosailvae.ProsailSimus import get_bands_idx, BANDS
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, load_params)
 import numpy as np 
 import socket
-from utils.image_utils import get_encoded_image_from_batch
+from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
+
 def get_parser():
     """
     Gets arguments for terminal-based launch of script

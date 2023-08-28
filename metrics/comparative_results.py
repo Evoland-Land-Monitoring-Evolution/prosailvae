@@ -806,9 +806,10 @@ def get_models_validation_rec_loss(model_dict, loader):
 
 def get_models_validation_cyclical_rmse(model_dict, loader):
     cyclical_rmse = []
-    for _, model_info in model_dict.items(): 
-        model_info['cyclical_rmse'] = model_info["model"].get_cyclical_rmse_from_loader(loader, lai_precomputed=True)
-        cyclical_rmse.append(model_info['cyclical_rmse'])
+    with torch.no_grad():
+        for _, model_info in model_dict.items(): 
+            model_info['cyclical_rmse'] = model_info["model"].get_cyclical_rmse_from_loader(loader, lai_precomputed=True).detach().cpu()
+            cyclical_rmse.append(model_info['cyclical_rmse'])
     return cyclical_rmse
 
 def main():
@@ -851,7 +852,7 @@ def main():
     losses = get_models_validation_rec_loss(model_dict, valid_loader)
     pd.DataFrame(data={"loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
     cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader)
-    pd.DataFrame(data={"cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
+    pd.DataFrame(data={"cyclical_rmse":cyclical_rmse.item()}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
     for mode in ["sim_tg_mean"]:
         recompute = True if not socket.gethostname()=='CELL200973' else False
         (lai_rmse_dict, lai_picp_dict, 

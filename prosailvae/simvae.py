@@ -658,6 +658,9 @@ class SimVAE(nn.Module):
                 s2_a = batchify_batch_latent(s2_a)
         sample_dim = self.reconstruction_loss.sample_dim   
         feature_dim = self.reconstruction_loss.feature_dim 
+        if self.supervised:
+            feature_dim=1
+            sample_dim=2
         # Forward Pass
         if not lai_precomputed:
 
@@ -680,9 +683,14 @@ class SimVAE(nn.Module):
             sim = batch[2].to(self.device)
             if self.spatial_mode:
                 sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
+            else:
+                sim = batchify_batch_latent(sim)
+                pass
         _, _, sim_cyc = self.point_estimate_sim(s2_r, s2_a, mode=mode) # Predicting PROSAIL vars from reconstruction
+        if self.spatial_mode:
+            sim_cyc = sim_cyc.squeeze(1)
         
-        return (sim_cyc.squeeze(1).select(feature_dim, lai_idx) - sim.select(feature_dim, lai_idx).squeeze()).pow(2)
+        return (sim_cyc.select(feature_dim, lai_idx) - sim.select(feature_dim, lai_idx)).pow(2)
     
     def get_cyclical_metrics_from_loader(self, dataloader, n_samples=1, 
                                          batch_per_epoch=None, 

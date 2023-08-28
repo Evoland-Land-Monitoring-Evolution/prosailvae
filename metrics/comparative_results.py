@@ -107,10 +107,10 @@ def get_model_results(model_dict: dict, test_loader, cyclical_dataloader, info_t
                                                             bands=torch.arange(10),
                                                             mode=mode, no_rec=False)
                 
-                (_, cyclical_sim_image, _, _, _) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
-                                                                                model, patch_size=32,
-                                                                                    bands=torch.arange(10),
-                                                                                    mode=mode, no_rec=True)
+                # (_, cyclical_sim_image, _, _, _) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
+                #                                                                 model, patch_size=32,
+                #                                                                     bands=torch.arange(10),
+                #                                                                     mode=mode, no_rec=True)
                 current_patch_results[model_name] = {"reconstruction": rec_image,
                                                        "prosail_vars": sim_image, 
                                                        "latent_sigma": sigma_image,

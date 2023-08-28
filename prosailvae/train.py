@@ -637,14 +637,14 @@ def main():
                                      frm4veg_data_dir=frm4veg_data_dir,
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir, lai_cyclical_loader=lai_cyclical_loader)
-        if True:#not socket.gethostname()=='CELL200973':
-            save_validation_results(prosail_vae, validation_dir,
-                                    frm4veg_data_dir=frm4veg_data_dir,
-                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                                    belsar_data_dir=belsar_data_dir,
-                                    model_name="pvae",
-                                    method="simple_interpolate",
-                                    mode="sim_tg_mean")
+        # if True:#not socket.gethostname()=='CELL200973':
+            # save_validation_results(prosail_vae, validation_dir,
+            #                         frm4veg_data_dir=frm4veg_data_dir,
+            #                         frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+            #                         belsar_data_dir=belsar_data_dir,
+            #                         model_name="pvae",
+            #                         method="simple_interpolate",
+            #                         mode="sim_tg_mean")
         if not params['supervised']:
             _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                          batch_size=1, num_workers=0)
@@ -658,7 +658,9 @@ def main():
         if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                         plot_results=parser.plot_results, weiss_mode=parser.weiss_mode, n_samples=params["n_samples"])
+                         plot_results=parser.plot_results, 
+                         weiss_mode=parser.weiss_mode, n_samples=params["n_samples"],
+                         lai_cyclical_loader=lai_cyclical_loader)
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)

@@ -484,7 +484,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
 
 def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,
-                 juan_validation=True, weiss_mode=False, n_samples=1):
+                 juan_validation=True, weiss_mode=False, n_samples=1,
+                            lai_cyclical_loader=None):
     bands_name = BANDS
     if weiss_mode:
         bands_name = ["B03", "B04", "B05", "B06", "B07", "B8A", "B11", "B12"]
@@ -509,6 +510,9 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
             loss_curve(info_df, save_file=loss_dir+"lr.svg")
             all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, 
                            save_file=loss_dir+"all_loss.svg")
+    cyclical_rmse = PROSAIL_VAE.get_cyclical_rmse_from_loader(lai_cyclical_loader, 
+                                                              lai_precomputed=True)
+    pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
     # Computing metrics
     logger.info("Loading test loader...")
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)

@@ -118,7 +118,7 @@ def save_common_cyclical_dataset(model_dict, loader, output_dir=""):
     all_s2_r = []
     all_s2_a = []
     all_sim = []
-    max_hw=0:
+    max_hw=0
     for _, model_info in model_dict.items():
         model = model_info["model"]
         max_hw=max(max_hw, model.encoder.nb_enc_cropped_hw)

@@ -118,9 +118,18 @@ def save_common_cyclical_dataset(model_dict, loader, output_dir=""):
     all_s2_r = []
     all_s2_a = []
     all_sim = []
+    max_hw=0:
     for _, model_info in model_dict.items():
         model = model_info["model"]
+        max_hw=max(max_hw, model.encoder.nb_enc_cropped_hw)
+    for _, model_info in model_dict.items():
+        model = model_info["model"]
+        delta_hw = max_hw - model.encoder.nb_enc_cropped_hw
         s2_r, s2_a, sim = project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1)
+        if delta_hw > 0:
+            s2_r = crop_s2_input(s2_r, delta_hw)
+            s2_a = crop_s2_input(s2_a, delta_hw)
+            sim = crop_s2_input(sim, delta_hw)
         all_s2_r.append(s2_r)
         all_s2_a.append(s2_a)
         all_sim.append(sim)

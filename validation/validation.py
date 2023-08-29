@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import torch
 from validation.frm4veg_validation import (interpolate_frm4veg_pred, 
                                            BARRAX_FILENAMES, WYTHAM_FILENAMES, BARRAX_2021_FILENAME,
                                            get_frm4veg_results_at_date)
@@ -72,7 +73,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
     return barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
 
 def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
-                                     frm4veg_lai="lai", get_reconstruction_error=False):
+                                     frm4veg_lai="lai", get_reconstruction_error=False, bands_idx=torch.arange(10)):
 
 
     date_list = [belsar_results['date'].values.reshape(-1),
@@ -121,7 +122,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
         rec_err = np.zeros_like(ref_lai)
 
     bands_rec_err = {}
-    for band in BANDS:
+    for band in np.array(BANDS)[bands_idx].tolist():
         if get_reconstruction_error:
             bands_rec_err[band] = np.concatenate([belsar_results[f'{band}_rec_err_mean'].values.reshape(-1),
                                                     barrax_results[f'{frm4veg_lai}_{band}_rec_err'].reshape(-1),
@@ -140,12 +141,12 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                                 "Time delta": np.concatenate(date_list),
                                 "Campaign": np.array(campaign_list),
                                 })
-    for band in BANDS:
+    for band in np.array(BANDS)[bands_idx].tolist():
         results[f"{band} error"] = bands_rec_err[band]
     return results
 
 def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
-                                     frm4veg_ccc="ccc", get_reconstruction_error=False):
+                                     frm4veg_ccc="ccc", get_reconstruction_error=False, bands_idx=torch.arange(10)):
 
 
     date_list = [barrax_results[f'{frm4veg_ccc}_date'].reshape(-1),
@@ -188,7 +189,7 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
         rec_err = np.zeros_like(ref_ccc)
 
     bands_rec_err = {}
-    for band in BANDS:
+    for band in np.array(BANDS)[bands_idx].tolist():
         if get_reconstruction_error:
             bands_rec_err[band] = np.concatenate([  barrax_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1),
                                                     barrax_2021_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1),
@@ -205,7 +206,7 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                 "Time delta": np.concatenate(date_list),
                                 "Campaign": np.array(campaign_list),
                                 })
-    for band in BANDS:
+    for band in np.array(BANDS)[bands_idx].tolist():
         results[f"{band} error"] = bands_rec_err[band]
     return results
 

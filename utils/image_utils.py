@@ -120,7 +120,7 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
     sim_image = unpatchify(patched_sim_image)[:,:s2_r.size(2),:s2_r.size(3)]
     rec_image = unpatchify(patched_rec_image)[:,:s2_r.size(2),:s2_r.size(3)]
     std_image = unpatchify(patched_std_image)[:,:s2_r.size(2),:s2_r.size(3)]
-
+    
     if not padding:
         # doesn't remove invalid pixels on image borders that were lost to convolutions
         sim_image = crop_s2_input(sim_image, hw)

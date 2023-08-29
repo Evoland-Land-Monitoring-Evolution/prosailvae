@@ -269,8 +269,9 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
     with torch.no_grad():
         (rec, sim_image, cropped_s2_r, cropped_s2_a,
             sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
-                                            patch_size=32, bands=torch.arange(10),
+                                            patch_size=32, bands=model.encoder.bands,
                                             mode=mode, padding=True, no_rec=not get_reconstruction)
+        cropped_s2_r = cropped_s2_r[:,model.encoder.bands,...]
         rec_err = (rec - cropped_s2_r.squeeze(0)).abs().mean(0, keepdim=True)
         band_rec_err = (rec - cropped_s2_r.squeeze(0)).abs()
     model_pred = {"s2_r":cropped_s2_r, "s2_a":cropped_s2_a}
@@ -285,7 +286,7 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
 
         model_pred[f"{lai_variable}_rec_err"] = rec_err[..., site_idx_dict[lai_variable]['y_idx'], 
                                                              site_idx_dict[lai_variable]['x_idx']].numpy()
-        for i, band in enumerate(BANDS):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
             model_pred[f"{lai_variable}_{band}_rec_err"] = band_rec_err[i, site_idx_dict[lai_variable]['y_idx'], 
                                                                              site_idx_dict[lai_variable]['x_idx']].numpy()
     for ccc_variable in ['ccc', 'ccc_eff']:
@@ -302,7 +303,7 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
         model_pred[f"ref_{ccc_variable}_std"] = ref_dict[f"{ccc_variable}_std"]
         model_pred[f"{ccc_variable}_rec_err"] = rec_err[..., site_idx_dict[ccc_variable]['y_idx'], 
                                                              site_idx_dict[ccc_variable]['x_idx']].numpy()
-        for i, band in enumerate(BANDS):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
             model_pred[f"{ccc_variable}_{band}_rec_err"] = band_rec_err[i, site_idx_dict[ccc_variable]['y_idx'], 
                                                                         site_idx_dict[ccc_variable]['x_idx']].numpy()
                                                              
@@ -319,7 +320,7 @@ def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
         snap_results[f"{variable}_rec_err"] = np.zeros_like(snap_results[variable])
         snap_results[f"ref_{variable}"] = ref_dict[variable]
         snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
-        for i, band in enumerate(BANDS):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
             snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
     for variable in ['ccc', 'ccc_eff']:
         snap_results[variable] = snap_ccc[..., site_idx_dict[variable]['y_idx'], 
@@ -328,7 +329,7 @@ def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
         snap_results[f"{variable}_rec_err"] = np.zeros_like(snap_results[variable])
         snap_results[f"ref_{variable}"] = ref_dict[variable]
         snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
-        for i, band in enumerate(BANDS):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
             snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
     return snap_results
 
@@ -381,7 +382,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             model_results[f"{variable}_rec_err"] = simple_interpolate(validation_results_after[f"{variable}_rec_err"].squeeze(),
                                                                       validation_results_before[f"{variable}_rec_err"].squeeze(),
                                                     dt_after, dt_before).squeeze()
-            for band in BANDS:
+            for band in np.array(BANDS)[model.encoder.bands].tolist():
                 model_results[f"{variable}_{band}_rec_err"] = simple_interpolate(validation_results_after[f"{variable}_{band}_rec_err"].squeeze(),
                                                                                  validation_results_before[f"{variable}_{band}_rec_err"].squeeze(),
                                                                                  dt_after, dt_before).squeeze()
@@ -414,7 +415,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             model_results[f"{variable}_rec_err"] = results_rec_err
             
-            for band in BANDS:
+            for band in np.array(BANDS)[model.encoder.bands].tolist():
                 results_band_rec_err = np.zeros_like(ref)
                 results_band_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[err_1_le_err_2]
                 results_band_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
@@ -444,7 +445,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             model_results[f"{variable}_rec_err"] = results_rec_err
             
-            for band in BANDS:
+            for band in np.array(BANDS[model.encoder.bands]).tolist():
                 results_band_rec_err = np.zeros_like(ref)
                 results_band_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[err_1_le_err_2]
                 results_band_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_{band}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]

@@ -352,7 +352,7 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_hyper.json",
+              "-c", "config_rnn_regression_weiss.json",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
@@ -634,7 +634,7 @@ def main():
                                      frm4veg_data_dir=frm4veg_data_dir,
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir, lai_cyclical_loader=lai_cyclical_loader)
-        if True and not socket.gethostname()=='CELL200973':
+        if True: # and not socket.gethostname()=='CELL200973':
             save_validation_results(prosail_vae, validation_dir,
                                     frm4veg_data_dir=frm4veg_data_dir,
                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,

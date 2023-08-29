@@ -341,7 +341,7 @@ after_filename_dict =  {"2018-05-17" : "2A_20180518_both_BelSAR_agriculture_data
                          }
 
 def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, belsar_pred_filename, 
-                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_error=True):
+                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_error=True, bands_idx=torch.arange(10)):
     """
     Get metrics df for single image prediction for all sites
     """
@@ -393,7 +393,7 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
                 d[f"rec_err_mean"] = np.nanmean(masked_err)
                 d[f"rec_err_std"] = np.nanstd(masked_err)
             if not np.isnan(masked_bands_err).all():
-                for i, band in enumerate(BANDS):
+                for i, band in enumerate(np.array(BANDS)[bands_idx].tolist()):
                     d[f"{band}_rec_err_mean"] = np.nanmean(masked_bands_err[i,...])
                     d[f"{band}_rec_err_std"] = np.nanstd(masked_bands_err[i,...])
         if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():
@@ -485,7 +485,7 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
         with torch.no_grad():
             
             (rec, sim_image, s2_r, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
-                                                        patch_size=32, bands=torch.arange(10),
+                                                        patch_size=32, bands=model.encoder.bands,
                                                         mode=mode, padding=True, no_rec=not save_reconstruction)
         
 

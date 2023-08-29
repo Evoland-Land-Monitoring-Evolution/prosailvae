@@ -392,7 +392,7 @@ class SimVAE(nn.Module):
         # Kl term
         if self.beta_kl > 0:
             if self.hyper_prior is None: # KL Truncated Normal latent || Uniform prior
-                kl_loss = self.beta_kl * self.lat_space.kl(params).sum(1).mean()
+                kl_loss = self.beta_kl * self.lat_space.kl(params, lai_only=self.lat_nll=="lai_nll").sum(1).mean()
             else: # KL Truncated Normal latent || Truncated Normal hyperprior
                 s2_r_sup = s2_r
                 s2_a_sup = s2_a
@@ -407,7 +407,7 @@ class SimVAE(nn.Module):
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
                 params_hyper = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
-                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper).sum(1).mean() #sum over latent and mean over batch
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper, lai_only=self.lat_nll=="lai_nll").sum(1).mean() #sum over latent and mean over batch
 
             loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()

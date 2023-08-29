@@ -299,8 +299,8 @@ class ProsailRNNEncoder(Encoder):
             normed_refl = standardize(s2_refl, loc=self.bands_loc, scale=self.bands_scale, dim=1)
             if len(self.bands) < normed_refl.size(1):
                 normed_refl = normed_refl[:, self.bands]
-        # elif len(self.bands) == self.bands_loc.size(0): # Same number of bands in bands than in normalization
-        #     normed_refl = standardize(s2_refl[:, self.bands], loc=self.bands_loc, scale=self.bands_scale, dim=1)
+        elif len(self.bands) == self.bands_loc.size(0): # Same number of bands in bands than in normalization (for weiss mode)
+            normed_refl = standardize(s2_refl[:, self.bands], loc=self.bands_loc, scale=self.bands_scale, dim=1)
         else:
             raise NotImplementedError
         # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),

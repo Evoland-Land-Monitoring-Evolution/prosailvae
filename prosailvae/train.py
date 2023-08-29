@@ -35,11 +35,8 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 torch.autograd.set_detect_anomaly(True)
 
-
 CUDA_LAUNCH_BLOCKING=1
 LOGGER_NAME = 'PROSAIL-VAE logger'
-
-
 
 @dataclass
 class DatasetConfig:
@@ -355,7 +352,7 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_hyper.json",
+              "-c", "config_rnn_regression_weiss.json",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
@@ -457,9 +454,9 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                                  num_workers=0, max_valid_samples=1000)
 
     if params["apply_norm_rec"]:
-        io_coeffs = load_standardize_coeffs(data_dir, params["dataset_file_prefix"])
+        io_coeffs = load_standardize_coeffs(data_dir, params["dataset_file_prefix"], n_idx=0 if params["weiss_bands"] else 4)
     else:
-        io_coeffs = load_standardize_coeffs(None, params["dataset_file_prefix"])
+        io_coeffs = load_standardize_coeffs(None, params["dataset_file_prefix"], n_idx=0 if params["weiss_bands"] else 4)
 
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
@@ -467,7 +464,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
 
     if params["load_model"]:
         vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
-        io_coeffs = load_standardize_coeffs(params["vae_load_dir_path"], params["dataset_file_prefix"])
+        io_coeffs = load_standardize_coeffs(params["vae_load_dir_path"], params["dataset_file_prefix"], n_idx=0 if params["weiss_bands"] else 4)
     else:
         vae_load_file_path = None
 

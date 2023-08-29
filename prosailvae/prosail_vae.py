@@ -139,7 +139,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
                                    block_layer_sizes = params["block_layer_sizes"],
                                    block_layer_depths = params["block_layer_depths"],
                                    block_kernel_sizes = params["block_kernel_sizes"],
-                                   block_n = params["block_n"])
+                                   block_n = params["block_n"],
+                                   disable_s2_r_idx=n_idx==0)
     spatial_encoder = get_encoder(encoder_config).get_spatial_encoding()
     if spatial_encoder:
         params["loss_type"] = "spatial_nll"

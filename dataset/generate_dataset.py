@@ -21,6 +21,9 @@ from tqdm import trange
 import scipy.stats as stats
 from dataset.dataset_utils import min_max_to_loc_scale
 from prosailvae.spectral_indices import get_spectral_idx
+import socket
+
+
 PROSAIL_VARS = [
     "N", "cab", "car", "cbrown", "caw", "cm",
     "lai", "lidfa", "hspot", "psoil", "rsoil"
@@ -402,10 +405,8 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
                                                             lai_corr=lai_corr)
     (norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_loc, 
      idx_scale) = get_bands_norm_factors(torch.from_numpy(prosail_s2_sim).float().transpose(1,0), mode='quantile')
-    torch.save(torch.from_numpy(prosail_vars),
-               data_dir + data_file_prefix + "prosail_sim_vars.pt")
-    torch.save(torch.from_numpy(prosail_s2_sim),
-               data_dir + data_file_prefix + "prosail_s2_sim_refl.pt")
+    torch.save(torch.from_numpy(prosail_vars), os.path.join(data_dir, f"{data_file_prefix}prosail_sim_vars.pt"))
+    torch.save(torch.from_numpy(prosail_s2_sim), os.path.join(data_dir, f"{data_file_prefix}prosail_s2_sim_refl.pt"))
     torch.save(norm_mean, os.path.join(data_dir, f"{data_file_prefix}norm_mean.pt"))
     torch.save(norm_std, os.path.join(data_dir, f"{data_file_prefix}norm_std.pt"))
     torch.save(cos_angles_loc, os.path.join(data_dir, f"{data_file_prefix}angles_loc.pt"))
@@ -413,28 +414,38 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
     torch.save(idx_loc, os.path.join(data_dir, f"{data_file_prefix}idx_loc.pt"))
     torch.save(idx_scale, os.path.join(data_dir, f"{data_file_prefix}idx_scale.pt"))
 
-def save_weiss_dataset(data_dir, rsr_dir, noise, lai_corr=True):
+def save_weiss_dataset(data_dir, rsr_dir, noise=0, lai_corr=True, nb_test_samples=0):
 
     PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
-    prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
-    nb_test_samples = 5000
-    test_prosail_s2_sim = prosail_s2_sim[:nb_test_samples,:]
-    test_prosail_vars = prosail_vars[:nb_test_samples,:]
-    train_prosail_s2_sim = prosail_s2_sim[nb_test_samples:,:]
-    train_prosail_vars = prosail_vars[nb_test_samples:,:]
     weiss_data_dir = os.path.join(data_dir, os.pardir) + "/weiss/"
     if not os.path.isdir(weiss_data_dir):
         os.makedirs(weiss_data_dir)
-    torch.save(torch.from_numpy(test_prosail_vars), weiss_data_dir + "/weiss_test_prosail_sim_vars.pt")
-    torch.save(torch.from_numpy(test_prosail_s2_sim), weiss_data_dir + "weiss_test_prosail_s2_sim_refl.pt")
-    torch.save(torch.from_numpy(train_prosail_vars), data_dir + "weiss_prosail_sim_vars.pt")
-    torch.save(torch.from_numpy(train_prosail_s2_sim), data_dir + "weiss_prosail_s2_sim_refl.pt")
+    prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
+    if nb_test_samples > 0:
+        test_prosail_s2_sim = prosail_s2_sim[:nb_test_samples,:]
+        test_prosail_vars = prosail_vars[:nb_test_samples,:]
+        train_prosail_s2_sim = prosail_s2_sim[nb_test_samples:,:]
+        train_prosail_vars = prosail_vars[nb_test_samples:,:]
+        torch.save(torch.from_numpy(test_prosail_vars), os.path.join(weiss_data_dir, "/weiss_test_prosail_sim_vars.pt"))
+        torch.save(torch.from_numpy(test_prosail_s2_sim), os.path.join(weiss_data_dir, "weiss_test_prosail_s2_sim_refl.pt"))
+        # save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True, lai_corr=lai_corr)
+    else:
+        train_prosail_s2_sim = prosail_s2_sim
+        train_prosail_vars = prosail_vars
+        save_dataset(data_dir, "test_", rsr_dir, 5000, noise, weiss_mode=True, lai_corr=lai_corr)
+    torch.save(torch.from_numpy(train_prosail_vars), os.path.join(weiss_data_dir, "weiss_prosail_sim_vars.pt"))
+    torch.save(torch.from_numpy(train_prosail_s2_sim), os.path.join(weiss_data_dir, "weiss_prosail_s2_sim_refl.pt"))
     
     norm_mean, norm_std = get_refl_normalization(train_prosail_s2_sim)
-    torch.save(norm_mean, parser.data_dir + "weiss_norm_mean.pt")
-    torch.save(norm_std, parser.data_dir + "weiss_norm_std.pt")
-
-    save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True, lai_corr=lai_corr)
+    torch.save(torch.from_numpy(norm_mean), os.path.join(weiss_data_dir, "weiss_norm_mean.pt"))
+    torch.save(torch.from_numpy(norm_std), os.path.join(weiss_data_dir, "weiss_norm_std.pt"))
+    cos_angle_min = torch.tensor([0.342108564072183, 0.979624800125421, -1.0000]) # sun zenith, S2 senith, relative azimuth
+    cos_angle_max = torch.tensor([0.9274847491748729, 1.0000, 1.0000])
+    cos_angles_loc, cos_angles_scale = min_max_to_loc_scale(cos_angle_min, cos_angle_max)
+    torch.save(cos_angles_loc, os.path.join(weiss_data_dir, f"weiss_angles_loc.pt"))
+    torch.save(cos_angles_scale, os.path.join(weiss_data_dir, f"weiss_angles_scale.pt"))
+    # torch.save(idx_loc, os.path.join(data_dir, f"weiss_idx_loc.pt"))
+    # torch.save(idx_scale, os.path.join(data_dir, f"weiss_idx_scale.pt"))
 
 def get_data_generation_parser():
     """
@@ -476,7 +487,13 @@ def get_data_generation_parser():
     return parser
 
 if  __name__ == "__main__":
-    parser = get_data_generation_parser().parse_args()
+    if socket.gethostname()=='CELL200973':
+        args=["-wd", "True",
+              "-w", "True",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/weiss_data/"]
+        parser = get_data_generation_parser().parse_args(args)
+    else:
+        parser = get_data_generation_parser().parse_args()
     if len(parser.data_dir)==0 : 
         data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                          os.pardir), "data/")  

@@ -483,9 +483,10 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
 
 
 def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
-                 all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,
-                 juan_validation=True, weiss_mode=False, n_samples=1,
-                            lai_cyclical_loader=None):
+                 all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
+                 plot_results=False, juan_validation=True, weiss_mode=False, n_samples=1,
+                 lai_cyclical_loader=None):
+    
     bands_name = BANDS
     if weiss_mode:
         bands_name = ["B03", "B04", "B05", "B06", "B07", "B8A", "B11", "B12"]

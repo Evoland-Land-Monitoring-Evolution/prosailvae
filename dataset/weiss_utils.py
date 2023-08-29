@@ -71,8 +71,8 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
             raise ValueError
     elif ver not in ["2.1", "3A", "3B"]:
         raise ValueError
-    weiss_bands = torch.tensor([1,2,3,4,5,7,8,9])
-    weiss_angles = torch.tensor([1,0,2])
+    weiss_bands = torch.tensor([1, 2, 3, 4, 5, 7, 8, 9])
+    weiss_angles = torch.tensor([1, 0, 2])
     s2_r, s2_a = batch
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=0)
     patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=0)
@@ -87,7 +87,7 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
             with torch.no_grad():
                 lai_snap = SnapNN(variable='lai', ver=ver, device=device)
                 lai_snap.set_weiss_weights()
-                lai = lai_snap.forward(s2_data, spatial_mode=True)
+                lai = torch.clip(lai_snap.forward(s2_data, spatial_mode=True), min=0)
                 cab_snap = SnapNN(variable='cab', ver=ver, device=device)
                 cab_snap.set_weiss_weights()
                 cab = torch.clip(cab_snap.forward(s2_data, spatial_mode=True), min=0) # torch.clip(cab_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0.1)
@@ -125,7 +125,7 @@ def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None, devi
     with torch.no_grad():
         lai_snap = SnapNN(variable='lai', ver=ver, device=device)
         lai_snap.set_weiss_weights()
-        lai = lai_snap.forward(s2_data, spatial_mode=False)
+        lai = torch.clip(lai_snap.forward(s2_data, spatial_mode=False), min=0)
         cab_snap = SnapNN(variable='cab', ver=ver, device=device)
         cab_snap.set_weiss_weights()
         cab = torch.clip(cab_snap.forward(s2_data, spatial_mode=False), min=0) 

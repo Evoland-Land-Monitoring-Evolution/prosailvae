@@ -405,7 +405,7 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
     return metrics.reset_index(drop=True)
 
 def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_dir, file_suffix, NO_DATA=-10000, 
-                                   get_error=True):
+                                   get_error=True, bands_idx = torch.arange(10)):
     """
     Get metrics for all sites at all dates (all images)
     """
@@ -421,15 +421,17 @@ def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_d
         delta_t = delta_dict[date]
         image_metrics = get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, 
                                                  filename, file_suffix, date, delta_t,
-                                                 NO_DATA=NO_DATA, get_error=get_error)
+                                                 NO_DATA=NO_DATA, get_error=get_error, bands_idx=bands_idx)
         metrics = pd.concat((metrics, image_metrics))
     return metrics.reset_index(drop=True)
 
-def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest", file_suffix="", get_error=True):
+def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest", file_suffix="", get_error=True, bands_idx=torch.arange(10)):
     
     if method == "simple_interpolate":
-        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
-        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, 
+                                                        file_suffix, get_error=get_error, bands_idx=bands_idx)
+        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, 
+                                                       file_suffix, get_error=get_error, bands_idx=bands_idx)
         metrics = before_metrics.copy()
         metrics.drop(columns=["delta"], inplace=True)
         for variable in ['lai_mean', 'cm_mean', 'lai_std', 'cm_std',
@@ -441,10 +443,13 @@ def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest
         metrics['delta_after'] = after_metrics['delta']
         metrics["date"] = (abs(metrics['delta_after']) + abs(metrics['delta_before'])) / 2
     elif method == "closest":
-        metrics = get_belsar_campaign_metrics_df(belsar_data_dir, closest_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        metrics = get_belsar_campaign_metrics_df(belsar_data_dir, closest_filename_dict, belsar_pred_dir, 
+                                                 file_suffix, get_error=get_error, bands_idx=bands_idx)
     elif method == 'best':
-        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
-        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, 
+                                                        file_suffix, get_error=get_error, bands_idx=bands_idx)
+        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, 
+                                                       file_suffix, get_error=get_error, bands_idx=bands_idx)
         metrics = before_metrics.copy()
         metrics["date"] = abs(before_metrics['delta'])
         for i in range(len(metrics)):
@@ -454,8 +459,10 @@ def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest
                 metrics.iloc[i] = after_metrics.iloc[i]
                 metrics["date"].iloc[i] = abs(metrics['delta'].iloc[i])
     elif method =="worst":
-        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
-        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, file_suffix, get_error=get_error)
+        before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, 
+                                                        file_suffix, get_error=get_error, bands_idx=bands_idx)
+        after_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, after_filename_dict, belsar_pred_dir, 
+                                                       file_suffix, get_error=get_error, bands_idx=bands_idx)
         metrics = before_metrics.copy()
         metrics["date"] = abs(before_metrics['delta'])
         for i in range(len(metrics)):
@@ -552,7 +559,7 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
                          hw = 0, 
                          half_res_coords=True)
 
-def get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, file_suffix, NO_DATA=-10000):
+def get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, file_suffix, NO_DATA=-10000, bands_idx=torch.arange(10)):
     metrics = pd.DataFrame()
     for date, filename in all_filename_dict.items():
         validation_df, _, _, _, _, _, crs = load_belsar_validation_data(belsar_data_dir, filename)
@@ -563,7 +570,7 @@ def get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, file_suffix, NO
         delta_t = 0
         image_metrics = get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, 
                                                  filename, file_suffix, date, delta_t,
-                                                 NO_DATA=NO_DATA, get_error=False)
+                                                 NO_DATA=NO_DATA, get_error=False, bands_idx=bands_idx)
         metrics = pd.concat((metrics, image_metrics))
     return metrics.reset_index(drop=True)
 

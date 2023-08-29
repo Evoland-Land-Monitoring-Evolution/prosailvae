@@ -176,7 +176,7 @@ def initialize_by_training(n_models:int,
                                                        pv_config_hyper=pv_config_hyper,
                                                        logger_name=LOGGER_NAME)
         optimizer = optim.Adam(prosail_vae.parameters(), lr=lr, weight_decay=1e-2)
-        _, all_valid_loss_df, _,_,_ = training_loop(prosail_vae,
+        _, all_valid_loss_df, _,_ = training_loop(prosail_vae,
                                                 optimizer,
                                                 n_epochs,
                                                 train_loader,

@@ -487,7 +487,7 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
             (rec, sim_image, s2_r, _, sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
                                                         patch_size=32, bands=model.encoder.bands,
                                                         mode=mode, padding=True, no_rec=not save_reconstruction)
-        
+            s2_r = s2_r[:,model.encoder.bands,...]
 
                 # err_tensor[err_tensor.isnan()] = NO_DATA
                 # tensor_to_raster(err_tensor, res_dir + f"/error_{filename}_{model_name}_{mode}.tif",

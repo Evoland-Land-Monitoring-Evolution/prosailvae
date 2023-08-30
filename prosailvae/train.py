@@ -18,7 +18,7 @@ import time
 from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig, load_params)
 # from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
-from metrics.results import save_results, save_results_2d, get_res_dir_path, save_validation_results
+from metrics.results import save_results, save_results_2d, get_res_dir_path, save_validation_results, plot_losses
 from utils.utils import save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow, load_standardize_coeffs, IOStandardizeCoeffs
 from ProsailSimus import get_bands_idx
 import argparse
@@ -635,6 +635,8 @@ def main():
                                      frm4veg_data_dir=frm4veg_data_dir,
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir, lai_cyclical_loader=lai_cyclical_loader)
+        plot_losses(res_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+                        plot_results=parser.plot_results)
         if True: # and not socket.gethostname()=='CELL200973':
             save_validation_results(prosail_vae, validation_dir,
                                     frm4veg_data_dir=frm4veg_data_dir,
@@ -648,8 +650,8 @@ def main():
                                                                          batch_size=1, num_workers=0)
             lai_cyclical_loader = valid_loader
             info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
-            save_results_2d(prosail_vae, test_loader, res_dir,
-                            all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+
+            save_results_2d(prosail_vae, test_loader, res_dir, LOGGER_NAME=LOGGER_NAME,
                             plot_results=parser.plot_results, info_test_data=info_test_data, 
                             max_test_patch=50 if not socket.gethostname()=='CELL200973' else 2,
                             lai_cyclical_loader=lai_cyclical_loader)

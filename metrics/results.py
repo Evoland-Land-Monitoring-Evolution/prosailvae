@@ -274,12 +274,8 @@ def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, b
             all_rec_var.append(rec_var.cpu())
     return torch.cat(all_rec_var, 1)
 
-def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None, 
-                    all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
-                    plot_results=False, info_test_data=None, max_test_patch=50, 
-                    lai_cyclical_loader=None):
-    cyclical_lai_precomputed=False
-    rec_mode = 'lat_mode' 
+def plot_losses(res_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df=None, 
+                LOGGER_NAME='PROSAIL-VAE logger', plot_results=False,):
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
     # Saving Loss
@@ -303,7 +299,13 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
             all_loss_curve(all_train_loss_df[["epoch", "loss_sum"]], all_valid_loss_df[["epoch", "loss_sum"]], 
                            info_df, save_file=loss_dir+"all_loss_sum.svg")
             all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, save_file=loss_dir+"all_loss.svg")
-    
+
+def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logger', 
+                    plot_results=False, info_test_data=None, max_test_patch=50, 
+                    lai_cyclical_loader=None):
+    cyclical_lai_precomputed=False
+    rec_mode = 'lat_mode' 
+    logger = logging.getLogger(LOGGER_NAME)
     # Computing metrics
     PROSAIL_VAE.eval()
     cyclical_rmse = PROSAIL_VAE.get_cyclical_rmse_from_loader(lai_cyclical_loader, 

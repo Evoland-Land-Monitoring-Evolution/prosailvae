@@ -1418,6 +1418,10 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI.tex')
 
+    fig, _ = plot_patches([sigma_image[6,...].unsqueeze(0).cpu()])
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI-std.tex')
+
     ccc = sim_image[1,...] * sim_image[6,...]
     ccc_std = var_of_product(sigma_image[1,...].pow(2),  sigma_image[6,...].pow(2), 
                              sim_image[1,...],  sim_image[6,...]).sqrt()
@@ -1430,6 +1434,10 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     fig, _ = plot_patches([ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc)
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC.tex')
+
+    fig, _ = plot_patches([ccc_std.unsqueeze(0).cpu()])
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC-std.tex')
 
     cwc = sim_image[4,...] * sim_image[6,...]
     cwc_std = var_of_product(sigma_image[4,...].pow(2),  sigma_image[6,...].pow(2), 
@@ -1444,6 +1452,11 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     fig, _ = plot_patches([cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc)
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC.tex')
+
+
+    fig, _ = plot_patches([cwc_std.unsqueeze(0).cpu()])
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC-std.tex')
 
     for j, varname in enumerate(PROSAILVARS):
         if j==6:

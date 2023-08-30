@@ -33,8 +33,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from torchutils.patches import patchify
+import tikzplotlib
 
 LOGGER_NAME = "PROSAIL-VAE results logger"
+
+def tikzplotlib_fix_ncols(obj):
+    """
+    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
+    """
+    if hasattr(obj, "_ncols"):
+        obj._ncol = obj._ncols
+    for child in obj.get_children():
+        tikzplotlib_fix_ncols(child)
 
 def get_prosailvae_results_parser():
     """
@@ -154,6 +164,29 @@ def save_validation_results(model, res_dir,
         ax.legend()
     axs[-1].set_ylabel("Date")
     fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Wheat.png"))
+    for i in range(0,10):
+        fig, ax= plt.subplots()
+        site = "W" + str(i+1)
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=ax, 
+                                               label="PROSAIL-VAE", use_ref_metrics=True)
+        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=ax, 
+                                               label="SNAP")
+        ax.legend()
+        ax[-1].set_ylabel("Date")
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(os.path.join(time_series_dir, f"belSAR_LAI_time_series_Wheat_{i}.tex"))
+        fig, ax= plt.subplots()
+        site = "M" + str(i+1)
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=ax, 
+                                               label="PROSAIL-VAE", use_ref_metrics=True)
+        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=ax, 
+                                               label="SNAP")
+        ax.legend()
+        ax[-1].set_ylabel("Date")
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(os.path.join(time_series_dir, f"belSAR_LAI_time_series_Maize_{i}.tex"))
+        plt.close("all")
+
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(10, 2*10))
     for i in range(0,10):
         site = "M" + str(i+1)
@@ -216,7 +249,7 @@ def save_validation_results(model, res_dir,
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error",  
                             hue="Campaign", ax=axs[row,col], s=5)
         fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_band_rec_error_Campaign.png"))
-        
+
         fig, axs = plt.subplots(2, n_cols, dpi=150, figsize=(n_cols*3, 2*3))
         for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
             row = i // n_cols

@@ -1151,13 +1151,13 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig.savefig(f"{plot_dir}/all_prosail_var_pred_dist.png")
     n_cols = 4
     n_rows = 3
-    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150, sharex=True)
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
     for idx, prosail_var in enumerate(PROSAILVARS):
         row = idx // n_cols
         col = idx % n_cols
-        ax[row, col].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, range=[0, max_sigma])
+        ax[row, col].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True)
         ax[row, col].set_yticks([])
-        ax[row, col].set_xlim(0, max_sigma)
+        # ax[row, col].set_xlim(0, max_sigma)
         ax[row, col].set_ylabel(prosail_var)
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables sigma")
@@ -1396,7 +1396,7 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
                              weiss_cw, sigma_image, i, info=None):
     art_plot_dir = os.path.join(plot_dir, 'article_plots')
     os.makedirs(art_plot_dir)
-    
+
     fig, _ = plot_patches([cropped_image.cpu()])
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_rgb.tex')

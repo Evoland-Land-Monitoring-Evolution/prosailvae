@@ -605,8 +605,9 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         if not os.path.isdir(juan_validation_dir):
             os.makedirs(juan_validation_dir)
         sites = ["france", "spain1", "italy1", "italy2"]
-        j_list_lai_nlls, list_lai_preds, j_dt_list, j_ndvi_list = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
-                                                                                 sites=sites, weiss_mode=weiss_mode)
+        (j_list_lai_nlls, list_lai_preds, j_dt_list, 
+         j_ndvi_list) = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
+                                                    sites=sites, weiss_mode=weiss_mode)
         all_lai_preds = torch.cat(list_lai_preds)
         all_dt_list  = torch.cat(j_dt_list)
         all_ndvi = torch.cat(j_ndvi_list)
@@ -617,6 +618,13 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
             if plot_results:
                 fig, ax = plot_lai_preds(list_lai_preds[i][:,1].cpu(), list_lai_preds[i][:,0].cpu(), j_dt_list[i], site)
                 fig.savefig(juan_validation_dir + f"/{site}_lai_pred_vs_true.png")
+                fig, ax = plot_lai_vs_ndvi(list_lai_preds[i][:,1].cpu(), j_ndvi_list[i].cpu(), j_dt_list[i], site)
+                fig.savefig(juan_validation_dir + f"/{site}_lai_true_vs_ndvi.png")
+                lai_filter = torch.logical_not(torch.logical_and(list_lai_preds[i][:,1] < 0.5, j_ndvi_list[i] > 0.4)).cpu()
+                fig, ax = plot_lai_preds(list_lai_preds[i][lai_filter, 1].cpu(), 
+                                         list_lai_preds[i][lai_filter, 0].cpu(), 
+                                         j_dt_list[i][lai_filter], site)
+                fig.savefig(juan_validation_dir + f"/filtered_{site}_lai_pred_vs_true.png")
         if plot_results:
             fig, ax = plot_lai_preds(all_lai_preds[:,1].cpu(), all_lai_preds[:,0].cpu(), all_dt_list, "all")
             fig.savefig(juan_validation_dir + f"/all_lai_pred_vs_true.png")

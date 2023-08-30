@@ -354,7 +354,7 @@ def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename,
 
 def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_after=None, 
                              method="simple_interpolate", is_SNAP=False, mode="sim_tg_mean",
-                             get_reconstruction=True):
+                             get_reconstruction=True, bands_idx=torch.arange(10)):
     validation_results_before = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_before, 
                                                             is_SNAP=is_SNAP, mode=mode,
                                                             get_reconstruction=get_reconstruction)
@@ -382,7 +382,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             model_results[f"{variable}_rec_err"] = simple_interpolate(validation_results_after[f"{variable}_rec_err"].squeeze(),
                                                                       validation_results_before[f"{variable}_rec_err"].squeeze(),
                                                     dt_after, dt_before).squeeze()
-            for band in np.array(BANDS)[model.encoder.bands].tolist():
+            for band in np.array(BANDS)[bands_idx].tolist():
                 model_results[f"{variable}_{band}_rec_err"] = simple_interpolate(validation_results_after[f"{variable}_{band}_rec_err"].squeeze(),
                                                                                  validation_results_before[f"{variable}_{band}_rec_err"].squeeze(),
                                                                                  dt_after, dt_before).squeeze()
@@ -415,7 +415,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             model_results[f"{variable}_rec_err"] = results_rec_err
             
-            for band in np.array(BANDS)[model.encoder.bands].tolist():
+            for band in np.array(BANDS)[bands_idx].tolist():
                 results_band_rec_err = np.zeros_like(ref)
                 results_band_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[err_1_le_err_2]
                 results_band_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
@@ -445,7 +445,7 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
             results_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]
             model_results[f"{variable}_rec_err"] = results_rec_err
             
-            for band in np.array(BANDS[model.encoder.bands]).tolist():
+            for band in np.array(BANDS[bands_idx]).tolist():
                 results_band_rec_err = np.zeros_like(ref)
                 results_band_rec_err[err_1_le_err_2] = validation_results_after[f"{variable}_{band}_rec_err"].reshape(-1)[err_1_le_err_2]
                 results_band_rec_err[np.logical_not(err_1_le_err_2)] = validation_results_before[f"{variable}_{band}_rec_err"].reshape(-1)[np.logical_not(err_1_le_err_2)]

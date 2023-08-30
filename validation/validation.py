@@ -44,7 +44,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
 
     barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
                                               BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
-                                              get_reconstruction=save_reconstruction)
+                                              get_reconstruction=save_reconstruction, bands_idx=model.encoder.bands)
     
     all_belsar = None
     list_belsar_filenames = BELSAR_FILENAMES
@@ -63,10 +63,12 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
                                                       is_SNAP=False, get_reconstruction=save_reconstruction)
     wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
                                               WYTHAM_FILENAMES[1],  method=method, is_SNAP=False,
-                                              get_reconstruction=save_reconstruction)
+                                              get_reconstruction=save_reconstruction, 
+                                              bands_idx=model.encoder.bands)
 
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
-                                                file_suffix=f"_{model_name}_{mode}", method=method, bands_idx=model.encoder.bands)
+                                                file_suffix=f"_{model_name}_{mode}", method=method, 
+                                                bands_idx=model.encoder.bands)
     if remove_files:
         for filename in list_belsar_filenames:
             if os.path.isfile(os.path.join(belsar_pred_dir, f"{filename}_{model_name}_{mode}.tif")):

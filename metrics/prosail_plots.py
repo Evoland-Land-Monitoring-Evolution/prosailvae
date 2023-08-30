@@ -1396,14 +1396,19 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
                              weiss_cw, sigma_image, i, info=None):
     art_plot_dir = os.path.join(plot_dir, 'article_plots')
     os.makedirs(art_plot_dir)
+    
     fig, _ = plot_patches([cropped_image.cpu()])
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_rgb.tex')
-    fig, _ = plot_patches([cropped_image.cpu()])
+
+    fig, _ = plot_patches([rec_image.cpu()])
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_rgb.tex')
+
     fig, _ = plot_patches([cropped_image[torch.tensor([8,6,3]),...].cpu()])
+    tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_B11-8-5.tex')
+
     fig, _ = plot_patches([rec_image[torch.tensor([8,6,3]),...].cpu()])
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_B11-8-5.tex')

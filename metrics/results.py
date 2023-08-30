@@ -141,72 +141,88 @@ def save_validation_results(model, res_dir,
     (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
      ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                       method=method, get_all_belsar=True, remove_files=remove_files)
+    time_series_dir = os.path.join(res_dir, "time_series")
+    os.makedirs(time_series_dir)
+
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(10, 2*10))
     for i in range(0,10):
         site = "W" + str(i+1)
-        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, 
-                                               fig=fig, ax=axs[i], label="PROSAIL-VAE", use_ref_metrics=True)
-        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, 
-                                               fig=fig, ax=axs[i], label="SNAP")
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
+                                               label="PROSAIL-VAE", use_ref_metrics=True)
+        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
+                                               label="SNAP")
         ax.legend()
     axs[-1].set_ylabel("Date")
-    fig.savefig(os.path.join(res_dir, f"{model_name}_belSAR_LAI_time_series_Wheat.png"))
+    fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Wheat.png"))
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(10, 2*10))
     for i in range(0,10):
         site = "M" + str(i+1)
-        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, 
-                                               fig=fig, ax=axs[i], label="PROSAIL-VAE", use_ref_metrics=True)
-        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, 
-                                               fig=fig, ax=axs[i], label="SNAP")
+        fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
+                                               label="PROSAIL-VAE", use_ref_metrics=True)
+        fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
+                                               label="SNAP")
     axs[-1].set_ylabel("Date")
-    fig.savefig(os.path.join(res_dir, f"{model_name}_belSAR_LAI_time_series_Maize.png"))
+    fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Maize.png"))
+
+    hspot_dir = os.path.join(res_dir, "hspot_vs_lai")
+    os.makedirs(hspot_dir)
     fig, ax = get_belsar_lai_vs_hspot(all_belsar, belsar_data_dir, sites=[f"W{i+1}" for i in range(10)], fig=None, ax=None, label="")
-    fig.savefig(os.path.join(res_dir, f"{model_name}_belSAR_LAI_vs_hspot_Wheat.png"))
+    fig.savefig(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Wheat.png"))
     fig, ax = get_belsar_lai_vs_hspot(all_belsar, belsar_data_dir, sites=[f"M{i+1}" for i in range(10)], fig=None, ax=None, label="")
-    fig.savefig(os.path.join(res_dir, f"{model_name}_belSAR_LAI_vs_hspot_Maize.png"))
+    fig.savefig(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Maize.png"))
 
     results = {}
     results["LAI"] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
-                                                      frm4veg_lai="lai", get_reconstruction_error=save_reconstruction)
+                                                      frm4veg_lai="lai", get_reconstruction_error=save_reconstruction,
+                                                      bands_idx=model.encoder.bands)
     results["CCC"] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
-                                             frm4veg_ccc="ccc", get_reconstruction_error=save_reconstruction)
+                                             frm4veg_ccc="ccc", get_reconstruction_error=save_reconstruction, 
+                                             bands_idx=model.encoder.bands)
+    
+    lai_dir = os.path.join(res_dir, "LAI_scatter")
+    os.makedirs(lai_dir)
+    ccc_dir = os.path.join(res_dir, "CCC_scatter")
+    os.makedirs(ccc_dir)
+    scatter_dir = {"LAI":lai_dir, "CCC":ccc_dir}
     for variable in ["LAI", "CCC"]:
         results[variable][f'{variable} error'] = results[variable][f'Predicted {variable}'] - results[variable][f'{variable}']
-        results[variable].to_csv(os.path.join(res_dir, f"{model_name}_all_campaigns_{variable}_{mode}_{method}.csv"))
+        results[variable].to_csv(os.path.join(scatter_dir[variable], f"{model_name}_all_campaigns_{variable}_{mode}_{method}.csv"))
 
         fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Site",
                                 legend_col=3, error_x=f"{variable} std", 
                                 error_y=f"Predicted {variable} std", hue_perfs=True)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_regression_sites.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_sites.png"))
         
         fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Campaign",
                                 legend_col=2, error_x=f"{variable} std", 
                                 error_y=f"Predicted {variable} std", hue_perfs=True)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_regression_campaign.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_campaign.png"))
         fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Land cover",
                                 legend_col=3, error_x=f"{variable} std", 
                                 error_y=f"Predicted {variable} std", hue_perfs=False)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_regression_land_cover.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_land_cover.png"))
 
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  
                         hue="Site", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_reconstruction_error.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error.png"))
 
-        fig, axs = plt.subplots(2, 5, dpi=150, figsize=(5*3, 2*3))
-        for i, band in enumerate(BANDS):
-            row = i // 5
-            col = i % 5
+        n_cols = len(np.array(BANDS)[model.encoder.bands])//2
+        fig, axs = plt.subplots(2, n_cols, dpi=150, figsize=(n_cols*3, 2*3))
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
+            row = i // n_cols
+            col = i % n_cols
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error",  
                             hue="Campaign", ax=axs[row,col], s=5)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_band_rec_error_Campaign.png"))
-        fig, axs = plt.subplots(2, 5, dpi=150, figsize=(5*3, 2*3))
-        for i, band in enumerate(BANDS):
-            row = i // 5
-            col = i % 5
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_band_rec_error_Campaign.png"))
+        
+        fig, axs = plt.subplots(2, n_cols, dpi=150, figsize=(n_cols*3, 2*3))
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
+            row = i // n_cols
+            col = i % n_cols
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error", ax=axs[row,col], s=5)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_band_rec_error.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_band_rec_error.png"))
 
         # fig, ax = plt.subplots(dpi=150)
         # sns.boxplot(data = results[variable], x=f"{variable} error", y="Time delta", ax=ax)
@@ -214,45 +230,45 @@ def save_validation_results(model, res_dir,
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Time delta", hue="Campaign", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_dt_boxplot_campaign.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_dt_boxplot_campaign.png"))
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"Predicted {variable} std",  hue="Campaign", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_sigma_campaign.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_sigma_campaign.png"))
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Land cover", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_reconstruction_error_land_cover.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error_land_cover.png"))
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Time delta", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_reconstruction_error_dt.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error_dt.png"))
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  hue="Site", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_reconstruction_error_site.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error_site.png"))
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable}", y=f"{variable} error", hue="Campaign", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_{variable}_campaign.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_{variable}_campaign.png"))
 
         fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} std", y=f"Predicted {variable} std", hue="Campaign", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_std_vs_{variable}_pred_std_campaign.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_std_vs_{variable}_pred_std_campaign.png"))
 
         fig, ax = fig, ax = plt.subplots(dpi=150)
         sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"Reconstruction error", hue="Campaign", ax=ax)
-        fig.savefig(os.path.join(res_dir, f"{model_name}_{variable}_error_vs_reconstruction_error_Campaign.png"))
+        fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error_Campaign.png"))
         global_rmse_dict, global_picp_dict, global_mestdr_dict = get_validation_global_metrics(results[variable], 
                                                                             decompose_along_columns = ["Site", "Land cover", "Campaign"], 
                                                                             n_sigma=3,
                                                                             variable=variable)
         for key, rmse_df in global_rmse_dict.items():
-            rmse_df.to_csv(os.path.join(res_dir, f"{model_name}_{key}_{variable}_validation_rmse.csv"))
+            rmse_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_rmse.csv"))
         for key, pcip_df in global_picp_dict.items():
-            pcip_df.to_csv(os.path.join(res_dir, f"{model_name}_{key}_{variable}_validation_picp.csv"))
+            pcip_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_picp.csv"))
         for key, mestdr_df in global_mestdr_dict.items():
-            mestdr_df.to_csv(os.path.join(res_dir, f"{model_name}_{key}_{variable}_validation_mestdr.csv"))
+            mestdr_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_mestdr.csv"))
         plt.close('all')
     
 def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10):

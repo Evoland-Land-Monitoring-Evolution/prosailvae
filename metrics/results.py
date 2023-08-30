@@ -10,7 +10,7 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                     all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_article_plots,
-                                    PROSAIL_2D_aggregated_results,
+                                    PROSAIL_2D_aggregated_results, article_2D_aggregated_results,
                                     frm4veg_plots, plot_belsar_metrics, regression_plot)
 from dataset.loaders import  get_simloader
 from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
@@ -520,6 +520,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
         cyclical_ref_lai = torch.cat(cyclical_ref_lai)
         cyclical_lai = torch.cat(cyclical_lai)
         cyclical_lai_std = torch.cat(cyclical_lai_std)
+        article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
+                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
+                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_std)
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std

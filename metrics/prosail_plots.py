@@ -1072,12 +1072,221 @@ def plot_hist_and_cumhist_from_samples(samples, bins=50):
     ax.hist(samples.reshape(-1), bins=bins, cumulative=True, histtype='step', density=True)
     return fig, ax
 
+def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
+                                  all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
+                                  all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma,
+                                #   gdf_lai, model_patch_pred, snap_patch_pred, 
+                                  max_sigma=1.4, n_sigma=2):
+    article_plot_dir = os.path.join(plot_dir, "article_aggregated_plots")
+    os.makedirs(article_plot_dir)
+    cyclical_piw = n_sigma * cyclical_lai_sigma
+    cyclical_mpiw = torch.mean(cyclical_piw)
+    cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
+    estdr = cyclical_lai_abs_error / cyclical_lai_sigma # Error to std ration
+    fig, ax = plot_hist_and_cumhist_from_samples(estdr, bins=50)
+    ax.set_xlabel("Ratio of LAI error to predicted std.")
+
+    cyclical_pic = torch.logical_and(cyclical_ref_lai < cyclical_lai + n_sigma / 2 * cyclical_lai_sigma, 
+                         cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma).int().float()
+    cyclical_picp = torch.mean(cyclical_pic)
+    ax.set_title(f"PICP:{cyclical_picp}, MESTDR:{estdr.mean().item()}")
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/cyclical_lai_estdr.tex")
+
+    fig, ax = regression_plot(pd.DataFrame({"Simulated LAI":cyclical_ref_lai.detach().cpu().numpy(), 
+                                            "Predicted LAI":cyclical_lai.detach().cpu().numpy()}), 
+                                            "Simulated LAI", "Predicted LAI", hue=None)
+    ax.set_title(f"PICP: {cyclical_picp}")
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/cyclical_lai_scatter.tex")
+
+    fig, ax = pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
+                        res_dir=None, filename=None)
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/sim_prosail_pair_plot.tex")
+
+    fig, ax = plt.subplots()
+    ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
+    ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
+    ax.set_ylabel('LAI latent sigma')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_sigma.tex")
+
+    fig, ax = plt.subplots()
+    ax.scatter(all_lai, all_sigma[6,:], s=0.5)
+    ax.set_xlabel('Predicted LAI')
+    ax.set_ylabel('LAI std')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/lai_vs_lai_std.tex")
+
+    fig, ax = plt.subplots()
+    ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)
+    sns.kdeplot(data=pd.DataFrame({"Reconstruction error":(all_s2_r - all_rec).abs().mean(0), 
+                                   "LAI difference (Prediction - SNAP)":(all_lai - all_weiss_lai)}), 
+                                   x="Reconstruction error", y="LAI difference (Prediction - SNAP)",
+                                   levels=5, thresh=.2, ax=ax, color="red")
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_rec_err.tex")
+
+    fig, ax = plt.subplots()
+    ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
+    ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
+    ax.set_ylabel('Cab latent sigma')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/cab_err_vs_sigma.tex")
+
+    fig, ax = plt.subplots()
+    ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
+    ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
+    ax.set_ylabel('Cw latent sigma')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/cw_err_vs_sigma.tex")
+
+    
+    for idx, prosail_var in enumerate(PROSAILVARS):
+        fig, ax = plt.subplots(tight_layout=True, dpi=150)
+        ax.hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
+        ax.set_yticks([])
+        ax.set_xlabel(prosail_var)
+        ax.set_xlim(ProsailVarsDist.Dists[PROSAILVARS[idx]]['min'],
+                    ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_pred_dist.tex")
+
+    fig, ax = plt.subplots(tight_layout=True, dpi=150)
+    for idx, prosail_var in enumerate(PROSAILVARS):
+        ax.hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
+        ax.set_yticks([])
+        # ax[row, col].set_xlim(0, max_sigma)
+        ax.set_xlabel(f"{prosail_var} std")
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_std.tex")
+
+    
+    for idx, band in enumerate(BANDS):
+        fig, ax = plt.subplots(tight_layout=True, dpi=150)
+        fig, ax = regression_plot(pd.DataFrame({band :all_s2_r[idx,:].reshape(-1).detach().cpu().numpy(), 
+                                                f"Reconstructed {band}":all_rec[idx,:].reshape(-1).detach().cpu().numpy()}), 
+                                                band, f"Reconstructed {band}", hue=None)
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f"{article_plot_dir}/{band}_scatter_true_vs_pred.tex")
+
+
+    for idx, band in enumerate(BANDS):
+        fig, ax = plt.subplots(figsize=(2,2), tight_layout=True, dpi=150)
+        xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
+        xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
+        ax.hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
+                            all_rec[idx,:].reshape(-1).cpu().numpy(),
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+        ax.set_yticks([])
+        ax.set_ylabel(f"Reconstructed {band}")
+        ax.set_xlabel(f"{band}")
+        ax.set_aspect('equal')
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f"{article_plot_dir}/{band}_2dhist_true_vs_pred.tex")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
+    xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
+    ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='BrBG')
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.set_ylabel("Predicted LAI")
+    ax.set_xlabel("SNAP LAI")
+    ax.set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/all_lai_2dhist_true_vs_pred.tex")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b, r2, rmse = regression_metrics(all_weiss_lai.detach().cpu().numpy(), 
+                                        all_lai.detach().cpu().numpy())
+    xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
+    xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
+    ax.scatter(all_weiss_lai.cpu().numpy(),
+                        all_lai.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel("Predicted LAI")
+    ax.set_xlabel("SNAP LAI")
+    ax.set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/all_lai_scatter_true_vs_pred.tex")
+
+    ccc = all_cab * all_lai
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b, r2, rmse = regression_metrics(all_weiss_cab.detach().cpu().numpy(), 
+                                        ccc.detach().cpu().numpy())
+    xmin = min(ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+    xmax = max(ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
+    ax.scatter(all_weiss_cab.cpu().numpy(),
+                        ccc.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted CCC")
+    ax.set_xlabel(f"SNAP CCC")
+    ax.set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/all_ccc_scatter_true_vs_pred.tex")
+
+    fig, ax = plt.subplots()
+    err = (all_s2_r - all_rec).reshape(len(BANDS), -1).abs().cpu()
+    ax.boxplot(err, positions=np.arange(len(BANDS)), showfliers=False)
+    ax.set_yscale('log')
+    # ax.set_yscale('symlog',linthresh=1e-6)
+    ax.set_xticklabels(BANDS)
+    ax.set_ylabel("Absolute error")
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/bands_err_boxplot.tex")
+
+    cwc = all_lai * all_cw
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    m, b, r2, rmse = regression_metrics(all_weiss_cw.detach().cpu().numpy(), 
+                                        cwc.detach().cpu().numpy())
+    
+    xmin = min(cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    xmax = max(cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    ax.scatter(all_weiss_cw.cpu().numpy(),
+                        cwc.cpu().numpy(),s=0.5)
+    ax.plot([xmin, xmax],
+            [m * xmin + b, m * xmax + b],'r', 
+            label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+    ax.legend()
+    ax.set_ylabel(f"Predicted CWC")
+    ax.set_xlabel(f"SNAP CWC")
+    ax.set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/all_cwc_scatter_true_vs_pred.tex")
+    
+
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
                                   all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma,
                                 #   gdf_lai, model_patch_pred, snap_patch_pred, 
-                                  max_sigma=1.4):
-    n_sigma = 2
+                                  max_sigma=1.4, n_sigma=2):
+    
     cyclical_piw = n_sigma * cyclical_lai_sigma
     cyclical_mpiw = torch.mean(cyclical_piw)
     cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
@@ -1263,69 +1472,6 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xticklabels(BANDS)
     ax.set_ylabel("Absolute error")
     fig.savefig(f"{plot_dir}/bands_err_boxplot.png")
-    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    # weiss_ccc = all_weiss_cab / all_weiss_lai * 10
-    # m, b = np.polyfit(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy(), 1)
-    # r2 = r2_score(weiss_ccc.cpu().numpy(), all_cab.cpu().numpy())
-    # mse = (weiss_ccc - all_cab).pow(2).mean().cpu().numpy()
-    # xmin = min(all_cab.cpu().min().item(), weiss_ccc.cpu().min().item())
-    # xmax = max(all_cab.cpu().max().item(), weiss_ccc.cpu().max().item())
-    # ax.scatter(weiss_ccc.cpu().numpy(),
-    #                     all_cab.cpu().numpy(),s=0.5)
-    # ax.plot([xmin, xmax],
-    #         [m * xmin + b, m * xmax + b],'r', 
-    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    # xlim = ax.get_xlim()
-    # ylim = ax.get_ylim()
-    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    # ax.legend()
-    # ax.set_ylabel(f"Predicted Cab")
-    # ax.set_xlabel(f"SNAP 'CCC'")
-    # ax.set_aspect('equal')
-    # fig.savefig(f"{plot_dir}/all_other_cab_scatter_true_vs_pred.png")
-
-    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    # m, b = np.polyfit(all_weiss_cab.cpu().numpy()*10, all_cab.cpu().numpy(), 1)
-    # r2 = r2_score(all_weiss_cab.cpu().numpy()*10, all_cab.cpu().numpy())
-    # mse = (all_weiss_cab*10 - all_cab).pow(2).mean().cpu().numpy()
-    # xmin = min(all_cab.cpu().min().item(), all_weiss_cab.cpu().min().item()*10)
-    # xmax = max(all_cab.cpu().max().item(), all_weiss_cab.cpu().max().item()*10)
-    # ax.scatter(all_weiss_cab.cpu().numpy()*10,
-    #                     all_cab.cpu().numpy(),s=0.5)
-    # ax.plot([xmin, xmax],
-    #         [m * xmin + b, m * xmax + b],'r', 
-    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    # xlim = ax.get_xlim()
-    # ylim = ax.get_ylim()
-    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    # ax.legend()
-    # ax.set_ylabel(f"Predicted Cab")
-    # ax.set_xlabel(f"SNAP Cab")
-    # ax.set_aspect('equal')
-    # fig.savefig(f"{plot_dir}/all_cab_times10_scatter_true_vs_pred.png")
-
-    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    # m, b = np.polyfit(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(), 1)
-    # r2 = r2_score(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy())
-    # mse = (all_weiss_cab - all_ccc).pow(2).mean().cpu().numpy()
-    # xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
-    # xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
-    # ax.scatter(all_weiss_cab.cpu().numpy(),
-    #                     all_ccc.cpu().numpy(),s=0.5)
-    # ax.plot([xmin, xmax],
-    #         [m * xmin + b, m * xmax + b],'r', 
-    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    # xlim = ax.get_xlim()
-    # ylim = ax.get_ylim()
-    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    # ax.legend()
-    # ax.set_ylabel(f"Predicted CCC")
-    # ax.set_xlabel(f"SNAP Cab")
-    # ax.set_aspect('equal')
-    # fig.savefig(f"{plot_dir}/all_ccc_scatter_true_vs_pred.png")
 
     cwc = all_lai * all_cw
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
@@ -1349,47 +1495,6 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_cwc_scatter_true_vs_pred.png")
 
-    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    # m, b = np.polyfit(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy(), 1)
-    # r2 = r2_score(all_weiss_cw.cpu().numpy() * 10, all_cw.cpu().numpy())
-    # mse = (all_weiss_cw * 10 - all_cw).pow(2).mean().cpu().numpy()
-    # xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item() * 10)
-    # xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item() * 10)
-    # ax.scatter(all_weiss_cw.cpu().numpy() * 10,
-    #                     all_cw.cpu().numpy(),s=0.5)
-    # ax.plot([xmin, xmax],
-    #         [m * xmin + b, m * xmax + b],'r', 
-    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    # xlim = ax.get_xlim()
-    # ylim = ax.get_ylim()
-    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-    #                 [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    # ax.legend()
-    # ax.set_ylabel(f"Predicted Cw")
-    # ax.set_xlabel(f"SNAP Cw")
-    # ax.set_aspect('equal')
-    # fig.savefig(f"{plot_dir}/all_cw_x10_scatter_true_vs_pred.png")
-
-    # fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    # m, b = np.polyfit(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy(), 1)
-    # r2 = r2_score(all_weiss_cw.cpu().numpy(), all_cw_rel.cpu().numpy())
-    # mse = (all_weiss_cw - all_cw_rel).pow(2).mean().cpu().numpy()
-    # xmin = min(all_cw_rel.cpu().min().item(), all_weiss_cw.cpu().min().item())
-    # xmax = max(all_cw_rel.cpu().max().item(), all_weiss_cw.cpu().max().item())
-    # ax.scatter(all_weiss_cw.cpu().numpy(),
-    #                     all_cw_rel.cpu().numpy(),s=0.5)
-    # ax.plot([xmin, xmax],
-    #         [m * xmin + b, m * xmax + b],'r', 
-    #         label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n MSE: {:.2f}".format(m,b,r2,mse))
-    # xlim = ax.get_xlim()
-    # ylim = ax.get_ylim()
-    # ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-    #                 [min(xlim[0], ylim[0]), max(xlim[1],ylim[1]), ],'k--')
-    # ax.legend()
-    # ax.set_ylabel(f"Predicted CwRel")
-    # ax.set_xlabel(f"SNAP Cw")
-    # ax.set_aspect('equal')
-    # fig.savefig(f"{plot_dir}/all_cwrel_scatter_true_vs_pred.png")
     return
 
 def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,

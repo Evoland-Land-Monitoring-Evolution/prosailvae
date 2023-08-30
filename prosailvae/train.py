@@ -623,8 +623,9 @@ def main():
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
-        lai_cyclical_loader = load_cyclical_data_set(cyclical_data_dir, batch_size=params["batch_size"])
-        # lai_cyclical_loader = None
+        # lai_cyclical_loader = load_cyclical_data_set(cyclical_data_dir, batch_size=params["batch_size"])
+        lai_cyclical_loader = None
+        
         validation_dir = os.path.join(res_dir, "validation")
         os.makedirs(validation_dir)
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
@@ -643,9 +644,9 @@ def main():
                                     method="simple_interpolate",
                                     mode="sim_tg_mean")
         if not params['supervised']:
-            _, _, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
+            _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                          batch_size=1, num_workers=0)
-            
+            lai_cyclical_loader = valid_loader
             info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
             save_results_2d(prosail_vae, test_loader, res_dir,
                             all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

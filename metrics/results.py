@@ -278,7 +278,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
                     all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None, max_test_patch=50, 
                     lai_cyclical_loader=None):
-    cyclical_lai_precomputed=True
+    cyclical_lai_precomputed=False
     rec_mode = 'lat_mode' 
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Saving Loss")
@@ -307,7 +307,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, all_train_loss_df=None,
     # Computing metrics
     PROSAIL_VAE.eval()
     cyclical_rmse = PROSAIL_VAE.get_cyclical_rmse_from_loader(lai_cyclical_loader, 
-                                                                    lai_precomputed=cyclical_lai_precomputed)
+                                                              lai_precomputed=cyclical_lai_precomputed)
     pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
     # logger.info("Computing inference metrics with test dataset...")
     # test_loss = PROSAIL_VAE.validate(loader, mmdc_dataset=True, n_samples=10)

@@ -164,37 +164,37 @@ def save_validation_results(model, res_dir,
         ax.legend()
     axs[-1].set_ylabel("Date")
     fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Wheat.png"))
-    for i in range(0,10):
-        fig, ax= plt.subplots()
+    for i in range(0, 10):
+        fig, ax= plt.subplots(dpi=150, tight_layout=True, figsize=(1, 2))
         site = "W" + str(i+1)
         fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                label="PROSAIL-VAE", use_ref_metrics=True)
         fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                label="SNAP")
         ax.legend()
-        ax[-1].set_ylabel("Date")
+        
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(os.path.join(time_series_dir, f"belSAR_LAI_time_series_Wheat_{i}.tex"))
-        fig, ax= plt.subplots()
+        fig, ax= plt.subplots(dpi=150, tight_layout=True, figsize=(1, 2))
         site = "M" + str(i+1)
         fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                label="PROSAIL-VAE", use_ref_metrics=True)
         fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                label="SNAP")
         ax.legend()
-        ax[-1].set_ylabel("Date")
+        
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(os.path.join(time_series_dir, f"belSAR_LAI_time_series_Maize_{i}.tex"))
         plt.close("all")
 
     fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(10, 2*10))
-    for i in range(0,10):
+    for i in range(0, 10):
         site = "M" + str(i+1)
         fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
                                                label="PROSAIL-VAE", use_ref_metrics=True)
         fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
                                                label="SNAP")
-    axs[-1].set_ylabel("Date")
+    
     fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Maize.png"))
 
     hspot_dir = os.path.join(res_dir, "hspot_vs_lai")

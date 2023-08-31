@@ -224,7 +224,7 @@ def plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=None, sim_pdf=No
     
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=None):
     if bands_name is None:
-        bands_name = BANDS
+        bands_name = np.array(BANDS)[model.encoder.bands].tolist()
     original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
     prosail_VAE.decoder.ssimulator.apply_norm = False
     for i in range(n_plots):

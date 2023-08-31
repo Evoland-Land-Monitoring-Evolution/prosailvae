@@ -265,13 +265,14 @@ def get_frm4veg_material(frm4veg_data_dir, frm4veg_filename):
     s2_a = torch.from_numpy(s2_a).float().unsqueeze(0)
     return s2_r, s2_a, site_idx_dict, ref_dict
 
-def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="lat_mode", get_reconstruction=False):
+def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="lat_mode", 
+                              get_reconstruction=False):
     with torch.no_grad():
         (rec, sim_image, cropped_s2_r, cropped_s2_a,
             sigma_image) = get_encoded_image_from_batch((s2_r, s2_a), model,
                                             patch_size=32, bands=model.encoder.bands,
                                             mode=mode, padding=True, no_rec=not get_reconstruction)
-        cropped_s2_r = cropped_s2_r[:,model.encoder.bands,...]
+        cropped_s2_r = cropped_s2_r[:,model.encoder.bands.to(cropped_s2_r.device),...]
         rec_err = (rec - cropped_s2_r.squeeze(0)).abs().mean(0, keepdim=True)
         band_rec_err = (rec - cropped_s2_r.squeeze(0)).abs()
     model_pred = {"s2_r":cropped_s2_r, "s2_a":cropped_s2_a}

@@ -241,9 +241,9 @@ def save_validation_results(model, res_dir,
                         hue="Site", ax=ax)
         fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error.png"))
 
-        n_cols = len(np.array(BANDS)[model.encoder.bands])//2
+        n_cols = len(np.array(BANDS)[model.encoder.bands.cpu()])//2
         fig, axs = plt.subplots(2, n_cols, dpi=150, figsize=(n_cols*3, 2*3))
-        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands.cpu()].tolist()):
             row = i // n_cols
             col = i % n_cols
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error",  
@@ -251,7 +251,7 @@ def save_validation_results(model, res_dir,
         fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_band_rec_error_Campaign.png"))
 
         fig, axs = plt.subplots(2, n_cols, dpi=150, figsize=(n_cols*3, 2*3))
-        for i, band in enumerate(np.array(BANDS)[model.encoder.bands].tolist()):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands.cpu()].tolist()):
             row = i // n_cols
             col = i % n_cols
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"{band} error", ax=axs[row,col], s=5)

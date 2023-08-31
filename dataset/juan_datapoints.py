@@ -118,10 +118,10 @@ def get_interpolated_validation_data(site, path_to_data_dir, lai_min=0, dt_max =
     # If dt > dt_max, using the other measurement
     dt_a_ge_max = (dt_a.abs() > dt_max).squeeze()
     dt_b_ge_max = (dt_b.abs() > dt_max).squeeze()
-    s2_r[dt_b_ge_max,:] = s2_r_a[dt_b_ge_max]
-    s2_r[dt_a_ge_max,:] = s2_r_b[dt_a_ge_max]
-    s2_a[dt_b_ge_max,:] = s2_a_a[dt_b_ge_max]
-    s2_a[dt_a_ge_max,:] = s2_a_b[dt_a_ge_max]
+    s2_r[dt_b_ge_max,:] = s2_r_a[dt_b_ge_max,:]
+    s2_r[dt_a_ge_max,:] = s2_r_b[dt_a_ge_max,:]
+    s2_a[dt_b_ge_max,:] = s2_a_a[dt_b_ge_max,:]
+    s2_a[dt_a_ge_max,:] = s2_a_b[dt_a_ge_max,:]
     dt[dt_b_ge_max] = dt_a[dt_b_ge_max]
     dt[dt_a_ge_max] = dt_b[dt_a_ge_max]
     dt_a[dt_a_ge_max] = dt_b[dt_a_ge_max]

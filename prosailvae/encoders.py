@@ -89,7 +89,7 @@ class ProsailNNEncoder(Encoder):
             # layers.append(nn.BatchNorm1d(num_features=out_features))
         layers.append(nn.Linear(in_features=hidden_layers_size[-1],
                                 out_features=config.n_latent_params * config.output_size))
-
+        self.output_size = config.output_size
         if config.last_activation is not None :
             layers.append(config.last_activation)
         self.device=device
@@ -242,6 +242,7 @@ class ProsailRNNEncoder(Encoder):
         # Last layer
         resnet.append(nn.Linear(in_features=config.block_layer_sizes[-1],
                                 out_features=config.n_latent_params * config.output_size))
+        self.output_size = config.output_size
         if config.last_activation is not None :
             resnet.append(config.last_activation)
         self.device=device
@@ -360,6 +361,7 @@ class ProsailCNNEncoder(nn.Module):
             ],
             [],
         )
+        self.output_size = config.output_size
         self.cnet = nn.Sequential(*enc_blocks).to(device)
         self.nb_enc_cropped_hw = sum(
             [(kernel_size - 1) // 2 for kernel_size in config.kernel_sizes]
@@ -534,6 +536,7 @@ class ProsailResCNNEncoder(nn.Module):
         self.bands = bands.to(device)
         self.device = device
         network = []
+        self.output_size = config.output_size
         network.append(nn.Conv2d(config.input_size, config.first_layer_size,
                                  config.first_layer_kernel, padding=config.padding))
         network.append(nn.ReLU())

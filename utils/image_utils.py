@@ -98,10 +98,10 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
     patched_s2_a = patchify(s2_a.squeeze(), patch_size=patch_size, margin=hw).to(PROSAIL_VAE.device)
     patched_sim_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
-                                     11, patch_size, patch_size)).to(PROSAIL_VAE.device)
+                                     PROSAIL_VAE.encoder.output_size, patch_size, patch_size)).to(PROSAIL_VAE.device)
     patched_rec_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1),
                                      len(bands), patch_size, patch_size)).to(PROSAIL_VAE.device)
-    patched_std_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), 11,
+    patched_std_image = torch.zeros((patched_s2_r.size(0), patched_s2_r.size(1), PROSAIL_VAE.encoder.output_size,
                                        patch_size, patch_size)).to(PROSAIL_VAE.device)
     for i in range(patched_s2_r.size(0)):
         for j in range(patched_s2_r.size(1)):

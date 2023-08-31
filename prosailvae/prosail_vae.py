@@ -118,7 +118,7 @@ class ProsailVAEConfig:
     deterministic:bool=False
 
 def get_prosail_vae_config(params, bands, io_coeffs,
-                           inference_mode, prosail_bands, rsr_dir):
+                           inference_mode, prosail_bands, rsr_dir, lai_ccc_mode=False):
     """
     Get ProsailVAEConfig from params dict
     """
@@ -126,7 +126,7 @@ def get_prosail_vae_config(params, bands, io_coeffs,
     n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
     encoder_config = EncoderConfig(encoder_type=params['encoder_type'],
                                    input_size=len(bands) + 3 + n_idx,# + 2 * 3 + n_idx,
-                                   output_size=len(PROSAILVARS),
+                                   output_size=len(PROSAILVARS) if not lai_ccc_mode else 2,
                                    io_coeffs=io_coeffs,
                                    bands=bands,
                                    last_activation = None,

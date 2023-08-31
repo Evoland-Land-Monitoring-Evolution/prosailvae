@@ -249,9 +249,7 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
         for j in range(len(PROSAILVARS)):
             ax2.append(fig.add_subplot(gs[j, 1]))
         rec_samples = rec.squeeze().detach().cpu().numpy()
-        
-        
-        
+
         rec_samples = [rec_samples[j,:] for j in range(len(bands_name))]
         sim_samples = sim.squeeze().detach().cpu().numpy()
         sim_samples = [sim_samples[j,:] for j in range(len(PROSAILVARS))]

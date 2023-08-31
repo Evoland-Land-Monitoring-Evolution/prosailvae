@@ -996,7 +996,7 @@ def plot_lai_preds(lais, lai_pred, time_delta=None, site=''):
     minlim = min(lai_i.min(), lai_pred.min())
     maxlim = max(lai_i.max(), lai_pred.max())
     ax.plot([minlim, maxlim],
-            [minlim, maxlim],'k--')
+            [minlim, maxlim],'k')
     ax.plot([minlim, maxlim],
             [m * minlim + b, m * maxlim + b],'r', label="{:.2f} x + {:.2f}\n r2 = {:.2f}\n RMSE: {:.2f}".format(m,b,r2,rmse))
     ax.legend()
@@ -1051,7 +1051,7 @@ def lai_validation_pred_vs_snap(all_model_lai, all_snap_lai, gdf,
     ylim = ax.get_ylim()
     
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1], ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1], ylim[1]), ],'k')
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
         [m * min(xlim[0],ylim[0]) + b, m * max(xlim[1],ylim[1]) + b],'r')
     ax.set_xlim(min(xlim[0],ylim[0]), max(xlim[1],ylim[1]))
@@ -1182,7 +1182,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
         ax.set_yticks([])
         ax.set_ylabel(f"Reconstructed {band}")
         ax.set_xlabel(f"{band}")
@@ -1198,7 +1198,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.set_ylabel("Predicted LAI")
     ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
@@ -1217,7 +1217,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
     ax.set_ylabel("Predicted LAI")
     ax.set_xlabel("SNAP LAI")
@@ -1239,7 +1239,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
     ax.set_ylabel(f"Predicted CCC")
     ax.set_xlabel(f"SNAP CCC")
@@ -1272,7 +1272,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
     ax.set_ylabel(f"Predicted CWC")
     ax.set_xlabel(f"SNAP CWC")
@@ -1288,7 +1288,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                   max_sigma=1.4, n_sigma=2):
     
     cyclical_piw = n_sigma * cyclical_lai_sigma
-    cyclical_mpiw = torch.mean(cyclical_piw)
+    cyclical_mpiw = torch.mean(cyclical_piw)lai_validation_pred_vs_snap
     cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
     estdr = cyclical_lai_abs_error / cyclical_lai_sigma # Error to std ration
     fig, ax = plot_hist_and_cumhist_from_samples(estdr, bins=50)
@@ -1382,7 +1382,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(f"Reconstructed {band}")
         ax[row, col].set_xlabel(f"True {band}")
@@ -1403,7 +1403,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(f"Reconstructed {band}")
         ax[row, col].set_xlabel(f"True {band}")
@@ -1417,7 +1417,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.set_ylabel("Predicted LAI")
     ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
@@ -1436,7 +1436,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
     ax.set_ylabel("Predicted LAI")
     ax.set_xlabel("SNAP LAI")
@@ -1457,7 +1457,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
     ax.set_ylabel(f"Predicted CCC")
     ax.set_xlabel(f"SNAP CCC")
@@ -1488,7 +1488,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                    [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
     ax.set_ylabel(f"Predicted CWC")
     ax.set_xlabel(f"SNAP CWC")
@@ -1610,7 +1610,7 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
-                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k--')
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(f"Reconstructed {BANDS[idx]}")
         ax[row, col].set_xlabel(f"True {BANDS[idx]}")
@@ -1743,7 +1743,7 @@ def patch_validation_reg_scatter_plot(gdf, patch_pred:np.ndarray|None=None,
         xmin = min(np.min(pred_at_site), np.min(ref))
     if xmax is None:
         xmax = max(np.max(pred_at_site), np.max(ref))
-    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.plot([xmin, xmax], [xmin, xmax], 'k')
     m, b, r2, rmse = regression_metrics(ref, pred_at_site)
     perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
@@ -1821,7 +1821,7 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
         xmin = min(np.min(pred_at_site), np.min(ref))
     if xmax is None:
         xmax = max(np.max(pred_at_site), np.max(ref))
-    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.plot([xmin, xmax], [xmin, xmax], 'k')
     m, b, r2, rmse = regression_metrics(ref, pred_at_site)
     perf_text = " y = {:.2f} x + {:.2f} \n r2: {:.2f} \n RMSE: {:.2f}".format(m,b,r2,rmse)
     ax.text(.05, .95, perf_text, ha='left', va='top', transform=ax.transAxes)
@@ -1853,7 +1853,7 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
         xmin = min(np.min(pred), np.min(ref))
     if xmax is None:
         xmax = max(np.max(pred), np.max(ref))
-    ax.plot([xmin, xmax], [xmin, xmax], '--k')
+    ax.plot([xmin, xmax], [xmin, xmax], 'k')
     
     m_tot, b_tot, r2_tot, rmse_tot = regression_metrics(ref, pred)
     perf_text = "All: \n r2: {:.2f} - RMSE: {:.2f}".format(r2_tot, rmse_tot)

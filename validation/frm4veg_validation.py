@@ -304,7 +304,7 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
         model_pred[f"ref_{ccc_variable}_std"] = ref_dict[f"{ccc_variable}_std"]
         model_pred[f"{ccc_variable}_rec_err"] = rec_err[..., site_idx_dict[ccc_variable]['y_idx'], 
                                                              site_idx_dict[ccc_variable]['x_idx']].numpy()
-        for i, band in enumerate(np.array(BANDS)[model.encoder.bands.detach().cpu(].tolist()):
+        for i, band in enumerate(np.array(BANDS)[model.encoder.bands.detach().cpu()].tolist()):
             model_pred[f"{ccc_variable}_{band}_rec_err"] = band_rec_err[i, site_idx_dict[ccc_variable]['y_idx'], 
                                                                         site_idx_dict[ccc_variable]['x_idx']].numpy()
                                                              

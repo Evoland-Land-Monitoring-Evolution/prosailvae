@@ -1288,7 +1288,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                   max_sigma=1.4, n_sigma=2):
     
     cyclical_piw = n_sigma * cyclical_lai_sigma
-    cyclical_mpiw = torch.mean(cyclical_piw)lai_validation_pred_vs_snap
+    cyclical_mpiw = torch.mean(cyclical_piw)
     cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
     estdr = cyclical_lai_abs_error / cyclical_lai_sigma # Error to std ration
     fig, ax = plot_hist_and_cumhist_from_samples(estdr, bins=50)

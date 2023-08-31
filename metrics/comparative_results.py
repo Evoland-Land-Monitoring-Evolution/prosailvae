@@ -804,11 +804,12 @@ def get_models_validation_rec_loss(model_dict, loader):
         losses.append(model_info['loss'])
     return losses
 
-def get_models_validation_cyclical_rmse(model_dict, loader):
+def get_models_validation_cyclical_rmse(model_dict, loader, lai_precomputed=False):
     cyclical_rmse = []
     with torch.no_grad():
         for _, model_info in model_dict.items(): 
-            model_info['cyclical_rmse'] = model_info["model"].get_cyclical_rmse_from_loader(loader, lai_precomputed=True).detach().cpu().item()
+            model_info['cyclical_rmse'] = model_info["model"].get_cyclical_rmse_from_loader(loader, 
+                                                                                            lai_precomputed=lai_precomputed).detach().cpu().item()
             cyclical_rmse.append(model_info['cyclical_rmse'])
     return cyclical_rmse
 
@@ -846,9 +847,10 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
-    if parser.save_projected:
-        save_common_cyclical_dataset(model_dict, valid_loader, projected_data_dir)
-    cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
+    # if parser.save_projected:
+    #     save_common_cyclical_dataset(model_dict, valid_loader, projected_data_dir)
+    # cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
+    cyclical_loader = valid_loader
     losses = get_models_validation_rec_loss(model_dict, valid_loader)
     pd.DataFrame(data={"loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
     cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader)

@@ -25,9 +25,9 @@
     "data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
     "lr_recompute_mode": false,
     "first_layer_kernel": 3,
-    "first_layer_size": 32,
+    "first_layer_size": 16,
     "block_layer_sizes": [
-        32
+        16
     ],
     "block_layer_depths": [
         2

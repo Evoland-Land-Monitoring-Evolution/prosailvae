@@ -393,7 +393,7 @@ def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, bel
                 d[f"rec_err_mean"] = np.nanmean(masked_err)
                 d[f"rec_err_std"] = np.nanstd(masked_err)
             if not np.isnan(masked_bands_err).all():
-                for i, band in enumerate(np.array(BANDS)[bands_idx].tolist()):
+                for i, band in enumerate(np.array(BANDS)[bands_idx.cpu()].tolist()):
                     d[f"{band}_rec_err_mean"] = np.nanmean(masked_bands_err[i,...])
                     d[f"{band}_rec_err_std"] = np.nanstd(masked_bands_err[i,...])
         if not np.isnan(masked_array[pred_array_idx[variable]['mean'],...]).all():

@@ -125,7 +125,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
         rec_err = np.zeros_like(ref_lai)
 
     bands_rec_err = {}
-    for band in np.array(BANDS)[bands_idx].tolist():
+    for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         if get_reconstruction_error:
             bands_rec_err[band] = np.concatenate([belsar_results[f'{band}_rec_err_mean'].values.reshape(-1),
                                                     barrax_results[f'{frm4veg_lai}_{band}_rec_err'].reshape(-1),
@@ -144,7 +144,7 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                                 "Time delta": np.concatenate(date_list),
                                 "Campaign": np.array(campaign_list),
                                 })
-    for band in np.array(BANDS)[bands_idx].tolist():
+    for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         results[f"{band} error"] = bands_rec_err[band]
     return results
 
@@ -192,7 +192,7 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
         rec_err = np.zeros_like(ref_ccc)
 
     bands_rec_err = {}
-    for band in np.array(BANDS)[bands_idx].tolist():
+    for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         if get_reconstruction_error:
             bands_rec_err[band] = np.concatenate([  barrax_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1),
                                                     barrax_2021_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1),
@@ -209,7 +209,7 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                 "Time delta": np.concatenate(date_list),
                                 "Campaign": np.array(campaign_list),
                                 })
-    for band in np.array(BANDS)[bands_idx].tolist():
+    for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         results[f"{band} error"] = bands_rec_err[band]
     return results
 

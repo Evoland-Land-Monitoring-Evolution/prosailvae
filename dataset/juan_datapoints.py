@@ -124,13 +124,13 @@ def get_interpolated_validation_data(site, path_to_data_dir, lai_min=0, dt_max =
     s2_a[dt_a_ge_max,:] = s2_a_b[dt_a_ge_max,:]
     dt[dt_b_ge_max] = dt_a[dt_b_ge_max]
     dt[dt_a_ge_max] = dt_b[dt_a_ge_max]
-    dt_a[dt_a_ge_max] = dt_b[dt_a_ge_max]
-    dt_b[dt_b_ge_max] = dt_a[dt_b_ge_max]
+    # dt_a[dt_a_ge_max] = dt_b[dt_a_ge_max]
+    # dt_b[dt_b_ge_max] = dt_a[dt_b_ge_max]
 
     if method =="closest":
         # Using reflectances and angles of the measurement with smallest absolute dt
-        dt_a_le_b = (dt_b.abs() <= dt_a.abs()).squeeze()
-        dt_b_le_a = (dt_a.abs() <= dt_b.abs()).squeeze()
+        dt_a_le_b = (dt_b.abs() >= dt_a.abs()).squeeze()
+        dt_b_le_a = (dt_a.abs() > dt_b.abs()).squeeze()
         s2_r[dt_b_le_a,:] = s2_r_b[dt_b_le_a]
         s2_r[dt_a_le_b,:] = s2_r_a[dt_a_le_b]
         s2_a[dt_b_le_a,:] = s2_a_b[dt_b_le_a]

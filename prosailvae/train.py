@@ -161,7 +161,8 @@ def initialize_by_training(n_models:int,
                            logger,
                            pv_config:ProsailVAEConfig,
                            pv_config_hyper:ProsailVAEConfig|None=None,
-                           break_at_rec_loss=None):
+                           break_at_rec_loss=None, 
+                           max_sec=3600):
     """
     Initialize prosial_vae by running a few models for several epochs at high lr,
       and selecting the best.
@@ -170,6 +171,7 @@ def initialize_by_training(n_models:int,
     broke_at_rec = False
     logger.info(f"Intializing by training {n_models} models for {n_epochs} epochs:")
     best_model_idx = 0
+    t0=time.time()
     for i in range(n_models):
         logger.info(f'=========================== Model {i} ============================')
         prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
@@ -190,7 +192,8 @@ def initialize_by_training(n_models:int,
                                                 lr_recompute_mode=False,
                                                 cycle_training = False, 
                                                 accum_iter=1,
-                                                lrs_threshold=0.01)
+                                                lrs_threshold=0.01, 
+                                                max_sec=None)
         
         model_min_loss = all_valid_loss_df['loss_sum'].values.min()
         if min_valid_loss > model_min_loss:
@@ -202,6 +205,8 @@ def initialize_by_training(n_models:int,
                 logger.info(f"Model {i} has gone under threshold loss {all_valid_loss_df['rec_loss'].values.min()} < {break_at_rec_loss}.")
                 broke_at_rec = True
                 break
+        if time.time() - t0 > max_sec:
+            break
     logger.info(f'Best model is model {best_model_idx}.')
     logger.info(f'=====================================================================')
     return broke_at_rec
@@ -215,7 +220,9 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                   plot_gradient=False, lr_recompute_mode=True, cycle_training=False,
                   accum_iter=1, lrs_threshold=0.01, lr_init=5e-4, validation_at_every_epoch=None,
                   validation_dir=None, frm4veg_data_dir=None, frm4veg_2021_data_dir=None,
-                  belsar_data_dir=None, lai_cyclical_loader=None):
+                  belsar_data_dir=None, lai_cyclical_loader=None, 
+                  max_sec=None):
+    t_init=time.time()
     cyclical_lai_precomputed=True
     if lai_cyclical_loader is None:
         lai_cyclical_loader=valid_loader
@@ -336,6 +343,11 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
                 if res_dir is not None:
                     prosail_vae.save_ae(epoch, optimizer, best_val_loss, 
                                         os.path.join(res_dir, "prosailvae_weights.tar"))
+            t_end =time.time()
+            if max_sec is not None:
+                if t_end - t_init > max_sec:
+                    logger.info(f"Time limit of {max_sec} seconds over, finishing training early.")
+                    break
             # if os.path.isfile(os.path.join(res_dir, "stop.txt")):
             #     break
     if n_epoch < 1: # In case we just want to plot results
@@ -586,7 +598,8 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                     frm4veg_data_dir=frm4veg_data_dir,
                                                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                                                     belsar_data_dir=belsar_data_dir, 
-                                                                    lai_cyclical_loader=lai_cyclical_loader)
+                                                                    lai_cyclical_loader=lai_cyclical_loader, 
+                                                                    max_sec = 11 * 3600)
     logger.info("Training Completed !")
     
     if len(all_cyclical_rmse):

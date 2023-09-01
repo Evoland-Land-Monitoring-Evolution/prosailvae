@@ -670,7 +670,6 @@ def main():
             cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
             cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
             lai_cyclical_loader = valid_loader
-
             info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
 
             save_results_2d(prosail_vae, test_loader, res_dir, LOGGER_NAME=LOGGER_NAME,

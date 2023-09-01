@@ -683,8 +683,11 @@ def main():
                                     mestdr_df,
                                     cyclical_rmse_df,
                                     min_loss_df), axis=1)
-        global_results_df.to_csv(os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv"), 
-                                mode="a", index=False, header=False)
+        res_df_filename = os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv")
+        if not os.path.isfile(res_df_filename):
+            global_results_df.to_csv(res_df_filename, header=global_results_df.columns, index=False)
+        else: # else it exists so append without writing the header
+            global_results_df.to_csv(res_df_filename, mode='a', index=False, header=False)
         if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

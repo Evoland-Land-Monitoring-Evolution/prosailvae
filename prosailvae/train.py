@@ -652,7 +652,7 @@ def main():
         plot_losses(res_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
                         plot_results=parser.plot_results)
         min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
-        min_loss_df = pd.DataFrame({"Loss":min_loss})
+        min_loss_df = pd.DataFrame({"Loss":[min_loss]})
         if True and not socket.gethostname()=='CELL200973':
             rmse_df, picp_df, mpiw_df, mestdr_df = save_validation_results(prosail_vae, validation_dir,
                                                                     frm4veg_data_dir=frm4veg_data_dir,

@@ -659,7 +659,8 @@ def main():
                                                     'mestrd':mestdr_df,
                                                     'cyclical_rmse':cyclical_rmse_df,
                                                     'loss':min_loss_df}), axis=1)
-        global_results_df.to_csv(os.path.join(os.path.join(res_dir, os.pardir), "model_results.csv"), mode="a", index=False, header=False)
+        global_results_df.to_csv(os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv"), 
+                                 mode="a", index=False, header=False)
         
         if not params['supervised']:
             _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),

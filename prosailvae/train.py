@@ -662,10 +662,11 @@ def main():
                                                                     method="simple_interpolate",
                                                                     mode="sim_tg_mean", 
                                                                     remove_files=True)
-            print("Computing cyclical LAI")
-            cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
-            cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
-
+        print("Computing cyclical LAI")
+        _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
+                                                                        batch_size=1, num_workers=0)
+        cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
+        cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
         global_results_df = pd.concat(pd.DataFrame({'model':[model_name], 
                                                     'rmse':rmse_df,
                                                     'picp':picp_df,
@@ -676,9 +677,9 @@ def main():
         global_results_df.to_csv(os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv"), 
                                  mode="a", index=False, header=False)
         
+
         if not params['supervised']:
-            _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
-                                                                         batch_size=1, num_workers=0)
+
             lai_cyclical_loader = valid_loader
             info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
 

@@ -660,7 +660,8 @@ def main():
                                                                     belsar_data_dir=belsar_data_dir,
                                                                     model_name="pvae",
                                                                     method="simple_interpolate",
-                                                                    mode="sim_tg_mean")
+                                                                    mode="sim_tg_mean", 
+                                                                    remove_files=True)
             print("Computing cyclical LAI")
             cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
             cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})

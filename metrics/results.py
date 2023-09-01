@@ -148,9 +148,7 @@ def save_validation_results(model, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
                                       save_reconstruction=save_reconstruction, get_all_belsar=plot_results, 
                                       remove_files=remove_files)
-    (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
-     ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
-                                      method=method, get_all_belsar=True, remove_files=remove_files)
+
     results = {}
     results["LAI"] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                       frm4veg_lai="lai", get_reconstruction_error=save_reconstruction,
@@ -181,6 +179,9 @@ def save_validation_results(model, res_dir,
     
 
     if plot_results:
+        (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
+         ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
+                                      method=method, get_all_belsar=True, remove_files=remove_files)
         time_series_dir = os.path.join(res_dir, "time_series")
         os.makedirs(time_series_dir)
         fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(10, 2*10))

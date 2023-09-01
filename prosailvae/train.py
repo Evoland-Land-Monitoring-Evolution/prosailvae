@@ -667,19 +667,18 @@ def main():
                                                                         batch_size=1, num_workers=0)
         cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
-        global_results_df = pd.concat(pd.DataFrame({'model':[model_name], 
-                                                    'rmse':rmse_df,
-                                                    'picp':picp_df,
-                                                    'mpiw':mpiw_df,
-                                                    'mestrd':mestdr_df,
-                                                    'cyclical_rmse':cyclical_rmse_df,
-                                                    'loss':min_loss_df}), axis=1)
+        global_results_df = pd.concat((pd.DataFrame({'model':[model_name]}),
+                                        rmse_df,
+                                        picp_df,
+                                        mpiw_df,
+                                        mestdr_df,
+                                        cyclical_rmse_df,
+                                        min_loss_df), axis=1)
         global_results_df.to_csv(os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv"), 
                                  mode="a", index=False, header=False)
         
 
         if not params['supervised']:
-
             lai_cyclical_loader = valid_loader
             info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
 

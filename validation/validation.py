@@ -213,33 +213,42 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
         results[f"{band} error"] = bands_rec_err[band]
     return results
 
-def get_validation_global_metrics(df_results, decompose_along_columns = ["Site", "Land cover"], n_sigma=3, variable="LAI"):
+def get_validation_global_metrics(df_results, decompose_along_columns=["Site", "Land cover"], 
+                                  n_sigma=3, variable="LAI"):
     global_rmse_dict = {}
     global_picp_dict = {}
+    global_mpiw_dict = {}
     global_mestdr_dict = {}
     for column in decompose_along_columns:
         rmse = {}
         for _, element in enumerate(pd.unique(df_results[column])):
             results = df_results[df_results[column]==element]
-            rmse[element] = np.sqrt((results[f'Predicted {variable}'] - results[variable]).pow(2).mean())
-        rmse["All"] = np.sqrt((df_results[f'Predicted {variable}'] - df_results[variable]).pow(2).mean())
+            rmse[f"rmse_{element}"] = np.sqrt((results[f'Predicted {variable}'] - results[variable]).pow(2).mean())
+        rmse[f"rmse_all"] = np.sqrt((df_results[f'Predicted {variable}'] - df_results[variable]).pow(2).mean())
         global_rmse_dict[column] = pd.DataFrame(data=rmse, index=[0])
     if n_sigma>0:
         for column in decompose_along_columns:
             picp = {}
             for _, element in enumerate(pd.unique(df_results[column])):
                 results = df_results[df_results[column]==element]
-                picp[element] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma * results[f'Predicted {variable} std'],
+                picp[f"picp_{element}"] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma * results[f'Predicted {variable} std'],
                                                results[variable] > results[f'Predicted {variable}'] - n_sigma * results[f'Predicted {variable} std']).astype(int).mean()
-            picp["All"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma * df_results[f'Predicted {variable} std'],
+            picp[f"picp_all"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma * df_results[f'Predicted {variable} std'],
                                          df_results[variable] > df_results[f'Predicted {variable}'] - n_sigma * df_results[f'Predicted {variable} std']).astype(int).mean()
             global_picp_dict[column] = pd.DataFrame(data=picp, index=[0])
-
+    if n_sigma>0:
+        for column in decompose_along_columns:
+            mpiw = {}
+            for _, element in enumerate(pd.unique(df_results[column])):
+                results = df_results[df_results[column]==element]
+                mpiw[f"mpiw_{element}"] = (2 * n_sigma * results[f'Predicted {variable} std']).mean()
+            mpiw[f"mpiw_all"] = (2 * n_sigma * df_results[f'Predicted {variable} std']).mean()
+            global_mpiw_dict[column] = pd.DataFrame(data=mpiw, index=[0])
     for column in decompose_along_columns:
         mestdr = {}
         for _, element in enumerate(pd.unique(df_results[column])):
             results = df_results[df_results[column]==element]
-            mestdr[element] = (np.abs(results[variable] - results[f'Predicted {variable}']) / results[f'Predicted {variable} std']).mean()
-        mestdr["All"] = (np.abs(df_results[variable] - df_results[f'Predicted {variable}']) /  df_results[f'Predicted {variable} std']).mean()
+            mestdr[f"mestdr_{element}"] = (np.abs(results[variable] - results[f'Predicted {variable}']) / results[f'Predicted {variable} std']).mean()
+        mestdr[f"mestdr_all"] = (np.abs(df_results[variable] - df_results[f'Predicted {variable}']) /  df_results[f'Predicted {variable} std']).mean()
         global_mestdr_dict[column] = pd.DataFrame(data=mestdr, index=[0])
-    return global_rmse_dict, global_picp_dict, global_mestdr_dict
+    return global_rmse_dict, global_picp_dict, global_mpiw_dict, global_mestdr_dict

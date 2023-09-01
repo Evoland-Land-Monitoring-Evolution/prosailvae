@@ -381,6 +381,7 @@ def setup_training():
         job_array_dir = os.path.join(parser.root_results_dir, os.pardir)
     config_dir = parser.config_dir
     params = load_params(config_dir, config_file=parser.config_file, parser=parser)
+    model_name = parser.config_file[:-5]
     if "data_dir" not in params.keys():
         data_dir = os.path.join(root_dir,"data/")
     else:
@@ -428,7 +429,7 @@ def setup_training():
         params_sup_kl_model = None
         sup_kl_io_coeffs = None
     return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
-            frm4veg_data_dir, frm4veg_2021_data_dir, belsar_dir, cyclical_data_dir)
+            frm4veg_data_dir, frm4veg_2021_data_dir, belsar_dir, cyclical_data_dir, model_name)
 
 def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                      sup_kl_io_coeffs, validation_dir=None,frm4veg_data_dir=None,
@@ -619,7 +620,7 @@ def main():
     (params, parser, res_dir, data_dir, params_sup_kl_model,
      job_array_dir, sup_kl_io_coeffs,
      frm4veg_data_dir, frm4veg_2021_data_dir, 
-     belsar_data_dir, cyclical_data_dir) = setup_training()
+     belsar_data_dir, cyclical_data_dir, model_name) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ['cnn', 'rcnn']
     try:
@@ -637,14 +638,29 @@ def main():
                                      belsar_data_dir=belsar_data_dir, lai_cyclical_loader=lai_cyclical_loader)
         plot_losses(res_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
                         plot_results=parser.plot_results)
+        min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
+        min_loss_df = pd.DataFrame({"Loss":min_loss})
         if True and not socket.gethostname()=='CELL200973':
-            save_validation_results(prosail_vae, validation_dir,
-                                    frm4veg_data_dir=frm4veg_data_dir,
-                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                                    belsar_data_dir=belsar_data_dir,
-                                    model_name="pvae",
-                                    method="simple_interpolate",
-                                    mode="sim_tg_mean")
+            rmse_df, picp_df, mpiw_df, mestdr_df = save_validation_results(prosail_vae, validation_dir,
+                                                                    frm4veg_data_dir=frm4veg_data_dir,
+                                                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                                                    belsar_data_dir=belsar_data_dir,
+                                                                    model_name="pvae",
+                                                                    method="simple_interpolate",
+                                                                    mode="sim_tg_mean")
+            print("Computing cyclical LAI")
+            cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
+            cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
+
+        global_results_df = pd.concat(pd.DataFrame({'model':[model_name], 
+                                                    'rmse':rmse_df,
+                                                    'picp':picp_df,
+                                                    'mpiw':mpiw_df,
+                                                    'mestrd':mestdr_df,
+                                                    'cyclical_rmse':cyclical_rmse_df,
+                                                    'loss':min_loss_df}), axis=1)
+        global_results_df.to_csv(os.path.join(os.path.join(res_dir, os.pardir), "model_results.csv"), mode="a", index=False, header=False)
+        
         if not params['supervised']:
             _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
                                                                          batch_size=1, num_workers=0)

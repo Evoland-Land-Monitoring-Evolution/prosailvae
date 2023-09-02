@@ -654,7 +654,7 @@ def main():
         min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
         min_loss_df = pd.DataFrame({"Loss":[min_loss]})
         if True and not socket.gethostname()=='CELL200973':
-            rmse_df, picp_df, mpiw_df, mestdr_df = save_validation_results(prosail_vae, validation_dir,
+            global_valdiation_metrics = save_validation_results(prosail_vae, validation_dir,
                                                                     frm4veg_data_dir=frm4veg_data_dir,
                                                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                                                     belsar_data_dir=belsar_data_dir,
@@ -677,17 +677,17 @@ def main():
                             max_test_patch=50 if not socket.gethostname()=='CELL200973' else 2,
                             lai_cyclical_loader=lai_cyclical_loader)
         global_results_df = pd.concat((pd.DataFrame({'model':[model_name]}),
-                                    rmse_df,
-                                    picp_df,
-                                    mpiw_df,
-                                    mestdr_df,
-                                    cyclical_rmse_df,
-                                    min_loss_df), axis=1)
+                                        cyclical_rmse_df,
+                                        min_loss_df), axis=1)
+        for variable, metrics in global_valdiation_metrics.items():
+            global_results_df = pd.concat((global_results_df, metrics['rmse'], metrics["picp"], 
+                                           metrics['mpiw'], metrics['mestdr']))
         res_df_filename = os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv")
         if not os.path.isfile(res_df_filename):
             global_results_df.to_csv(res_df_filename, header=global_results_df.columns, index=False)
         else: # else it exists so append without writing the header
             global_results_df.to_csv(res_df_filename, mode='a', index=False, header=False)
+
         if not params['encoder_type'] in spatial_encoder_types:
             save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
                          all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,

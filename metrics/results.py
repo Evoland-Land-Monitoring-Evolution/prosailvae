@@ -161,12 +161,16 @@ def save_validation_results(model, res_dir,
     ccc_dir = os.path.join(res_dir, "CCC_scatter")
     os.makedirs(ccc_dir)
     scatter_dir = {"LAI":lai_dir, "CCC":ccc_dir}
+    global_metrics = {}
+
     for variable in ["LAI", "CCC"]:
         (global_rmse_dict, global_picp_dict, 
          global_mpiw_dict, global_mestdr_dict) = get_validation_global_metrics(results[variable], 
-                                                                    decompose_along_columns = ["Campaign"], #["Site", "Land cover", "Campaign"], 
-                                                                            n_sigma=3,
-                                                                            variable=variable)
+                                                                               decompose_along_columns = ["Campaign"], #["Site", "Land cover", "Campaign"], 
+                                                                               n_sigma=3,
+                                                                               variable=variable)
+        global_metrics[variable] = {"rmse":global_rmse_dict, "picp":global_picp_dict, 
+                                    "mpiw":global_mpiw_dict, "mestdr": global_mestdr_dict}
         for key, rmse_df in global_rmse_dict.items():
             rmse_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_rmse.csv"))
         for key, pcip_df in global_picp_dict.items():
@@ -314,8 +318,7 @@ def save_validation_results(model, res_dir,
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error_Campaign.png"))
             plt.close('all')
 
-    return (global_rmse_dict["Campaign"], global_picp_dict["Campaign"], 
-            global_mpiw_dict["Campaign"], global_mestdr_dict["Campaign"])
+    return global_metrics
         
     
 def get_rec_var(PROSAIL_VAE, loader, max_batch=50, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10):

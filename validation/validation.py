@@ -223,17 +223,17 @@ def get_validation_global_metrics(df_results, decompose_along_columns=["Site", "
         rmse = {}
         for _, element in enumerate(pd.unique(df_results[column])):
             results = df_results[df_results[column]==element]
-            rmse[f"rmse_{element}"] = np.sqrt((results[f'Predicted {variable}'] - results[variable]).pow(2).mean())
-        rmse[f"rmse_all"] = np.sqrt((df_results[f'Predicted {variable}'] - df_results[variable]).pow(2).mean())
+            rmse[f"{variable}_rmse_{element}"] = np.sqrt((results[f'Predicted {variable}'] - results[variable]).pow(2).mean())
+        rmse[f"{variable}_rmse_all"] = np.sqrt((df_results[f'Predicted {variable}'] - df_results[variable]).pow(2).mean())
         global_rmse_dict[column] = pd.DataFrame(data=rmse, index=[0])
     if n_sigma>0:
         for column in decompose_along_columns:
             picp = {}
             for _, element in enumerate(pd.unique(df_results[column])):
                 results = df_results[df_results[column]==element]
-                picp[f"picp_{element}"] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma * results[f'Predicted {variable} std'],
+                picp[f"{variable}_picp_{element}"] = np.logical_and(results[variable] < results[f'Predicted {variable}'] + n_sigma * results[f'Predicted {variable} std'],
                                                results[variable] > results[f'Predicted {variable}'] - n_sigma * results[f'Predicted {variable} std']).astype(int).mean()
-            picp[f"picp_all"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma * df_results[f'Predicted {variable} std'],
+            picp[f"{variable}_picp_all"] = np.logical_and(df_results[variable] < df_results[f'Predicted {variable}'] + n_sigma * df_results[f'Predicted {variable} std'],
                                          df_results[variable] > df_results[f'Predicted {variable}'] - n_sigma * df_results[f'Predicted {variable} std']).astype(int).mean()
             global_picp_dict[column] = pd.DataFrame(data=picp, index=[0])
     if n_sigma>0:
@@ -241,14 +241,14 @@ def get_validation_global_metrics(df_results, decompose_along_columns=["Site", "
             mpiw = {}
             for _, element in enumerate(pd.unique(df_results[column])):
                 results = df_results[df_results[column]==element]
-                mpiw[f"mpiw_{element}"] = (2 * n_sigma * results[f'Predicted {variable} std']).mean()
-            mpiw[f"mpiw_all"] = (2 * n_sigma * df_results[f'Predicted {variable} std']).mean()
+                mpiw[f"{variable}_mpiw_{element}"] = (2 * n_sigma * results[f'Predicted {variable} std']).mean()
+            mpiw[f"{variable}_mpiw_all"] = (2 * n_sigma * df_results[f'Predicted {variable} std']).mean()
             global_mpiw_dict[column] = pd.DataFrame(data=mpiw, index=[0])
     for column in decompose_along_columns:
         mestdr = {}
         for _, element in enumerate(pd.unique(df_results[column])):
             results = df_results[df_results[column]==element]
-            mestdr[f"mestdr_{element}"] = (np.abs(results[variable] - results[f'Predicted {variable}']) / results[f'Predicted {variable} std']).mean()
-        mestdr[f"mestdr_all"] = (np.abs(df_results[variable] - df_results[f'Predicted {variable}']) /  df_results[f'Predicted {variable} std']).mean()
+            mestdr[f"{variable}_mestdr_{element}"] = (np.abs(results[variable] - results[f'Predicted {variable}']) / results[f'Predicted {variable} std']).mean()
+        mestdr[f"{variable}_mestdr_all"] = (np.abs(df_results[variable] - df_results[f'Predicted {variable}']) /  df_results[f'Predicted {variable} std']).mean()
         global_mestdr_dict[column] = pd.DataFrame(data=mestdr, index=[0])
     return global_rmse_dict, global_picp_dict, global_mpiw_dict, global_mestdr_dict

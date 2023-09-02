@@ -599,7 +599,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                                                     belsar_data_dir=belsar_data_dir, 
                                                                     lai_cyclical_loader=lai_cyclical_loader, 
-                                                                    max_sec = 11 * 3600)
+                                                                    max_sec = 10.5 * 3600)
     logger.info("Training Completed !")
     
     if len(all_cyclical_rmse):

@@ -653,7 +653,7 @@ def main():
                         plot_results=parser.plot_results)
         min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
         min_loss_df = pd.DataFrame({"Loss":[min_loss]})
-        if True and not socket.gethostname()=='CELL200973':
+        if True:# and not socket.gethostname()=='CELL200973':
             global_validation_metrics = save_validation_results(prosail_vae, validation_dir,
                                                                     frm4veg_data_dir=frm4veg_data_dir,
                                                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
@@ -681,7 +681,7 @@ def main():
                                         min_loss_df), axis=1)
         for variable, metrics in global_validation_metrics.items():
             global_results_df = pd.concat((global_results_df, metrics['rmse'], metrics["picp"], 
-                                           metrics['mpiw'], metrics['mestdr']))
+                                           metrics['mpiw'], metrics['mestdr']), axis=1)
         res_df_filename = os.path.join(os.path.join(os.path.join(res_dir, os.pardir), os.pardir), "model_results.csv")
         if not os.path.isfile(res_df_filename):
             global_results_df.to_csv(res_df_filename, header=global_results_df.columns, index=False)

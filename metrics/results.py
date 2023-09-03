@@ -169,8 +169,8 @@ def save_validation_results(model, res_dir,
                                                                                decompose_along_columns = ["Campaign"], #["Site", "Land cover", "Campaign"], 
                                                                                n_sigma=3,
                                                                                variable=variable)
-        global_metrics[variable] = {"rmse":global_rmse_dict, "picp":global_picp_dict, 
-                                    "mpiw":global_mpiw_dict, "mestdr": global_mestdr_dict}
+        global_metrics[variable] = {"rmse":global_rmse_dict["Campaign"], "picp":global_picp_dict["Campaign"], 
+                                    "mpiw":global_mpiw_dict["Campaign"], "mestdr": global_mestdr_dict["Campaign"]}
         for key, rmse_df in global_rmse_dict.items():
             rmse_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_rmse.csv"))
         for key, pcip_df in global_picp_dict.items():

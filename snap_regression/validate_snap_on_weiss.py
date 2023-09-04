@@ -78,7 +78,7 @@ def main():
         os.makedirs(res_dir)
     lr = 1e-3
     patience = 20
-    epochs=1000
+    epochs=5000
     disable_tqdm=False
     
     
@@ -94,10 +94,10 @@ def main():
             # model_dict[variable] = model
             optimizer = optim.Adam(model.parameters(), lr=lr)
             lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
-                                            threshold=0.001)
+                                             threshold=0.001)
             _, all_valid_losses, _ = model.train_model(train_loader, valid_loader, optimizer,
                                                                 epochs=epochs, lr_scheduler=lr_scheduler,
-                                                                disable_tqdm=disable_tqdm)
+                                                                disable_tqdm=disable_tqdm, lr_recompute=patience)
             if plot_loss:
                 fig, ax = plt.subplots()
                 ax.scatter(np.arange(len(all_valid_losses)), all_valid_losses)

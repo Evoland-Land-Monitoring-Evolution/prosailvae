@@ -6,6 +6,7 @@ import numpy as np
 from rasterio.coords import BoundingBox
 from shapely import Point
 import geopandas as gpd
+import argparse
 
 def get_parser():
     """

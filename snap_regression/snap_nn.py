@@ -257,13 +257,15 @@ class SnapNN(nn.Module):
         return variable
 
     def train_model(self, train_loader, valid_loader, optimizer, 
-                    epochs:int=100, lr_scheduler=None, disable_tqdm:bool=False):
+                    epochs:int=100, lr_scheduler=None, disable_tqdm:bool=False, 
+                    cycle_training=True, lr_recompute=10):
         """
         Fit and validate the model to data for a number of epochs
         """
         all_train_losses = []
         all_valid_losses = []
         all_lr = []
+        lr_init = 1e-3
         for _ in trange(epochs, disable=disable_tqdm):
             train_loss = self.fit(train_loader, optimizer)
             all_train_losses.append(train_loss.item())
@@ -273,7 +275,13 @@ class SnapNN(nn.Module):
             if lr_scheduler is not None:
                 lr_scheduler.step(valid_loss)
             if all_lr[-1] <= 1e-8:
-                break
+                if not cycle_training:
+                    break #stop training if lr too low
+                for g in optimizer.param_groups:
+                    g['lr'] = lr_init
+                lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
+                                                            patience=lr_recompute,
+                                                            threshold=0.01, threshold_mode='abs')
         return all_train_losses, all_valid_losses, all_lr
 
     def fit(self, loader, optimizer):

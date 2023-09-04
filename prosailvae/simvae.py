@@ -13,7 +13,7 @@ from utils.utils import NaN_model_params, unstandardize, count_parameters
 from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
 # from sensorsio.utils import rgb_render
 # import matplotlib.pyplot as plt
-from dataset.weiss_utils import get_weiss_biophyiscal_from_batch, get_weiss_biophyiscal_from_pixellic_batch
+from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch, get_weiss_biophyiscal_from_pixellic_batch
 
 class SimVAE(nn.Module):
     """

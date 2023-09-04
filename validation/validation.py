@@ -38,6 +38,22 @@ def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, be
                 os.remove(os.path.join(belsar_pred_dir, f"{filename}_SNAP.tif"))
     return barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
 
+def get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, method="simple_interpolate", 
+                                      ccc_snap=None, lai_snap=None, cab_mode=False):
+    
+    barrax_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, BARRAX_FILENAMES[0], 
+                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=True, 
+                                              get_reconstruction=False, ccc_snap=ccc_snap, lai_snap=lai_snap, 
+                                              cab_mode=cab_mode)
+    barrax_2021_results = get_frm4veg_results_at_date(None, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
+                                                      is_SNAP=True, get_reconstruction=False, ccc_snap=ccc_snap, lai_snap=lai_snap, 
+                                                        cab_mode=cab_mode)
+    wytham_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
+                                              WYTHAM_FILENAMES[1],  method=method, is_SNAP=True,
+                                              get_reconstruction=False, ccc_snap=ccc_snap, lai_snap=lai_snap, 
+                                              cab_mode=cab_mode)
+    return barrax_results, barrax_2021_results, wytham_results
+
 def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
                                  mode="sim_tg_mean", method="simple_interpolate", model_name="pvae",
                                  save_reconstruction=False, get_all_belsar=False, remove_files=False):

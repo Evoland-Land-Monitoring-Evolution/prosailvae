@@ -17,7 +17,7 @@ if __name__ == "__main__":
 else:
     from validation.validation_utils import var_of_product, simple_interpolate
 from utils.image_utils import get_encoded_image_from_batch
-from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
+from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
 from prosailvae.ProsailSimus import BANDS
 
 BARRAX_FILENAMES = ["2B_20180516_FRM_Veg_Barrax_20180605_V2", "2A_20180613_FRM_Veg_Barrax_20180605_V2"]
@@ -311,8 +311,11 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
     return model_pred #, rec, cropped_s2_r
 
 
-def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
-    (snap_lai, snap_ccc,  _) = get_weiss_biophyiscal_from_batch((s2_r, s2_a), patch_size=32, sensor=sensor)
+def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A", lai_snap=None, ccc_snap=None, cab_mode=False):
+    (snap_lai, snap_ccc,  _) = get_weiss_biophyiscal_from_batch((s2_r, s2_a), patch_size=32, sensor=sensor, 
+                                                                lai_snap=lai_snap, ccc_snap=ccc_snap)
+    if cab_mode:
+        snap_ccc = snap_ccc * snap_lai
     snap_results = {}
     for variable in ['lai', 'lai_eff']:
         snap_results[variable] = snap_lai[..., site_idx_dict[variable]['y_idx'], 
@@ -334,9 +337,8 @@ def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A"):
             snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
     return snap_results
 
-def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, 
-                                is_SNAP=False, mode="sim_tg_mean", 
-                                get_reconstruction=True):
+def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, is_SNAP=False, mode="sim_tg_mean", 
+                                get_reconstruction=True, lai_snap=None, ccc_snap=None, cab_mode=False):
     sensor = filename.split("_")[0]
     (s2_r, s2_a, site_idx_dict, ref_dict) = get_frm4veg_material(frm4veg_data_dir, filename)
     if not is_SNAP:
@@ -345,7 +347,8 @@ def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename,
                                                         get_reconstruction=get_reconstruction)
     else:
         validation_results = get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, 
-                                                             ref_dict, sensor=sensor)
+                                                        ref_dict, sensor=sensor, lai_snap=lai_snap, ccc_snap=ccc_snap, 
+                                                        cab_mode=cab_mode)
     d = datetime.strptime(filename.split("_")[1], '%Y%m%d').date()
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
         gdf, _, _ , _, _ = load_frm4veg_data(frm4veg_data_dir, filename, variable=variable)
@@ -355,14 +358,18 @@ def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename,
 
 def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_after=None, 
                              method="simple_interpolate", is_SNAP=False, mode="sim_tg_mean",
-                             get_reconstruction=True, bands_idx=torch.arange(10)):
+                             get_reconstruction=True, bands_idx=torch.arange(10), lai_snap=None, ccc_snap=None, cab_mode=False):
     validation_results_before = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_before, 
                                                             is_SNAP=is_SNAP, mode=mode,
-                                                            get_reconstruction=get_reconstruction)
+                                                            get_reconstruction=get_reconstruction,
+                                                            lai_snap=lai_snap, ccc_snap=ccc_snap, 
+                                                            cab_mode=cab_mode)
     d_before = datetime.strptime(filename_before.split("_")[1], '%Y%m%d').date()
     validation_results_after = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_after, 
                                                             is_SNAP=is_SNAP, mode=mode,
-                                                            get_reconstruction=get_reconstruction)
+                                                            get_reconstruction=get_reconstruction, 
+                                                            lai_snap=lai_snap, ccc_snap=ccc_snap, 
+                                                            cab_mode=cab_mode)
     d_after = datetime.strptime(filename_after.split("_")[1], '%Y%m%d').date()
     
     model_results = {}

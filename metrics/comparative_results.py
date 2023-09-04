@@ -11,7 +11,7 @@ from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosai
 from dataset.loaders import  get_train_valid_test_loader_from_patches
 from prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics, regression_plot
 from prosailvae.ProsailSimus import get_bands_idx, BANDS
-from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
+from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
 from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -662,7 +662,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             # all_picp = []
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
-                rmse, picp, mestdr = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
+                rmse, picp, mpiw, mestdr = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"])
                 lai_picp_dict[method][variable][model] = picp
                 lai_rmse_dict[method][variable][model] = rmse
                 lai_mestdr_dict[method][variable][model] = mestdr
@@ -727,7 +727,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
             # all_picp = []
             for model, df_results in validation_lai_results[method][variable].items():
                 df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
-                rmse, picp, mestdr = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="CCC")
+                rmse, picp, mpiw, mestdr = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="CCC")
                 ccc_picp_dict[method][variable][model] = picp
                 ccc_rmse_dict[method][variable][model] = rmse
                 ccc_mestdr_dict[method][variable][model] = mestdr

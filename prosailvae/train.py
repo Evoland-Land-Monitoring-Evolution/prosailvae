@@ -653,7 +653,7 @@ def main():
                         plot_results=parser.plot_results)
         min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
         min_loss_df = pd.DataFrame({"Loss":[min_loss]})
-        if True:# and not socket.gethostname()=='CELL200973':
+        if True and not socket.gethostname()=='CELL200973':
             global_validation_metrics = save_validation_results(prosail_vae, validation_dir,
                                                                     frm4veg_data_dir=frm4veg_data_dir,
                                                                     frm4veg_2021_data_dir=frm4veg_2021_data_dir,

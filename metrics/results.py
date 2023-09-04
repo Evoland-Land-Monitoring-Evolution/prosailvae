@@ -13,7 +13,7 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     PROSAIL_2D_aggregated_results, article_2D_aggregated_results,
                                     frm4veg_plots, plot_belsar_metrics, regression_plot)
 from dataset.loaders import  get_simloader
-from dataset.weiss_utils import get_weiss_biophyiscal_from_batch
+from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
 from utils.utils import load_dict, save_dict

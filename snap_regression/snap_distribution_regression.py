@@ -18,7 +18,7 @@ from prosailvae.dist_utils import (sample_truncated_gaussian, kl_tntn, truncated
                                    numerical_kl_from_pdf, truncated_gaussian_cdf)
 from snap_nn import SnapNN, test_snap_nn
 from utils.image_utils import rgb_render, tensor_to_raster
-from dataset.frm4veg_validation import load_frm4veg_data
+from validation.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 from metrics.prosail_plots import frm4veg_plots, plot_belsar_metrics
 from metrics.belsar_metrics import compute_metrics_at_date
@@ -401,7 +401,7 @@ def get_model_metrics(test_data, model, all_valid_losses=[]):
 def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=None,
                         n_models:int=10, epochs:int=500, lr:float=0.001,
                         disable_tqdm:bool=False,  patience:int=10, init_models:bool=False, 
-                        ver:str="2.1", third_layer=False):
+                        ver:str="2", third_layer=False):
     """
     Trains several models on given train and validation dataloaders and assesses their regression metrics
     on provided test dataloader
@@ -670,7 +670,7 @@ def get_metrics_ref(data_eval_list, train_data_list, ver="3A"):
 
 def main():
     
-    test_snap_nn(ver="2.1")
+    test_snap_nn(ver="2")
     test_snap_nn(ver="3A")
     test_snap_nn(ver="3B")
     

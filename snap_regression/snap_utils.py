@@ -3,7 +3,7 @@ from torchutils.patches import patchify, unpatchify
 from snap_regression.snap_nn import SnapNN
 
 def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None, device='cpu', 
-                                              lai_snap=None, ccc_snap=None, cwc_snap=None,):
+                                              lai_snap=None, ccc_snap=None, cwc_snap=None):
     if ver is None:
         if sensor is None:
             ver = "2"
@@ -38,9 +38,9 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
             angles = torch.cos(torch.deg2rad(patched_s2_a[i, j, weiss_angles, ...]))
             s2_data = torch.cat((x, angles),0)
             with torch.no_grad():
-                lai = torch.clip(lai_snap.forward(s2_data, spatial_mode=True), min=0)
-                ccc = torch.clip(ccc_snap.forward(s2_data, spatial_mode=True), min=0) # torch.clip(cab_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0.1)
-                cwc = torch.clip(cwc_snap.forward(s2_data, spatial_mode=True), min=0) # torch.clip(cw_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0. 1)
+                lai = torch.clip(lai_snap.forward(s2_data.to(lai_snap.device), spatial_mode=True), min=0)
+                ccc = torch.clip(ccc_snap.forward(s2_data.to(ccc_snap.device), spatial_mode=True), min=0) # torch.clip(cab_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0.1)
+                cwc = torch.clip(cwc_snap.forward(s2_data.to(cwc_snap.device), spatial_mode=True), min=0) # torch.clip(cw_snap.forward(s2_data, spatial_mode=True), min=0) / torch.clip(lai, min=0. 1)
                 # lai = weiss_lai(x, angles, band_dim=0, ver=ver)
             patched_lai_image[i,j,...] = lai
             patched_ccc_image[i,j,...] = ccc
@@ -48,7 +48,7 @@ def get_weiss_biophyiscal_from_batch(batch, patch_size=32, sensor=None, ver=None
     lai_image = unpatchify(patched_lai_image)[:,:s2_r.size(2),:s2_r.size(3)]
     ccc_image = unpatchify(patched_ccc_image)[:,:s2_r.size(2),:s2_r.size(3)]
     cwc_image = unpatchify(patched_cwc_image)[:,:s2_r.size(2),:s2_r.size(3)]
-    return lai_image, ccc_image, cwc_image
+    return lai_image.cpu(), ccc_image.cpu(), cwc_image.cpu()
 
 
 def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None, device='cpu', 
@@ -81,7 +81,7 @@ def get_weiss_biophyiscal_from_pixellic_batch(batch, sensor=None, ver=None, devi
             cwc_snap = SnapNN(variable='cwc', ver=ver, device=device)
             cwc_snap.set_weiss_weights()
 
-        lai = torch.clip(lai_snap.forward(s2_data, spatial_mode=False), min=0)
-        ccc = torch.clip(ccc_snap.forward(s2_data, spatial_mode=False), min=0) 
-        cwc = torch.clip(cwc_snap.forward(s2_data, spatial_mode=False), min=0) 
+        lai = torch.clip(lai_snap.forward(s2_data.to(lai_snap.device), spatial_mode=False), min=0)
+        ccc = torch.clip(ccc_snap.forward(s2_data.to(ccc_snap.device), spatial_mode=False), min=0) 
+        cwc = torch.clip(cwc_snap.forward(s2_data.to(cwc_snap.device), spatial_mode=False), min=0) 
     return lai, ccc, cwc

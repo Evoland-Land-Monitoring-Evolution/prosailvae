@@ -323,7 +323,7 @@ class SnapNN(nn.Module):
         """
         s2_data, variable = batch
         variable_pred = self.forward(s2_data.to(self.device))
-        return ((variable_pred - loc_bv) / scale_bv - (variable - loc_bv) / scale_bv).to(self.device).pow(2).mean()
+        return ((variable_pred - loc_bv) / scale_bv - (variable.to(self.device) - loc_bv) / scale_bv).pow(2).mean()
 
 
 # def load_refl_angles(path_to_data_dir: str):

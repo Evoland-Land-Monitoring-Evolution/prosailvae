@@ -536,7 +536,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     break_at_rec_loss=params["break_init_at_rec_loss"])
             if not broke_at_rec:
                 logger.info("No good initialization was found !")
-        # Changing config to load the best model intialized
+        # Changing config to load the best model initialized
         params["load_model"] = True
         params["vae_load_file_path"] = params["vae_save_file_path"]
         pv_config = get_prosail_vae_config(params, bands=bands, prosail_bands=prosail_bands,
@@ -603,7 +603,16 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                                     lai_cyclical_loader=lai_cyclical_loader, 
                                                                     max_sec = 10.5 * 3600)
     logger.info("Training Completed !")
-    
+    # Loading best model
+    params["load_model"] = True
+    params["vae_load_file_path"] = params["vae_save_file_path"]
+    pv_config = get_prosail_vae_config(params, bands=bands, prosail_bands=prosail_bands,
+                                        inference_mode=False, rsr_dir=parser.rsr_dir,
+                                        io_coeffs=io_coeffs)
+
+    prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
+                                                    pv_config_hyper=pv_config_hyper,
+                                                    logger_name=LOGGER_NAME)
     if len(all_cyclical_rmse):
         # pd.DataFrame(all_cyclical_loss).to_csv(os.path.join(res_dir, "cyclical_loss.csv"))
         pd.DataFrame(all_cyclical_rmse).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))

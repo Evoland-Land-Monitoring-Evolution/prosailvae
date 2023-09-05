@@ -39,6 +39,8 @@ def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024):
           "ccc": prosail_vars[:,6] * prosail_vars[:,1],
           "cwc": prosail_vars[:,6] * prosail_vars[:,4]}
     bv = bv[variable]
+    loc_bv = bv.mean(0)
+    scale_bv = bv.std(0)
     data_weiss = torch.from_numpy(np.concatenate((s2_r, np.cos(np.deg2rad(s2_a)), bv.reshape(-1, 1)), 1))
     seed = 4567895683301
     g_cpu = torch.Generator()
@@ -62,7 +64,7 @@ def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024):
                                   num_workers=0, shuffle=True)
     else:
         valid_loader = None
-    return train_loader, valid_loader
+    return train_loader, valid_loader, loc_bv, scale_bv
 
 def main():
     if socket.gethostname()=='CELL200973':
@@ -85,25 +87,31 @@ def main():
     # model_dict = {}
     plot_loss = False
     n_models=20
+    batch_size=1024
     results_dict = {}
-    for variable in ["ccc", "cab"]:
+    for variable in ["cab", "ccc"]:
         results_dict[variable] = []
         for i in range(n_models):
-            train_loader, valid_loader = get_weiss_dataloader(variable=variable, valid_ratio=0.05, batch_size=1024)
+            train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
+                                                                                batch_size=batch_size)
             model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
             # model_dict[variable] = model
             optimizer = optim.Adam(model.parameters(), lr=lr)
             lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                              threshold=0.001)
-            _, all_valid_losses, _ = model.train_model(train_loader, valid_loader, optimizer,
+            _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
                                                                 epochs=epochs, lr_scheduler=lr_scheduler,
-                                                                disable_tqdm=disable_tqdm, lr_recompute=patience)
+                                                                disable_tqdm=disable_tqdm, lr_recompute=patience, 
+                                                                loc_bv=loc_bv, scale_bv=scale_bv)
             if plot_loss:
-                fig, ax = plt.subplots()
-                ax.scatter(np.arange(len(all_valid_losses)), all_valid_losses)
-                ax.set_yscale('log')
-                ax.set_xlabel("epoch")
-                ax.set_ylabel("Loss (MSE)")
+                fig, axs = plt.subplots(2,1, sharex=True)
+                axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)
+                axs[1].scatter(np.arange(len(all_valid_losses)), all_lr)
+                axs[0].set_yscale('log')
+                axs[1].set_yscale('log')
+                axs[1].set_xlabel("epoch")
+                axs[0].set_ylabel("Loss (MSE)")
+                axs[1].set_ylabel("LR")
                 
             barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
                                                                                                     frm4veg_2021_data_dir,

@@ -258,7 +258,8 @@ class SnapNN(nn.Module):
 
     def train_model(self, train_loader, valid_loader, optimizer, 
                     epochs:int=100, lr_scheduler=None, disable_tqdm:bool=False, 
-                    cycle_training=True, lr_recompute=10):
+                    cycle_training=True, lr_recompute=10, res_dir=".", 
+                    loc_bv=0, scale_bv=1):
         """
         Fit and validate the model to data for a number of epochs
         """
@@ -266,11 +267,15 @@ class SnapNN(nn.Module):
         all_valid_losses = []
         all_lr = []
         lr_init = 1e-3
+        best_valid_loss = np.inf
         for _ in trange(epochs, disable=disable_tqdm):
-            train_loss = self.fit(train_loader, optimizer)
+            train_loss = self.fit(train_loader, optimizer, loc_bv=loc_bv, scale_bv=scale_bv)
             all_train_losses.append(train_loss.item())
-            valid_loss = self.validate(valid_loader)
+            valid_loss = self.validate(valid_loader, loc_bv=loc_bv, scale_bv=scale_bv)
             all_valid_losses.append(valid_loss.item())
+            if valid_loss.item() < best_valid_loss:
+                best_valid_loss = valid_loss.item()
+                self.save_weights(res_dir)
             all_lr.append(optimizer.param_groups[0]['lr'])
             if lr_scheduler is not None:
                 lr_scheduler.step(valid_loss)
@@ -282,16 +287,17 @@ class SnapNN(nn.Module):
                 lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                             patience=lr_recompute,
                                                             threshold=0.01, threshold_mode='abs')
+        self.load_weights(res_dir)
         return all_train_losses, all_valid_losses, all_lr
 
-    def fit(self, loader, optimizer):
+    def fit(self, loader, optimizer, loc_bv=0, scale_bv=1):
         """
         Apply mini-batch optimization from a train dataloader
         """
         self.train()
         loss_mean = torch.tensor(0.0).to(self.device)
         for _, batch in enumerate(loader):
-            loss = self.get_batch_loss(batch)
+            loss = self.get_batch_loss(batch, loc_bv=loc_bv, scale_bv=scale_bv)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -299,7 +305,7 @@ class SnapNN(nn.Module):
                 loss_mean += loss / batch[0].size(0)
         return loss_mean
 
-    def validate(self, loader):
+    def validate(self, loader, loc_bv=0, scale_bv=1):
         """
         Compute loss on loader with mini-batches
         """
@@ -307,17 +313,17 @@ class SnapNN(nn.Module):
         with torch.no_grad():
             loss_mean = torch.tensor(0.0).to(self.device)
             for _, batch in enumerate(loader):
-                loss = self.get_batch_loss(batch)
+                loss = self.get_batch_loss(batch, loc_bv=loc_bv, scale_bv=scale_bv)
                 loss_mean += loss / batch[0].size(0)
         return loss_mean
 
-    def get_batch_loss(self, batch):
+    def get_batch_loss(self, batch, loc_bv=0, scale_bv=1):
         """
         Computes loss on batch
         """
         s2_data, variable = batch
         variable_pred = self.forward(s2_data.to(self.device))
-        return (variable_pred - variable.to(self.device)).pow(2).mean()
+        return ((variable_pred - loc_bv) / scale_bv - (variable - loc_bv) / scale_bv).to(self.device).pow(2).mean()
 
 
 # def load_refl_angles(path_to_data_dir: str):

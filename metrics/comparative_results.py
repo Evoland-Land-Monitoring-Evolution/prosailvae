@@ -848,14 +848,19 @@ def main():
                             "2A_20180727_both_BelSAR_agriculture_database",
                             "2B_20180804_both_BelSAR_agriculture_database"]  
     model_dict, test_loader, valid_loader, info_test_data = get_model_and_dataloader(parser)
-    # if parser.save_projected:
-    #     save_common_cyclical_dataset(model_dict, valid_loader, projected_data_dir)
-    # cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
+    if parser.save_projected:
+        save_common_cyclical_dataset(model_dict, valid_loader, projected_data_dir)
+    cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
+    cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader, lai_precomputed=True)
+    pd.DataFrame(data={"model":model_dict.keys(), "cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, 
+                                                                                                      "common_cyclical_rmse.csv"))
+
     cyclical_loader = valid_loader
     losses = get_models_validation_rec_loss(model_dict, valid_loader)
     pd.DataFrame(data={"model":model_dict.keys(), "loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
     cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader)
-    pd.DataFrame(data={"model":model_dict.keys(), "cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
+    pd.DataFrame(data={"model":model_dict.keys(), "cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, 
+                                                                                                      "self_cyclical_rmse.csv"))
     for mode in ["sim_tg_mean"]:
         recompute = True if not socket.gethostname()=='CELL200973' else False
         (lai_rmse_dict, lai_picp_dict, 

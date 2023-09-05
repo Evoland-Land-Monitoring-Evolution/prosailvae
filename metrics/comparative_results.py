@@ -852,9 +852,9 @@ def main():
     # cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
     cyclical_loader = valid_loader
     losses = get_models_validation_rec_loss(model_dict, valid_loader)
-    pd.DataFrame(data={"loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
+    pd.DataFrame(data={"model":model_dict.keys(), "loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
     cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader)
-    pd.DataFrame(data={"cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
+    pd.DataFrame(data={"model":model_dict.keys(), "cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
     for mode in ["sim_tg_mean"]:
         recompute = True if not socket.gethostname()=='CELL200973' else False
         (lai_rmse_dict, lai_picp_dict, 

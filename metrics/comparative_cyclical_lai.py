@@ -107,13 +107,16 @@ def main():
         save_common_cyclical_dataset(model_dict, valid_loader, projected_data_dir)
     cyclical_loader = load_cyclical_data_set(projected_data_dir, batch_size=1)
     cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader, lai_precomputed=True)
-    pd.DataFrame(data={"cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "common_cyclical_rmse.csv"))
+    pd.DataFrame(data={"model":model_dict.keys(),
+                       "cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "common_cyclical_rmse.csv"))
 
     cyclical_loader = valid_loader
     losses = get_models_validation_rec_loss(model_dict, valid_loader)
-    pd.DataFrame(data={"loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
+    pd.DataFrame(data={"model":model_dict.keys(),
+                       "loss":losses}).to_csv(os.path.join(res_dir, "loss.csv"))
     cyclical_rmse = get_models_validation_cyclical_rmse(model_dict, cyclical_loader, lai_precomputed=False)
-    pd.DataFrame(data={"cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "self_cyclical_rmse.csv"))
+    pd.DataFrame(data={"model":model_dict.keys(),
+                       "cyclical_rmse":cyclical_rmse}).to_csv(os.path.join(res_dir, "self_cyclical_rmse.csv"))
 
 if __name__=="__main__":
     main()

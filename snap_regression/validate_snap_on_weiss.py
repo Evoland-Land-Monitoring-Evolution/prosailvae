@@ -78,7 +78,7 @@ def main():
         os.makedirs(res_dir)
     lr = 1e-3
     patience = 20
-    epochs=5000
+    epochs=2000
     disable_tqdm=False
     
     

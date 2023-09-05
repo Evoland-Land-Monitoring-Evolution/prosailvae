@@ -102,7 +102,7 @@ def main():
             _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
                                                                 epochs=epochs, lr_scheduler=lr_scheduler,
                                                                 disable_tqdm=disable_tqdm, lr_recompute=patience, 
-                                                                loc_bv=loc_bv, scale_bv=scale_bv)
+                                                                loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
             if plot_loss:
                 fig, axs = plt.subplots(2,1, sharex=True)
                 axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)

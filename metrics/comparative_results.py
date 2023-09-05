@@ -53,8 +53,9 @@ def get_model_and_dataloader(parser):
     Get test data (patches) in a loader and loads all trained models
     """
     _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(parser.data_dir,
-                                                                 bands = torch.arange(10),
-                                                                 batch_size=1, num_workers=0)
+                                                                            bands = torch.arange(10),
+                                                                            batch_size=1, num_workers=0, 
+                                                                            max_valid_samples=None)
     model_dict = load_dict(parser.model_dict_path)
     for model_name, model_info in model_dict.items():
         if model_info["type"] == "simvae":

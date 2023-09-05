@@ -580,28 +580,28 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
     (all_train_loss_df, all_valid_loss_df, info_df, all_cyclical_rmse) = training_loop(prosail_vae,
-                                                                    optimizer,
-                                                                    params['epochs'],
-                                                                    train_loader,
-                                                                    valid_loader,
-                                                                    lrtrainloader,
-                                                                    res_dir=res_dir,
-                                                                    n_samples=params["n_samples"],
-                                                                    lr_recompute=params['lr_recompute'],
-                                                                    exp_lr_decay=params["exp_lr_decay"],
-                                                                    plot_gradient=False,#parser.plot_results,
-                                                                    lr_recompute_mode=lr_recompute_mode,
-                                                                    cycle_training=params["cycle_training"], 
-                                                                    accum_iter=params["accum_iter"],
-                                                                    lrs_threshold=params['lrs_threshold'], 
-                                                                    lr_init=params['lr'], 
-                                                                    validation_at_every_epoch=params["validation_at_every_epoch"],
-                                                                    validation_dir=validation_dir,
-                                                                    frm4veg_data_dir=frm4veg_data_dir,
-                                                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                                                                    belsar_data_dir=belsar_data_dir, 
-                                                                    lai_cyclical_loader=lai_cyclical_loader, 
-                                                                    max_sec = 10.5 * 3600)
+                                                                                        optimizer,
+                                                                                        params['epochs'],
+                                                                                        train_loader,
+                                                                                        valid_loader,
+                                                                                        lrtrainloader,
+                                                                                        res_dir=res_dir,
+                                                                                        n_samples=params["n_samples"],
+                                                                                        lr_recompute=params['lr_recompute'],
+                                                                                        exp_lr_decay=params["exp_lr_decay"],
+                                                                                        plot_gradient=False,#parser.plot_results,
+                                                                                        lr_recompute_mode=lr_recompute_mode,
+                                                                                        cycle_training=params["cycle_training"], 
+                                                                                        accum_iter=params["accum_iter"],
+                                                                                        lrs_threshold=params['lrs_threshold'], 
+                                                                                        lr_init=params['lr'], 
+                                                                                        validation_at_every_epoch=params["validation_at_every_epoch"],
+                                                                                        validation_dir=validation_dir,
+                                                                                        frm4veg_data_dir=frm4veg_data_dir,
+                                                                                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                                                                        belsar_data_dir=belsar_data_dir, 
+                                                                                        lai_cyclical_loader=lai_cyclical_loader, 
+                                                                                        max_sec = 10.5 * 3600)
     logger.info("Training Completed !")
     # Loading best model
     params["load_model"] = True
@@ -677,7 +677,8 @@ def main():
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[1.0]})
         if not params['supervised']:
             _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
-                                                                        batch_size=1, num_workers=0)
+                                                                                    batch_size=1, num_workers=0,
+                                                                                    max_valid_samples=None)
             cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
             cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
             lai_cyclical_loader = valid_loader

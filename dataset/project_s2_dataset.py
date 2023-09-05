@@ -65,9 +65,9 @@ def project_loader_patches(model, loader, mode="lat_mode", loader_output=False, 
             if i==max_batches:
                 break
         (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
-                sigma_image) = get_encoded_image_from_batch(batch, model, patch_size=32,
-                                                            bands=torch.arange(10),
-                                                            mode=mode, no_rec=False)
+        sigma_image) = get_encoded_image_from_batch(batch, model, patch_size=32,
+                                                    bands=torch.arange(10),
+                                                    mode=mode, no_rec=False)
         inferred_BV.append(sim_image.unsqueeze(0))
         projected_images.append(rec_image.unsqueeze(0))
         angles.append(cropped_s2_a)

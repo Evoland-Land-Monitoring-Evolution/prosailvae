@@ -111,7 +111,7 @@ def get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                 if no_rec:
                     dist_params, z, sim = PROSAIL_VAE.point_estimate_sim(x, angles, mode=mode)
                 else:
-                    dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode)
+                    dist_params, z, sim, rec = PROSAIL_VAE.point_estimate_rec(x, angles, mode=mode, apply_norm=False)
                     patched_rec_image[i,j,:,:,:] = rec
             
             patched_sim_image[i,j,:,:,:] = sim.squeeze(0)

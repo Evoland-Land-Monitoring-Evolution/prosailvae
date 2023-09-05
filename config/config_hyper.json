@@ -12,7 +12,7 @@
     "beta_index": 0,
     "beta_cyclical": 0,
     "k_fold": 1,
-    "dataset_file_prefix": "train_",
+    "dataset_file_prefix": "",
     "n_fold": null,
     "simulated_dataset": false,
     "lr_recompute": 10,

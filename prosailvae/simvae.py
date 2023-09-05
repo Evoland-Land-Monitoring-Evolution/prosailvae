@@ -671,7 +671,7 @@ class SimVAE(nn.Module):
                 s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
                 sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
 
-            s2_r = unstandardize(s2_r, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
+            # s2_r = unstandardize(s2_r, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)  
             s2_r = s2_r.transpose(sample_dim, 1)
             s2_r = s2_r.reshape(-1, *s2_r.shape[2:])
 

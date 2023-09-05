@@ -196,7 +196,7 @@ RSR of the sensor.
 
     def forward(self, prosail_output: torch.Tensor, apply_norm=None) -> torch.Tensor:
         simu = self.apply_s2_sensor(prosail_output)
-        if apply_norm is None:
+        if apply_norm is None: # using SensorSimulator apply_norm as default
             apply_norm = self.apply_norm
         if apply_norm:
             simu = self.normalize(simu)

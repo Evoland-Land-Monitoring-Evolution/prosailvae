@@ -473,7 +473,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
 
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
-    print(f"Weiss mode : {parser.weiss_mode}")
+    logger.info(f"Weiss mode : {parser.weiss_mode}")
 
     if params["load_model"]:
         vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
@@ -487,8 +487,10 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     torch.save(io_coeffs.idx.scale, res_dir + "/idx_scale.pt")
     torch.save(io_coeffs.angles.loc, res_dir + "/angles_loc.pt")
     torch.save(io_coeffs.angles.scale, res_dir + "/angles_scale.pt")
-    print(f"io_coeffs.idx.loc : {io_coeffs.idx.loc}")
-    print(f"io_coeffs.idx.scale : {io_coeffs.idx.scale}")
+    logger.info(f"io_coeffs.bands.loc : {io_coeffs.bands.loc}")
+    logger.info(f"io_coeffs.bands.scale : {io_coeffs.bands.scale}")
+    logger.info(f"io_coeffs.idx.loc : {io_coeffs.idx.loc}")
+    logger.info(f"io_coeffs.idx.scale : {io_coeffs.idx.scale}")
 
     params["vae_load_file_path"] = vae_load_file_path
     training_config = get_training_config(params)

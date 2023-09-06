@@ -64,5 +64,6 @@
     "break_init_at_rec_loss": null,
     "rec_bands_loss_coeffs": null,
     "deterministic": false,
-    "snap_cyclical": true
+    "snap_cyclical": true,
+    "prosail_vars_dist_type":"new"
 }

@@ -12,28 +12,35 @@ from .dist_utils import convolve_pdfs, pdfs2cdfs, cdfs2quantiles
 from utils.TruncatedNormal import TruncatedNormal
 from utils.image_utils import batchify_batch_latent, unbatchify
 from utils.utils import torch_select_unsqueeze
-from .ProsailSimus import get_z2prosailparams_bound
-
+from .prosail_var_dists import (get_z2prosailparams_bound, get_prosail_var_bounds, get_z2prosailparams_offset, 
+                                get_z2prosailparams_mat, get_prosailparams_pdf_span)
 class SimVarSpace(nn.Module):
     def lat2sim(self):
         raise NotImplementedError
 
 class LinearVarSpace(SimVarSpace):
-    def __init__(self, latent_dim=6, z2sim_mat=None, z2sim_offset=None, 
-                 sim_pdf_support_span=None,  device='cpu'):
+    def __init__(self, latent_dim=6, 
+                #  z2sim_mat=None, z2sim_offset=None, 
+                #  sim_pdf_support_span=None,  
+                 device='cpu', var_bounds_type="legacy"):
         super().__init__()
         self.device=device
         self.eps=1e-3
         self.latent_dim=latent_dim
-        self.z2sim_mat = z2sim_mat.to(device)
-        self.z2sim_offset = z2sim_offset.to(device)
-        self.sim_pdf_support_span = sim_pdf_support_span
-        if z2sim_mat is None:
-            self.z2sim_mat = torch.eye(latent_dim).to(device)
-        if z2sim_offset is None:
-            self.z2sim_offset = torch.zeros((1,latent_dim)).to(device)
-        if sim_pdf_support_span is None:
-            self.sim_pdf_support_span = 2 * torch.ones((1,latent_dim)).view(1,-1, 1).to(device)
+        # self.z2sim_mat = z2sim_mat.to(device)
+        # self.z2sim_offset = z2sim_offset.to(device)
+        # self.sim_pdf_support_span = sim_pdf_support_span
+        self.var_bounds = get_prosail_var_bounds(var_bounds_type)
+        self.z2sim_mat = get_z2prosailparams_mat(self.var_bounds).to(device)
+        self.z2sim_offset = get_z2prosailparams_offset(self.var_bounds).to(device)
+        self.sim_pdf_support_span = get_prosailparams_pdf_span(self.var_bounds).to(device)
+        # if z2sim_mat is None:
+        #     self.z2sim_mat = torch.eye(latent_dim).to(device)
+        # if z2sim_offset is None:
+        #     self.z2sim_offset = torch.zeros((1,latent_dim)).to(device)
+        # if sim_pdf_support_span is None:
+        #     self.sim_pdf_support_span = 2 * torch.ones((1,latent_dim)).view(1,-1, 1).to(device)
+        
         self.inv_z2sim_mat = torch.from_numpy(np.linalg.inv(self.z2sim_mat.detach().cpu())).to(self.device)
 
 
@@ -110,7 +117,7 @@ class LinearVarSpace(SimVarSpace):
         return quantiles
 
     def sim_median(self, pdfs, supports, n_pdf_sample_points=3001):
-        sim_median = self.sim_quantiless(pdfs, supports, n_pdf_sample_points=n_pdf_sample_points,
+        sim_median = self.sim_quantiles(pdfs, supports, n_pdf_sample_points=n_pdf_sample_points,
                                           alpha=[0.5]).view(1,-1, 1)
         return sim_median
 

@@ -13,9 +13,9 @@ from prosailvae.loss import LossConfig
 # from prosailvae.decoders import TSSimulatorDecoder
 from prosailvae.latentspace import TruncatedNormalLatent
 from prosailvae.simspaces import LinearVarSpace
-from prosailvae.ProsailSimus import (SensorSimulator, ProsailSimulator, get_z2prosailparams_offset,
-                                     get_z2prosailparams_mat, get_prosailparams_pdf_span, 
-                                     PROSAILVARS)
+from prosailvae.ProsailSimus import (SensorSimulator, ProsailSimulator, PROSAILVARS)
+# from prosailvae.prosail_var_dists import (get_z2prosailparams_offset, get_z2prosailparams_mat, get_prosailparams_pdf_span)
+
 from prosailvae.decoders import ProsailSimulatorDecoder
 from prosailvae.loss import NLLLoss
 from utils.utils import load_dict
@@ -95,6 +95,8 @@ def load_params(config_dir, config_file, parser=None):
         params["lrs_threshold"] = 5e-3
     if "validation_at_every_epoch" not in params.keys():
         params["validation_at_every_epoch"] = None
+    if "prosail_vars_dist_type" not in params.keys():
+        params["prosail_vars_dist_type"] = "legacy"
     return params
 
 @dataclass
@@ -116,6 +118,7 @@ class ProsailVAEConfig:
     disabled_latent_values:list[int] = field(default_factory=lambda: [])
     R_down:int=1
     deterministic:bool=False
+    prosail_vars_dist_type:str="legacy"
 
 def get_prosail_vae_config(params, bands, io_coeffs,
                            inference_mode, prosail_bands, rsr_dir, lai_ccc_mode=False):
@@ -170,7 +173,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
                             disabled_latent=params["disabled_latent"],
                             disabled_latent_values=params["disabled_latent_values"],
                             R_down=params["R_down"], 
-                            deterministic=params["deterministic"])
+                            deterministic=params["deterministic"], 
+                            prosail_vars_dist_type=params["prosail_vars_dist_type"])
 
 
 def get_prosail_vae(pv_config:ProsailVAEConfig,
@@ -197,14 +201,12 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
     reconstruction_loss = NLLLoss(loss_type=pv_config.loss_config.loss_type, 
                                   feature_indexes=pv_config.loss_config.reconstruction_bands_coeffs)
 
-    z2sim_mat = get_z2prosailparams_mat()
-    z2sim_offset = get_z2prosailparams_offset()
-    sim_pdf_support_span = get_prosailparams_pdf_span()
-    pheno_var_space = LinearVarSpace(latent_dim=pv_config.encoder_config.output_size,
-                                     z2sim_mat=z2sim_mat,
-                                     z2sim_offset=z2sim_offset,
-                                     sim_pdf_support_span=sim_pdf_support_span,
-                                     device='cpu')
+
+    prosail_var_space = LinearVarSpace(latent_dim=pv_config.encoder_config.output_size,
+                                    #  z2sim_mat=z2sim_mat,
+                                    #  z2sim_offset=z2sim_offset,
+                                    #  sim_pdf_support_span=sim_pdf_support_span,
+                                     device='cpu', var_bounds_type=pv_config.prosail_vars_dist_type)
     psimulator = ProsailSimulator(device='cpu', R_down=pv_config.R_down)
     if load_simulator:
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
@@ -226,7 +228,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                       loss_type=pv_config.loss_config.loss_type)
 
     prosail_vae = SimVAE(encoder=encoder, decoder=decoder,
-                        lat_space=lat_space, sim_space=pheno_var_space, config=pv_config,
+                        lat_space=lat_space, sim_space=prosail_var_space, config=pv_config,
                         reconstruction_loss=reconstruction_loss,
                         supervised=pv_config.loss_config.supervised,
                         device='cpu',

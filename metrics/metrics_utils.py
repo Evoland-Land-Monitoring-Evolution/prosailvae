@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import os 
-from prosailvae.ProsailSimus import PROSAILVARS, get_ProsailVarsIntervalLen
+from prosailvae.ProsailSimus import PROSAILVARS
+from prosailvae.prosail_var_dists import get_prosail_vars_interval_width
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 from dataset.juan_datapoints import get_interpolated_validation_data
@@ -18,7 +19,7 @@ from dataset.weiss_utils import load_weiss_dataset
 from utils.image_utils import get_encoded_image_from_batch
 from sklearn.metrics import r2_score
 
-def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles):
+def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percentiles, piw_percentiles, var_bounds_type="legacy"):
     metrics_dir = res_dir + "/metrics/"
     if not os.path.isdir(metrics_dir):
         os.makedirs(metrics_dir)
@@ -33,7 +34,7 @@ def save_metrics(res_dir, mae, mpiw, picp, alpha_pi, ae_percentiles, are_percent
     df_picp["alpha"] = alpha_pi
     df_picp.to_csv(metrics_dir + "/picp.csv")
     
-    interval_length = get_ProsailVarsIntervalLen().to(mpiw.device)
+    interval_length = get_prosail_vars_interval_width(bounds_type=var_bounds_type).to(mpiw.device)
     mpiwr = (mpiw / interval_length.view(-1,1)).transpose(0,1)
     maer = mae / interval_length
     df_maer = pd.DataFrame(data=maer.view(-1, len(PROSAILVARS)).detach().cpu().numpy(), 

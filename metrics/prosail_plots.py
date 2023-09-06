@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from prosailvae.ProsailSimus import PROSAILVARS, ProsailVarsDist, BANDS
+from prosailvae.ProsailSimus import PROSAILVARS, BANDS
+from prosailvae.prosail_var_dists import get_prosail_var_dist, get_prosail_var_bounds
 # from sensorsio.utils import rgb_render
 from utils.image_utils import rgb_render
 
@@ -224,7 +225,7 @@ def plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=None, sim_pdf=No
     
 def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=None):
     if bands_name is None:
-        bands_name = np.array(BANDS)[model.encoder.bands].tolist()
+        bands_name = np.array(BANDS)[prosail_VAE.encoder.bands].tolist()
     original_prosail_s2_norm = prosail_VAE.decoder.ssimulator.apply_norm
     prosail_VAE.decoder.ssimulator.apply_norm = False
     for i in range(n_plots):
@@ -281,8 +282,8 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
         for j in range(len(PROSAILVARS)):
             # v2 = ax2[j].violinplot(sim_samples[j], points=100, positions=[ind2[j]+width],
             #        showmeans=True, showextrema=True, showmedians=False, vert=False)
-            min_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["min"]
-            max_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["max"]
+            min_b = prosail_VAE.simspace.var_bounds.asdict()[PROSAILVARS[j]]["min"]
+            max_b = prosail_VAE.simspace.var_bounds.asdict()[PROSAILVARS[j]]["max"]
             dist_max = sim_pdfs.squeeze()[j,:].detach().cpu().max().numpy()
             dist_argmax =  sim_pdfs.squeeze()[j,:].detach().cpu().argmax().numpy()
             ax2[j].set_xlim(min_b, max_b)
@@ -464,7 +465,8 @@ def all_loss_curve(train_loss_df, valid_loss_df, info_df, save_file=None):
 #     axs[2].set_ylabel('LR')
 #     fig.savefig(save_file)
     
-def plot_param_dist(res_dir, sim_dist, tgt_dist):
+def plot_param_dist(res_dir, sim_dist, tgt_dist, var_bounds_type="legacy"):
+    var_bounds = get_prosail_var_bounds(var_bounds_type)
     fig = plt.figure(figsize=(18,12), dpi=150,)
     ax2=[]
     gs = fig.add_gridspec(len(PROSAILVARS),1)
@@ -474,8 +476,8 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
     for j in range(len(PROSAILVARS)):
         v2 = ax2[j].violinplot(sim_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
-        min_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["min"]
-        max_b = ProsailVarsDist.Dists[PROSAILVARS[j]]["max"]
+        min_b = var_bounds.asdict()[PROSAILVARS[j]]["min"]
+        max_b = var_bounds.asdict()[PROSAILVARS[j]]["max"]
         
         ax2[j].set_xlim(min_b, max_b)
 
@@ -517,20 +519,21 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist):
     plt.show()
     fig.savefig(res_dir + '/prosail_dist.svg')
 
-def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist):
+def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist, var_bounds_type="legacy"):
+    var_bounds = get_prosail_var_bounds(var_bounds_type)
     for i in range(len(PROSAILVARS)):
         fig, ax = plt.subplots(figsize=(7,7), dpi=150)
         ax.scatter(sim_dist[:,i].detach().cpu(),tgt_dist[:,i].detach().cpu(), marker='.',s=2)
         ax.set_xlabel(f'{PROSAILVARS[i]} predicted')
         ax.set_ylabel(f'{PROSAILVARS[i]} reference')
-        ax.set_xlim(ProsailVarsDist.Dists[PROSAILVARS[i]]["min"],
-                    ProsailVarsDist.Dists[PROSAILVARS[i]]["max"])
-        ax.set_ylim(ProsailVarsDist.Dists[PROSAILVARS[i]]["min"],
-                    ProsailVarsDist.Dists[PROSAILVARS[i]]["max"])
-        ax.plot([ProsailVarsDist.Dists[PROSAILVARS[i]]["min"], 
-                 ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]],
-                [ProsailVarsDist.Dists[PROSAILVARS[i]]["min"], 
-                 ProsailVarsDist.Dists[PROSAILVARS[i]]["max"]],color='black')
+        ax.set_xlim(var_bounds.asdict()[PROSAILVARS[i]]["min"],
+                    var_bounds.asdict()[PROSAILVARS[i]]["max"])
+        ax.set_ylim(var_bounds.asdict()[PROSAILVARS[i]]["min"],
+                    var_bounds.asdict()[PROSAILVARS[i]]["max"])
+        ax.plot([var_bounds.asdict()[PROSAILVARS[i]]["min"], 
+                 var_bounds.asdict()[PROSAILVARS[i]]["max"]],
+                [var_bounds.asdict()[PROSAILVARS[i]]["min"], 
+                 var_bounds.asdict()[PROSAILVARS[i]]["max"]],color='black')
         fig.savefig(res_dir + f'/pred_vs_ref_{PROSAILVARS[i]}.svg')
 
 def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=None, bands_name=None):
@@ -1074,7 +1077,8 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
                                   all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma,
                                 #   gdf_lai, model_patch_pred, snap_patch_pred, 
-                                  max_sigma=1.4, n_sigma=2):
+                                  max_sigma=1.4, n_sigma=2, var_bounds_type="legacy"):
+    var_bounds = get_prosail_var_bounds(var_bounds_type)
     article_plot_dir = os.path.join(plot_dir, "article_aggregated_plots")
     os.makedirs(article_plot_dir)
     cyclical_piw = n_sigma * cyclical_lai_sigma
@@ -1146,8 +1150,8 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax.hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
         ax.set_yticks([])
         ax.set_xlabel(prosail_var)
-        ax.set_xlim(ProsailVarsDist.Dists[PROSAILVARS[idx]]['min'],
-                    ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
+        ax.set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['min'],
+                    var_bounds.asdict()[PROSAILVARS[idx]]['max'])
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_pred_dist.tex")
 
@@ -1283,8 +1287,8 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
                                   all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma,
                                 #   gdf_lai, model_patch_pred, snap_patch_pred, 
-                                  max_sigma=1.4, n_sigma=2):
-    
+                                  max_sigma=1.4, n_sigma=2, var_bounds_type="legacy"):
+    var_bounds = get_prosail_var_bounds(var_bounds_type)
     cyclical_piw = n_sigma * cyclical_lai_sigma
     cyclical_mpiw = torch.mean(cyclical_piw)
     cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
@@ -1351,8 +1355,8 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(prosail_var)
-        ax[row, col].set_xlim(ProsailVarsDist.Dists[PROSAILVARS[idx]]['min'],
-                              ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
+        ax[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['min'],
+                              var_bounds.asdict()[PROSAILVARS[idx]]['max'])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions")
     fig.savefig(f"{plot_dir}/all_prosail_var_pred_dist.png")
@@ -1579,7 +1583,8 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
-                         weiss_cw, sigma_image, i, info=None):
+                         weiss_cw, sigma_image, i, info=None, var_bounds_type="legacy"):
+    var_bounds = get_prosail_var_bounds(var_bounds_type)
     if info is None:
         info = ["SENSOR","DATE","TILE", "ROI"]
     n_cols = 4
@@ -1591,8 +1596,8 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
         ax[row, col].hist(sim_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(PROSAILVARS[idx])
-        ax[row, col].set_xlim(ProsailVarsDist.Dists[PROSAILVARS[idx]]['min'], 
-                              ProsailVarsDist.Dists[PROSAILVARS[idx]]['max'])
+        ax[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['min'], 
+                              var_bounds.asdict()[PROSAILVARS[idx]]['max'])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions {info[1]} {info[2]}")
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_{info[3]}_prosail_var_pred_dist.png")

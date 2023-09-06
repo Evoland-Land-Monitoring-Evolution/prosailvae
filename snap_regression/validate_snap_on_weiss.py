@@ -15,6 +15,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from validation.validation import get_all_campaign_CCC_results_SNAP, get_frm4veg_ccc_results, get_validation_global_metrics
+from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
+from prosailvae.prosail_var_dists import get_prosail_var_dist
 
 import argparse
 
@@ -27,11 +29,50 @@ def get_parser():
     parser.add_argument("-r", dest="res_dir",
                         help="path to results directory",
                         type=str, default="")
+    parser.add_argument('-p', dest="last_prosail",
+                        help="toggle last prosail version",
+                        type=bool, default=False)
     return parser
 
+def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
+                                        n_samples_per_batch=1024):
+    _, prosail_vars_weiss = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
+                                               mode="pvae")
+    _, prosail_vars_snap = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
+                                               mode="snap")
+    s2_a_snap = prosail_vars_snap[:,-3:]
+    # s2_a_weiss = prosail_vars_weiss[:,-3:]
+    # prosail_vars_weiss = prosail_vars_weiss[:,:-3]
+    n_full_batch = nb_simus // n_samples_per_batch
+    last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
-def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024):
-    s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    prosail_vars = np.zeros((nb_simus, 14))
+    prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
+    for i in range(n_full_batch):
+        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = prosail_vars_weiss[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]
+        prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())
+        sim_s2_r = ssimulator(prosail_r).numpy()
+        if noise>0:
+            sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)
+            add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
+            sim_s2_r += add_noise
+        prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
+    if last_batch > 0:
+        prosail_vars[n_full_batch*n_samples_per_batch:,:] = prosail_vars_weiss[n_full_batch*n_samples_per_batch:,:]
+        sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
+        if noise>0:
+            sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
+            add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
+            sim_s2_r += add_noise
+        prosail_s2_sim[n_full_batch*n_samples_per_batch:,:] = sim_s2_r
+    prosail_vars[:,-3:] = s2_a_snap # permuting angles
+    return prosail_vars, prosail_s2_sim
+
+
+def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024, s2_r=None, prosail_vars=None):
+    if prosail_vars is None or s2_r is None:
+        s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
+    
     s2_a = prosail_vars[:,-3:]
     bv = {"lai":prosail_vars[:,6],
           "cab":prosail_vars[:,1],
@@ -71,20 +112,31 @@ def main():
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_ccc/" 
+        rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
     else:
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         parser = get_parser().parse_args()
         res_dir = parser.res_dir
+        rsr_dir = "/work/scratch/zerahy/prosailvae/data/"
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
     lr = 1e-3
     patience = 20
     epochs=2000
     disable_tqdm=False
-    
-    
-    # model_dict = {}
+    prosail_vars = None
+    prosail_s2_sim = None
+    if parser.last_prosail:
+        psimulator = ProsailSimulator()
+        bands = [2, 3, 4, 5, 6, 8, 11, 12]
+        ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
+        prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=43000,
+                                                                            noise=0,
+                                                                            psimulator=psimulator,
+                                                                            ssimulator=ssimulator,
+                                                                            n_samples_per_batch=1024)
+    model_dict = {}
     plot_loss = False
     n_models=20
     batch_size=1024
@@ -93,7 +145,8 @@ def main():
         results_dict[variable] = []
         for i in range(n_models):
             train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
-                                                                                batch_size=batch_size)
+                                                                                batch_size=batch_size, 
+                                                                                prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
             model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
             # model_dict[variable] = model
             optimizer = optim.Adam(model.parameters(), lr=lr)

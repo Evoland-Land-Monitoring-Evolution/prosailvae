@@ -38,8 +38,8 @@ def load_prosail_params(path_to_data_dir):
     return N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil
 
 
-def load_weiss_dataset(path_to_data_dir):
-    s2_r, tts, tto, psi = load_refl_angles(path_to_data_dir)
+def load_weiss_dataset(path_to_data_dir, mode = "pvae"):
+    s2_r, sun_zen, view_zen, rel_azi = load_refl_angles(path_to_data_dir)
     N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil = load_prosail_params(path_to_data_dir)
     prosail_vars = np.zeros((N.shape[0], 14))
     prosail_vars[:,6] = lai.reshape(-1)
@@ -53,8 +53,15 @@ def load_weiss_dataset(path_to_data_dir):
     prosail_vars[:,8] = hspot.reshape(-1)
     prosail_vars[:,9] = psoil.reshape(-1)
     prosail_vars[:,10] = rsoil.reshape(-1)
-    prosail_vars[:,11] = tts.reshape(-1)
-    prosail_vars[:,12] = tto.reshape(-1)
-    prosail_vars[:,13] = psi.reshape(-1)
+    if mode == "pvae":
+        prosail_vars[:,11] = sun_zen.reshape(-1)
+        prosail_vars[:,12] = view_zen.reshape(-1)
+        prosail_vars[:,13] = rel_azi.reshape(-1)
+    elif mode == "snap":
+        prosail_vars[:,11] = view_zen.reshape(-1)
+        prosail_vars[:,12] = sun_zen.reshape(-1)
+        prosail_vars[:,13] = rel_azi.reshape(-1)
+    else:
+        raise ValueError
     return s2_r, prosail_vars
 

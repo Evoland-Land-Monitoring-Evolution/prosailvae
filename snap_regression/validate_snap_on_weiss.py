@@ -138,7 +138,7 @@ def main():
                                                                             n_samples_per_batch=1024)
     model_dict = {}
     plot_loss = False
-    n_models=20
+    n_models=10
     batch_size=1024
     results_dict = {}
     for variable in ["cab", "ccc"]:

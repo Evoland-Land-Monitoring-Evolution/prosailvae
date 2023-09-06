@@ -56,7 +56,7 @@ def get_model_and_dataloader(parser):
     info_test_data = np.load(os.path.join(parser.data_dir, "test_info.npy"))
     return model_dict, train_loader, test_loader, valid_loader, info_test_data
    
-def project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1, max_batches=50):
+def project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1, max_batches=None):
     inferred_BV = []
     projected_images = []
     angles = []
@@ -115,7 +115,7 @@ def project_loader_pixellic(model, loader, mode = 'lat_mode', loader_output=Fals
         return (prosail_s2_sim_refl.detach().cpu(), 
                 prosail_sim_vars.detach().cpu())
 
-def save_common_cyclical_dataset(model_dict, loader, output_dir=""):
+def save_common_cyclical_dataset(model_dict, loader, output_dir="", max_batches=None):
     all_s2_r = []
     all_s2_a = []
     all_sim = []
@@ -126,7 +126,7 @@ def save_common_cyclical_dataset(model_dict, loader, output_dir=""):
     for _, model_info in model_dict.items():
         model = model_info["model"]
         delta_hw = max_hw - model.encoder.nb_enc_cropped_hw
-        s2_r, s2_a, sim = project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1)
+        s2_r, s2_a, sim = project_loader_patches(model, loader, mode="lat_mode", loader_output=False, batch_size=1, max_batches=max_batches)
         if delta_hw > 0:
             s2_r = crop_s2_input(s2_r, delta_hw)
             s2_a = crop_s2_input(s2_a, delta_hw)

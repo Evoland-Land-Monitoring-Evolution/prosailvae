@@ -241,7 +241,7 @@ def save_validation_results(model, res_dir,
 
     
 
-        for variable in ["LAI", "CCC"]:
+        for variable in ["lai", "ccc"]:
             results[variable][f'{variable} error'] = results[variable][f'Predicted {variable}'] - results[variable][f'{variable}']
             results[variable].to_csv(os.path.join(scatter_dir[variable], f"{model_name}_all_campaigns_{variable}_{mode}_{method}.csv"))
 

@@ -150,22 +150,22 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
         else:
             bands_rec_err[band] = np.zeros_like(ref_lai)
 
-    results = pd.DataFrame(data={'LAI':ref_lai,
-                                'LAI std':np.concatenate(ref_lai_std_list),
-                                'Predicted LAI': np.concatenate(pred_lai_list),
-                                'Predicted LAI std':np.concatenate(pred_lai_std_list),
-                                "Site": np.array(site_list),
-                                "Land cover": np.concatenate(land_cover_list),
-                                "Reconstruction error": rec_err,
-                                "Time delta": np.concatenate(date_list),
-                                "Campaign": np.array(campaign_list),
+    results = pd.DataFrame(data={f'{frm4veg_lai}':ref_lai,
+                                 f'{frm4veg_lai} std':np.concatenate(ref_lai_std_list),
+                                 f'Predicted {frm4veg_lai}': np.concatenate(pred_lai_list),
+                                 f'Predicted {frm4veg_lai} std':np.concatenate(pred_lai_std_list),
+                                 "Site": np.array(site_list),
+                                 "Land cover": np.concatenate(land_cover_list),
+                                 "Reconstruction error": rec_err,
+                                 "Time delta": np.concatenate(date_list),
+                                 "Campaign": np.array(campaign_list),
                                 })
     for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         results[f"{band} error"] = bands_rec_err[band]
     return results
 
 def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
-                                     frm4veg_ccc="ccc", get_reconstruction_error=False, bands_idx=torch.arange(10)):
+                            frm4veg_ccc="ccc", get_reconstruction_error=False, bands_idx=torch.arange(10)):
 
 
     date_list = [barrax_results[f'{frm4veg_ccc}_date'].reshape(-1),
@@ -215,10 +215,10 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                                     wytham_results[f'{frm4veg_ccc}_{band}_rec_err'].reshape(-1)])
         else:
             bands_rec_err[band] = np.zeros_like(ref_ccc)
-    results = pd.DataFrame(data={'CCC':ref_ccc,
-                                'CCC std':np.concatenate(ref_ccc_std_list),
-                                'Predicted CCC': np.concatenate(pred_ccc_list),
-                                'Predicted CCC std':np.concatenate(pred_ccc_std_list),
+    results = pd.DataFrame(data={f'{frm4veg_ccc}':ref_ccc,
+                                f'{frm4veg_ccc} std':np.concatenate(ref_ccc_std_list),
+                                f'Predicted {frm4veg_ccc}': np.concatenate(pred_ccc_list),
+                                f'Predicted {frm4veg_ccc} std':np.concatenate(pred_ccc_std_list),
                                 "Site": np.array(site_list),
                                 "Land cover": np.concatenate(land_cover_list),
                                 "Reconstruction error": rec_err,
@@ -230,7 +230,7 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
     return results
 
 def get_validation_global_metrics(df_results, decompose_along_columns=["Site", "Land cover"], 
-                                  n_sigma=3, variable="LAI"):
+                                  n_sigma=3, variable="lai"):
     global_rmse_dict = {}
     global_picp_dict = {}
     global_mpiw_dict = {}

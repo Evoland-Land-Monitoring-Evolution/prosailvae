@@ -445,7 +445,7 @@ def get_train_valid_test_loader_from_patches(path_to_patches_dir, bands=torch.ar
                                             concat=concat)
     valid_loader = get_loader_from_patches(path_to_valid_patches, bands = bands,
                                             batch_size=batch_size, num_workers=num_workers,
-                                            max_samples=max_valid_samples, concat=concat)
+                                            max_samples=max_valid_samples, concat=concat, shuffle=False)
     test_loader = get_loader_from_patches(path_to_test_patches, bands = bands,
                                             batch_size=batch_size, num_workers=num_workers, concat=concat,
                                             shuffle=False)

@@ -77,11 +77,14 @@ def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None,
     return prosail_vars, prosail_s2_sim
 
 
-def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024, s2_r=None, prosail_vars=None):
+def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024, s2_r=None, prosail_vars=None, max_samples=50000):
     if prosail_vars is None or s2_r is None:
         s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
                                                 mode="snap")
+    s2_r = s2_r[:max_samples, :]
+    prosail_vars = prosail_vars[:max_samples, :]
     s2_a = prosail_vars[:,-3:]
+
     bv = {"lai":prosail_vars[:,6],
           "cab":prosail_vars[:,1],
           "cw": prosail_vars[:,4],

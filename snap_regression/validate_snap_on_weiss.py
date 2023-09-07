@@ -32,6 +32,9 @@ def get_parser():
     parser.add_argument('-p', dest="last_prosail",
                         help="toggle last prosail version",
                         type=bool, default=False)
+    parser.add_argument('-sd', dest="sim_data",
+                        help="toggle last prosail version",
+                        type=bool, default=False)
     return parser
 
 def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
@@ -76,8 +79,8 @@ def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None,
 
 def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024, s2_r=None, prosail_vars=None):
     if prosail_vars is None or s2_r is None:
-        s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
-    
+        s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
+                                                mode="snap")
     s2_a = prosail_vars[:,-3:]
     bv = {"lai":prosail_vars[:,6],
           "cab":prosail_vars[:,1],
@@ -118,35 +121,55 @@ def main():
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_ccc/" 
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
+        epochs=200
+        n_models=1
+        parser = get_parser().parse_args()
+        file_prefix = ""
+        data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data"
+        
     else:
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         parser = get_parser().parse_args()
         res_dir = parser.res_dir
         rsr_dir = "/work/scratch/zerahy/prosailvae/data/"
+        epochs=2000
+        n_models=10
+        file_prefix = "train_"
+        data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist/"
+        
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
     lr = 1e-3
     patience = 20
-    epochs=2000
+    # epochs=2000
     disable_tqdm=False
     prosail_vars = None
     prosail_s2_sim = None
+    
     if parser.last_prosail:
         psimulator = ProsailSimulator()
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
         ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
         prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=41000,
-                                                                            noise=0,
-                                                                            psimulator=psimulator,
-                                                                            ssimulator=ssimulator,
-                                                                            n_samples_per_batch=1024)
+                                                                           noise=0,
+                                                                           psimulator=psimulator,
+                                                                           ssimulator=ssimulator,
+                                                                           n_samples_per_batch=1024)
+    elif parser.sim_data:
+        bands = [1, 2, 3, 4, 5, 7, 8, 9]
+        prosail_s2_sim = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")[:,bands]
+        vars = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11, 13]
+        prosail_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")[:,vars]
+        # prosail_params = prosail_sim_vars[:,:-3]
+        # angles = prosail_sim_vars[:,-3:]
+
     model_dict = {}
-    plot_loss = False
-    n_models=10
+    plot_loss = True
+    # n_models=10
     batch_size=1024
     results_dict = {}
-    for variable in ["cab", "ccc"]:
+    for variable in ["ccc", "cab"]:
         results_dict[variable] = []
         for i in range(n_models):
             train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
@@ -158,9 +181,9 @@ def main():
             lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                              threshold=0.001)
             _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
-                                                                epochs=epochs, lr_scheduler=lr_scheduler,
-                                                                disable_tqdm=disable_tqdm, lr_recompute=patience, 
-                                                                loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
+                                                            epochs=epochs, lr_scheduler=lr_scheduler,
+                                                            disable_tqdm=disable_tqdm, lr_recompute=patience, 
+                                                            loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
             if plot_loss:
                 fig, axs = plt.subplots(2,1, sharex=True)
                 axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)

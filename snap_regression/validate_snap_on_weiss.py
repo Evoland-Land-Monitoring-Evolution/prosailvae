@@ -180,7 +180,7 @@ def main():
     # n_models=10
     batch_size=1024
     results_dict = {}
-    if parser.lai_mode:
+    if not parser.lai_mode:
         for variable in ["ccc", "cab"]:
             results_dict[variable] = []
             for i in range(n_models):

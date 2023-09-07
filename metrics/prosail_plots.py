@@ -282,8 +282,8 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
         for j in range(len(PROSAILVARS)):
             # v2 = ax2[j].violinplot(sim_samples[j], points=100, positions=[ind2[j]+width],
             #        showmeans=True, showextrema=True, showmedians=False, vert=False)
-            min_b = prosail_VAE.simspace.var_bounds.asdict()[PROSAILVARS[j]]["min"]
-            max_b = prosail_VAE.simspace.var_bounds.asdict()[PROSAILVARS[j]]["max"]
+            min_b = prosail_VAE.sim_space.var_bounds.asdict()[PROSAILVARS[j]]["min"]
+            max_b = prosail_VAE.sim_space.var_bounds.asdict()[PROSAILVARS[j]]["max"]
             dist_max = sim_pdfs.squeeze()[j,:].detach().cpu().max().numpy()
             dist_argmax =  sim_pdfs.squeeze()[j,:].detach().cpu().argmax().numpy()
             ax2[j].set_xlim(min_b, max_b)

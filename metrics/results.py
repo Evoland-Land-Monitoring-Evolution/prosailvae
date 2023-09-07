@@ -428,7 +428,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
                                      weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info)
             PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,
                                  weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info, 
-                                 var_bounds_type=PROSAIL_VAE.simspace.var_bounds_type)
+                                 var_bounds_type=PROSAIL_VAE.sim_space.var_bounds_type)
             all_rec.append(rec_image.reshape(10,-1))
             all_lai.append(sim_image[6,...].reshape(-1))
             all_cab.append(sim_image[1,...].reshape(-1))
@@ -462,12 +462,12 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
         article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
-                                      var_bounds_type=PROSAIL_VAE.simspace.var_bounds_type)
+                                      var_bounds_type=PROSAIL_VAE.sim_space.var_bounds_type)
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
                                     #   gdf_lai, lai_validation_pred, snap_validation_lai
-                                      var_bounds_type=PROSAIL_VAE.simspace.var_bounds_type)
+                                      var_bounds_type=PROSAIL_VAE.sim_space.var_bounds_type)
 
     logger.info("Metrics computed.")
     rec_var = get_rec_var(PROSAIL_VAE, loader, max_batch=10, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10)
@@ -595,7 +595,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     logger.info("Metrics computed.")
 
     save_metrics(res_dir, mae, mpiw, picp, alpha_pi, 
-                ae_percentiles, are_percentiles, piw_percentiles, var_bounds_type=PROSAIL_VAE.simspace.var_bounds_type)
+                ae_percentiles, are_percentiles, piw_percentiles, var_bounds_type=PROSAIL_VAE.sim_space.var_bounds_type)
     maer = pd.read_csv(res_dir+"/metrics/maer.csv").drop(columns=["Unnamed: 0"])
     mpiwr = pd.read_csv(res_dir+"/metrics/mpiwr.csv").drop(columns=["Unnamed: 0"])
     if plot_results:
@@ -617,10 +617,10 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         plot_rec_and_latent(PROSAIL_VAE, loader, rec_dir, n_plots=20, bands_name=bands_name)
         
         logger.info("Plotting PROSAIL parameter distributions")
-        plot_param_dist(metrics_dir, sim_dist, tgt_dist, var_bounds_type=PROSAIL_VAE.simspace.var_bounds_type)
+        plot_param_dist(metrics_dir, sim_dist, tgt_dist, var_bounds_type=PROSAIL_VAE.sim_space.var_bounds_type)
         logger.info("Plotting PROSAIL parameters, reference vs prediction")
         plot_lat_hist2D(tgt_dist, sim_pdfs, sim_supports, res_dir, nbin=50)
-        plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist, var_bounds_type=PROSAIL_VAE.simspace.var_bounds_type)
+        plot_pred_vs_tgt(metrics_dir, sim_dist, tgt_dist, var_bounds_type=PROSAIL_VAE.sim_space.var_bounds_type)
         ssimulator = PROSAIL_VAE.decoder.ssimulator
         refl_dist = loader.dataset[:][0]
         plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, 

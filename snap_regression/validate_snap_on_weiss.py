@@ -43,6 +43,7 @@ def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None,
     s2_a_snap = prosail_vars_snap[:,-3:]
     # s2_a_weiss = prosail_vars_weiss[:,-3:]
     # prosail_vars_weiss = prosail_vars_weiss[:,:-3]
+    nb_simus = min(nb_simus, 41474)
     n_full_batch = nb_simus // n_samples_per_batch
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
@@ -127,15 +128,15 @@ def main():
     disable_tqdm=False
     prosail_vars = None
     prosail_s2_sim = None
-    if parser.last_prosail:
-        psimulator = ProsailSimulator()
-        bands = [2, 3, 4, 5, 6, 8, 11, 12]
-        ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
-        prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=43000,
-                                                                            noise=0,
-                                                                            psimulator=psimulator,
-                                                                            ssimulator=ssimulator,
-                                                                            n_samples_per_batch=1024)
+    # if parser.last_prosail:
+    psimulator = ProsailSimulator()
+    bands = [2, 3, 4, 5, 6, 8, 11, 12]
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
+    prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=43000,
+                                                                        noise=0,
+                                                                        psimulator=psimulator,
+                                                                        ssimulator=ssimulator,
+                                                                        n_samples_per_batch=1024)
     model_dict = {}
     plot_loss = False
     n_models=10
@@ -172,8 +173,8 @@ def main():
                                                                                                     cab_mode=variable=="cab")
             df_results = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
                                             get_reconstruction_error=False)
-            rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="CCC")
-            results_dict[variable].append(rmse['Campaign'][f'CCC_rmse_all'].values[0])
+            rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="ccc")
+            results_dict[variable].append(rmse['Campaign'][f'ccc_rmse_all'].values[0])
     pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))
 
 if __name__ =="__main__":

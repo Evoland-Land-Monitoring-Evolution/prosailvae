@@ -150,20 +150,20 @@ def save_validation_results(model, res_dir,
                                       remove_files=remove_files)
 
     results = {}
-    results["LAI"] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
+    results["lai"] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                       frm4veg_lai="lai", get_reconstruction_error=save_reconstruction,
                                                       bands_idx=model.encoder.bands)
-    results["CCC"] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
+    results["ccc"] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                              frm4veg_ccc="ccc", get_reconstruction_error=save_reconstruction, 
                                              bands_idx=model.encoder.bands)
-    lai_dir = os.path.join(res_dir, "LAI_scatter")
+    lai_dir = os.path.join(res_dir, "lai_scatter")
     os.makedirs(lai_dir)
-    ccc_dir = os.path.join(res_dir, "CCC_scatter")
+    ccc_dir = os.path.join(res_dir, "ccc_scatter")
     os.makedirs(ccc_dir)
-    scatter_dir = {"LAI":lai_dir, "CCC":ccc_dir}
+    scatter_dir = {"lai":lai_dir, "ccc":ccc_dir}
     global_metrics = {}
 
-    for variable in ["LAI", "CCC"]:
+    for variable in ["lai", "ccc"]:
         (global_rmse_dict, global_picp_dict, 
          global_mpiw_dict, global_mestdr_dict) = get_validation_global_metrics(results[variable], 
                                                                                decompose_along_columns = ["Campaign"], #["Site", "Land cover", "Campaign"], 

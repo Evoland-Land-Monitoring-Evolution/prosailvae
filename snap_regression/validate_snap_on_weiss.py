@@ -36,14 +36,18 @@ def get_parser():
 
 def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
                                         n_samples_per_batch=1024):
+    nb_simus = min(nb_simus, 41474)
     _, prosail_vars_weiss = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
                                                mode="pvae")
     _, prosail_vars_snap = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
                                                mode="snap")
+    prosail_vars_weiss = prosail_vars_weiss[:nb_simus,:]
+    prosail_vars_snap = prosail_vars_snap[:nb_simus,:]
     s2_a_snap = prosail_vars_snap[:,-3:]
+
     # s2_a_weiss = prosail_vars_weiss[:,-3:]
     # prosail_vars_weiss = prosail_vars_weiss[:,:-3]
-    nb_simus = min(nb_simus, 41474)
+    
     n_full_batch = nb_simus // n_samples_per_batch
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
@@ -132,7 +136,7 @@ def main():
         psimulator = ProsailSimulator()
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
         ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
-        prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=43000,
+        prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=41000,
                                                                             noise=0,
                                                                             psimulator=psimulator,
                                                                             ssimulator=ssimulator,

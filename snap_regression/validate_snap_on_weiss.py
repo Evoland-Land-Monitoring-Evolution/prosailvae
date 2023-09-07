@@ -14,7 +14,9 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from validation.validation import get_all_campaign_CCC_results_SNAP, get_frm4veg_ccc_results, get_validation_global_metrics
+from validation.validation import (get_all_campaign_CCC_results_SNAP, get_frm4veg_ccc_results, 
+                                   get_validation_global_metrics, get_all_campaign_lai_results_SNAP,
+                                   get_belsar_x_frm4veg_lai_results)
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 from prosailvae.prosail_var_dists import get_prosail_var_dist
 
@@ -34,6 +36,9 @@ def get_parser():
                         type=bool, default=False)
     parser.add_argument('-sd', dest="sim_data",
                         help="toggle last prosail version",
+                        type=bool, default=False)
+    parser.add_argument('-l', dest="lai_mode",
+                        help="toggle lai instead of cab",
                         type=bool, default=False)
     return parser
 
@@ -122,8 +127,10 @@ def main():
     if socket.gethostname()=='CELL200973':
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
+        belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_ccc/" 
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
+
         epochs=200
         n_models=1
         parser = get_parser().parse_args()
@@ -133,6 +140,7 @@ def main():
     else:
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
+        belsar_data_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
         parser = get_parser().parse_args()
         res_dir = parser.res_dir
         rsr_dir = "/work/scratch/zerahy/prosailvae/data/"
@@ -140,7 +148,7 @@ def main():
         n_models=10
         file_prefix = "train_"
         data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist/"
-        
+    belsar_pred_dir = parser.res_dir
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
     lr = 1e-3
@@ -172,40 +180,77 @@ def main():
     # n_models=10
     batch_size=1024
     results_dict = {}
-    for variable in ["ccc", "cab"]:
-        results_dict[variable] = []
-        for i in range(n_models):
-            train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
-                                                                                batch_size=batch_size, 
-                                                                                prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
-            model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-            # model_dict[variable] = model
-            optimizer = optim.Adam(model.parameters(), lr=lr)
-            lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
-                                             threshold=0.001)
-            _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
-                                                            epochs=epochs, lr_scheduler=lr_scheduler,
-                                                            disable_tqdm=disable_tqdm, lr_recompute=patience, 
-                                                            loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
-            if plot_loss:
-                fig, axs = plt.subplots(2,1, sharex=True)
-                axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)
-                axs[1].scatter(np.arange(len(all_valid_losses)), all_lr)
-                axs[0].set_yscale('log')
-                axs[1].set_yscale('log')
-                axs[1].set_xlabel("epoch")
-                axs[0].set_ylabel("Loss (MSE)")
-                axs[1].set_ylabel("LR")
-                
-            barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
-                                                                                                    frm4veg_2021_data_dir,
-                                                                                                    ccc_snap=model, 
-                                                                                                    cab_mode=variable=="cab")
-            df_results = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
-                                            get_reconstruction_error=False)
-            rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="ccc")
-            results_dict[variable].append(rmse['Campaign'][f'ccc_rmse_all'].values[0])
-    pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))
+    if parser.lai_mode:
+        for variable in ["ccc", "cab"]:
+            results_dict[variable] = []
+            for i in range(n_models):
+                train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
+                                                                                    batch_size=batch_size, 
+                                                                                    prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
+                model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                # model_dict[variable] = model
+                optimizer = optim.Adam(model.parameters(), lr=lr)
+                lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
+                                                threshold=0.001)
+                _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
+                                                                epochs=epochs, lr_scheduler=lr_scheduler,
+                                                                disable_tqdm=disable_tqdm, lr_recompute=patience, 
+                                                                loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
+                if plot_loss:
+                    fig, axs = plt.subplots(2,1, sharex=True)
+                    axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)
+                    axs[1].scatter(np.arange(len(all_valid_losses)), all_lr)
+                    axs[0].set_yscale('log')
+                    axs[1].set_yscale('log')
+                    axs[1].set_xlabel("epoch")
+                    axs[0].set_ylabel("Loss (MSE)")
+                    axs[1].set_ylabel("LR")
+                    
+                barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
+                                                                                                        frm4veg_2021_data_dir,
+                                                                                                        ccc_snap=model, 
+                                                                                                        cab_mode=variable=="cab")
+                df_results = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
+                                                get_reconstruction_error=False)
+                rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="ccc")
+                results_dict[variable].append(rmse['Campaign'][f'ccc_rmse_all'].values[0])
+        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))
+    else:
+        for variable in ["lai"]:
+            results_dict[variable] = []
+            for i in range(n_models):
+                train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
+                                                                                    batch_size=batch_size, 
+                                                                                    prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
+                model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                # model_dict[variable] = model
+                optimizer = optim.Adam(model.parameters(), lr=lr)
+                lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
+                                                threshold=0.001)
+                _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
+                                                                epochs=epochs, lr_scheduler=lr_scheduler,
+                                                                disable_tqdm=disable_tqdm, lr_recompute=patience, 
+                                                                loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
+                if plot_loss:
+                    fig, axs = plt.subplots(2,1, sharex=True)
+                    axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)
+                    axs[1].scatter(np.arange(len(all_valid_losses)), all_lr)
+                    axs[0].set_yscale('log')
+                    axs[1].set_yscale('log')
+                    axs[1].set_xlabel("epoch")
+                    axs[0].set_ylabel("Loss (MSE)")
+                    axs[1].set_ylabel("LR")
+
+                (barrax_results, barrax_2021_results, wytham_results, belsar_results, 
+                all_belsar) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, 
+                                                                belsar_data_dir, belsar_pred_dir,
+                                                                method="simple_interpolate", get_all_belsar=False, 
+                                                                remove_files=True)    
+                df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
+                                                            frm4veg_lai="lai", get_reconstruction_error=False)
+                rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
+                results_dict[variable].append(rmse['Campaign'][f'lai_rmse_all'].values[0])
+        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))
 
 if __name__ =="__main__":
     main()

@@ -128,15 +128,15 @@ def main():
     disable_tqdm=False
     prosail_vars = None
     prosail_s2_sim = None
-    # if parser.last_prosail:
-    psimulator = ProsailSimulator()
-    bands = [2, 3, 4, 5, 6, 8, 11, 12]
-    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
-    prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=43000,
-                                                                        noise=0,
-                                                                        psimulator=psimulator,
-                                                                        ssimulator=ssimulator,
-                                                                        n_samples_per_batch=1024)
+    if parser.last_prosail:
+        psimulator = ProsailSimulator()
+        bands = [2, 3, 4, 5, 6, 8, 11, 12]
+        ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
+        prosail_vars, prosail_s2_sim = convert_prosail_data_set_from_weiss(nb_simus=43000,
+                                                                            noise=0,
+                                                                            psimulator=psimulator,
+                                                                            ssimulator=ssimulator,
+                                                                            n_samples_per_batch=1024)
     model_dict = {}
     plot_loss = False
     n_models=10

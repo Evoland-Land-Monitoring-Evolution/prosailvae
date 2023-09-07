@@ -75,7 +75,7 @@ def get_model_and_dataloader(parser):
     info_test_data = np.load(os.path.join(parser.data_dir,"test_info.npy"))
     return model_dict, test_loader, valid_loader, info_test_data
 
-def get_model_results(model_dict: dict, test_loader, cyclical_dataloader, info_test_data, max_patch = 50, mode = 'lat_mode'):
+def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch = 50, mode = 'lat_mode'):
     """
     Compute results for all models
     """

@@ -425,7 +425,8 @@ def get_belsar_campaign_metrics_df(belsar_data_dir, filename_dict, belsar_pred_d
         metrics = pd.concat((metrics, image_metrics))
     return metrics.reset_index(drop=True)
 
-def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest", file_suffix="", get_error=True, bands_idx=torch.arange(10)):
+def interpolate_belsar_metrics(belsar_data_dir, belsar_pred_dir, method="closest", file_suffix="", 
+                               get_error=True, bands_idx=torch.arange(10)):
     
     if method == "simple_interpolate":
         before_metrics = get_belsar_campaign_metrics_df(belsar_data_dir, before_filename_dict, belsar_pred_dir, 

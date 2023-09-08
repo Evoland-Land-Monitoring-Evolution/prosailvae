@@ -71,8 +71,9 @@ class SimVAE(nn.Module):
                  beta_cyclical:float=0.0,
                  snap_cyclical:bool=False,
                  inference_mode:bool=False,
-                 lat_nll:str="", disabled_latent=[], 
-                 disabled_latent_values=[],):
+                 lat_idx:torch.Tensor=torch.tensor([]), disabled_latent=[], 
+                 disabled_latent_values=[],
+                 lat_nll:str="diag_nll"):
         super(SimVAE, self).__init__()
         # encoder
         self.config = config
@@ -94,6 +95,7 @@ class SimVAE(nn.Module):
         self.beta_index = beta_index
         self.inference_mode = inference_mode
         self.hyper_prior = None
+        self.lat_idx = lat_idx
         self.lat_nll = lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
         self.deterministic = config.deterministic
@@ -101,7 +103,8 @@ class SimVAE(nn.Module):
         
         self.snap_cyclical = snap_cyclical
         if self.snap_cyclical:
-            self.lat_nll == "lai_nll"
+            self.lat_idx = torch.tensor([6]).int()
+            self.lat_nll = "lai_nll"
         
 
     def set_hyper_prior(self, hyper_prior:nn.Module|None=None):
@@ -392,7 +395,7 @@ class SimVAE(nn.Module):
         # Kl term
         if self.beta_kl > 0:
             if self.hyper_prior is None: # KL Truncated Normal latent || Uniform prior
-                kl_loss = self.beta_kl * self.lat_space.kl(params, lai_only=self.lat_nll=="lai_nll").sum(1).mean()
+                kl_loss = self.beta_kl * self.lat_space.kl(params, lat_idx=self.lat_idx).sum(1).mean()
             else: # KL Truncated Normal latent || Truncated Normal hyperprior
                 s2_r_sup = s2_r
                 s2_a_sup = s2_a
@@ -407,7 +410,7 @@ class SimVAE(nn.Module):
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
                 params_hyper = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
-                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper, lai_only=self.lat_nll=="lai_nll").sum(1).mean() #sum over latent and mean over batch
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper, lat_idx=self.lat_idx).sum(1).mean() #sum over latent and mean over batch
 
             loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()

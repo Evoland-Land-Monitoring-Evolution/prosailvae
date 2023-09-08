@@ -173,15 +173,17 @@ class TruncatedNormalLatent(LatentSpace):
             nll=nll.mean()
         return nll
     
-    def kl(self, params: torch.Tensor, params2: torch.Tensor | None=None, lai_only=False):
+    def kl(self, params: torch.Tensor, params2: torch.Tensor | None=None, 
+        #    lai_only=False, 
+           lat_idx=torch.tensor([])):
         """
         Computes the Kullback-Leibler divergence
         """
         sigma = params[:, :, 1].squeeze()
         mu = params[:, :, 0].squeeze()
-        if lai_only:
-            sigma = sigma[:,6].unsqueeze(1)
-            mu = mu[:,6].unsqueeze(1)
+        if len(lat_idx.size()) > 0:
+            sigma = sigma[:, lat_idx].unsqueeze(1)
+            mu = mu[:, lat_idx].unsqueeze(1)
         p_tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))
         if self.kl_type=='tnu':
             return kl_truncated_normal_uniform(p=p_tn_dist, q=None)
@@ -189,9 +191,9 @@ class TruncatedNormalLatent(LatentSpace):
             assert params is not None
             sigma2 = params2[:, :, 1].squeeze()
             mu2 = params2[:, :, 0].squeeze()
-            if lai_only:
-                sigma2 = sigma2[:,6].unsqueeze(1)
-                mu2 = mu2[:,6].unsqueeze(1)
+            if len(lat_idx.size()) > 0:
+                sigma2 = sigma2[:, lat_idx].unsqueeze(1)
+                mu2 = mu2[:, lat_idx].unsqueeze(1)
             q_tn_dist = TruncatedNormal(loc=mu2, scale=sigma2, low=torch.zeros_like(mu2), high=torch.ones_like(mu2))
             return kl_truncated_normal_truncated_normal(p_tn_dist, q_tn_dist)
         raise NotImplementedError

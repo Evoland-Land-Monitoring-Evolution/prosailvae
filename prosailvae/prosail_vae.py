@@ -97,6 +97,8 @@ def load_params(config_dir, config_file, parser=None):
         params["validation_at_every_epoch"] = None
     if "prosail_vars_dist_type" not in params.keys():
         params["prosail_vars_dist_type"] = "legacy"
+    if "lat_idx" not in params.keys():
+        params["lat_idx"] = []
     return params
 
 @dataclass
@@ -159,7 +161,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
                              snap_cyclical=params["snap_cyclical"],
                              loss_type=params["loss_type"],
                              lat_loss_type=params["lat_loss_type"],
-                             reconstruction_bands_coeffs=reconstruction_bands_coeffs)
+                             reconstruction_bands_coeffs=reconstruction_bands_coeffs,
+                             lat_idx=torch.tensor(params['lat_idx']).int())
 
     return ProsailVAEConfig(encoder_config=encoder_config,
                             loss_config=loss_config,
@@ -237,7 +240,8 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                         beta_cyclical=pv_config.loss_config.beta_cyclical,
                         snap_cyclical=pv_config.loss_config.snap_cyclical,
                         logger_name=logger_name, inference_mode=pv_config.inference_mode,
-                        lat_nll=pv_config.loss_config.lat_loss_type)
+                        lat_nll=pv_config.loss_config.lat_loss_type,
+                        lat_idx=pv_config.loss_config.lat_idx)
     prosail_vae.set_hyper_prior(hyper_prior)
     if pv_config.load_vae is not None and pv_config.vae_load_file_path is not None:
         if pv_config.load_vae:

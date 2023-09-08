@@ -18,6 +18,7 @@ class LossConfig:
     loss_type: str = 'diag_nll'
     lat_loss_type:str = ""
     reconstruction_bands_coeffs:list[int]|None=None
+    lat_idx:torch.Tensor = torch.tensor([])
     
 
 def get_nll_dimensions(loss_type):

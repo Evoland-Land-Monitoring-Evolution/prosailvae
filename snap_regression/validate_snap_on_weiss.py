@@ -222,7 +222,8 @@ def main():
                 train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
                                                                                     batch_size=batch_size, 
                                                                                     prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
-                model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                model = SnapNN(ver="3A", variable=variable, 
+                               device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
                 # model_dict[variable] = model
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,

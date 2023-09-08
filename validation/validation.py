@@ -11,24 +11,24 @@ from validation.belsar_validation import (interpolate_belsar_metrics, save_belsa
 from prosailvae.ProsailSimus import BANDS
 
 def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
-                                      method="simple_interpolate", get_all_belsar=False, remove_files=False):
+                                      method="simple_interpolate", get_all_belsar=False, remove_files=False, lai_snap=None):
     
     all_belsar = None
     list_belsar_filenames = BELSAR_FILENAMES
     if get_all_belsar:
         list_belsar_filenames = ALL_BELSAR_FILENAMES
-    save_snap_belsar_predictions(belsar_data_dir, belsar_pred_dir, list_belsar_filenames)
+    save_snap_belsar_predictions(belsar_data_dir, belsar_pred_dir, list_belsar_filenames, lai_snap=lai_snap)
     if get_all_belsar:
         all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_SNAP")  
 
     barrax_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, BARRAX_FILENAMES[0], 
                                               BARRAX_FILENAMES[1],  method=method, is_SNAP=True, 
-                                              get_reconstruction=False)
+                                              get_reconstruction=False, lai_snap=lai_snap)
     barrax_2021_results = get_frm4veg_results_at_date(None, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
-                                                      is_SNAP=True, get_reconstruction=False)
+                                                      is_SNAP=True, get_reconstruction=False, lai_snap=lai_snap)
     wytham_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
                                               WYTHAM_FILENAMES[1],  method=method, is_SNAP=True,
-                                              get_reconstruction=False)
+                                              get_reconstruction=False, lai_snap=lai_snap)
 
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix="_SNAP", method=method)

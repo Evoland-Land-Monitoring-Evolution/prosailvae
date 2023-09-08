@@ -522,13 +522,14 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
     return
 
 
-def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
+def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename, lai_snap=None):
     NO_DATA = -10000
     # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
     for filename in list_belsar_filename: 
         ver = "3A" if filename[:2] == "2A" else "3B"
-        model_lai = SnapNN(ver=ver, variable="lai")
-        model_lai.set_weiss_weights()
+        if lai_snap is None:
+            lai_snap = SnapNN(ver=ver, variable="lai")
+            lai_snap.set_weiss_weights()
 
         df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
         s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]), ...].float()
@@ -543,7 +544,7 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
         
         s2_data = torch.concat((s2_r, s2_a_permutated), 0)
         with torch.no_grad():
-            lai_pred = model_lai.forward(s2_data, spatial_mode=True)
+            lai_pred = lai_snap.forward(s2_data, spatial_mode=True)
         dummy_tensor = 0 * NO_DATA * torch.ones(16, lai_pred.size(1), lai_pred.size(2))
         tensor = torch.cat((lai_pred, dummy_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
@@ -560,7 +561,8 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
                          hw = 0, 
                          half_res_coords=True)
 
-def get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, file_suffix, NO_DATA=-10000, bands_idx=torch.arange(10)):
+def get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, file_suffix, NO_DATA=-10000, 
+                               bands_idx=torch.arange(10)):
     metrics = pd.DataFrame()
     for date, filename in all_filename_dict.items():
         validation_df, _, _, _, _, _, crs = load_belsar_validation_data(belsar_data_dir, filename)

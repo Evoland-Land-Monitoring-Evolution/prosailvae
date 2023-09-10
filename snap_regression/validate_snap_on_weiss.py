@@ -30,7 +30,7 @@ def get_parser():
     
     parser.add_argument("-r", dest="res_dir",
                         help="path to results directory",
-                        type=str, default="")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results")
     parser.add_argument('-p', dest="last_prosail",
                         help="toggle last prosail version",
                         type=bool, default=False)
@@ -131,8 +131,8 @@ def main():
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_ccc/" 
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
-        epochs=200
-        n_models=1
+        epochs=50
+        n_models=2
         parser = get_parser().parse_args()
         file_prefix = ""
         data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data"
@@ -246,9 +246,9 @@ def main():
                 all_belsar) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, 
                                                                 belsar_data_dir, belsar_pred_dir,
                                                                 method="simple_interpolate", get_all_belsar=False, 
-                                                                remove_files=True)    
+                                                                remove_files=True, lai_snap=model)    
                 df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
-                                                            frm4veg_lai="lai", get_reconstruction_error=False)
+                                                              frm4veg_lai="lai", get_reconstruction_error=False)
                 rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
                 results_dict[variable].append(rmse['Campaign'][f'lai_rmse_all'].values[0])
         pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))

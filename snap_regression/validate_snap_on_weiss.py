@@ -128,10 +128,10 @@ def main():
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
-        res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_ccc/" 
-        rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
+        res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_lai/" 
+        # rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
-        epochs=50
+        epochs=1000
         n_models=2
         parser = get_parser().parse_args()
         file_prefix = ""

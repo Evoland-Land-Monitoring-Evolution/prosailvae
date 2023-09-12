@@ -200,11 +200,21 @@ def main():
                 valid_loss_list.append(min(all_valid_losses))
                 rmse_grid[i,j,n] = get_dataset_rmse(eval_loader.dataset, model)
                 rmse_list.append(rmse_grid[i,j,n])
+                res_df_filename = os.path.join(res_dir, "snap_distribution_regression_results.csv")
+                model_df = pd.DataFrame(data={"mu":[mu], 
+                                                "sigma":[sigma], 
+                                                "kl":[kl], 
+                                                "rmse":[rmse_grid[i,j,n]], 
+                                                "loss":[min(all_valid_losses)]})
+                if not os.path.isfile(res_df_filename):
+                    model_df.to_csv(res_df_filename, header=model_df.columns, index=False)
+                else: # else it exists so append without writing the header
+                    model_df.to_csv(res_df_filename, mode='a', index=False, header=False)
     pd.DataFrame(data={"mu":tg_mu_list, 
                        "sigma":tg_sigma_list, 
                        "kl":kl_list, 
                        "rmse":rmse_list, 
-                       "loss":valid_loss_list}).to_csv(os.path.join(res_dir, "snap_distribution_regression_results.csv"), 
+                       "loss":valid_loss_list}).to_csv(os.path.join(res_dir, "snap_distribution_regression_results_all.csv"), 
                                                        index=False)
     np.save(os.path.join(res_dir, "snap_distribution_regression_rmse.npy"), rmse_grid)
     np.save(os.path.join(res_dir, "snap_distribution_regression_kl.npy"), kl_grid)

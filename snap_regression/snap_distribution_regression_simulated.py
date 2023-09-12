@@ -136,6 +136,7 @@ def main():
         parser = get_parser().parse_args(args)
 
     else:
+        disable_tqdm=True
         parser = get_parser().parse_args()
         tg_mu = [0, 1, 2, 3, 4]
         tg_sigma = [0.5, 1, 2, 3]

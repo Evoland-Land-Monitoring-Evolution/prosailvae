@@ -209,8 +209,8 @@ def lr_finder_loader(sample_ids=None,
     
 
 def get_simloader(valid_ratio=None, sample_ids=None, 
-                 batch_size=1024, num_workers=0, file_prefix="s2_", 
-                 data_dir=None, cat_angles=False):
+                    batch_size=1024, num_workers=0, file_prefix="s2_", 
+                    data_dir=None, cat_angles=False, lai_only=False):
     if data_dir is None:
         data_dir = os.path.join(os.path.join(os.path.dirname(prosailvae.__file__),
                                              os.pardir),"data/")
@@ -220,6 +220,8 @@ def get_simloader(valid_ratio=None, sample_ids=None,
     prosail_sim_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")
     prosail_params = prosail_sim_vars[:,:-3]
     angles = prosail_sim_vars[:,-3:]
+    if lai_only:
+        prosail_params = prosail_params[:, 6].reshape(-1, 1)
     if sample_ids is None:
         sample_ids = torch.arange(0,len_dataset) 
         sub_s2_refl = s2_refl

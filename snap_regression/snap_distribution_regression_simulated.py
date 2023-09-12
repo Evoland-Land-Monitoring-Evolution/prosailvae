@@ -74,7 +74,7 @@ def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000,
                                                 scale=sigma,
                                                 loc=mu,
                                                 law="gaussian")
-            save_dataset(save_dir, "train_mu_{mu}_sigma_{sigma}_", nb_simus=n_samples_sub, 
+            save_dataset(save_dir, f"train_mu_{mu}_sigma_{sigma}_", nb_simus=n_samples_sub, 
                          rsr_dir=rsr_dir, weiss_mode=True, 
                          prosail_var_dist_type="new", lai_var_dist=lai_var_dist)
 
@@ -124,15 +124,16 @@ def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_distribution_validation/",
-              "-e", "3",
+              "-e", "300",
               "-n", "2",
               "-lr", "0.001",
+              '-s', 'True'
               ]
         disable_tqdm=False
         tg_mu = [1, 2]
         tg_sigma = [0.5, 3]
-        n_eval = 1000
-        n_samples_sub=1000
+        n_eval = 20000
+        n_samples_sub=20000
         parser = get_parser().parse_args(args)
 
     else:
@@ -180,9 +181,9 @@ def main():
             kl_grid[i, j] = kl
             
             train_loader, valid_loader = get_weiss_simloader(valid_ratio=0.05,
-                                                            file_prefix="train_mu_{mu}_sigma_{sigma}_",
-                                                            batch_size=batch_size,
-                                                            data_dir=data_dir)
+                                                             file_prefix=f"train_mu_{mu}_sigma_{sigma}_",
+                                                             batch_size=batch_size,
+                                                             data_dir=data_dir)
             for n in range(parser.n_model_train):
                 tg_mu_list.append(mu)
                 tg_sigma_list.append(sigma)

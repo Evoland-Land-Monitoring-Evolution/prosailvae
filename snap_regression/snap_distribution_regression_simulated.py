@@ -10,9 +10,10 @@ from prosailvae.prosail_var_dists import VariableDistribution
 import argparse
 from dataset.generate_dataset import save_dataset
 import socket
-from dataset.loaders import get_simloader
 from snap_regression.snap_nn import SnapNN
 from prosailvae.dist_utils import kl_tntn
+from validation.validation import (get_validation_global_metrics, get_all_campaign_lai_results_SNAP,
+                                   get_belsar_x_frm4veg_lai_results)
 
 def get_parser():
     """
@@ -44,6 +45,9 @@ def get_parser():
                         type=float, default=0.001)
     
     parser.add_argument("-s", dest="simulate_dataset",
+                        type=bool, default=False)
+    
+    parser.add_argument("-v", dest="validate_on_terrain",
                         type=bool, default=False)
     return parser
 
@@ -127,15 +131,18 @@ def main():
               "-e", "300",
               "-n", "2",
               "-lr", "0.001",
-              '-s', 'True'
+              '-v', 'True',
+              "-s", "True"
               ]
         disable_tqdm=False
         tg_mu = [1, 2]
         tg_sigma = [0.5, 3]
-        n_eval = 20000
-        n_samples_sub=20000
+        n_eval = 2000
+        n_samples_sub=2000
         parser = get_parser().parse_args(args)
-
+        frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
+        belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
     else:
         disable_tqdm=True
         parser = get_parser().parse_args()
@@ -143,6 +150,9 @@ def main():
         tg_sigma = [1, 2, 3, 4]
         n_eval = 20000
         n_samples_sub=20000
+        frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
+        belsar_data_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
     tg_mu_0 = 2
     tg_sigma_0 = 3
     batch_size = 1024
@@ -171,6 +181,7 @@ def main():
     kl_list = []
     valid_loss_list = []
     rmse_list = []
+    lai_terrain_rmse_list = []
     for i, mu in enumerate(tg_mu):
         loc_bv = mu
         for j, sigma in enumerate(tg_sigma):
@@ -203,19 +214,36 @@ def main():
                 rmse_list.append(rmse_grid[i,j,n])
                 res_df_filename = os.path.join(res_dir, "snap_distribution_regression_results.csv")
                 model_df = pd.DataFrame(data={"mu":[mu], 
-                                                "sigma":[sigma], 
-                                                "kl":[kl], 
-                                                "rmse":[rmse_grid[i,j,n]], 
-                                                "loss":[min(all_valid_losses)]})
+                                              "sigma":[sigma], 
+                                              "kl":[kl], 
+                                              "rmse":[rmse_grid[i,j,n]], 
+                                              "loss":[min(all_valid_losses)]})
+                if parser.validate_on_terrain:
+
+                    (barrax_results, barrax_2021_results, wytham_results, belsar_results, 
+                    all_belsar) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, 
+                                                                    belsar_data_dir, res_dir,
+                                                                    method="simple_interpolate", get_all_belsar=False, 
+                                                                    remove_files=True, lai_snap=model)    
+                    df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
+                                                                frm4veg_lai="lai", get_reconstruction_error=False)
+                    rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
+                    lai_terrain_rmse = rmse['Campaign'][f'lai_rmse_all'].values[0]
+                    model_df = pd.concat((model_df, pd.DataFrame({"terrain_rmse":[lai_terrain_rmse]})), axis=1)
+                    lai_terrain_rmse_list.append(lai_terrain_rmse)
                 if not os.path.isfile(res_df_filename):
                     model_df.to_csv(res_df_filename, header=model_df.columns, index=False)
                 else: # else it exists so append without writing the header
                     model_df.to_csv(res_df_filename, mode='a', index=False, header=False)
-    pd.DataFrame(data={"mu":tg_mu_list, 
+
+    all_results_df = pd.DataFrame(data={"mu":tg_mu_list, 
                        "sigma":tg_sigma_list, 
                        "kl":kl_list, 
                        "rmse":rmse_list, 
-                       "loss":valid_loss_list}).to_csv(os.path.join(res_dir, "snap_distribution_regression_results_all.csv"), 
+                       "loss":valid_loss_list})
+    if parser.validate_on_terrain:
+        all_results_df = pd.concat((model_df, pd.DataFrame({"terrain_rmse":[lai_terrain_rmse_list]})), axis=1)
+    all_results_df.to_csv(os.path.join(res_dir, "snap_distribution_regression_results_all.csv"), 
                                                        index=False)
     np.save(os.path.join(res_dir, "snap_distribution_regression_rmse.npy"), rmse_grid)
     np.save(os.path.join(res_dir, "snap_distribution_regression_kl.npy"), kl_grid)

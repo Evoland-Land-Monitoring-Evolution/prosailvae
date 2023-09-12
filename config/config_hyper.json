@@ -65,6 +65,5 @@
     "rec_bands_loss_coeffs": null,
     "deterministic": false,
     "snap_cyclical": false,
-    "prosail_vars_dist_type":"legacy",
-    "lat_idx": [1, 6]
+    "prosail_vars_dist_type":"legacy"
 }

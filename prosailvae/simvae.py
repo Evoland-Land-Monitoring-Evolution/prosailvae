@@ -410,7 +410,8 @@ class SimVAE(nn.Module):
                     s2_r_sup = batchify_batch_latent(s2_r_sup)
                     s2_a_sup = batchify_batch_latent(s2_a_sup)
                 params_hyper = self.hyper_prior.encode2lat_params(s2_r_sup, s2_a_sup)
-                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper, lat_idx=self.lat_idx).sum(1).mean() #sum over latent and mean over batch
+                kl_loss = self.beta_kl * self.lat_space.kl(params, params_hyper, 
+                                                           lat_idx=self.lat_idx).sum(1).mean() #sum over latent and mean over batch
 
             loss_sum += kl_loss
             loss_dict['kl_loss'] = kl_loss.item()

@@ -23,6 +23,7 @@ import scipy.stats as stats
 from dataset.dataset_utils import min_max_to_loc_scale
 from prosailvae.spectral_indices import get_spectral_idx
 import socket
+from prosailvae.prosail_var_dists import VariableDistribution
 
 
 PROSAIL_VARS = [
@@ -145,10 +146,14 @@ def sample_angles(n_samples=100):
 
 
 def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=None, n_samples=1, 
-                                uniform_mode=True, lai_corr=False, lai_conv_override=None):
+                                uniform_mode=True, lai_corr=False, lai_conv_override=None, 
+                                lai_var_dist:VariableDistribution|None=None):
     prosail_vars = np.zeros((n_samples, 14))
     if lai is None:
-        lai = np_sample_param(var_dists.lai, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
+        if lai_var_dist is not None:
+            lai = np_sample_param(lai_var_dist, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
+        else:
+            lai = np_sample_param(var_dists.lai, lai=None, n_samples=n_samples, uniform_mode=uniform_mode)
     prosail_vars[:,6] = lai
     prosail_vars[:,0] = np_sample_param(var_dists.N, lai=lai if lai_corr else None, n_samples=n_samples, uniform_mode=uniform_mode, lai_conv_override=lai_conv_override, lai_max=var_dists.lai.high)
     prosail_vars[:,1] = np_sample_param(var_dists.cab, lai=lai if lai_corr else None, n_samples=n_samples, uniform_mode=uniform_mode, lai_conv_override=lai_conv_override, lai_max=var_dists.lai.high)
@@ -191,7 +196,7 @@ def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=Non
 
 def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
                                 n_samples_per_batch=1024, uniform_mode=False, lai_corr=True,
-                                prosail_var_dist_type="legacy"):
+                                prosail_var_dist_type="legacy", lai_var_dist:VariableDistribution|None=None):
     prosail_vars = np.zeros((nb_simus, 14))
     prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
     prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
@@ -199,7 +204,9 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
     for i in range(n_full_batch):
-        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = partial_sample_prosail_vars(prosail_var_dist, n_samples=n_samples_per_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
+        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,
+                     :] = partial_sample_prosail_vars(prosail_var_dist, n_samples=n_samples_per_batch, 
+                                                      uniform_mode=uniform_mode, lai_corr=lai_corr, lai_var_dist=lai_var_dist)
         prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())
         sim_s2_r = ssimulator(prosail_r).numpy()
         if noise>0:
@@ -208,7 +215,9 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
             sim_s2_r += add_noise
         prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
     if last_batch > 0:
-        prosail_vars[n_full_batch*n_samples_per_batch:,:] = partial_sample_prosail_vars(prosail_var_dist, n_samples=last_batch, uniform_mode=uniform_mode, lai_corr=lai_corr)
+        prosail_vars[n_full_batch*n_samples_per_batch:,
+                     :] = partial_sample_prosail_vars(prosail_var_dist, n_samples=last_batch, uniform_mode=uniform_mode, 
+                                                      lai_corr=lai_corr, lai_var_dist=lai_var_dist)
         sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
         if noise>0:
             sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
@@ -410,7 +419,7 @@ def get_bands_norm_factors(s2_r_samples, mode='mean'):
     return norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_norm_mean, idx_norm_std
 
 def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False, 
-                 lai_corr=True, prosail_var_dist_type="legacy"):
+                 lai_corr=True, prosail_var_dist_type="legacy", lai_var_dist:VariableDistribution|None=None):
 
     psimulator = ProsailSimulator()
     bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
@@ -418,13 +427,14 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
     prosail_vars, prosail_s2_sim = np_simulate_prosail_dataset(nb_simus=nb_simus,
-                                                            noise=noise,
-                                                            psimulator=psimulator,
-                                                            ssimulator=ssimulator,
-                                                            n_samples_per_batch=1024,
-                                                            uniform_mode=uniform_mode,
-                                                            lai_corr=lai_corr,
-                                                            prosail_var_dist_type=prosail_var_dist_type)
+                                                                noise=noise,
+                                                                psimulator=psimulator,
+                                                                ssimulator=ssimulator,
+                                                                n_samples_per_batch=1024,
+                                                                uniform_mode=uniform_mode,
+                                                                lai_corr=lai_corr,
+                                                                prosail_var_dist_type=prosail_var_dist_type,
+                                                                lai_var_dist=lai_var_dist)
     (norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_loc, 
      idx_scale) = get_bands_norm_factors(torch.from_numpy(prosail_s2_sim).float().transpose(1,0), mode='quantile')
     torch.save(torch.from_numpy(prosail_vars), os.path.join(data_dir, f"{data_file_prefix}prosail_sim_vars.pt"))

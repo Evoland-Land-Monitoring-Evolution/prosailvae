@@ -9,6 +9,7 @@ import pandas as pd
 from prosailvae import __path__ as PPATH
 TOP_PATH = os.path.join(PPATH[0], os.pardir)
 SNAP_WEIGHTS_PATH = os.path.join(os.path.join(TOP_PATH, "snap_regression"), "weights")
+from dataset.weiss_utils import load_weiss_dataset
 
 def normalize(unnormalized:torch.Tensor, min_sample:torch.Tensor, max_sample:torch.Tensor):
     """
@@ -350,7 +351,6 @@ class SnapNN(nn.Module):
 
 
 
-
 def test_snap_nn(ver="2"):
     """
     Test if SNAP neural network's outputs are identical to that of the translated java
@@ -359,7 +359,9 @@ def test_snap_nn(ver="2"):
     from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases,
                                         get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
     import prosailvae
-    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
+    s2_a = prosail_vars[:,-3:]
+    lai = prosail_vars[:,6].reshape(-1,1)
     snap_nn = SnapNN(ver=ver, variable="lai")
     snap_nn.set_weiss_weights()
     sample = torch.cat((torch.from_numpy(s2_r), torch.cos(torch.from_numpy(s2_a))), 1).float()

@@ -16,12 +16,13 @@ import socket
 import prosailvae
 from prosailvae.dist_utils import (sample_truncated_gaussian, kl_tntn, truncated_gaussian_pdf, 
                                    numerical_kl_from_pdf, truncated_gaussian_cdf)
-from snap_nn import SnapNN, test_snap_nn
+from snap_regression.snap_nn import SnapNN, test_snap_nn
 from utils.image_utils import rgb_render, tensor_to_raster
 from validation.frm4veg_validation import load_frm4veg_data
 import seaborn as sns
 from metrics.prosail_plots import frm4veg_plots, plot_belsar_metrics
-from metrics.belsar_metrics import compute_metrics_at_date
+# from validation.belsar_validation import compute_metrics_at_date
+from dataset.weiss_utils import load_weiss_dataset
 # from metrics.results import get_snap_belsar_predictions
 
 def get_parser():
@@ -59,62 +60,62 @@ def get_parser():
     return parser
 
 
-def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
-    NO_DATA = -10000
-    # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
-    for filename in list_belsar_filename: 
-        ver = "3A" if filename[:2] == "2A" else "3B"
-        model_lai = SnapNN(ver=ver, variable="lai")
-        model_lai.set_weiss_weights()
+# def get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename):
+#     NO_DATA = -10000
+#     # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
+#     for filename in list_belsar_filename: 
+#         ver = "3A" if filename[:2] == "2A" else "3B"
+#         model_lai = SnapNN(ver=ver, variable="lai")
+#         model_lai.set_weiss_weights()
 
-        df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
-        s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
-        mask[mask==1.] = np.nan
-        mask[mask==0.] = 1.
-        if np.isnan(mask).all():
-            print(f"No valid pixels in {filename}!")
-        s2_r = s2_r * torch.from_numpy(mask).float()
-        s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
-        s2_data = torch.concat((s2_r, s2_a), 0)
-        with torch.no_grad():
-            lai_pred = model_lai.forward(s2_data, spatial_mode=True)
-        dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
-        tensor = torch.cat((lai_pred, dummy_tensor), 0)
-        tensor[tensor.isnan()] = NO_DATA
-        resolution = 10
-        file_path = res_dir + f"/{filename}_SNAP.tif"
-        tensor_to_raster(tensor, file_path,
-                         crs=crs,
-                         resolution=resolution,
-                         dtype=np.float32,
-                         bounds=None,
-                         xcoords=xcoords,
-                         ycoords=ycoords,
-                         nodata=NO_DATA,
-                         hw = 0, 
-                         half_res_coords=True)
+#         df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
+#         s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+#         mask[mask==1.] = np.nan
+#         mask[mask==0.] = 1.
+#         if np.isnan(mask).all():
+#             print(f"No valid pixels in {filename}!")
+#         s2_r = s2_r * torch.from_numpy(mask).float()
+#         s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
+#         s2_data = torch.concat((s2_r, s2_a), 0)
+#         with torch.no_grad():
+#             lai_pred = model_lai.forward(s2_data, spatial_mode=True)
+#         dummy_tensor = NO_DATA * torch.ones(3, lai_pred.size(1), lai_pred.size(2))
+#         tensor = torch.cat((lai_pred, dummy_tensor), 0)
+#         tensor[tensor.isnan()] = NO_DATA
+#         resolution = 10
+#         file_path = res_dir + f"/{filename}_SNAP.tif"
+#         tensor_to_raster(tensor, file_path,
+#                          crs=crs,
+#                          resolution=resolution,
+#                          dtype=np.float32,
+#                          bounds=None,
+#                          xcoords=xcoords,
+#                          ycoords=ycoords,
+#                          nodata=NO_DATA,
+#                          hw = 0, 
+#                          half_res_coords=True)
 
-def load_refl_angles(path_to_data_dir: str):
-    """
-    Loads simulated s2 reflectance angles and LAI from weiss dataset.
-    """
-    path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
-    assert os.path.isfile(path_to_file)
-    df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
-    s2_r = df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values
-    tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
-    tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
-    psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
-    lai = df_validation_data['lai_true'].values
-    return s2_r, tto, tts, psi, lai # Warning, inverted tto and tts w.r.t my prosil version
+# def load_refl_angles(path_to_data_dir: str):
+#     """
+#     Loads simulated s2 reflectance angles and LAI from weiss dataset.
+#     """
+#     path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
+#     assert os.path.isfile(path_to_file)
+#     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
+#     s2_r = df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values
+#     tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
+#     tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
+#     psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
+#     lai = df_validation_data['lai_true'].values
+#     return s2_r, tto, tts, psi, lai # Warning, inverted tto and tts w.r.t my prosil version
 
-def load_weiss_dataset(path_to_data_dir: str):
-    """
-    Loads simulated s2 reflectance angles and LAI from weiss dataset as aggregated numpy arrays.
-    """
-    s2_r, tto, tts, psi, lai = load_refl_angles(path_to_data_dir)
-    s2_a = np.stack((tto, tts, psi), 1)
-    return s2_r, s2_a, lai
+# def load_weiss_dataset(path_to_data_dir: str):
+#     """
+#     Loads simulated s2 reflectance angles and LAI from weiss dataset as aggregated numpy arrays.
+#     """
+#     s2_r, tto, tts, psi, lai = load_refl_angles(path_to_data_dir)
+#     s2_a = np.stack((tto, tts, psi), 1)
+#     return s2_r, s2_a, lai
 
 def sample_from_dist(input_samples: np.ndarray, n: int = 100, 
                      kernel_p: Callable | None = None, kernel_q: Callable | None = None):
@@ -179,38 +180,107 @@ def swap_sampling_truncated_gaussians(samples:torch.Tensor, mu: torch.Tensor, si
         samples_idx.append(idx)
     return samples_idx
 
+def wasserstein1(cdf1, cdf2, dx, low=0, high=14):
+    return (np.abs(cdf1 - cdf2) * dx / (high - low)).sum()
+
+def hellinger(pdf1, pdf2, dx, low=0, high=14):
+    return(np.square(np.sqrt(pdf1) - np.sqrt(pdf2)) * dx / (high - low)).sum()
+
+def kolmogorov_smirnov(cdf1, cdf2):
+    return np.max(cdf1 - cdf2)
+
+def divergence_contour_tg(mu0, sigma0, low=0, high=14, d_mu=0.1,mu_min=0, 
+                          mu_max=4, d_log_sigma=0.1, log_sigma_min=-2, divergence="wasserstein", dx=0.1, levels=10):
+    mu_grid = np.arange(mu_min, mu_max, d_mu)
+    log_sigma_grid = np.arange(log_sigma_min, 1, d_log_sigma)
+    sigma_grid = 10 ** log_sigma_grid 
+    mu_sigma_grid = np.meshgrid(mu_grid, sigma_grid)
+    metric = np.zeros_like(mu_sigma_grid[0])
+    cdf_1 = truncated_gaussian_cdf(torch.arange(low, high, dx), torch.as_tensor(mu0), torch.as_tensor(sigma0),
+                                    lower=torch.as_tensor(low), upper=torch.as_tensor(high))
+    pdf_1 = truncated_gaussian_pdf(torch.arange(low, high, dx), torch.as_tensor(mu0), torch.as_tensor(sigma0),
+                                    lower=torch.as_tensor(low), upper=torch.as_tensor(high))
+    for i, sigma in enumerate(sigma_grid):    
+        for j, mu in enumerate(mu_grid):
+            if divergence == "wasserstein":
+                cdf_2 = truncated_gaussian_cdf(torch.arange(low, high, dx), torch.as_tensor(mu), torch.as_tensor(sigma),
+                                               lower=torch.as_tensor(low), upper=torch.as_tensor(high))
+                metric[i,j] = wasserstein1(cdf_1, cdf_2, dx, low=low, high=high)
+                metric_title = 'distance'
+                pass
+            elif divergence == "kolmogorov-smirnov":
+                cdf_2 = truncated_gaussian_cdf(torch.arange(low, high, dx), torch.as_tensor(mu), torch.as_tensor(sigma),
+                                               lower=torch.as_tensor(low), upper=torch.as_tensor(high))
+                metric[i,j] = kolmogorov_smirnov(cdf_1.numpy(), cdf_2.numpy())
+                metric_title = 'distance'
+                pass
+            elif divergence == "kl":
+                metric[i,j] = kl_tntn(torch.as_tensor(mu0), torch.as_tensor(sigma0), 
+                                      torch.as_tensor(mu), torch.as_tensor(sigma), 
+                                      lower=torch.as_tensor(low), upper=torch.as_tensor(high))
+                metric_title = 'divergence'
+                pass
+            elif divergence == "hellinger":
+                pdf_2 = truncated_gaussian_pdf(torch.arange(low, high, dx), torch.as_tensor(mu), torch.as_tensor(sigma),
+                                               lower=torch.as_tensor(low), upper=torch.as_tensor(high))
+                metric[i,j] = hellinger(pdf_1, pdf_2, dx, low=low, high=high)
+                metric_title = 'divergence'
+                pass
+            else:
+                raise ValueError
+    fig, ax = plt.subplots(dpi=150)
+    cs = ax.contour(mu_sigma_grid[0], mu_sigma_grid[1], metric, levels=levels)
+    ax.set_xlabel("$\mu_2$")
+    ax.set_ylabel("$\sigma_2$")
+    ax.set_yscale('log')
+    ax.clabel(cs, inline=True, fontsize=10)
+    ax.set_title(f"{divergence} {metric_title} between truncated gaussians with $p_1 = TG({mu0}, {sigma0})$")
+    ax.scatter([mu0], [sigma0], c='r')
+    return fig, ax
+
+def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000, 
+                       save_dir:str="",
+                       tg_mu: torch.Tensor=torch.tensor([0,4]), 
+                       tg_sigma:torch.Tensor=torch.tensor([1,4]),
+                       tg_mu_0:torch.Tensor=torch.tensor([2]),
+                       tg_sigma_0:torch.Tensor=torch.tensor([3])):
+    
+    return
 
 def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
                      reduce_to_common_samples_nb:bool=True,
                      tg_mu: torch.Tensor=torch.tensor([0,4]), tg_sigma:torch.Tensor=torch.tensor([1,4]),
-                     plot_dist:bool=False, s2_tensor_image_path:str = ""):
+                     plot_dist:bool=False, s2_tensor_image_path:str = "", allow_doubles=True):
     """
     Prepare dataset for nn regression from weiss reflectances / lai dataset.
     """
     max_im_size = 256
-    bands = torch.tensor([1,2,4,5,6,7,8,9])
+    bands = torch.tensor([1, 2, 4, 5, 6, 7, 8, 9])
     image_tensor = torch.load(s2_tensor_image_path)
     max_im_size = min(max_im_size, image_tensor.size(1), image_tensor.size(2))
     image_tensor = image_tensor[:,:max_im_size,:max_im_size]
     angles = torch.zeros(3, image_tensor.size(1),image_tensor.size(2))
-    angles[1,...] = image_tensor[11,...]
-    angles[0,...] = image_tensor[13,...] # inverted from my networks
-    angles[2,...] = image_tensor[12,...] - image_tensor[14, ...]
+    angles[1,...] = image_tensor[11,...] # view_zenith
+    angles[0,...] = image_tensor[13,...] # inverted from my networks # sun_zenith
+    angles[2,...] = image_tensor[12,...] - image_tensor[14, ...] # relative azimuth
     s2_r = image_tensor[bands,...].reshape(len(bands), -1).transpose(1,0)
     s2_a = angles.reshape(3, -1).transpose(1,0)
     with torch.no_grad():
         snap_nn = SnapNN(device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), ver="3A")
         snap_nn.set_weiss_weights()
         snap_lai = snap_nn.forward(torch.cat((s2_r, np.cos(np.deg2rad(s2_a))), 1).to(snap_nn.device)).cpu()
-        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
-        ax.imshow(rgb_render(image_tensor)[0])
-        fig.savefig(save_dir + "/s2_data_image.png")
-        fig, ax = plt.subplots(dpi=150, figsize=(6,6))
-        ax.hist(snap_lai.squeeze().cpu().numpy(), density=True, bins=200)
-        fig.savefig(save_dir + "/s2_data_laid_hist.png")
+        # fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+        # ax.imshow(rgb_render(image_tensor)[0])
+        # fig.savefig(save_dir + "/s2_data_image.png")
+        # fig, ax = plt.subplots(dpi=150, figsize=(6,6))
+        # ax.hist(snap_lai.squeeze().cpu().numpy(), density=True, bins=200)
+        # fig.savefig(save_dir + "/s2_data_lai_hist.png")
 
-    data_s2 = torch.cat((s2_r, np.cos(np.deg2rad(s2_a)), snap_lai), 1)
-    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    data_s2 = torch.cat((s2_r, np.cos(np.deg2rad(s2_a)), snap_lai), 1) # S2 reflectances and LAI produced by SNAP 
+
+    s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
+    s2_a = prosail_vars[:,-3:]
+    lai = prosail_vars[:,6].reshape(-1,1)
     data_weiss = torch.from_numpy(np.concatenate((s2_r, np.cos(np.deg2rad(s2_a)), lai.reshape(-1,1)), 1))
     seed = 4567895683301
     g_cpu = torch.Generator()
@@ -235,7 +305,7 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
     sigma_ref = torch.tensor(3)
     list_params = []
     list_kl = []
-    appox_kl = []
+    approx_kl = []
     # list_kl_true = []
     list_idx_samples = []
     min_sample_nb = n_samples_sub
@@ -256,7 +326,7 @@ def prepare_datasets(n_eval:int=5000, n_samples_sub:int=5000, save_dir:str="",
             idx_samples = swap_sampling_truncated_gaussians(data_train[:,-1], mu.reshape(1,1),
                                                             sigma.reshape(1,1),
                                                             n_samples=n_samples_sub,
-                                                            allow_doubles=False)
+                                                            allow_doubles=allow_doubles)
             h, p = np.histogram(data_train[idx_samples,-1].squeeze(), bins=200,
                                 range=[0,14], density=True)
             cum_hist = np.cumsum(h) * np.diff(p)[0]
@@ -347,38 +417,38 @@ def get_loaders(data:torch.Tensor, seed:int=86294692001, valid_ratio:float=0.1, 
     return train_loader, valid_loader
 
 
-def get_silvia_validation_metrics(res_dir=None):
-    model_lai = SnapNN(ver="3B",variable="lai")
-    model_lai.set_weiss_weights()
-    model_ccc = SnapNN(ver="3B",variable="cab")
-    model_ccc.set_weiss_weights()
-    data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
-    filename = "2B_20180516_FRM_Veg_Barrax_20180605"
-    # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
+# def get_silvia_validation_metrics(res_dir=None):
+#     model_lai = SnapNN(ver="3B",variable="lai")
+#     model_lai.set_weiss_weights()
+#     model_ccc = SnapNN(ver="3B",variable="cab")
+#     model_ccc.set_weiss_weights()
+#     data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/silvia_validation"
+#     filename = "2B_20180516_FRM_Veg_Barrax_20180605"
+#     # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
 
-    gdf_lai, s2_r_image, s2_a, xcoords, ycoords = load_validation_data(data_dir, filename, variable="lai")
-    crs = gdf_lai.crs
-    s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
-    s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
-    s2_data = torch.concat((s2_r, s2_a), 0)
-    with torch.no_grad():
-        lai_pred = model_lai.forward(s2_data, spatial_mode=True)
-        ccc_pred = model_ccc.forward(s2_data, spatial_mode=True)
-    tensor = lai_pred
-    resolution = 10
-    file_path = res_dir + f"/{filename}_SNAP_LAI.tif"
-    tensor_to_raster(tensor, file_path,
-                     crs=crs,
-                     resolution=resolution,
-                     dtype=np.float32,
-                     bounds=None,
-                     xcoords=xcoords,
-                     ycoords=ycoords,
-                     nodata= -10000,
-                     hw = 0, 
-                     half_res_coords=True)
-    silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=res_dir, s2_r=s2_r_image)
-    return
+#     gdf_lai, s2_r_image, s2_a, xcoords, ycoords = load_validation_data(data_dir, filename, variable="lai")
+#     crs = gdf_lai.crs
+#     s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1,2,3,4,5,7,8,9]), ...].float()
+#     s2_a = torch.cos(torch.deg2rad(torch.from_numpy(s2_a).float()))
+#     s2_data = torch.concat((s2_r, s2_a), 0)
+#     with torch.no_grad():
+#         lai_pred = model_lai.forward(s2_data, spatial_mode=True)
+#         ccc_pred = model_ccc.forward(s2_data, spatial_mode=True)
+#     tensor = lai_pred
+#     resolution = 10
+#     file_path = res_dir + f"/{filename}_SNAP_LAI.tif"
+#     tensor_to_raster(tensor, file_path,
+#                      crs=crs,
+#                      resolution=resolution,
+#                      dtype=np.float32,
+#                      bounds=None,
+#                      xcoords=xcoords,
+#                      ycoords=ycoords,
+#                      nodata= -10000,
+#                      hw = 0, 
+#                      half_res_coords=True)
+#     silvia_validation_plots(lai_pred, ccc_pred, data_dir, filename, res_dir=res_dir, s2_r=s2_r_image)
+#     return
 
 
 def get_model_metrics(test_data, model, all_valid_losses=[]):
@@ -428,7 +498,7 @@ def get_n_model_metrics(train_loader, valid_loader, test_loader_list:List|None=N
 
 def get_pixel_log_likelihood_with_weiss(s2_r, lai, n_components=128, max_iter=500):
     from sklearn.mixture import GaussianMixture
-    s2_r_ref, _, lai_ref = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    s2_r_ref, _, lai_ref = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
     s2_ref_mean = np.mean(s2_r_ref, 0)
     s2_ref_std = np.std(s2_r_ref, 0)
     lai_mean = np.mean(lai)
@@ -446,7 +516,7 @@ def get_boxplot_symlog_width(positions:np.ndarray, threshold:float=0.01, linear_
     return symlog_width
 
 def weiss_dataset_lai_vs_ll(res_dir):
-    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
+    s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
     data_weiss = torch.from_numpy(np.concatenate((s2_r, np.cos(np.deg2rad(s2_a)), lai.reshape(-1,1)), 1))
     train_loader, valid_loader = get_loaders(data_weiss, seed=86294692001, valid_ratio=0.1,
                                 batch_size=256)
@@ -708,25 +778,25 @@ def main():
     compute_metrics = True
     save_dir = parser.data_dir
     res_dir = parser.results_dir
-    belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/"
-    list_belsar_filename = ["2A_20180508_both_BelSAR_agriculture_database",
-                            "2A_20180518_both_BelSAR_agriculture_database",
-                            "2A_20180528_both_BelSAR_agriculture_database",
-                            "2A_20180620_both_BelSAR_agriculture_database",
-                            "2A_20180627_both_BelSAR_agriculture_database",
-                            "2B_20180715_both_BelSAR_agriculture_database",
-                            "2B_20180722_both_BelSAR_agriculture_database",
-                            "2A_20180727_both_BelSAR_agriculture_database",
-                            "2B_20180804_both_BelSAR_agriculture_database"]
-    get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename)
+    # belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/"
+    # list_belsar_filename = ["2A_20180508_both_BelSAR_agriculture_database",
+    #                         "2A_20180518_both_BelSAR_agriculture_database",
+    #                         "2A_20180528_both_BelSAR_agriculture_database",
+    #                         "2A_20180620_both_BelSAR_agriculture_database",
+    #                         "2A_20180627_both_BelSAR_agriculture_database",
+    #                         "2B_20180715_both_BelSAR_agriculture_database",
+    #                         "2B_20180722_both_BelSAR_agriculture_database",
+    #                         "2A_20180727_both_BelSAR_agriculture_database",
+    #                         "2B_20180804_both_BelSAR_agriculture_database"]
+    # get_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename)
     # belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
-    metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP")
-    metrics_inter = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP",method='interpolate')
-    fig, ax = plot_belsar_metrics(metrics)
-    fig.savefig(res_dir + "/snap_belsar_lai_pred.png", transparent=True)
-    fig, ax = plot_belsar_metrics(metrics_inter)
-    fig.savefig(res_dir + "/snap_belsar_lai_pred_interpolated.png", transparent=True)
-    get_silvia_validation_metrics(res_dir = res_dir)
+    # metrics = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP")
+    # metrics_inter = compute_metrics_at_date(belsar_dir=belsar_dir, res_dir=res_dir, file_suffix="_SNAP", method='interpolate')
+    # fig, ax = plot_belsar_metrics(metrics)
+    # fig.savefig(res_dir + "/snap_belsar_lai_pred.png", transparent=True)
+    # fig, ax = plot_belsar_metrics(metrics_inter)
+    # fig.savefig(res_dir + "/snap_belsar_lai_pred_interpolated.png", transparent=True)
+    # get_silvia_validation_metrics(res_dir = res_dir)
     
     # weiss_dataset_lai_vs_ll(res_dir)
     lr = parser.lr

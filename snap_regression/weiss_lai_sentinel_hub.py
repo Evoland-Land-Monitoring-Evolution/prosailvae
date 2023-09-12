@@ -2,8 +2,8 @@ from math import pi
 import torch
 from utils.utils import torch_select_unsqueeze
 
-def get_layer_1_neuron_weights(ver="2.1"):
-    if ver =="2.1":
+def get_layer_1_neuron_weights(ver="2"):
+    if ver =="2":
         w1 = torch.tensor([- 0.023406878966470, + 0.921655164636366, + 0.135576544080099, - 1.938331472397950, - 3.342495816122680, + 0.902277648009576,
                                 + 0.205363538258614, - 0.040607844721716, - 0.083196409727092, + 0.260029270773809, + 0.284761567218845])
         w2 = torch.tensor([- 0.132555480856684, - 0.139574837333540, - 1.014606016898920, - 1.330890038649270, + 0.031730624503341, - 1.433583541317050,
@@ -40,8 +40,8 @@ def get_layer_1_neuron_weights(ver="2.1"):
         raise NotImplementedError
     return w1, w2, w3, w4, w5
 
-def get_layer_1_neuron_biases(ver="2.1"):
-    if ver =="2.1":
+def get_layer_1_neuron_biases(ver="2"):
+    if ver =="2":
         b1 = torch.tensor(4.96238030555279)
         b2 = torch.tensor(1.416008443981500)
         b3 = torch.tensor(1.075897047213310)
@@ -63,8 +63,8 @@ def get_layer_1_neuron_biases(ver="2.1"):
         raise NotImplementedError
     return b1, b2, b3, b4, b5
 
-def get_layer_2_bias(ver="2.1"):
-    if ver =="2.1":
+def get_layer_2_bias(ver="2"):
+    if ver =="2":
         bl2 = torch.tensor(1.096963107077220)
     elif ver =="3A":
         bl2 = torch.tensor(-0.2889370017570876)
@@ -74,8 +74,8 @@ def get_layer_2_bias(ver="2.1"):
         raise NotImplementedError
     return bl2
 
-def get_layer_2_weights(ver="2.1"):
-    if ver =="2.1":
+def get_layer_2_weights(ver="2"):
+    if ver =="2":
         wl2 = torch.tensor([- 1.500135489728730, - 0.096283269121503, - 0.194935930577094, - 0.352305895755591, + 0.075107415847473,])
     elif ver =="3A":
         wl2 = torch.tensor([0.03766013804422397, -0.0006743151224540634, -0.000537335098594741, 0.6734767487882749, 0.06266448073894361])
@@ -85,8 +85,8 @@ def get_layer_2_weights(ver="2.1"):
         raise NotImplementedError
     return wl2
 
-def get_norm_factors(ver="2.1"):
-    if ver =="2.1":
+def get_norm_factors(ver="2"):
+    if ver =="2":
         norm_factors = {"min_sample_B03" : 0, "max_sample_B03" : 0.253061520471542,
                         "min_sample_B04" : 0, "max_sample_B04" : 0.290393577911328,
                         "min_sample_B05" : 0, "max_sample_B05" : 0.305398915248555,
@@ -127,7 +127,7 @@ def get_norm_factors(ver="2.1"):
     return norm_factors
 
 def manage_extreme_values(lai, ver=2.1):
-    if ver =="2.1":
+    if ver =="2":
         return lai
     elif ver =="3A" or ver == "3B":
         lai[torch.logical_and(lai < 0, lai >-0.2)] = 0
@@ -137,7 +137,7 @@ def manage_extreme_values(lai, ver=2.1):
         raise NotImplementedError
 
 
-def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2.1", lai_disp_norm=False):
+def weiss_lai(s2_r, s2_a, band_dim=1, bands_idx=None, ver="2", lai_disp_norm=False):
     if bands_idx is None:
         B03 = s2_r.select(band_dim, 1).unsqueeze(band_dim)
         B04 = s2_r.select(band_dim, 2).unsqueeze(band_dim)
@@ -351,7 +351,7 @@ def weiss_regression():
         return s2_r, s2_a, lai
     s2_r, s2_a, lai = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/")
     bands_idx = {'B03':0, 'B04':1, 'B05':2, 'B06':3, 'B07':4, 'B8A':5, 'B11':6, 'B12':7}
-    lai_pred = weiss_lai(torch.from_numpy(s2_r), torch.from_numpy(s2_a), band_dim=1, bands_idx=bands_idx, ver="2.1", lai_disp_norm=False)
+    lai_pred = weiss_lai(torch.from_numpy(s2_r), torch.from_numpy(s2_a), band_dim=1, bands_idx=bands_idx, ver="2", lai_disp_norm=False)
     import matplotlib.pyplot as plt 
     fig, ax = plt.subplots()
     ax.scatter(lai, lai_pred, s=0.5)
@@ -381,7 +381,7 @@ def validate_sentinel_hub_lai():
     s2_a[0,...] = data[12,...]
     s2_a[1,...] = data[10,...]
     s2_a[2,...] = (data[13,...] - data[11,...])
-    lai_pred = weiss_lai(s2_r, s2_a, band_dim=0, bands_idx=None, ver="2.1", lai_disp_norm=True)
+    lai_pred = weiss_lai(s2_r, s2_a, band_dim=0, bands_idx=None, ver="2", lai_disp_norm=True)
     
     import matplotlib.pyplot as plt
     from prosail_plots import plot_patches

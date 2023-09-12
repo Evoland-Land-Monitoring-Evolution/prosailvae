@@ -181,7 +181,7 @@ class TruncatedNormalLatent(LatentSpace):
         """
         sigma = params[:, :, 1].squeeze()
         mu = params[:, :, 0].squeeze()
-        if len(lat_idx.size()) > 0:
+        if lat_idx.size(0) > 0:
             sigma = sigma[:, lat_idx].unsqueeze(1)
             mu = mu[:, lat_idx].unsqueeze(1)
         p_tn_dist = TruncatedNormal(loc=mu, scale=sigma, low=torch.zeros_like(mu), high=torch.ones_like(mu))

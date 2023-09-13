@@ -63,13 +63,35 @@ class SamplingProsailVarsDist:
     cab   :VariableDistribution = VariableDistribution(low=20.0,   high=90.0,  loc=45.0,  scale=30.0,  C_lai_min=45,     C_lai_max=90,    law="gaussian", lai_conv=10)
     car   :VariableDistribution = VariableDistribution(low=5,      high=23,    loc=11,    scale=5,     C_lai_min=5,      C_lai_max=23,    law="gaussian", lai_conv=10)
     cbrown:VariableDistribution = VariableDistribution(low=0,      high=2,     loc=0.0,   scale=0.3,   C_lai_min=0,      C_lai_max=0.2,   law="gaussian", lai_conv=10)
-    cw    :VariableDistribution = VariableDistribution(low=0.0075, high=0.075, loc=0.025, scale=0.02,  C_lai_min=0.0075, C_lai_max=0.075, law="gaussian", lai_conv=10)
+    # cw    :VariableDistribution = VariableDistribution(low=0.0075, high=0.075, loc=0.025, scale=0.02,  C_lai_min=0.0075, C_lai_max=0.075, law="gaussian", lai_conv=10)
+    cw    :VariableDistribution = VariableDistribution(low=0.0075, high=0.075, loc=0.025, scale=0.02,  C_lai_min=0.017,  C_lai_max=0.055, law="gaussian", lai_conv=10)
     cm    :VariableDistribution = VariableDistribution(low=0.003,  high=0.011, loc=0.005, scale=0.005, C_lai_min=0.003,  C_lai_max=0.011, law="gaussian", lai_conv=10)
     lai   :VariableDistribution = VariableDistribution(low=0,      high=15,    loc=2,     scale=3,     C_lai_min=None,   C_lai_max=None,  law="gaussian", lai_conv=None)
     lidfa :VariableDistribution = VariableDistribution(low=30.0,   high=80.0,  loc=60,    scale=30,    C_lai_min=55,     C_lai_max=65,    law="gaussian", lai_conv=10)
     hspot :VariableDistribution = VariableDistribution(low=0.1,    high=0.5,   loc=0.2,   scale=0.5,   C_lai_min=0.1,    C_lai_max=0.5,   law="gaussian", lai_conv=1000)
     psoil :VariableDistribution = VariableDistribution(low=0,      high=1,     loc=0.5,   scale=0.5,   C_lai_min=0,      C_lai_max=1,     law="uniform",  lai_conv=10)
     rsoil :VariableDistribution = VariableDistribution(low=0.5,    high=3.5,   loc=1.2,   scale=2,     C_lai_min=0.5,    C_lai_max=1.2,   law="uniform",  lai_conv=10)
+    def asdict(self):
+        return asdict(self)
+
+@dataclass#(frozen=True)
+class SamplingProsailVarsDistV2:
+    """Values from [AD7]VALSE2-TN-012-CCRS-LAI-v2.0.pdf and
+    [AD10]S2PAD-VEGA-ATBD-0003-2_1_L2B_ATBD
+        Each tuple is gives the range (min, high) for each variable.
+        """
+    N     :VariableDistribution = VariableDistribution(low=1.2,    high=2.2,   loc=1.5,   scale=0.3,   C_lai_min=1.3,    C_lai_max=1.8,   law="gaussian", lai_conv=10)
+    cab   :VariableDistribution = VariableDistribution(low=20.0,   high=90.0,  loc=45.0,  scale=30.0,  C_lai_min=45,     C_lai_max=90,    law="gaussian", lai_conv=10)
+    car   :VariableDistribution = VariableDistribution(low=5,      high=23,    loc=11,    scale=5,     C_lai_min=5,      C_lai_max=23,    law="gaussian", lai_conv=None)
+    cbrown:VariableDistribution = VariableDistribution(low=0,      high=2,     loc=0.0,   scale=0.3,   C_lai_min=0,      C_lai_max=0.2,   law="gaussian", lai_conv=10)
+    # cw    :VariableDistribution = VariableDistribution(low=0.0075, high=0.075, loc=0.025, scale=0.02,  C_lai_min=0.0075, C_lai_max=0.075, law="gaussian", lai_conv=10)
+    cw    :VariableDistribution = VariableDistribution(low=0.0075, high=0.075, loc=0.025, scale=0.02,  C_lai_min=0.015,  C_lai_max=0.055, law="gaussian", lai_conv=10)
+    cm    :VariableDistribution = VariableDistribution(low=0.003,  high=0.011, loc=0.005, scale=0.005, C_lai_min=0.003,  C_lai_max=0.011, law="gaussian", lai_conv=10)
+    lai   :VariableDistribution = VariableDistribution(low=0,      high=15,    loc=2,     scale=3,     C_lai_min=None,   C_lai_max=None,  law="gaussian", lai_conv=None)
+    lidfa :VariableDistribution = VariableDistribution(low=30.0,   high=80.0,  loc=60,    scale=30,    C_lai_min=55,     C_lai_max=65,    law="gaussian", lai_conv=10)
+    hspot :VariableDistribution = VariableDistribution(low=0.1,    high=0.5,   loc=0.2,   scale=0.5,   C_lai_min=0.1,    C_lai_max=0.5,   law="gaussian", lai_conv=None)
+    psoil :VariableDistribution = VariableDistribution(low=0.0,    high=1.0,   loc=0.5,   scale=0.5,   C_lai_min=0,      C_lai_max=1,     law="uniform",  lai_conv=None)
+    rsoil :VariableDistribution = VariableDistribution(low=0.5,    high=3.5,   loc=1.2,   scale=2,     C_lai_min=0.5,    C_lai_max=1.2,   law="gaussian", lai_conv=10)
     def asdict(self):
         return asdict(self)
 
@@ -168,6 +190,8 @@ def get_prosail_var_dist(which="legacy"):
         return ProsailVarsDistLegacy()
     if which == "new":
         return SamplingProsailVarsDist()
+    if which == "new_v2":
+        return SamplingProsailVarsDistV2()
     else:
         raise ValueError
 

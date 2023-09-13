@@ -27,16 +27,22 @@ def get_parser():
     Creates a new argument parser.
     """
     parser = argparse.ArgumentParser(description='Parser for data generation')
+    parser.add_argument("-d", dest="data_dir",
+                        help="path to data directory",
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data")
     
     parser.add_argument("-r", dest="res_dir",
                         help="path to results directory",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results")
+    
     parser.add_argument('-p', dest="last_prosail",
                         help="toggle last prosail version",
                         type=bool, default=False)
+    
     parser.add_argument('-sd', dest="sim_data",
                         help="toggle last prosail version",
                         type=bool, default=False)
+    
     parser.add_argument('-l', dest="lai_mode",
                         help="toggle lai instead of cab",
                         type=bool, default=False)
@@ -147,7 +153,8 @@ def main():
         epochs=2000
         n_models=10
         file_prefix = "train_"
-        data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_old_corr/"
+        # data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_old_corr/"
+    data_dir = parser.data_dir
     belsar_pred_dir = parser.res_dir
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)

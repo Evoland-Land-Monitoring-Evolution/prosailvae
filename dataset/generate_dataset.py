@@ -568,8 +568,8 @@ if  __name__ == "__main__":
             # "-wd", "True",
             #   "-w", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data_corr_v1/",
-              "-dt", "new",
-              "-m", "v1"]
+              "-dt", "new_v2",
+              "-m", "v2"]
         parser = get_data_generation_parser().parse_args(args)
     else:
         parser = get_data_generation_parser().parse_args()

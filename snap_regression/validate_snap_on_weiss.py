@@ -221,7 +221,14 @@ def main():
                                                 get_reconstruction_error=False)
                 rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="ccc")
                 results_dict[variable].append(rmse['Campaign'][f'ccc_rmse_all'].values[0])
-        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))
+                res_df_filename = os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv')
+                if not os.path.isfile(res_df_filename):
+                    pd.DataFrame({variable:rmse['Campaign'][f'ccc_rmse_all'].values[0]}).to_csv(res_df_filename, 
+                                                                                                header=[variable], index=False)
+                else: # else it exists so append without writing the header
+                    pd.DataFrame({variable:rmse['Campaign'][f'ccc_rmse_all'].values[0]}).to_csv(res_df_filename, mode='a', 
+                                                                                                index=False, header=False)
+        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse_all.csv'))
     else:
         for variable in ["lai"]:
             results_dict[variable] = []
@@ -258,7 +265,14 @@ def main():
                                                               frm4veg_lai="lai", get_reconstruction_error=False)
                 rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
                 results_dict[variable].append(rmse['Campaign'][f'lai_rmse_all'].values[0])
-        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv'))
+                res_df_filename = os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv')
+                if not os.path.isfile(res_df_filename):
+                    pd.DataFrame({variable:rmse['Campaign'][f'lai_rmse_all'].values[0]}).to_csv(res_df_filename, 
+                                                                                                header=[variable], index=False)
+                else: # else it exists so append without writing the header
+                    pd.DataFrame({variable:rmse['Campaign'][f'lai_rmse_all'].values[0]}).to_csv(res_df_filename, mode='a', 
+                                                                                                index=False, header=False)
+        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse_all.csv'))
 
 if __name__ =="__main__":
     main()

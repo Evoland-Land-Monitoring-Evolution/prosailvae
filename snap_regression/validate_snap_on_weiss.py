@@ -147,7 +147,7 @@ def main():
         epochs=2000
         n_models=10
         file_prefix = "train_"
-        data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands"#_new_dist/"
+        data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_old_corr/"
     belsar_pred_dir = parser.res_dir
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)

@@ -223,10 +223,10 @@ def main():
                 results_dict[variable].append(rmse['Campaign'][f'ccc_rmse_all'].values[0])
                 res_df_filename = os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv')
                 if not os.path.isfile(res_df_filename):
-                    pd.DataFrame({variable:rmse['Campaign'][f'ccc_rmse_all'].values[0]}).to_csv(res_df_filename, 
+                    pd.DataFrame({variable:[rmse['Campaign'][f'ccc_rmse_all'].values[0]]}).to_csv(res_df_filename, 
                                                                                                 header=[variable], index=False)
                 else: # else it exists so append without writing the header
-                    pd.DataFrame({variable:rmse['Campaign'][f'ccc_rmse_all'].values[0]}).to_csv(res_df_filename, mode='a', 
+                    pd.DataFrame({variable:[rmse['Campaign'][f'ccc_rmse_all'].values[0]]}).to_csv(res_df_filename, mode='a', 
                                                                                                 index=False, header=False)
         pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse_all.csv'))
     else:

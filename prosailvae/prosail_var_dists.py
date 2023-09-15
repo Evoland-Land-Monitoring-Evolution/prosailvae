@@ -97,7 +97,7 @@ class SamplingProsailVarsDistV2:
 
 
 @dataclass#(frozen=True)
-class SamplingProsailVarsDistV2:
+class SamplingProsailVarsDistV3:
     """Values from [AD7]VALSE2-TN-012-CCRS-LAI-v2.0.pdf and
     [AD10]S2PAD-VEGA-ATBD-0003-2_1_L2B_ATBD
         Each tuple is gives the range (min, high) for each variable.
@@ -214,6 +214,8 @@ def get_prosail_var_dist(which="legacy"):
         return SamplingProsailVarsDist()
     if which == "new_v2":
         return SamplingProsailVarsDistV2()
+    if which == "new_v3":
+        return SamplingProsailVarsDistV3()
     else:
         raise ValueError
 

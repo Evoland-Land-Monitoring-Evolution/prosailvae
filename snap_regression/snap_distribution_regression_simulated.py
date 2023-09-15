@@ -80,7 +80,7 @@ def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000,
                                                 law="gaussian")
             save_dataset(save_dir, f"train_mu_{mu}_sigma_{sigma}_", nb_simus=n_samples_sub, 
                          rsr_dir=rsr_dir, weiss_mode=True, 
-                         prosail_var_dist_type="new", lai_var_dist=lai_var_dist)
+                         prosail_var_dist_type="new_v3", lai_var_dist=lai_var_dist, lai_thresh=10)
 
 def get_weiss_simloader(data_dir, file_prefix, valid_ratio=0.05, batch_size=1024, shuffle=True):
     prosail_s2_sim = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")

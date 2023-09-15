@@ -32,7 +32,7 @@ def get_parser():
     parser = argparse.ArgumentParser(description='Parser for data generation')
 
     parser.add_argument("-d", dest="data_dir",
-                        help="path to data direcotry",
+                        help="path to data directory",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
     
     parser.add_argument("-r", dest="results_dir",

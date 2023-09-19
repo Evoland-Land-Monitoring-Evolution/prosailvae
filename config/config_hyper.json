@@ -40,7 +40,7 @@
     ],
     "weiss_bands": false,
     "init_model": false,
-    "supervised_kl": false,
+    "supervised_kl": true,
     "supervised_config_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/2/config.json",
     "supervised_weight_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/2/prosailvae_weights.tar",
     "n_init_models": 10,

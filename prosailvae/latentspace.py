@@ -191,7 +191,7 @@ class TruncatedNormalLatent(LatentSpace):
             assert params is not None
             sigma2 = params2[:, :, 1].squeeze()
             mu2 = params2[:, :, 0].squeeze()
-            if len(lat_idx.size()) > 0:
+            if lat_idx.size(0) > 0:
                 sigma2 = sigma2[:, lat_idx].unsqueeze(1)
                 mu2 = mu2[:, lat_idx].unsqueeze(1)
             q_tn_dist = TruncatedNormal(loc=mu2, scale=sigma2, low=torch.zeros_like(mu2), high=torch.ones_like(mu2))

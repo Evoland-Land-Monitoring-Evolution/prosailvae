@@ -559,11 +559,11 @@ class SimVAE(nn.Module):
                 n_batches += batch[0].size(0)
                 if not self.supervised:
                     loss_sum, train_loss_dict = self.unsupervised_batch_loss(batch, train_loss_dict,
-                                                               n_samples=n_samples,
-                                                               len_loader=len_loader,)
+                                                                             n_samples=n_samples,
+                                                                             len_loader=len_loader,)
                 else:
                     loss_sum, train_loss_dict = self.supervised_batch_loss(batch, train_loss_dict,
-                                                            len_loader=len_loader)
+                                                                           len_loader=len_loader)
             except Exception as exc:
                 self.logger.error("Couldn't compute loss at batch %d!", batch_idx)
                 self.logger.error("s2_r : %d NaN", torch.isnan(batch[0]).sum().item())

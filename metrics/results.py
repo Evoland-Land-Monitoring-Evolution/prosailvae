@@ -391,6 +391,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
     all_cab = []
     all_cw = []
     all_vars = []
+    all_vars_hyper = []
+    all_std_hyper = []
     all_weiss_lai = []
     all_weiss_cab = []
     all_weiss_cw = []
@@ -399,18 +401,29 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
     cyclical_ref_lai = []
     cyclical_lai = []
     cyclical_lai_std = []
+    hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
+
     with torch.no_grad():
         for i, batch in enumerate(loader):
             (rec_image, sim_image, cropped_s2_r, cropped_s2_a,
                 std_image) = get_encoded_image_from_batch(batch, PROSAIL_VAE, patch_size=32,
                                                             bands=torch.arange(10),
                                                             mode=rec_mode, no_rec=False)
+            if PROSAIL_VAE.hyper_prior is not None:
+                (_, sim_image_hyper, _, _,
+                std_image_hyper) = get_encoded_image_from_batch(batch, PROSAIL_VAE.hyper_prior, patch_size=32,
+                                                            bands=torch.arange(10),
+                                                            mode=rec_mode, no_rec=True)
+                sim_image_hyper = crop_s2_input(sim_image_hyper, hw)
+                std_image_hyper = crop_s2_input(std_image_hyper, hw)
+                all_vars_hyper.append(sim_image_hyper.reshape(11,-1))
+                all_std_hyper.append(std_image_hyper.reshape(11,-1))
             (_, cyclical_sim_image, cyclical_cropped_s2_r, cyclical_cropped_s2_a,
                 cyclical_std_image) = get_encoded_image_from_batch((rec_image.unsqueeze(0), cropped_s2_a), 
                                                                         PROSAIL_VAE, patch_size=32,
                                                                         bands=torch.arange(10),
                                                                         mode=rec_mode, no_rec=True)
-            hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
+            
             cyclical_ref_lai.append(crop_s2_input(sim_image, hw)[6,...].reshape(-1))
             cyclical_lai.append(cyclical_sim_image[6,...].reshape(-1))
             cyclical_lai_std.append(cyclical_std_image[6,...].reshape(-1))
@@ -434,15 +447,21 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
             all_cab.append(sim_image[1,...].reshape(-1))
             all_cw.append(sim_image[4,...].reshape(-1))
             all_vars.append(sim_image.reshape(11,-1))
-            pair_plot(sim_image.reshape(11,-1).squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
-                      res_dir=patch_plot_dir, filename='sim_prosail_pair_plot.png')
+            if not socket.gethostname()=='CELL200973':
+                pair_plot(sim_image.reshape(11,-1).squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
+                        res_dir=patch_plot_dir, filename='sim_prosail_pair_plot.png')
             all_weiss_lai.append(weiss_lai.reshape(-1))
             all_weiss_cab.append(weiss_cab.reshape(-1))
             all_weiss_cw.append(weiss_cw.reshape(-1))
             all_s2_r.append(cropped_s2_r.reshape(10,-1))
             all_std.append(std_image.reshape(11,-1))
+
             if i == max_test_patch-1:
                 break
+
+        if PROSAIL_VAE.hyper_prior is not None:
+            all_vars_hyper = torch.cat(all_vars_hyper, axis=1)
+            all_std_hyper = torch.cat(all_std_hyper, axis=1)
         all_rec = torch.cat(all_rec, axis=1)
         all_lai = torch.cat(all_lai)
         all_cab = torch.cat(all_cab)
@@ -459,15 +478,17 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
         cyclical_ref_lai = torch.cat(cyclical_ref_lai)
         cyclical_lai = torch.cat(cyclical_lai)
         cyclical_lai_std = torch.cat(cyclical_lai_std)
+
+        PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
+                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
+                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_std, all_vars_hyper=all_vars_hyper, 
+                                      all_std_hyper=all_std_hyper,
+                                    #   gdf_lai, lai_validation_pred, snap_validation_lai
+                                      var_bounds=PROSAIL_VAE.sim_space.var_bounds)
         article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
-                                      var_bounds_type=PROSAIL_VAE.sim_space.var_bounds)
-        PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
-                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
-                                    #   gdf_lai, lai_validation_pred, snap_validation_lai
-                                      var_bounds_type=PROSAIL_VAE.sim_space.var_bounds)
+                                      var_bounds=PROSAIL_VAE.sim_space.var_bounds)
 
     logger.info("Metrics computed.")
     rec_var = get_rec_var(PROSAIL_VAE, loader, max_batch=10, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10)

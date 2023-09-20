@@ -36,7 +36,7 @@ def subsample_spectra(tensor, R_down=1, axis=0, method="interp"):
             raise NotImplementedError
     return tensor
 
-PROSAILVARS = ["N", "cab", "car", "cbrown", "caw", "cm",
+PROSAILVARS = ["N", "cab", "car", "cbrown", "cw", "cm",
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
 BANDS = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
 

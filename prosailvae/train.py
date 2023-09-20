@@ -354,6 +354,7 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, l
         all_train_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
         all_valid_loss_df = pd.DataFrame(data={"loss_sum":10000, "epoch":0}, index=[0])
         info_df = pd.DataFrame(data={"lr":10000, "epoch":0}, index=[0])
+        prosail_vae.save_ae(0, optimizer, 0, os.path.join(res_dir, "prosailvae_weights.tar"))
     tend = time.time()
     logger.info('Total training time: {:.1f} seconds'.format(tend-tbeg))
     return all_train_loss_df, all_valid_loss_df, info_df, all_cyclical_rmse
@@ -364,7 +365,7 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_hyper.json",
+              "-c", "config_hyper_3.json",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
@@ -673,7 +674,7 @@ def main():
                                                                 model_name="pvae",
                                                                 method="simple_interpolate",
                                                                 mode="sim_tg_mean", 
-                                                                remove_files=True)
+                                                                remove_files=True, plot_results=parser.plot_results)
         
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[1.0]})
         if not params['supervised']:

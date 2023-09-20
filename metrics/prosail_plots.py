@@ -7,6 +7,7 @@ Created on Thu Nov 17 11:46:20 2022
 """
 
 import matplotlib.pyplot as plt
+import socket
 
 # plt.rcParams.update({
 #   "text.usetex": True,
@@ -282,8 +283,8 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
         for j in range(len(PROSAILVARS)):
             # v2 = ax2[j].violinplot(sim_samples[j], points=100, positions=[ind2[j]+width],
             #        showmeans=True, showextrema=True, showmedians=False, vert=False)
-            min_b = prosail_VAE.sim_space.var_bounds.asdict()[PROSAILVARS[j]]["min"]
-            max_b = prosail_VAE.sim_space.var_bounds.asdict()[PROSAILVARS[j]]["max"]
+            min_b = prosail_VAE.sim_space.var_bounds.asdict()[PROSAILVARS[j]]["low"]
+            max_b = prosail_VAE.sim_space.var_bounds.asdict()[PROSAILVARS[j]]["high"]
             dist_max = sim_pdfs.squeeze()[j,:].detach().cpu().max().numpy()
             dist_argmax =  sim_pdfs.squeeze()[j,:].detach().cpu().argmax().numpy()
             ax2[j].set_xlim(min_b, max_b)
@@ -476,8 +477,8 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist, var_bounds_type="legacy"):
     for j in range(len(PROSAILVARS)):
         v2 = ax2[j].violinplot(sim_dist[:,j].squeeze().detach().cpu(), points=100, positions=[0],
                 showmeans=True, showextrema=True, showmedians=False, vert=False)
-        min_b = var_bounds.asdict()[PROSAILVARS[j]]["min"]
-        max_b = var_bounds.asdict()[PROSAILVARS[j]]["max"]
+        min_b = var_bounds.asdict()[PROSAILVARS[j]]["low"]
+        max_b = var_bounds.asdict()[PROSAILVARS[j]]["high"]
         
         ax2[j].set_xlim(min_b, max_b)
 
@@ -526,14 +527,14 @@ def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist, var_bounds_type="legacy"):
         ax.scatter(sim_dist[:,i].detach().cpu(),tgt_dist[:,i].detach().cpu(), marker='.',s=2)
         ax.set_xlabel(f'{PROSAILVARS[i]} predicted')
         ax.set_ylabel(f'{PROSAILVARS[i]} reference')
-        ax.set_xlim(var_bounds.asdict()[PROSAILVARS[i]]["min"],
-                    var_bounds.asdict()[PROSAILVARS[i]]["max"])
-        ax.set_ylim(var_bounds.asdict()[PROSAILVARS[i]]["min"],
-                    var_bounds.asdict()[PROSAILVARS[i]]["max"])
-        ax.plot([var_bounds.asdict()[PROSAILVARS[i]]["min"], 
-                 var_bounds.asdict()[PROSAILVARS[i]]["max"]],
-                [var_bounds.asdict()[PROSAILVARS[i]]["min"], 
-                 var_bounds.asdict()[PROSAILVARS[i]]["max"]],color='black')
+        ax.set_xlim(var_bounds.asdict()[PROSAILVARS[i]]["low"],
+                    var_bounds.asdict()[PROSAILVARS[i]]["high"])
+        ax.set_ylim(var_bounds.asdict()[PROSAILVARS[i]]["low"],
+                    var_bounds.asdict()[PROSAILVARS[i]]["high"])
+        ax.plot([var_bounds.asdict()[PROSAILVARS[i]]["low"], 
+                 var_bounds.asdict()[PROSAILVARS[i]]["high"]],
+                [var_bounds.asdict()[PROSAILVARS[i]]["low"], 
+                 var_bounds.asdict()[PROSAILVARS[i]]["high"]],color='black')
         fig.savefig(res_dir + f'/pred_vs_ref_{PROSAILVARS[i]}.svg')
 
 def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=None, bands_name=None):
@@ -1077,8 +1078,8 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
                                   all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma,
                                 #   gdf_lai, model_patch_pred, snap_patch_pred, 
-                                  max_sigma=1.4, n_sigma=2, var_bounds_type="legacy"):
-    var_bounds = get_prosail_var_bounds(var_bounds_type)
+                                  max_sigma=1.4, n_sigma=2, var_bounds=None):
+    # var_bounds = get_prosail_var_bounds(var_bounds_type)
     article_plot_dir = os.path.join(plot_dir, "article_aggregated_plots")
     os.makedirs(article_plot_dir)
     cyclical_piw = n_sigma * cyclical_lai_sigma
@@ -1143,17 +1144,18 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_ylabel('Cw latent sigma')
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/cw_err_vs_sigma.tex")
-
+    plt.close('all')
     
     for idx, prosail_var in enumerate(PROSAILVARS):
         fig, ax = plt.subplots(tight_layout=True, dpi=150)
         ax.hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
         ax.set_yticks([])
         ax.set_xlabel(prosail_var)
-        ax.set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['min'],
-                    var_bounds.asdict()[PROSAILVARS[idx]]['max'])
+        ax.set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['low'],
+                    var_bounds.asdict()[PROSAILVARS[idx]]['high'])
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_pred_dist.tex")
+    plt.close('all')
 
     fig, ax = plt.subplots(tight_layout=True, dpi=150)
     for idx, prosail_var in enumerate(PROSAILVARS):
@@ -1163,7 +1165,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax.set_xlabel(f"{prosail_var} std")
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_std.tex")
-
+    plt.close('all')
     
     for idx, band in enumerate(BANDS):
         fig, ax = plt.subplots(tight_layout=True, dpi=150)
@@ -1172,7 +1174,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                                 band, f"Reconstructed {band}", hue=None)
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f"{article_plot_dir}/{band}_scatter_true_vs_pred.tex")
-
+    plt.close('all')
 
     for idx, band in enumerate(BANDS):
         fig, ax = plt.subplots(figsize=(2,2), tight_layout=True, dpi=150)
@@ -1191,6 +1193,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax.set_aspect('equal')
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f"{article_plot_dir}/{band}_2dhist_true_vs_pred.tex")
+    plt.close('all')
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
@@ -1281,21 +1284,21 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/all_cwc_scatter_true_vs_pred.tex")
+    plt.close('all')
     
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
-                                  all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma,
+                                  all_cw_rel, cyclical_ref_lai, cyclical_lai, cyclical_lai_sigma, all_vars_hyper, all_std_hyper,
                                 #   gdf_lai, model_patch_pred, snap_patch_pred, 
-                                  max_sigma=1.4, n_sigma=2, var_bounds_type="legacy"):
-    var_bounds = get_prosail_var_bounds(var_bounds_type)
+                                  max_sigma=1.4, n_sigma=2, var_bounds=None):
+    # var_bounds = get_prosail_var_bounds(var_bounds_type)
     cyclical_piw = n_sigma * cyclical_lai_sigma
     cyclical_mpiw = torch.mean(cyclical_piw)
     cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
     estdr = cyclical_lai_abs_error / cyclical_lai_sigma # Error to std ration
     fig, ax = plot_hist_and_cumhist_from_samples(estdr, bins=50)
     ax.set_xlabel("Ratio of LAI error to predicted std.")
-
     cyclical_pic = torch.logical_and(cyclical_ref_lai < cyclical_lai + n_sigma / 2 * cyclical_lai_sigma, 
                          cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma).int().float()
     cyclical_picp = torch.mean(cyclical_pic)
@@ -1310,15 +1313,18 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
                                             "Simulated LAI", "Predicted LAI", hue=None)
     ax.set_title(f"PICP: {cyclical_picp}")
     fig.savefig(f"{plot_dir}/cyclical_lai_scatter.png")
-    pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
-              res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
+
+    if not socket.gethostname()=='CELL200973':
+        pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
+                res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
+    
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)
     ax.set_xlabel('LAI difference (SNAP LAI - predicted LAI)')
     ax.set_ylabel('LAI latent sigma')
     fig.savefig(f"{plot_dir}/lai_err_vs_sigma.png")
-    fig, ax = plt.subplots()
 
+    fig, ax = plt.subplots()
     ax.scatter(all_lai, all_sigma[6,:], s=0.5)
     ax.set_xlabel('Predicted LAI')
     ax.set_ylabel('LAI std')
@@ -1346,6 +1352,38 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_ylabel('Cw latent sigma')
     fig.savefig(f"{plot_dir}/cw_err_vs_sigma.png")
 
+    if len(all_vars_hyper) > 0:
+        n_cols = 4
+        n_rows = 3
+        fig, ax = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, n_rows*4), tight_layout=True, dpi=150)
+        for idx, prosail_var in enumerate(PROSAILVARS):
+            row = idx // n_cols
+            col = idx % n_cols
+            regression_plot(pd.DataFrame({f"mu {prosail_var}": all_vars[idx,...].reshape(-1).cpu(),
+                                          f"mu {prosail_var} IP": all_vars_hyper[idx,...].reshape(-1).cpu()}),
+                                          x=f"mu {prosail_var}",
+                                          y=f"mu {prosail_var} IP",
+                                          fig=fig, ax=ax[row, col],
+                                          hue=None, display_text=False)
+        fig.delaxes(ax[-1, -1])
+        fig.suptitle(f"PROSAIL variables encoder vs prior")
+        fig.savefig(f"{plot_dir}/all_prosail_mu_var_vs_var_hyper.png")
+
+        fig, ax = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, n_rows*4), tight_layout=True, dpi=150)
+        for idx, prosail_var in enumerate(PROSAILVARS):
+            row = idx // n_cols
+            col = idx % n_cols
+            regression_plot(pd.DataFrame({f"std {prosail_var}": all_sigma[idx,...].reshape(-1).cpu(),
+                                          f"std {prosail_var} IP": all_std_hyper[idx,...].reshape(-1).cpu()}),
+                                          x=f"std {prosail_var}",
+                                          y=f"std {prosail_var} IP",
+                                          fig=fig, ax=ax[row, col], 
+                                          hue=None, display_text=False)
+        fig.delaxes(ax[-1, -1])
+        fig.suptitle(f"PROSAIL variables encoder vs prior")
+        fig.savefig(f"{plot_dir}/all_prosail_sigma_var_vs_var_hyper.png")
+
+    plt.close('all')
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
@@ -1355,11 +1393,14 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(prosail_var)
-        ax[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['min'],
-                              var_bounds.asdict()[PROSAILVARS[idx]]['max'])
+        ax[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['low'],
+                              var_bounds.asdict()[PROSAILVARS[idx]]['high'])
+                              
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions")
     fig.savefig(f"{plot_dir}/all_prosail_var_pred_dist.png")
+    plt.close('all')
+
     n_cols = 4
     n_rows = 3
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
@@ -1373,6 +1414,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables sigma")
     fig.savefig(f"{plot_dir}/all_prosail_var_sigma.png")
+    plt.close('all')
     n_cols = 5
     n_rows = 2
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols,n_rows*2), tight_layout=True, dpi=150)
@@ -1390,7 +1432,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].set_xlabel(f"True {band}")
         ax[row, col].set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_bands_scatter_true_vs_pred.png")
-
+    plt.close('all')
     n_cols = 5
     n_rows = 2
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols, n_rows*2), tight_layout=True, dpi=150)
@@ -1411,6 +1453,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].set_xlabel(f"True {band}")
         ax[row, col].set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_bands_2dhist_true_vs_pred.png")
+    plt.close('all')
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
@@ -1424,7 +1467,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_lai_2dhist_true_vs_pred.png")
-
+    plt.close('all')
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     m, b, r2, rmse = regression_metrics(all_weiss_lai.detach().cpu().numpy(), 
                                         all_lai.detach().cpu().numpy())
@@ -1444,7 +1487,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel("SNAP LAI")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_lai_scatter_true_vs_pred.png")
-
+    plt.close('all')
     ccc = all_cab * all_lai
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     m, b, r2, rmse = regression_metrics(all_weiss_cab.detach().cpu().numpy(), 
@@ -1496,7 +1539,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.set_xlabel(f"SNAP CWC")
     ax.set_aspect('equal')
     fig.savefig(f"{plot_dir}/all_cwc_scatter_true_vs_pred.png")
-
+    plt.close('all')
     return
 
 def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
@@ -1596,8 +1639,8 @@ def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_la
         ax[row, col].hist(sim_image[idx,:,:].reshape(-1).cpu(), bins=50, density=True)
         ax[row, col].set_yticks([])
         ax[row, col].set_ylabel(PROSAILVARS[idx])
-        ax[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['min'], 
-                              var_bounds.asdict()[PROSAILVARS[idx]]['max'])
+        ax[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['low'], 
+                              var_bounds.asdict()[PROSAILVARS[idx]]['high'])
     fig.delaxes(ax[-1, -1])
     fig.suptitle(f"PROSAIL variables distributions {info[1]} {info[2]}")
     fig.savefig(f"{plot_dir}/{i}_{info[1]}_{info[2]}_{info[3]}_prosail_var_pred_dist.png")
@@ -1847,7 +1890,7 @@ def plot_belsar_metrics(belsar_metrics, fig=None, ax=None, hue="crop",
 
 def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site", 
                     legend_col=2, xmin=None, xmax=None, error_x=None, 
-                    error_y=None, hue_perfs=False, s=20):
+                    error_y=None, hue_perfs=False, s=20, display_text=True):
     pred = df_metrics[y].values
     ref = df_metrics[x].values
     if fig is None or ax is None:
@@ -1866,8 +1909,8 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
             ref = df_metrics[df_metrics[hue]==elem][x].values
             m, b, r2, rmse = regression_metrics(ref, pred)
             perf_text += "\n {} : \n r2: {:.2f} - RMSE: {:.2f}".format(elem, r2, rmse)
-
-    ax.text(.01, .99, perf_text, ha='left', va='top', transform=ax.transAxes)
+    if display_text:
+        ax.text(.01, .99, perf_text, ha='left', va='top', transform=ax.transAxes)
     line = ax.plot([xmin, xmax], [m_tot * xmin + b_tot, m_tot * xmax + b_tot],'r')
 
     if error_x is not None and error_y is None:
@@ -1882,7 +1925,10 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
         ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
                     yerr=df_metrics[error_y].values, ecolor='k', fmt='o', linestyle='', markersize=0.1, 
                     elinewidth=0.5, zorder=0)
-    g = sns.scatterplot(data=df_metrics, x=x, y=y, hue=hue, ax=ax, s=s, zorder=10)
+    if hue is not None:
+        g = sns.scatterplot(data=df_metrics, x=x, y=y, hue=hue, ax=ax, s=s, zorder=10)
+    else:
+        g = sns.scatterplot(data=df_metrics, x=x, y=y, ax=ax, s=s, zorder=10)
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(xmin, xmax)
     ax.set_aspect('equal', 'box')

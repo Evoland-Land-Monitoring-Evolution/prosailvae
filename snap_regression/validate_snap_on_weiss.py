@@ -41,7 +41,7 @@ def get_parser():
     
     parser.add_argument('-sd', dest="sim_data",
                         help="toggle my simulated data instead of Jordi's",
-                        type=bool, default=True)
+                        type=bool, default=False)
     
     parser.add_argument('-l', dest="lai_mode",
                         help="toggle lai instead of cab",
@@ -210,7 +210,8 @@ def main():
                 train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
                                                                                     batch_size=batch_size, 
                                                                                     prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
-                model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, n_models=10, n_epochs=20, lr=1e-3)
+                model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
+                                         n_models=10, n_epochs=20, lr=1e-3)
                 
                 # model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
                 # model_dict[variable] = model

@@ -29,19 +29,19 @@ def get_parser():
     parser = argparse.ArgumentParser(description='Parser for data generation')
     parser.add_argument("-d", dest="data_dir",
                         help="path to data directory",
-                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v1")
     
     parser.add_argument("-r", dest="res_dir",
                         help="path to results directory",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results")
     
     parser.add_argument('-p', dest="last_prosail",
-                        help="toggle last prosail version",
+                        help="toggle last prosail version to convert Jordi's data",
                         type=bool, default=False)
     
     parser.add_argument('-sd', dest="sim_data",
-                        help="toggle last prosail version",
-                        type=bool, default=False)
+                        help="toggle my simulated data instead of Jordi's",
+                        type=bool, default=True)
     
     parser.add_argument('-l', dest="lai_mode",
                         help="toggle lai instead of cab",
@@ -129,6 +129,23 @@ def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024, s2_r
         valid_loader = None
     return train_loader, valid_loader, loc_bv, scale_bv
 
+def initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, n_models=10, n_epochs=20, lr=1e-3):
+    best_valid_loss = np.inf
+    for i in range(n_models):
+        model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=n_epochs,
+                                                threshold=0.001)
+        _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
+                                                        epochs=n_epochs, lr_scheduler=lr_scheduler,
+                                                        disable_tqdm=True, lr_recompute=n_epochs, 
+                                                        loc_bv=loc_bv, scale_bv=scale_bv, res_dir=None)
+        if min(all_valid_losses) < best_valid_loss:
+            model.save_weights(res_dir)
+            best_valid_loss = min(all_valid_losses)
+    model.load_weights(res_dir)
+    return model
+
 def main():
     if socket.gethostname()=='CELL200973':
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
@@ -141,7 +158,6 @@ def main():
         n_models=2
         parser = get_parser().parse_args()
         file_prefix = ""
-        data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data"
         
     else:
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
@@ -194,7 +210,9 @@ def main():
                 train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
                                                                                     batch_size=batch_size, 
                                                                                     prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
-                model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, n_models=10, n_epochs=20, lr=1e-3)
+                
+                # model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
                 # model_dict[variable] = model
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,

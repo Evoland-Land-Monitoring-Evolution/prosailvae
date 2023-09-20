@@ -276,7 +276,8 @@ class SnapNN(nn.Module):
             all_valid_losses.append(valid_loss.item())
             if valid_loss.item() < best_valid_loss:
                 best_valid_loss = valid_loss.item()
-                self.save_weights(res_dir)
+                if res_dir is not None:
+                    self.save_weights(res_dir)
             all_lr.append(optimizer.param_groups[0]['lr'])
             if lr_scheduler is not None:
                 lr_scheduler.step(valid_loss)
@@ -288,7 +289,8 @@ class SnapNN(nn.Module):
                 lr_scheduler =  torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                             patience=lr_recompute,
                                                             threshold=0.01, threshold_mode='abs')
-        self.load_weights(res_dir)
+        if res_dir is not None:
+            self.load_weights(res_dir)
         return all_train_losses, all_valid_losses, all_lr
 
     def fit(self, loader, optimizer, loc_bv=0, scale_bv=1):

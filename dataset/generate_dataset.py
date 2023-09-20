@@ -25,8 +25,8 @@ from prosailvae.spectral_indices import get_spectral_idx
 import socket
 from prosailvae.prosail_var_dists import VariableDistribution
 
-PROSAIL_VARS = [
-    "N", "cab", "car", "cbrown", "caw", "cm",
+PROSAILVARS = [
+    "N", "cab", "car", "cbrown", "cw", "cm",
     "lai", "lidfa", "hspot", "psoil", "rsoil"
 ]
 def correlate_with_lai(lai, V, V_mean, lai_conv):
@@ -576,9 +576,10 @@ if  __name__ == "__main__":
         args=[
             # "-wd", "True",
             #   "-w", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/new_sim_data_corr_v1/",
-              "-dt", "new_v2",
-              "-m", "v1"]
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2/",
+              "-dt", "new_v3",
+              "-n", "40000",
+              "-m", "v2"]
         parser = get_data_generation_parser().parse_args(args)
     else:
         parser = get_data_generation_parser().parse_args()

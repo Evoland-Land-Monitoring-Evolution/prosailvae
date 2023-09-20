@@ -394,7 +394,7 @@ def down_sample_prosail(params, parser, res_dir, data_dir:str, params_sup_kl_mod
     # for j, (key, pvae) in enumerate(pvae_down.items()):
     #     ax.plot(recs_rdown[key][0,:,0], label = f"R_down = {pvae.decoder.prosailsimulator.R_down}")
     # ax.legend()
-
+    maja_uncertainty = [0.011, 0.010, 0.009, 0.008, 0.010, 0.010, 0.009, 0.009, 0.005, 0.004]
     fig, axs = plt.subplots(2,5, dpi=150, tight_layout=True, figsize = (12,6), sharey=True, sharex='col')#)
     for i in range(10):
         row = i % 2
@@ -402,11 +402,14 @@ def down_sample_prosail(params, parser, res_dir, data_dir:str, params_sup_kl_mod
         for j, (key, rec) in enumerate(recs_rdown.items()):
             err = (rec_1[:,i,:] - rec[:,i,:]).abs().squeeze()
             axs[row, col].boxplot(err ,positions=[j], showfliers=False)
+            rmse = ((rec_1[:,i,:] - rec[:,i,:])**2).mean().sqrt()
+            axs[row, col].scatter([j], rmse)
         axs[1, col].set_xlabel("Down-sampling")
         # axs[1, col].set_xticks(range(len(recs_rdown.keys())))
         
         # axs[row, col].ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
         axs[row, col].set_title(BANDS[i])
+        axs[row, col].axhline(maja_uncertainty[i], c='k')
     for i in range(10):
         row = i % 2
         col = i // 2

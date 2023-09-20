@@ -428,13 +428,13 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
                                      weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info)
             PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,
                                  weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info, 
-                                 var_bounds_type=PROSAIL_VAE.sim_space.var_bounds)
+                                 var_bounds=PROSAIL_VAE.sim_space.var_bounds)
             all_rec.append(rec_image.reshape(10,-1))
             all_lai.append(sim_image[6,...].reshape(-1))
             all_cab.append(sim_image[1,...].reshape(-1))
             all_cw.append(sim_image[4,...].reshape(-1))
             all_vars.append(sim_image.reshape(11,-1))
-            pair_plot(sim_image.reshape(11,-1).squeeze().permute(1,0), tensor_2=None, features = PROSAILVARS,
+            pair_plot(sim_image.reshape(11,-1).squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
                       res_dir=patch_plot_dir, filename='sim_prosail_pair_plot.png')
             all_weiss_lai.append(weiss_lai.reshape(-1))
             all_weiss_cab.append(weiss_cab.reshape(-1))

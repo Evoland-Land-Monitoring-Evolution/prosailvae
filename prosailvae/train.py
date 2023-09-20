@@ -579,29 +579,30 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     # Training
     logger.info(f"Starting Training loop for {params['epochs']} epochs.")
 
-    (all_train_loss_df, all_valid_loss_df, info_df, all_cyclical_rmse) = training_loop(prosail_vae,
-                                                                                        optimizer,
-                                                                                        params['epochs'],
-                                                                                        train_loader,
-                                                                                        valid_loader,
-                                                                                        lrtrainloader,
-                                                                                        res_dir=res_dir,
-                                                                                        n_samples=params["n_samples"],
-                                                                                        lr_recompute=params['lr_recompute'],
-                                                                                        exp_lr_decay=params["exp_lr_decay"],
-                                                                                        plot_gradient=False,#parser.plot_results,
-                                                                                        lr_recompute_mode=lr_recompute_mode,
-                                                                                        cycle_training=params["cycle_training"], 
-                                                                                        accum_iter=params["accum_iter"],
-                                                                                        lrs_threshold=params['lrs_threshold'], 
-                                                                                        lr_init=params['lr'], 
-                                                                                        validation_at_every_epoch=params["validation_at_every_epoch"],
-                                                                                        validation_dir=validation_dir,
-                                                                                        frm4veg_data_dir=frm4veg_data_dir,
-                                                                                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                                                                                        belsar_data_dir=belsar_data_dir, 
-                                                                                        lai_cyclical_loader=lai_cyclical_loader, 
-                                                                                        max_sec = 10.5 * 3600)
+    (all_train_loss_df, all_valid_loss_df, info_df, 
+     all_cyclical_rmse) = training_loop(prosail_vae,
+                                        optimizer,
+                                        params['epochs'],
+                                        train_loader,
+                                        valid_loader,
+                                        lrtrainloader,
+                                        res_dir=res_dir,
+                                        n_samples=params["n_samples"],
+                                        lr_recompute=params['lr_recompute'],
+                                        exp_lr_decay=params["exp_lr_decay"],
+                                        plot_gradient=False,#parser.plot_results,
+                                        lr_recompute_mode=lr_recompute_mode,
+                                        cycle_training=params["cycle_training"], 
+                                        accum_iter=params["accum_iter"],
+                                        lrs_threshold=params['lrs_threshold'], 
+                                        lr_init=params['lr'], 
+                                        validation_at_every_epoch=params["validation_at_every_epoch"],
+                                        validation_dir=validation_dir,
+                                        frm4veg_data_dir=frm4veg_data_dir,
+                                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                        belsar_data_dir=belsar_data_dir, 
+                                        lai_cyclical_loader=lai_cyclical_loader, 
+                                        max_sec = 10.5 * 3600)
     logger.info("Training Completed !")
     # Loading best model
     params["load_model"] = True
@@ -666,13 +667,13 @@ def main():
         min_loss_df = pd.DataFrame({"Loss":[min_loss]})
         if True and not socket.gethostname()=='CELL200973':
             global_validation_metrics = save_validation_results(prosail_vae, validation_dir,
-                                                                    frm4veg_data_dir=frm4veg_data_dir,
-                                                                    frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                                                                    belsar_data_dir=belsar_data_dir,
-                                                                    model_name="pvae",
-                                                                    method="simple_interpolate",
-                                                                    mode="sim_tg_mean", 
-                                                                    remove_files=True)
+                                                                frm4veg_data_dir=frm4veg_data_dir,
+                                                                frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                                                                belsar_data_dir=belsar_data_dir,
+                                                                model_name="pvae",
+                                                                method="simple_interpolate",
+                                                                mode="sim_tg_mean", 
+                                                                remove_files=True)
         
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[1.0]})
         if not params['supervised']:

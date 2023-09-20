@@ -1583,8 +1583,8 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,
-                         weiss_cw, sigma_image, i, info=None, var_bounds_type="legacy"):
-    var_bounds = get_prosail_var_bounds(var_bounds_type)
+                         weiss_cw, sigma_image, i, info=None, var_bounds=None):
+    # var_bounds = get_prosail_var_bounds(var_bounds_type)
     if info is None:
         info = ["SENSOR","DATE","TILE", "ROI"]
     n_cols = 4

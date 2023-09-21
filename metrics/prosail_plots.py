@@ -39,14 +39,15 @@ def tikzplotlib_fix_ncols(obj):
     for child in obj.get_children():
         tikzplotlib_fix_ncols(child)
 
-def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None):
+def plot_patches(patch_list, title_list=[], use_same_visu=True, colorbar=True, vmin=None, vmax=None, fig=None, axs=None):
     if len(patch_list[0].size())==3:
         w = patch_list[0].shape[1]
         h = patch_list[0].shape[2]
     else:
         w = patch_list[0].shape[0]
         h = patch_list[0].shape[1]
-    fig, axs = plt.subplots(1, len(patch_list), figsize=(4*len(patch_list), 4), dpi=min(w, h))
+    if fig is None or axs is None:
+        fig, axs = plt.subplots(1, len(patch_list), figsize=(4*len(patch_list), 4), dpi=min(w, h))
     if len(patch_list)==1:
         axs = [axs]
     minvisu = None
@@ -1589,7 +1590,7 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     fig, _ = plot_patches([ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc)
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC.tex')
-
+ 
     fig, _ = plot_patches([ccc_std.unsqueeze(0).cpu()])
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC-std.tex')
@@ -1608,11 +1609,47 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC.tex')
 
-
     fig, _ = plot_patches([cwc_std.unsqueeze(0).cpu()])
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC-std.tex')
 
+    w = cropped_image.shape[1]
+    h = cropped_image.shape[2]
+    fig, axs = plt.subplots(1, 4, figsize=(4*4, 1*4), dpi=min(w, h))
+    _, _ = plot_patches([cropped_image.cpu(), rec_image.cpu()], fig=fig, axs=axs[:2])
+    _, _ = plot_patches([cropped_image[torch.tensor([8,6,3]),...].cpu(), 
+                         rec_image[torch.tensor([8,6,3]),...].cpu()], fig=fig, axs=axs[2:])
+    axs[0].set_xlabel("Original image (visible)")
+    axs[1].set_xlabel("Reconstruction (visible)")
+    axs[2].set_xlabel("Original image (infra-red)")
+    axs[3].set_xlabel("Reconstruction (infra-red)")
+
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-patch_rgb_ir_rec.tex')
+
+    w = sim_image.shape[1]
+    h = sim_image.shape[2]
+    fig, axs = plt.subplots(3, 3, figsize=(3*4, 3*4), dpi=min(w, h))
+    _, _ = plot_patches((weiss_lai.unsqueeze(0).cpu()), vmin=vmin_lai, vmax=vmax_lai, fig=fig, axs=axs[0,0])
+    _, _ = plot_patches([sim_image[6,...].unsqueeze(0).cpu()], vmin=vmin_lai, vmax=vmax_lai, fig=fig, axs=axs[0,1])
+    _, _ = plot_patches([sigma_image[6,...].unsqueeze(0).cpu()], fig=fig, axs=axs[0,2])
+    _, _ = plot_patches((weiss_cab.unsqueeze(0).cpu()), vmin=vmin_ccc, vmax=vmax_ccc, fig=fig, axs=axs[1,0])
+    _, _ = plot_patches([ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc, fig=fig, axs=axs[1,1])
+    _, _ = plot_patches([ccc_std.unsqueeze(0).cpu()], fig=fig, axs=axs[1,2])   
+    _, _ = plot_patches((weiss_cw.unsqueeze(0).cpu()), vmin=vmin_cwc, vmax=vmax_cwc, fig=fig, axs=axs[2,0])
+    _, _ = plot_patches([cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc, fig=fig, axs=axs[2,1])
+    _, _ = plot_patches([cwc_std.unsqueeze(0).cpu()], fig=fig, axs=axs[2,2])
+    axs[0,0].set_xlabel("SNAP LAI")
+    axs[0,1].set_xlabel("PROSAIL-VAE LAI")
+    axs[0,2].set_xlabel("PROSAIL-VAE LAI std")
+    axs[1,0].set_xlabel("SNAP CCC")
+    axs[1,1].set_xlabel("PROSAIL-VAE CCC")
+    axs[1,2].set_xlabel("PROSAIL-VAE CCC std")
+    axs[2,0].set_xlabel("SNAP CWC")
+    axs[2,1].set_xlabel("PROSAIL-VAE CWC")
+    axs[2,2].set_xlabel("PROSAIL-VAE CWC std")
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_PVAE_LAI_CCC_CWC.tex')
     for j, varname in enumerate(PROSAILVARS):
         if j==6:
             continue
@@ -1623,6 +1660,22 @@ def PROSAIL_2D_article_plots(plot_dir, sim_image, cropped_image, rec_image, weis
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}-std.tex')
         plt.close('all')
+
+
+    fig, axs = plt.subplots(5, 4, figsize=(4*4, 10*4), dpi=min(w, h))
+    n_var = 0
+    for j, varname in enumerate(PROSAILVARS):
+        if j==6:
+            continue
+        row = n_var // 2
+        col = (n_var % 2) * 2
+        _, _ = plot_patches([sim_image[j,...].unsqueeze(0).cpu()], fig=fig, axs=axs[row, col])
+        axs[row, col].set_xlabel(varname)
+        _, _ = plot_patches([sigma_image[j,...].unsqueeze(0).cpu()], fig=fig, axs=axs[row, col+1])        
+        axs[row, col+1].set_xlabel(f"{varname} std")
+        n_var += 1
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{art_plot_dir}/{i}-{info[1]}-{info[2]}-all_vars_and_std.tex')
     return
 
 def PROSAIL_2D_res_plots(plot_dir, sim_image, cropped_image, rec_image, weiss_lai, weiss_cab,

@@ -123,6 +123,23 @@ def get_dataset_rmse(dataset, model):
         lai_true = dataset[:][1].cpu()
         rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
     return rmse
+    
+def initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, n_models=10, n_epochs=20, lr=1e-3):
+    best_valid_loss = np.inf
+    for i in range(n_models):
+        model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=n_epochs,
+                                                threshold=0.001)
+        _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
+                                                        epochs=n_epochs, lr_scheduler=lr_scheduler,
+                                                        disable_tqdm=True, lr_recompute=n_epochs, 
+                                                        loc_bv=loc_bv, scale_bv=scale_bv, res_dir=None)
+        if min(all_valid_losses) < best_valid_loss:
+            model.save_weights(res_dir)
+            best_valid_loss = min(all_valid_losses)
+    model.load_weights(res_dir)
+    return model
 
 def main():
     if socket.gethostname()=='CELL200973':
@@ -199,8 +216,10 @@ def main():
                 tg_mu_list.append(mu)
                 tg_sigma_list.append(sigma)
                 kl_list.append(kl)                
-                model = SnapNN(ver="3A", variable="lai",
-                               device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                # model = SnapNN(ver="3A", variable="lai",
+                #                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                model = initialize_bvnet("lai", train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
+                                                n_models=5, n_epochs=20, lr=1e-3)
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                                 threshold=0.001)

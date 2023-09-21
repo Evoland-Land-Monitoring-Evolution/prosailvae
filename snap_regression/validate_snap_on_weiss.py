@@ -29,7 +29,7 @@ def get_parser():
     parser = argparse.ArgumentParser(description='Parser for data generation')
     parser.add_argument("-d", dest="data_dir",
                         help="path to data directory",
-                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v1")
+                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2")
     
     parser.add_argument("-r", dest="res_dir",
                         help="path to results directory",
@@ -37,7 +37,7 @@ def get_parser():
     
     parser.add_argument('-p', dest="last_prosail",
                         help="toggle last prosail version to convert Jordi's data",
-                        type=bool, default=False)
+                        type=bool, default=True)
     
     parser.add_argument('-sd', dest="sim_data",
                         help="toggle my simulated data instead of Jordi's",
@@ -152,7 +152,7 @@ def main():
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_lai/" 
-        # rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
+        rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
         epochs=1000
         n_models=2
@@ -180,7 +180,7 @@ def main():
     disable_tqdm=False
     prosail_vars = None
     prosail_s2_sim = None
-    
+    data_set_txt = "weiss"
     if parser.last_prosail:
         psimulator = ProsailSimulator()
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
@@ -190,6 +190,7 @@ def main():
                                                                            psimulator=psimulator,
                                                                            ssimulator=ssimulator,
                                                                            n_samples_per_batch=1024)
+        data_set_txt = "projected"
     elif parser.sim_data:
         bands = [1, 2, 3, 4, 5, 7, 8, 9]
         prosail_s2_sim = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")[:,bands]
@@ -197,7 +198,7 @@ def main():
         prosail_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")[:,vars]
         # prosail_params = prosail_sim_vars[:,:-3]
         # angles = prosail_sim_vars[:,-3:]
-
+        data_set_txt = "simulated"
     model_dict = {}
     plot_loss = True
     # n_models=10
@@ -284,14 +285,14 @@ def main():
                                                               frm4veg_lai="lai", get_reconstruction_error=False)
                 rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
                 results_dict[variable].append(rmse['Campaign'][f'lai_rmse_all'].values[0])
-                res_df_filename = os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv')
+                res_df_filename = os.path.join(res_dir, f'snap_{data_set_txt}_{variable}_validation_rmse.csv')
                 if not os.path.isfile(res_df_filename):
                     pd.DataFrame({variable:[rmse['Campaign'][f'lai_rmse_all'].values[0]]}).to_csv(res_df_filename, 
                                                                                                 header=[variable], index=False)
                 else: # else it exists so append without writing the header
                     pd.DataFrame({variable:[rmse['Campaign'][f'lai_rmse_all'].values[0]]}).to_csv(res_df_filename, mode='a', 
                                                                                                 index=False, header=False)
-        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{variable}_validation_rmse_all.csv'))
+        pd.DataFrame(results_dict).to_csv(os.path.join(res_dir, f'snap_{data_set_txt}_{variable}_validation_rmse_all.csv'))
 
 if __name__ =="__main__":
     main()

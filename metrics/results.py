@@ -233,13 +233,16 @@ def save_validation_results(model, res_dir,
 
         hspot_dir = os.path.join(res_dir, "hspot_vs_lai")
         os.makedirs(hspot_dir)
+
         fig, ax = get_belsar_lai_vs_hspot(all_belsar, belsar_data_dir, sites=[f"W{i+1}" for i in range(10)], fig=None, ax=None, label="")
         fig.savefig(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Wheat.png"))
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Wheat.tex"))
+        
         fig, ax = get_belsar_lai_vs_hspot(all_belsar, belsar_data_dir, sites=[f"M{i+1}" for i in range(10)], fig=None, ax=None, label="")
         fig.savefig(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Maize.png"))
-
-
-    
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Maize.tex"))
 
         for variable in ["lai", "ccc"]:
             results[variable][f'{variable} error'] = results[variable][f'Predicted {variable}'] - results[variable][f'{variable}']
@@ -249,21 +252,29 @@ def save_validation_results(model, res_dir,
                                     legend_col=3, error_x=f"{variable} std", 
                                     error_y=f"Predicted {variable} std", hue_perfs=True)
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_sites.png"))
-            
+            tikzplotlib_fix_ncols(fig)
+            tikzplotlib.save(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_sites.tex"))
+
             fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Campaign",
                                     legend_col=2, error_x=f"{variable} std", 
                                     error_y=f"Predicted {variable} std", hue_perfs=True)
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_campaign.png"))
+            tikzplotlib_fix_ncols(fig)
+            tikzplotlib.save(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_campaign.tex"))
+
             fig, ax = regression_plot(results[variable], x=f"{variable}", y=f"Predicted {variable}", fig=None, ax=None, hue="Land cover",
                                     legend_col=3, error_x=f"{variable} std", 
                                     error_y=f"Predicted {variable} std", hue_perfs=False)
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_land_cover.png"))
-
+            tikzplotlib_fix_ncols(fig)
+            tikzplotlib.save(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_regression_land_cover.tex"))
 
             fig, ax = plt.subplots(dpi=150)
             sns.scatterplot(data = results[variable], x=f"{variable} error", y="Reconstruction error",  
                             hue="Site", ax=ax)
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error.png"))
+            tikzplotlib_fix_ncols(fig)
+            tikzplotlib.save(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error.tex"))
 
             n_cols = len(np.array(BANDS)[model.encoder.bands.cpu()])//2
             fig, axs = plt.subplots(2, n_cols, dpi=150, figsize=(n_cols*3, 2*3))

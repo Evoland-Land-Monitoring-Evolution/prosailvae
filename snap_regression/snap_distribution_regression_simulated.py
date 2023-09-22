@@ -219,7 +219,7 @@ def main():
                 # model = SnapNN(ver="3A", variable="lai",
                 #                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
                 model = initialize_bvnet("lai", train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
-                                                n_models=5, n_epochs=20, lr=1e-3)
+                                                n_models=10, n_epochs=10, lr=1e-3)
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                                 threshold=0.001)

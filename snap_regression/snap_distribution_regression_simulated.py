@@ -68,7 +68,7 @@ def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000,
                                         law="gaussian")
     print("Simulating evaluation data...")
     save_dataset(save_dir, "evaluation_", nb_simus=n_eval, rsr_dir=rsr_dir,weiss_mode=True, 
-                 prosail_var_dist_type="new",lai_var_dist=lai_var_dist)
+                 prosail_var_dist_type="new_v3",lai_var_dist=lai_var_dist)
 
     for i, mu in enumerate(tg_mu):
         for j, sigma in enumerate(tg_sigma):
@@ -165,8 +165,8 @@ def main():
         parser = get_parser().parse_args()
         tg_mu = [0, 1, 2, 3, 4]
         tg_sigma = [0.5, 1, 2, 3, 4]
-        n_eval = 20000
-        n_samples_sub=20000
+        n_eval = 40000
+        n_samples_sub=40000
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         belsar_data_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"

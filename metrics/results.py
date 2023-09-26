@@ -268,15 +268,15 @@ def save_validation_results(model, res_dir,
         for variable in ["lai", "ccc"]:
             fig, axs = plt.subplots(7, 14, dpi=150)
             _, _ = regression_plot_2hues(df_results_snap[variable], x=f"{variable}", y=f"Predicted {variable}", 
-                                            fig=None, ax=None, hue="Land cover", hue2="Campaign", display_text=False,
+                                         hue="Land cover", hue2="Campaign", display_text=False,
                                              error_x=f"{variable} std", 
                                             error_y=f"Predicted {variable} std", hue_perfs=False, 
                                             title_hue="Land cover", title_hue2="\n Site",
                                             hue_color_dict=hue_color_dict, 
                                             hue2_markers_dict=hue2_markers_dict, legend_col=0, fig=fig, ax=axs[0])
             
-            _, _ = regression_plot_2hues(results[variable], x=f"{variable}", y=f"Predicted {variable}", 
-                                            fig=None, ax=None, hue="Land cover", hue2="Campaign", display_text=False,
+            _, _ = regression_plot_2hues(results[variable], x=f"{variable}", y=f"Predicted {variable}",
+                                         hue="Land cover", hue2="Campaign", display_text=False,
                                             legend_col=1, error_x=f"{variable} std", 
                                             error_y=f"Predicted {variable} std", hue_perfs=False, 
                                             title_hue="Land cover", title_hue2="\n Site",

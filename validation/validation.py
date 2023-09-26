@@ -162,6 +162,11 @@ def get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021
                                 })
     for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         results[f"{band} error"] = bands_rec_err[band]
+    results['Land cover'].replace('Bare soil ', 'Bare soil', inplace=True)
+    results['Land cover'].replace('Cereal reaped', 'Bare soil', inplace=True)
+    results['Land cover'].replace('Onion & sunflower', 'Onion', inplace=True)
+    results['Land cover'].replace('Corn', 'Maize', inplace=True)
+    results['Land cover'].replace('Rappesed', 'Rapeseed', inplace=True)
     return results
 
 def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
@@ -227,6 +232,11 @@ def get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                 })
     for band in np.array(BANDS)[bands_idx.cpu()].tolist():
         results[f"{band} error"] = bands_rec_err[band]
+    results['Land cover'].replace('Bare soil ', 'Bare soil', inplace=True)
+    results['Land cover'].replace('Cereal reaped', 'Bare soil', inplace=True)
+    results['Land cover'].replace('Onion & sunflower', 'Onion', inplace=True)
+    results['Land cover'].replace('Corn', 'Maize', inplace=True)
+    results['Land cover'].replace('Rappesed', 'Rapeseed', inplace=True)
     return results
 
 def get_validation_global_metrics(df_results, decompose_along_columns=["Site", "Land cover"], 

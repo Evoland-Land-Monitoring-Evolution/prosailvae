@@ -11,7 +11,7 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
                                     all_loss_curve, plot_patches, plot_lai_vs_ndvi, PROSAIL_2D_res_plots, PROSAIL_2D_article_plots,
                                     PROSAIL_2D_aggregated_results, article_2D_aggregated_results,
-                                    frm4veg_plots, plot_belsar_metrics, regression_plot)
+                                    frm4veg_plots, plot_belsar_metrics, regression_plot, regression_plot_2hues)
 from dataset.loaders import  get_simloader
 from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
@@ -21,7 +21,8 @@ from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
 from validation.validation import (get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_frm4veg_ccc_results, 
-                                   get_validation_global_metrics, get_all_campaign_lai_results_SNAP)
+                                   get_validation_global_metrics, get_all_campaign_lai_results_SNAP, 
+                                   get_all_campaign_CCC_results_SNAP)
 from article_plots.belsar_plots import get_belsar_sites_time_series, get_belsar_lai_vs_hspot
 from datetime import datetime 
 import shutil
@@ -148,11 +149,20 @@ def save_validation_results(model, res_dir,
                                       mode=mode, method=method, model_name=model_name, 
                                       save_reconstruction=save_reconstruction, get_all_belsar=plot_results, 
                                       remove_files=remove_files)
-
     results = {}
     results["lai"] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                       frm4veg_lai="lai", get_reconstruction_error=save_reconstruction,
                                                       bands_idx=model.encoder.bands)
+    hue_elem = pd.unique(results["lai"]["Land cover"])
+    hue2_elem = pd.unique(results["lai"]["Campaign"])
+    hue_color_dict= {}
+    for j, h_e in enumerate(hue_elem):
+        hue_color_dict[h_e] = f"C{j}"
+    default_markers = ["o", "v", "D", "s", "+", ".", "^", "1"]
+    hue2_markers_dict= {}
+    for j, h2_e in enumerate(hue2_elem):
+        hue2_markers_dict[h2_e] = default_markers[j]
+
     results["ccc"] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results,
                                              frm4veg_ccc="ccc", get_reconstruction_error=save_reconstruction, 
                                              bands_idx=model.encoder.bands)
@@ -180,21 +190,32 @@ def save_validation_results(model, res_dir,
         for key, mestdr_df in global_mestdr_dict.items():
             mestdr_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_mestdr.csv"))
     
-    
-
+    df_results_snap = {}
     if plot_results:
         (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
          ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
-                                      method=method, get_all_belsar=True, remove_files=remove_files)
+                                               method=method, get_all_belsar=True, remove_files=remove_files)
+        
+        df_results_snap['lai'] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, 
+                                                               wytham_results, frm4veg_lai="lai", 
+                                                               get_reconstruction_error=False)
+        
+        barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
+                                                                                                frm4veg_2021_data_dir,
+                                                                                                ccc_snap=None, 
+                                                                                                cab_mode=False)
+        df_results_snap['ccc'] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
+                                                         get_reconstruction_error=False)
+        
         time_series_dir = os.path.join(res_dir, "time_series")
         os.makedirs(time_series_dir)
         fig, axs = plt.subplots(10, 1 ,dpi=150, sharex=True, tight_layout=True, figsize=(10, 2*10))
         for i in range(0,10):
             site = "W" + str(i+1)
             fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
-                                                label="PROSAIL-VAE", use_ref_metrics=True)
+                                                    label="PROSAIL-VAE", use_ref_metrics=True)
             fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
-                                                label="SNAP")
+                                                    label="SNAP")
             ax.legend()
         axs[-1].set_ylabel("Date")
         fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Wheat.png"))
@@ -245,6 +266,26 @@ def save_validation_results(model, res_dir,
         tikzplotlib.save(os.path.join(hspot_dir, f"{model_name}_belSAR_LAI_vs_hspot_Maize.tex"))
 
         for variable in ["lai", "ccc"]:
+            fig, axs = plt.subplots(7, 14, dpi=150)
+            _, _ = regression_plot_2hues(df_results_snap[variable], x=f"{variable}", y=f"Predicted {variable}", 
+                                            fig=None, ax=None, hue="Land cover", hue2="Campaign", display_text=False,
+                                             error_x=f"{variable} std", 
+                                            error_y=f"Predicted {variable} std", hue_perfs=False, 
+                                            title_hue="Land cover", title_hue2="\n Site",
+                                            hue_color_dict=hue_color_dict, 
+                                            hue2_markers_dict=hue2_markers_dict, legend_col=0, fig=fig, ax=axs[0])
+            
+            _, _ = regression_plot_2hues(results[variable], x=f"{variable}", y=f"Predicted {variable}", 
+                                            fig=None, ax=None, hue="Land cover", hue2="Campaign", display_text=False,
+                                            legend_col=1, error_x=f"{variable} std", 
+                                            error_y=f"Predicted {variable} std", hue_perfs=False, 
+                                            title_hue="Land cover", title_hue2="\n Site",
+                                            hue_color_dict=hue_color_dict, 
+                                            hue2_markers_dict=hue2_markers_dict, fig=fig, ax=axs[1])
+            fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_pvae_vs_snap_regression_campaign_land_cover.png"))
+            tikzplotlib_fix_ncols(fig)
+            tikzplotlib.save(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_pvae_vs_snap_regression_campaign_land_cover.tex"))
+
             results[variable][f'{variable} error'] = results[variable][f'Predicted {variable}'] - results[variable][f'{variable}']
             results[variable].to_csv(os.path.join(scatter_dir[variable], f"{model_name}_all_campaigns_{variable}_{mode}_{method}.csv"))
 

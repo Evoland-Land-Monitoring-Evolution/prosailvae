@@ -238,7 +238,8 @@ def main():
                                                                                                         ccc_snap=model, 
                                                                                                         cab_mode=variable=="cab")
                 df_results = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
-                                                get_reconstruction_error=False)
+                                                
+                                                    get_reconstruction_error=False)
                 rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="ccc")
                 results_dict[variable].append(rmse['Campaign'][f'ccc_rmse_all'].values[0])
                 res_df_filename = os.path.join(res_dir, f'snap_{variable}_validation_rmse.csv')

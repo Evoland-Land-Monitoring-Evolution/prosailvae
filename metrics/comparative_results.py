@@ -628,7 +628,8 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
     ccc_mpiw_dict = {}
     ccc_mestdr_dict = {}
 
-    belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode, get_error=get_error)
+    belsar_results = get_belsar_validation_results(model_dict, belsar_dir, res_dir, method=method, mode=mode, 
+                                                   get_error=get_error)
     # plot_belsar_validation_results_comparison(model_dict, belsar_results, res_dir, suffix="_" + method)
 
     # barrax_filenames = ["2B_20180516_FRM_Veg_Barrax_20180605", "2A_20180613_FRM_Veg_Barrax_20180605"]
@@ -663,7 +664,9 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
 
         for model, df_results in validation_lai_results[variable].items():
             df_results.to_csv(os.path.join(res_dir, f"{mode}_{method}_{variable}_{model}.csv"))
-            rmse, picp, mpiw, mestdr = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable=variable)
+            rmse, picp, mpiw, mestdr = get_validation_global_metrics(df_results, 
+                                                                     decompose_along_columns=["Campaign"], 
+                                                                     variable=variable)
             lai_picp_dict[variable][model] = picp
             lai_rmse_dict[variable][model] = rmse
             lai_mpiw_dict[variable][model] = mpiw

@@ -30,6 +30,7 @@ from math import ceil, log10
 from metrics.metrics_utils import regression_metrics
 import tikzplotlib
 from validation.validation_utils import var_of_product
+from matplotlib.patches import Rectangle
 def tikzplotlib_fix_ncols(obj):
     """
     workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
@@ -1991,5 +1992,95 @@ def regression_plot(df_metrics, x, y, fig=None, ax=None, hue="Site",
         else:
             sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),
                             ncol=legend_col, frameon=True)
+            fig.tight_layout()
+    return fig, ax
+
+
+def regression_plot_2hues(df_metrics, x, y, fig=None, ax=None, hue="Land cover", hue2="Campaign",
+                            legend_col=2, xmin=None, xmax=None, error_x=None, 
+                            error_y=None, hue_perfs=False, s=20, display_text=True, 
+                            hue_color_dict = None,
+                            hue2_markers_dict = None, title_hue="", title_hue2=""):
+    pred = df_metrics[y].values
+    ref = df_metrics[x].values
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(dpi=150, figsize=(7,7))
+    if xmin is None:
+        xmin = min(np.min(pred), np.min(ref))
+    if xmax is None:
+        xmax = max(np.max(pred), np.max(ref))
+    ax.plot([xmin, xmax], [xmin, xmax], 'k')
+    
+    m_tot, b_tot, r2_tot, rmse_tot = regression_metrics(ref, pred)
+    perf_text = "All: \n r2: {:.2f} - RMSE: {:.2f}".format(r2_tot, rmse_tot)
+    if hue_perfs:
+        for elem in pd.unique(df_metrics[hue]):
+            pred = df_metrics[df_metrics[hue]==elem][y].values
+            ref = df_metrics[df_metrics[hue]==elem][x].values
+            m, b, r2, rmse = regression_metrics(ref, pred)
+            perf_text += "\n {} : \n r2: {:.2f} - RMSE: {:.2f}".format(elem, r2, rmse)
+    if display_text:
+        ax.text(.01, .99, perf_text, ha='left', va='top', transform=ax.transAxes)
+    line = ax.plot([xmin, xmax], [m_tot * xmin + b_tot, m_tot * xmax + b_tot],'r')
+
+    if error_x is not None and error_y is None:
+        ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
+                    ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,
+                    elinewidth=0.5, zorder=0)
+    elif error_y is not None and error_x is None:
+        ax.errorbar(df_metrics[x].values, df_metrics[y].values, yerr=df_metrics[error_y].values,
+                    ecolor='k', capthick=1, fmt='o', linestyle='', markersize=0.1,
+                    elinewidth=0.5, zorder=0)
+    elif error_y is not None and error_x is not None:
+        ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
+                    yerr=df_metrics[error_y].values, ecolor='k', fmt='o', linestyle='', markersize=0.1, 
+                    elinewidth=0.5, zorder=0)
+    if hue2 is None:
+        g = sns.scatterplot(data=df_metrics, x=x, y=y, ax=ax, s=s, zorder=10)
+    else:
+        if hue2 is None:
+            g = sns.scatterplot(data=df_metrics, x=x, y=y, hue=hue, ax=ax, s=s, zorder=10)
+        else:
+            hue_elem = pd.unique(df_metrics[hue])
+            hue2_elem = pd.unique(df_metrics[hue2])
+            if hue_color_dict is None:
+                hue_color_dict= {}
+                for j, h_e in enumerate(hue_elem):
+                    hue_color_dict[h_e] = f"C{j}"
+            if hue2_markers_dict is None:
+                default_markers = ["o", "v", "D", "s", "+", ".", "^", "1"]
+                hue2_markers_dict= {}
+                for j, h2_e in enumerate(hue2_elem):
+                    hue2_markers_dict[h2_e] = default_markers[j]
+            for i in range(len(df_metrics)):
+                pred = df_metrics[y].iloc[i]
+                ref = df_metrics[x].iloc[i]
+                ax.scatter([ref], [pred], s=s, zorder=10, 
+                           c=hue_color_dict[df_metrics[hue].iloc[i]], 
+                           marker=hue2_markers_dict[df_metrics[hue2].iloc[i]])
+            ax.set_xlabel(x)
+            ax.set_ylabel(y)
+            if legend_col > 0:
+                title_proxy = Rectangle((0, 0), 0, 0, color='w')
+                f = lambda m,c: ax.plot([],[],marker=m, color=c, ls="none")[0]
+                colors = [hue_color_dict[h_e] for h_e in hue_color_dict.keys()]
+                markers = [hue2_markers_dict[h2_e] for h2_e in hue2_markers_dict.keys()]
+                handles = [title_proxy] + [f("s", color) for color in colors] + [title_proxy]
+                handles += [f(m, "k") for m in markers]
+                labels = [title_hue] + list(hue_color_dict.keys()) + [title_hue2] + list(hue2_markers_dict.keys())
+                ax.legend(handles, labels,  framealpha=0, loc="upper left", bbox_to_anchor=(1, 1), 
+                          ncols=legend_col)
+            g=ax
+
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(xmin, xmax)
+    ax.set_aspect('equal', 'box')
+    if hue is not None:
+        if not legend_col:
+            ax.get_legend().remove()
+        else:
+            if hue2 is None:
+                sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),
+                                ncol=legend_col, frameon=True)
             fig.tight_layout()
     return fig, ax

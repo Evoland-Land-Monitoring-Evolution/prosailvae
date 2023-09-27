@@ -196,15 +196,17 @@ def save_validation_results(model, res_dir,
          ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                                method=method, get_all_belsar=True, remove_files=remove_files)
         
-        df_results_snap['lai'] = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, 
-                                                               wytham_results, frm4veg_lai="lai", 
+        df_results_snap['lai'] = get_belsar_x_frm4veg_lai_results(belsar_results_snap, barrax_results_snap, 
+                                                                  barrax_2021_results_snap, 
+                                                                    wytham_results_snap, frm4veg_lai="lai", 
                                                                get_reconstruction_error=False)
         
-        barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
+        barrax_results_snap, barrax_2021_results_snap, wytham_results_snap = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
                                                                                                 frm4veg_2021_data_dir,
                                                                                                 ccc_snap=None, 
                                                                                                 cab_mode=False)
-        df_results_snap['ccc'] = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
+        df_results_snap['ccc'] = get_frm4veg_ccc_results(barrax_results_snap, barrax_2021_results_snap, 
+                                                         wytham_results_snap, frm4veg_ccc="ccc",
                                                          get_reconstruction_error=False)
         
         time_series_dir = os.path.join(res_dir, "time_series")

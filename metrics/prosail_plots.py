@@ -2035,7 +2035,7 @@ def regression_plot_2hues(df_metrics, x, y, fig=None, ax=None, hue="Land cover",
         ax.errorbar(df_metrics[x].values, df_metrics[y].values, xerr=df_metrics[error_x].values,
                     yerr=df_metrics[error_y].values, ecolor='k', fmt='o', linestyle='', markersize=0.1, 
                     elinewidth=0.5, zorder=0)
-    if hue2 is None:
+    if hue is None:
         g = sns.scatterplot(data=df_metrics, x=x, y=y, ax=ax, s=s, zorder=10)
     else:
         if hue2 is None:
@@ -2052,12 +2052,21 @@ def regression_plot_2hues(df_metrics, x, y, fig=None, ax=None, hue="Land cover",
                 hue2_markers_dict= {}
                 for j, h2_e in enumerate(hue2_elem):
                     hue2_markers_dict[h2_e] = default_markers[j]
-            for i in range(len(df_metrics)):
-                pred = df_metrics[y].iloc[i]
-                ref = df_metrics[x].iloc[i]
-                ax.scatter([ref], [pred], s=s, zorder=10, 
-                           c=hue_color_dict[df_metrics[hue].iloc[i]], 
-                           marker=hue2_markers_dict[df_metrics[hue2].iloc[i]])
+            for h_e in hue_elem:
+                sub_df_metrics = df_metrics[df_metrics[hue]==h_e]
+                if len(sub_df_metrics)>0:
+                    for h2_e in hue2_elem:
+                        sub_sub_df_metrics = sub_df_metrics[sub_df_metrics[hue2]==h2_e]
+                        if len(sub_sub_df_metrics) > 0:
+                            ax.scatter(sub_sub_df_metrics[x], sub_sub_df_metrics[y], s=s, zorder=10, 
+                            c=hue_color_dict[h_e], 
+                            marker=hue2_markers_dict[h2_e])
+            # for i in range(len(df_metrics)):
+            #     pred = df_metrics[y].iloc[i]
+            #     ref = df_metrics[x].iloc[i]
+            #     ax.scatter([ref], [pred], s=s, zorder=10, 
+            #                c=hue_color_dict[df_metrics[hue].iloc[i]], 
+            #                marker=hue2_markers_dict[df_metrics[hue2].iloc[i]])
             ax.set_xlabel(x)
             ax.set_ylabel(y)
             if legend_col > 0:

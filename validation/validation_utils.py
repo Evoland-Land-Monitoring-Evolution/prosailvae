@@ -18,7 +18,7 @@ def simple_interpolate(y_after, y_before, dt_after, dt_before, is_std=False):
     if is_std:
         res[idx] = np.sqrt((u[idx] * y_before[idx])**2 + (v[idx] * y_after[idx])**2)
     else:    
-        res[idx] = u[idx] * y_before[idx] + v[idx] * y_after[idx]
+        res[idx] = v[idx] * y_before[idx] + u[idx] * y_after[idx]
     return res
 
 def get_bb_array_index(bb, image_bb, res=10):

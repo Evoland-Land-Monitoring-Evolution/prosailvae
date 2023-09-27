@@ -2077,7 +2077,8 @@ def regression_plot_2hues(df_metrics, x, y, fig=None, ax=None, hue="Land cover",
     ax.set_aspect('equal', 'box')
     if hue is not None:
         if not legend_col:
-            ax.get_legend().remove()
+            if legend_col !=0:
+                ax.get_legend().remove()
         else:
             if hue2 is None:
                 sns.move_legend(g, "upper center", bbox_to_anchor=(0.5, -0.1),

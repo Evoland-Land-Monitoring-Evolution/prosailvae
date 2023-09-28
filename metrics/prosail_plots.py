@@ -1312,19 +1312,16 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     plt.close('all')
 
     fig, axs = plt.subplots(6, 4, figsize=(4*4, 10*4), dpi=150)
-    n_var = 0
     for j, varname in enumerate(PROSAILVARS):
-        if j==6:
-            continue
-        row = n_var // 2
-        col = (n_var % 2) * 2
+        row = j // 2
+        col = (j % 2) * 2
         axs[row, col].hist(all_vars[j,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
         axs[row, col].set_xlabel(varname)    
         axs[row, col].set_yticks([])  
         axs[row, col+1].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
         axs[row, col+1].set_yticks([])
         axs[row, col+1].set_xlabel(f"{varname} std")
-        n_var += 1
+        j += 1
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{article_plot_dir}/aggregated_all_vars_and_std.tex')
     

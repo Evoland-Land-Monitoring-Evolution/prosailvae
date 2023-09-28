@@ -162,9 +162,9 @@ def main():
         epochs=1000
         n_models=2
         args = [
-            "-sd", "True",
-                "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2",
-            #     "-p", "True"
+            # "-sd", "True",
+            
+                "-l", "True"
                 ]
         parser = get_parser().parse_args(args)
         file_prefix = ""
@@ -272,9 +272,11 @@ def main():
                 train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
                                                                                     batch_size=batch_size, 
                                                                                     prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
+                # model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
+                #                          n_models=10, n_epochs=20, lr=1e-3)
                 model = SnapNN(ver="3A", variable=variable, 
                                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-                # model_dict[variable] = model
+                model_dict[variable] = model
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                                 threshold=0.001)
@@ -284,8 +286,8 @@ def main():
                                                                 loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
                 if plot_loss:
                     fig, axs = plt.subplots(2,1, sharex=True)
-                    axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses)
-                    axs[1].scatter(np.arange(len(all_valid_losses)), all_lr)
+                    axs[0].scatter(np.arange(len(all_valid_losses)), all_valid_losses, s=1)
+                    axs[1].scatter(np.arange(len(all_valid_losses)), all_lr, s=1)
                     axs[0].set_yscale('log')
                     axs[1].set_yscale('log')
                     axs[1].set_xlabel("epoch")

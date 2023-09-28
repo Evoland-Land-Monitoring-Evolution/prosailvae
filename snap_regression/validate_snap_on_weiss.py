@@ -159,11 +159,11 @@ def main():
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_lai/" 
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
-        epochs=1000
+        epochs=200
         n_models=2
         args = [
             # "-sd", "True",
-            
+            "-p", "True",
                 "-l", "True"
                 ]
         parser = get_parser().parse_args(args)
@@ -271,12 +271,13 @@ def main():
             for i in range(n_models):
                 train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
                                                                                     batch_size=batch_size, 
-                                                                                    prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
-                # model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
-                #                          n_models=10, n_epochs=20, lr=1e-3)
-                model = SnapNN(ver="3A", variable=variable, 
-                               device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-                model_dict[variable] = model
+                                                                                    prosail_vars=prosail_vars, 
+                                                                                    s2_r=prosail_s2_sim)
+                model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
+                                         n_models=10, n_epochs=20, lr=1e-3)
+                # model = SnapNN(ver="3A", variable=variable, 
+                #                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                # model_dict[variable] = model
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
                                                 threshold=0.001)
@@ -299,7 +300,8 @@ def main():
                                                                 belsar_data_dir, belsar_pred_dir,
                                                                 method="simple_interpolate", get_all_belsar=False, 
                                                                 remove_files=True, lai_snap=model)    
-                df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
+                df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, 
+                                                              wytham_results,
                                                               frm4veg_lai="lai", get_reconstruction_error=False)
                 rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
                 results_dict[variable].append(rmse['Campaign'][f'lai_rmse_all'].values[0])

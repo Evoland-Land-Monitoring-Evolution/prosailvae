@@ -162,8 +162,8 @@ def main():
         epochs=1000
         n_models=2
         args = [
-            # "-sd", "True",
-            #     "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2",
+            "-sd", "True",
+                "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2",
             #     "-p", "True"
                 ]
         parser = get_parser().parse_args(args)
@@ -233,7 +233,7 @@ def main():
                 # model_dict[variable] = model
                 optimizer = optim.Adam(model.parameters(), lr=lr)
                 lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
-                                                threshold=0.001)
+                                                 threshold=0.001)
                 _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
                                                                 epochs=epochs, lr_scheduler=lr_scheduler,
                                                                 disable_tqdm=disable_tqdm, lr_recompute=patience, 

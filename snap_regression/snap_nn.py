@@ -281,7 +281,7 @@ class SnapNN(nn.Module):
             all_lr.append(optimizer.param_groups[0]['lr'])
             if lr_scheduler is not None:
                 lr_scheduler.step(valid_loss)
-            if all_lr[-1] <= 1e-8:
+            if all_lr[-1] <= 5e-8:
                 if not cycle_training:
                     break #stop training if lr too low
                 for g in optimizer.param_groups:

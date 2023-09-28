@@ -176,7 +176,7 @@ def main():
         parser = get_parser().parse_args()
         res_dir = parser.res_dir
         rsr_dir = "/work/scratch/zerahy/prosailvae/data/"
-        epochs=2000
+        epochs=1000
         n_models=parser.n_models
         file_prefix = "train_"
         # data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_old_corr/"

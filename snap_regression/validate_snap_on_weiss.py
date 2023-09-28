@@ -27,6 +27,11 @@ def get_parser():
     Creates a new argument parser.
     """
     parser = argparse.ArgumentParser(description='Parser for data generation')
+
+    parser.add_argument("-n", dest="n_models",
+                        help="Number of trained bvnets",
+                        type=int, default=10)
+
     parser.add_argument("-d", dest="data_dir",
                         help="path to data directory",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2")
@@ -37,7 +42,7 @@ def get_parser():
     
     parser.add_argument('-p', dest="last_prosail",
                         help="toggle last prosail version to convert Jordi's data",
-                        type=bool, default=True)
+                        type=bool, default=False)
     
     parser.add_argument('-sd', dest="sim_data",
                         help="toggle my simulated data instead of Jordi's",
@@ -156,7 +161,12 @@ def main():
 
         epochs=1000
         n_models=2
-        parser = get_parser().parse_args()
+        args = [
+            # "-sd", "True",
+            #     "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2",
+            #     "-p", "True"
+                ]
+        parser = get_parser().parse_args(args)
         file_prefix = ""
         
     else:
@@ -167,7 +177,7 @@ def main():
         res_dir = parser.res_dir
         rsr_dir = "/work/scratch/zerahy/prosailvae/data/"
         epochs=2000
-        n_models=10
+        n_models=parser.n_models
         file_prefix = "train_"
         # data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_old_corr/"
     data_dir = parser.data_dir
@@ -181,6 +191,7 @@ def main():
     prosail_vars = None
     prosail_s2_sim = None
     data_set_txt = "weiss"
+    variable = "lai" if parser.lai_mode else "ccc"
     if parser.last_prosail:
         psimulator = ProsailSimulator()
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
@@ -191,6 +202,7 @@ def main():
                                                                            ssimulator=ssimulator,
                                                                            n_samples_per_batch=1024)
         data_set_txt = "projected"
+        print("Projecting samples with PROSPECT-D + 4SAIL")
     elif parser.sim_data:
         bands = [1, 2, 3, 4, 5, 7, 8, 9]
         prosail_s2_sim = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")[:,bands]
@@ -199,6 +211,9 @@ def main():
         # prosail_params = prosail_sim_vars[:,:-3]
         # angles = prosail_sim_vars[:,-3:]
         data_set_txt = "simulated"
+        print(f"Using simulated data from {data_dir}/{file_prefix}prosail_s2_sim_refl.pt")
+    else:
+        print(f"Using Jordi's Data")
     model_dict = {}
     plot_loss = True
     # n_models=10

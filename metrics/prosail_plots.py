@@ -1318,7 +1318,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         axs[row, col].hist(all_vars[j,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
         axs[row, col].set_xlabel(varname)    
         axs[row, col].set_yticks([])  
-        axs[row, col+1].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
+        axs[row, col+1].hist(all_sigma[j,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
         axs[row, col+1].set_yticks([])
         axs[row, col+1].set_xlabel(f"{varname} std")
         j += 1

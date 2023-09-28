@@ -1196,6 +1196,29 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         tikzplotlib_fix_ncols(fig)
         tikzplotlib.save(f"{article_plot_dir}/{band}_2dhist_true_vs_pred.tex")
     plt.close('all')
+    
+    n_cols = 5
+    n_rows = 2
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(2*n_cols, n_rows*2), tight_layout=True, dpi=150)
+    for idx, band in enumerate(BANDS):
+        row = idx // n_cols
+        col = idx % n_cols
+        xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
+        xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
+        ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
+                            all_rec[idx,:].reshape(-1).cpu().numpy(),
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
+        xlim = ax[row, col].get_xlim()
+        ylim = ax[row, col].get_ylim()
+        ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+                        [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
+        ax[row, col].set_yticks([])
+        ax[row, col].set_ylabel(f"Reconstructed {band}")
+        ax[row, col].set_xlabel(f"True {band}")
+        ax[row, col].set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/2dhist_true_vs_pred.tex")
+    plt.close('all')
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
@@ -1287,6 +1310,23 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/all_cwc_scatter_true_vs_pred.tex")
     plt.close('all')
+
+    fig, axs = plt.subplots(6, 4, figsize=(4*4, 10*4), dpi=150)
+    n_var = 0
+    for j, varname in enumerate(PROSAILVARS):
+        if j==6:
+            continue
+        row = n_var // 2
+        col = (n_var % 2) * 2
+        axs[row, col].hist(all_vars[j,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
+        axs[row, col].set_xlabel(varname)    
+        axs[row, col].set_yticks([])  
+        axs[row, col+1].hist(all_sigma[idx,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
+        axs[row, col+1].set_yticks([])
+        axs[row, col+1].set_xlabel(f"{varname} std")
+        n_var += 1
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{article_plot_dir}/aggregated_all_vars_and_std.tex')
     
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,

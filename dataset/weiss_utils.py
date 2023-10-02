@@ -20,7 +20,7 @@ def load_refl_angles(path_to_data_dir):
     # time_delta = torch.zeros((n_obs,1))
     return s2_r, tts, tto, psi
 
-def load_prosail_params(path_to_data_dir):
+def load_prosail_params(path_to_data_dir, psoil0=0.0):
     path_to_file = path_to_data_dir + "/Sentinel2_Laws.txt"
     prosail_params = np.loadtxt(path_to_file, skiprows=1)
     N = prosail_params[:,4].reshape(-1,1)
@@ -34,13 +34,13 @@ def load_prosail_params(path_to_data_dir):
     lidfa = prosail_params[:,1].reshape(-1,1)
     hspot = prosail_params[:,3].reshape(-1,1)
     rsoil = prosail_params[:,10].reshape(-1,1)
-    psoil = np.zeros_like(rsoil)
+    psoil = psoil0 * np.ones_like(rsoil)
     return N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil
 
 
-def load_weiss_dataset(path_to_data_dir, mode = "pvae"):
+def load_weiss_dataset(path_to_data_dir, mode = "pvae", psoil0=0.0):
     s2_r, sun_zen, view_zen, rel_azi = load_refl_angles(path_to_data_dir)
-    N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil = load_prosail_params(path_to_data_dir)
+    N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil = load_prosail_params(path_to_data_dir, psoil0=psoil0)
     prosail_vars = np.zeros((N.shape[0], 14))
     prosail_vars[:,6] = lai.reshape(-1)
     prosail_vars[:,0] = N.reshape(-1)

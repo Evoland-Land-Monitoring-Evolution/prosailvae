@@ -9,15 +9,15 @@ def var_of_product(var_1, var_2, mean_1, mean_2):
 
 def std_interpolate(x0, std0, x1, std1, x):
     assert (x <= x1).all() and (x >= x0).all()
-    u0 = (x1-x)/(x1-x0)
-    u1 = (x-x0)/(x1-x0)
+    u0 = (x1-x) / (x1-x0)
+    u1 = (x-x0) / (x1-x0)
     return np.sqrt((u0 * std0)**2 + (u1*std1)**2)
 
-def interpolate(x0, std0, x1, std1, x):
+def interpolate(x0, y0, x1, y1, x):
     assert (x <= x1).all() and (x >= x0).all()
-    u0 = (x1-x)/(x1-x0)
-    u1 = (x-x0)/(x1-x0)
-    return u0 * std0 + u1 * std1
+    u0 = (x1-x) / (x1-x0)
+    u1 = (x-x0) / (x1-x0)
+    return u0 * y0 + u1 * y1 
 
 def simple_interpolate(y_after, y_before, dt_after, dt_before, is_std=False):
     res = np.zeros_like(y_after).astype(float)
@@ -30,6 +30,7 @@ def simple_interpolate(y_after, y_before, dt_after, dt_before, is_std=False):
     # if is_std:
     #     res[idx] = std_interpolate(-dt_before[idx], y_before[idx], -dt_after[idx], y_after[idx], np.zeros_like(dt_before[idx]))
     # else:    
+    
     res[idx] = interpolate(-dt_before[idx], y_before[idx], -dt_after[idx], y_after[idx], np.zeros_like(dt_before[idx]))
     return res
 

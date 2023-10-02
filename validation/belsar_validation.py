@@ -544,7 +544,7 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename, lai_
         
         s2_data = torch.concat((s2_r, s2_a_permutated), 0).to(lai_snap.device)
         with torch.no_grad():
-            lai_pred = lai_snap.forward(s2_data, spatial_mode=True).cpu()
+            lai_pred = torch.clamp(lai_snap.forward(s2_data, spatial_mode=True).cpu(), min=0, max=None)
         dummy_tensor = 0 * NO_DATA * torch.ones(16, lai_pred.size(1), lai_pred.size(2))
         tensor = torch.cat((lai_pred, dummy_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA

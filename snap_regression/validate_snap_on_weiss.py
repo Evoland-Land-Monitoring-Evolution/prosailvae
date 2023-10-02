@@ -31,7 +31,11 @@ def get_parser():
     parser.add_argument("-n", dest="n_models",
                         help="Number of trained bvnets",
                         type=int, default=20)
-
+    
+    parser.add_argument("-b", dest="batch_size",
+                        help="Number of trained sample per batch",
+                        type=int, default=4096)
+    
     parser.add_argument("-d", dest="data_dir",
                         help="path to data directory",
                         type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2")
@@ -95,7 +99,7 @@ def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None,
     return prosail_vars, prosail_s2_sim
 
 
-def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=1024, s2_r=None, prosail_vars=None, max_samples=50000):
+def get_weiss_dataloader(variable='lai', valid_ratio=0.05, batch_size=2048, s2_r=None, prosail_vars=None, max_samples=50000):
     if prosail_vars is None or s2_r is None:
         s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
                                                 mode="snap")
@@ -166,7 +170,7 @@ def main():
         args = [
             # "-sd", "True",
             # "-p", "True",
-            # "-l", "True"
+            "-l", "True"
                 ]
         parser = get_parser().parse_args(args)
         file_prefix = ""
@@ -219,7 +223,7 @@ def main():
     model_dict = {}
     plot_loss = True
     # n_models=10
-    batch_size=1024
+    batch_size = parser.batch_size
     results_dict = {}
     variable = "ccc" if not parser.lai_mode else "lai"
 

@@ -477,8 +477,10 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
     logger.info(f"Weiss mode : {parser.weiss_mode}")
 
     if params["load_model"]:
-        vae_load_file_path = params["vae_load_dir_path"] + "/prosailvae_weights.tar"
-        io_coeffs = load_standardize_coeffs(params["vae_load_dir_path"], params["dataset_file_prefix"], n_idx=0 if params["weiss_bands"] else 4)
+        vae_load_file_path = os.path.join(params["vae_load_dir_path"], "/prosailvae_weights.tar")
+        io_coeffs = load_standardize_coeffs(params["vae_load_dir_path"], 
+                                            # params["dataset_file_prefix"], 
+                                            n_idx=0 if params["weiss_bands"] else 4)
     else:
         vae_load_file_path = None
 

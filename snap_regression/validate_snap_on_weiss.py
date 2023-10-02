@@ -30,7 +30,7 @@ def get_parser():
 
     parser.add_argument("-n", dest="n_models",
                         help="Number of trained bvnets",
-                        type=int, default=10)
+                        type=int, default=20)
 
     parser.add_argument("-d", dest="data_dir",
                         help="path to data directory",
@@ -75,7 +75,8 @@ def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None,
     for i in range(n_full_batch):
         prosail_vars[i*n_samples_per_batch:(i+1)*n_samples_per_batch,
                      :] = prosail_vars_weiss[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]
-        prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())
+        prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,
+                                                             :]).view(n_samples_per_batch,-1).float())
         sim_s2_r = ssimulator(prosail_r).numpy()
         if noise>0:
             sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)
@@ -90,7 +91,7 @@ def convert_prosail_data_set_from_weiss(nb_simus=2048, noise=0, psimulator=None,
             add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
             sim_s2_r += add_noise
         prosail_s2_sim[n_full_batch*n_samples_per_batch:,:] = sim_s2_r
-    prosail_vars[:,-3:] = s2_a_snap # permuting angles
+    prosail_vars[:,-3:] = s2_a_snap # permuting angles for bvnet
     return prosail_vars, prosail_s2_sim
 
 
@@ -160,12 +161,12 @@ def main():
         res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_lai/" 
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
-        epochs=100
+        epochs=500
         n_models=2
         args = [
             # "-sd", "True",
             # "-p", "True",
-            "-l", "True"
+            # "-l", "True"
                 ]
         parser = get_parser().parse_args(args)
         file_prefix = ""
@@ -224,7 +225,7 @@ def main():
 
     results_dict[variable] = []
     for i in range(n_models):
-        train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.05, 
+        train_loader, valid_loader, loc_bv, scale_bv = get_weiss_dataloader(variable=variable, valid_ratio=0.1, 
                                                                             batch_size=batch_size, 
                                                                             prosail_vars=prosail_vars, s2_r=prosail_s2_sim)
         model = initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, 

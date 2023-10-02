@@ -30,7 +30,6 @@ def simple_interpolate(y_after, y_before, dt_after, dt_before, is_std=False):
     # if is_std:
     #     res[idx] = std_interpolate(-dt_before[idx], y_before[idx], -dt_after[idx], y_after[idx], np.zeros_like(dt_before[idx]))
     # else:    
-    
     res[idx] = interpolate(-dt_before[idx], y_before[idx], -dt_after[idx], y_after[idx], np.zeros_like(dt_before[idx]))
     return res
 

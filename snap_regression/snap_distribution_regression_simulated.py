@@ -173,7 +173,7 @@ def main():
         belsar_data_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
     tg_mu_0 = 2
     tg_sigma_0 = 3
-    batch_size = 1024
+    batch_size = 4096
     res_dir = parser.res_dir
     data_dir = parser.data_dir
     lr = parser.lr

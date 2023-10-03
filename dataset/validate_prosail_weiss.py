@@ -7,7 +7,7 @@ import os
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, PROSAILVARS
 from tqdm import trange
 from metrics.prosail_plots import plot_param_compare_dist
-from dataset.weiss_utils import load_weiss_dataset
+from dataset.bvnet_dataset import load_bvnet_dataset
 
 PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
 
@@ -24,14 +24,14 @@ def plot_bands_scatter_plots(s2_r, s2_r_sim, vars_names = ["B3", "B4", "B5", "B6
         axs[row, col].set_aspect('equal', 'box')
     return fig, axs
 
-def plot_lai_correlations(prosail_var_weiss,i):
+def plot_lai_correlations(prosail_var_bvnet,i):
     import matplotlib.pyplot as plt
     plt.figure()
-    plt.scatter(prosail_var_weiss[:,i], prosail_var_weiss[:,6], s=1)
+    plt.scatter(prosail_var_bvnet[:,i], prosail_var_bvnet[:,6], s=1)
 
-def compare_weiss_w_simulations(prosail_var_weiss, prosail_var_simu):
-    fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_weiss, params_name=PROSAILVARS+["phi_s", "phi_o", "psi"], res_dir = None,)
-    fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/sim_vs_weiss_vers.png")
+def compare_bvnet_w_simulations(prosail_var_bvnet, prosail_var_simu):
+    fig, ax = plot_param_compare_dist(prosail_var_simu, prosail_var_bvnet, params_name=PROSAILVARS+["phi_s", "phi_o", "psi"], res_dir = None,)
+    fig.savefig("/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/sim_vs_bvnet_vers.png")
     return 
 
 def lognormal_pdf(x, mu, sigma):
@@ -42,13 +42,13 @@ def normal_pdf(x, mu, sigma):
 
 
 def main():
-    s2_r, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
+    s2_r, prosail_vars = load_bvnet_dataset(PATH_TO_DATA_DIR)
     lai = prosail_vars[:,6]
     s2_r = torch.as_tensor(s2_r)
     data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/"
     t_prosail_vars = torch.load(data_dir + "test_dist_prosail_sim_vars.pt")
     # t_s2_r = torch.load(data_dir + "test_dist_prosail_s2_sim_refl.pt")
-    compare_weiss_w_simulations(torch.as_tensor(prosail_vars), t_prosail_vars)
+    compare_bvnet_w_simulations(torch.as_tensor(prosail_vars), t_prosail_vars)
 
     rsr_dir = '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/'
     results_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/validation/"
@@ -66,7 +66,7 @@ def main():
         # plt.close('all')
 
     fig, axs = plot_bands_scatter_plots(s2_r_lai4, s2_r_sim, vars_names = ["B3", "B4", "B5", "B6", "B7", "B8A", "B11", "B12"])
-    fig.savefig(results_dir + "/weiss_refl_scatter_all_lai.png")
+    fig.savefig(results_dir + "/bvnet_refl_scatter_all_lai.png")
     return
 
 if __name__=="__main__":

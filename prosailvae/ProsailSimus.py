@@ -40,14 +40,14 @@ PROSAILVARS = ["N", "cab", "car", "cbrown", "cw", "cm",
                "lai", "lidfa", "hspot", "psoil", "rsoil"]
 BANDS = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
 
-def get_bands_idx(weiss_bands=False):
+def get_bands_idx(bvnet_bands=False):
     """
     Outputs the index of bands to be taken into account in the reflectance tensor
     """
     bands = torch.arange(10) # Bands are supposed to come in number order, not by resolution group
     prosail_bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
     
-    if weiss_bands: # Removing B2 and B8
+    if bvnet_bands: # Removing B2 and B8
         print("Weiss bands enabled")
         bands = torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]) # removing b2 and b8
         prosail_bands = [2, 3, 4, 5, 6, 8, 11, 12]

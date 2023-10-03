@@ -1,9 +1,6 @@
 import os
-# import torch
 import numpy as np
 import pandas as pd
-# from torchutils.patches import patchify, unpatchify
-# from snap_regression.snap_nn import SnapNN
 
 def load_refl_angles(path_to_data_dir):
     path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
@@ -15,9 +12,6 @@ def load_refl_angles(path_to_data_dir):
     tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
     tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
     psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
-    # lais = torch.as_tensor(df_validation_data['lai_true'].values.reshape(-1,1))
-    # lai_bv_net = torch.as_tensor(df_validation_data['lai_bvnet'].values.reshape(-1,1))
-    # time_delta = torch.zeros((n_obs,1))
     return s2_r, tts, tto, psi
 
 def load_prosail_params(path_to_data_dir, psoil0=0.0):
@@ -38,7 +32,7 @@ def load_prosail_params(path_to_data_dir, psoil0=0.0):
     return N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil
 
 
-def load_weiss_dataset(path_to_data_dir, mode = "pvae", psoil0=0.0):
+def load_bvnet_dataset(path_to_data_dir, mode = "pvae", psoil0=0.0):
     s2_r, sun_zen, view_zen, rel_azi = load_refl_angles(path_to_data_dir)
     N, cab, car, cbrown, cw, cm, lai, lidfa, hspot, psoil, rsoil = load_prosail_params(path_to_data_dir, psoil0=psoil0)
     prosail_vars = np.zeros((N.shape[0], 14))
@@ -57,7 +51,7 @@ def load_weiss_dataset(path_to_data_dir, mode = "pvae", psoil0=0.0):
         prosail_vars[:,11] = sun_zen.reshape(-1)
         prosail_vars[:,12] = view_zen.reshape(-1)
         prosail_vars[:,13] = rel_azi.reshape(-1)
-    elif mode == "snap":
+    elif mode == "bvnet":
         prosail_vars[:,11] = view_zen.reshape(-1)
         prosail_vars[:,12] = sun_zen.reshape(-1)
         prosail_vars[:,13] = rel_azi.reshape(-1)

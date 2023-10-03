@@ -17,7 +17,7 @@ import argparse
 import prosailvae
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 from prosailvae.prosail_var_dists import get_prosail_var_dist
-from dataset.validate_prosail_weiss import load_weiss_dataset
+from dataset.bvnet_dataset import load_bvnet_dataset
 from tqdm import trange
 import scipy.stats as stats
 from dataset.dataset_utils import min_max_to_loc_scale
@@ -272,7 +272,7 @@ def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=None, ss
 def simulate_lai_with_rec_error_hist(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
                                           tto=None, psi=None, max_iter=100, 
                                           samples_per_iter=1024, log_err = True, uniform_mode=True, lai_corr=False, 
-                                          lai_conv_override=None, weiss_mode=False, prosail_var_dist_type="legacy"):
+                                          lai_conv_override=None, bvnet_bands=False, prosail_var_dist_type="legacy"):
     
     prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
     best_mae = np.inf
@@ -305,7 +305,7 @@ def simulate_lai_with_rec_error_hist(s2_r_ref, noise=0, psimulator=None, ssimula
             aggregate_lai_hist += np.histogram(lai_sim, bins=n_bin_lai, range=[min_lai, max_lai])[0].reshape(-1,1)
             if noise > 0:
                 raise NotImplementedError
-            if weiss_mode:
+            if bvnet_bands:
                 mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
             else:
                 mare = np.abs((s2_r_ref - prosail_s2_sim)/(s2_r_ref+1e-8)).mean(1)
@@ -326,7 +326,7 @@ def simulate_lai_with_rec_error_hist(s2_r_ref, noise=0, psimulator=None, ssimula
 def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
                                                     tto=None, psi=None, max_iter=100, 
                                                     samples_per_iter=1024, log_err = True, uniform_mode=True, lai_corr=False, 
-                                                    lai_conv_override=None, weiss_mode=False, sigma=2, prosail_var_dist_type="legacy"):
+                                                    lai_conv_override=None, bvnet_bands=False, sigma=2, prosail_var_dist_type="legacy"):
     AD=0.01
     MD=2  
     prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
@@ -363,7 +363,7 @@ def simulate_lai_with_rec_error_hist_with_enveloppe(s2_r_ref, noise=0, psimulato
             aggregate_lai_hist += np.histogram(lai_sim, bins=n_bin_lai, range=[min_lai, max_lai])[0].reshape(-1,1)
             if noise > 0:
                 raise NotImplementedError
-            if weiss_mode:
+            if bvnet_bands:
                 mare = np.abs((s2_r_ref[:,[1,2,3,4,5,7,8,9]] - prosail_s2_sim[:,[1,2,3,4,5,7,8,9]])/(s2_r_ref[:,[1,2,3,4,5,7,8,9]]+1e-8)).mean(1)
                 enveloppe_low = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 - sigma * MD / 100 ) - sigma * AD
                 enveloppe_high = s2_r_ref[:,[1,2,3,4,5,7,8,9]] * (1 + sigma * MD / 100 ) + sigma * AD
@@ -424,14 +424,14 @@ def get_bands_norm_factors(s2_r_samples, mode='mean'):
 
     return norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_norm_mean, idx_norm_std
 
-def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_mode=False, uniform_mode=False, 
+def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, bvnet_bands=False, uniform_mode=False, 
                  lai_corr=True, prosail_var_dist_type="legacy", lai_var_dist:VariableDistribution|None=None, 
                  lai_corr_mode="v2", lai_thresh=None):
 
     psimulator = ProsailSimulator()
-    bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
-    if weiss_mode:
-        bands = [2, 3, 4, 5, 6, 8, 11, 12]
+    bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12] # B2, B3, B4, B5, B6, B7, B8, B8A, B11, B12
+    if bvnet_bands:
+        bands = [2, 3, 4, 5, 6, 8, 11, 12] #       B3, B4, B5, B6, B7,     B8A, B11, B12
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
     prosail_vars, prosail_s2_sim = np_simulate_prosail_dataset(nb_simus=nb_simus,
                                                                 noise=noise,
@@ -455,70 +455,70 @@ def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, weiss_m
     torch.save(idx_loc, os.path.join(data_dir, f"{data_file_prefix}idx_loc.pt"))
     torch.save(idx_scale, os.path.join(data_dir, f"{data_file_prefix}idx_scale.pt"))
 
-def save_weiss_dataset(data_dir, rsr_dir, noise=0, lai_corr=True, nb_test_samples=0, prosail_var_dist_type="legacy"):
+def save_bvnet_dataset(data_dir, rsr_dir, noise=0, lai_corr=True, nb_test_samples=0, prosail_var_dist_type="legacy"):
 
     PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
-    weiss_data_dir = os.path.join(data_dir, os.pardir) + "/weiss/"
-    if not os.path.isdir(weiss_data_dir):
-        os.makedirs(weiss_data_dir)
-    prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
+    bvnet_data_dir = os.path.join(data_dir, os.pardir) + "/bvnet/"
+    if not os.path.isdir(bvnet_data_dir):
+        os.makedirs(bvnet_data_dir)
+    prosail_s2_sim, prosail_vars = load_bvnet_dataset(PATH_TO_DATA_DIR)
     if nb_test_samples > 0:
         test_prosail_s2_sim = prosail_s2_sim[:nb_test_samples,:]
         test_prosail_vars = prosail_vars[:nb_test_samples,:]
         train_prosail_s2_sim = prosail_s2_sim[nb_test_samples:,:]
         train_prosail_vars = prosail_vars[nb_test_samples:,:]
-        torch.save(torch.from_numpy(test_prosail_vars), os.path.join(weiss_data_dir, "/weiss_test_prosail_sim_vars.pt"))
-        torch.save(torch.from_numpy(test_prosail_s2_sim), os.path.join(weiss_data_dir, "weiss_test_prosail_s2_sim_refl.pt"))
-        # save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True, lai_corr=lai_corr)
+        torch.save(torch.from_numpy(test_prosail_vars), os.path.join(bvnet_data_dir, "/bvnet_test_prosail_sim_vars.pt"))
+        torch.save(torch.from_numpy(test_prosail_s2_sim), os.path.join(bvnet_data_dir, "bvnet_test_prosail_s2_sim_refl.pt"))
+        # save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, bvnet_bands=True, lai_corr=lai_corr)
     else:
         train_prosail_s2_sim = prosail_s2_sim
         train_prosail_vars = prosail_vars
-        save_dataset(data_dir, "test_", rsr_dir, 5000, noise, weiss_mode=True, lai_corr=lai_corr, prosail_var_dist_type=prosail_var_dist_type)
-    torch.save(torch.from_numpy(train_prosail_vars), os.path.join(weiss_data_dir, "weiss_prosail_sim_vars.pt"))
-    torch.save(torch.from_numpy(train_prosail_s2_sim), os.path.join(weiss_data_dir, "weiss_prosail_s2_sim_refl.pt"))
+        save_dataset(data_dir, "test_", rsr_dir, 5000, noise, bvnet_bands=True, lai_corr=lai_corr, prosail_var_dist_type=prosail_var_dist_type)
+    torch.save(torch.from_numpy(train_prosail_vars), os.path.join(bvnet_data_dir, "bvnet_prosail_sim_vars.pt"))
+    torch.save(torch.from_numpy(train_prosail_s2_sim), os.path.join(bvnet_data_dir, "bvnet_prosail_s2_sim_refl.pt"))
     
     norm_mean, norm_std = get_refl_normalization(train_prosail_s2_sim)
-    torch.save(torch.from_numpy(norm_mean), os.path.join(weiss_data_dir, "weiss_norm_mean.pt"))
-    torch.save(torch.from_numpy(norm_std), os.path.join(weiss_data_dir, "weiss_norm_std.pt"))
+    torch.save(torch.from_numpy(norm_mean), os.path.join(bvnet_data_dir, "bvnet_norm_mean.pt"))
+    torch.save(torch.from_numpy(norm_std), os.path.join(bvnet_data_dir, "bvnet_norm_std.pt"))
     cos_angle_min = torch.tensor([0.342108564072183, 0.979624800125421, -1.0000]) # sun zenith, S2 senith, relative azimuth
     cos_angle_max = torch.tensor([0.9274847491748729, 1.0000, 1.0000])
     cos_angles_loc, cos_angles_scale = min_max_to_loc_scale(cos_angle_min, cos_angle_max)
-    torch.save(cos_angles_loc, os.path.join(weiss_data_dir, f"weiss_angles_loc.pt"))
-    torch.save(cos_angles_scale, os.path.join(weiss_data_dir, f"weiss_angles_scale.pt"))
-    # torch.save(idx_loc, os.path.join(data_dir, f"weiss_idx_loc.pt"))
-    # torch.save(idx_scale, os.path.join(data_dir, f"weiss_idx_scale.pt"))
+    torch.save(cos_angles_loc, os.path.join(bvnet_data_dir, f"bvnet_angles_loc.pt"))
+    torch.save(cos_angles_scale, os.path.join(bvnet_data_dir, f"bvnet_angles_scale.pt"))
+    # torch.save(idx_loc, os.path.join(data_dir, f"bvnet_idx_loc.pt"))
+    # torch.save(idx_scale, os.path.join(data_dir, f"bvnet_idx_scale.pt"))
 
-def save_lai_ccc_weiss_dataset(data_dir, rsr_dir, noise=0, lai_corr=True, nb_test_samples=0, prosail_var_dist_type="legacy"):
+def save_lai_ccc_bvnet_dataset(data_dir, rsr_dir, noise=0, lai_corr=True, nb_test_samples=0, prosail_var_dist_type="legacy"):
 
     PATH_TO_DATA_DIR = os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
-    weiss_data_dir = os.path.join(data_dir, os.pardir) + "/weiss_ccc_lai/"
-    if not os.path.isdir(weiss_data_dir):
-        os.makedirs(weiss_data_dir)
-    prosail_s2_sim, prosail_vars = load_weiss_dataset(PATH_TO_DATA_DIR)
+    bvnet_data_dir = os.path.join(data_dir, os.pardir) + "/bvnet_ccc_lai/"
+    if not os.path.isdir(bvnet_data_dir):
+        os.makedirs(bvnet_data_dir)
+    prosail_s2_sim, prosail_vars = load_bvnet_dataset(PATH_TO_DATA_DIR)
     prosail_vars = prosail_vars[:,np.array([6,1,11,12,13])]
     if nb_test_samples > 0:
         test_prosail_s2_sim = prosail_s2_sim[:nb_test_samples,:]
         test_prosail_vars = prosail_vars[:nb_test_samples,:]
         train_prosail_s2_sim = prosail_s2_sim[nb_test_samples:,:]
         train_prosail_vars = prosail_vars[nb_test_samples:,:]
-        torch.save(torch.from_numpy(test_prosail_vars), os.path.join(weiss_data_dir, "/weiss_test_prosail_sim_vars.pt"))
-        torch.save(torch.from_numpy(test_prosail_s2_sim), os.path.join(weiss_data_dir, "weiss_test_prosail_s2_sim_refl.pt"))
-        # save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, weiss_mode=True, lai_corr=lai_corr)
+        torch.save(torch.from_numpy(test_prosail_vars), os.path.join(bvnet_data_dir, "/bvnet_test_prosail_sim_vars.pt"))
+        torch.save(torch.from_numpy(test_prosail_s2_sim), os.path.join(bvnet_data_dir, "bvnet_test_prosail_s2_sim_refl.pt"))
+        # save_dataset(data_dir, "test_", rsr_dir, nb_test_samples, noise, bvnet_bands=True, lai_corr=lai_corr)
     else:
         train_prosail_s2_sim = prosail_s2_sim
         train_prosail_vars = prosail_vars
-        save_dataset(data_dir, "test_", rsr_dir, 5000, noise, weiss_mode=True, lai_corr=lai_corr, prosail_var_dist_type=prosail_var_dist_type)
-    torch.save(torch.from_numpy(train_prosail_vars), os.path.join(weiss_data_dir, "weiss_prosail_sim_vars.pt"))
-    torch.save(torch.from_numpy(train_prosail_s2_sim), os.path.join(weiss_data_dir, "weiss_prosail_s2_sim_refl.pt"))
+        save_dataset(data_dir, "test_", rsr_dir, 5000, noise, bvnet_bands=True, lai_corr=lai_corr, prosail_var_dist_type=prosail_var_dist_type)
+    torch.save(torch.from_numpy(train_prosail_vars), os.path.join(bvnet_data_dir, "bvnet_prosail_sim_vars.pt"))
+    torch.save(torch.from_numpy(train_prosail_s2_sim), os.path.join(bvnet_data_dir, "bvnet_prosail_s2_sim_refl.pt"))
     
     norm_mean, norm_std = get_refl_normalization(train_prosail_s2_sim)
-    torch.save(torch.from_numpy(norm_mean), os.path.join(weiss_data_dir, "weiss_norm_mean.pt"))
-    torch.save(torch.from_numpy(norm_std), os.path.join(weiss_data_dir, "weiss_norm_std.pt"))
+    torch.save(torch.from_numpy(norm_mean), os.path.join(bvnet_data_dir, "bvnet_norm_mean.pt"))
+    torch.save(torch.from_numpy(norm_std), os.path.join(bvnet_data_dir, "bvnet_norm_std.pt"))
     cos_angle_min = torch.tensor([0.342108564072183, 0.979624800125421, -1.0000]) # sun zenith, S2 senith, relative azimuth
     cos_angle_max = torch.tensor([0.9274847491748729, 1.0000, 1.0000])
     cos_angles_loc, cos_angles_scale = min_max_to_loc_scale(cos_angle_min, cos_angle_max)
-    torch.save(cos_angles_loc, os.path.join(weiss_data_dir, f"weiss_angles_loc.pt"))
-    torch.save(cos_angles_scale, os.path.join(weiss_data_dir, f"weiss_angles_scale.pt"))
+    torch.save(cos_angles_loc, os.path.join(bvnet_data_dir, f"bvnet_angles_loc.pt"))
+    torch.save(cos_angles_scale, os.path.join(bvnet_data_dir, f"bvnet_angles_scale.pt"))
 
 def get_data_generation_parser():
     """
@@ -550,12 +550,12 @@ def get_data_generation_parser():
                         help="Set to True to generate prosail samples with a single angular configuration",
                         type=bool, default=False)
     
-    parser.add_argument("-w", dest="weiss_mode",
-                        help="Set to True to generate prosail samples without B2 and B8 for validation with weiss_dataset",
+    parser.add_argument("-b", dest="bvnet_bands",
+                        help="Set to True to generate prosail samples without B2 and B8 for validation with bvnet_dataset",
                         type=bool, default=False)
     
-    parser.add_argument("-wd", dest="weiss_dataset",
-                        help="Set to True to generate a training dataset from weiss data",
+    parser.add_argument("-bd", dest="bvnet_dataset",
+                        help="Set to True to generate a training dataset from bvnet data",
                         type=bool, default=False)
     
     parser.add_argument("-dt", dest="dist_type",
@@ -576,8 +576,8 @@ if  __name__ == "__main__":
         args=[
             # "-wd", "True",
             #   "-w", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2/",
-              "-dt", "new_v3",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test/",
+              "-dt", "new_v2",
               "-n", "40000",
               "-m", "v2"]
         parser = get_data_generation_parser().parse_args(args)
@@ -593,12 +593,12 @@ if  __name__ == "__main__":
     lai_thresh = None
     if parser.lai_thresh:
         lai_thresh = 10
-    if parser.weiss_dataset:
-        save_lai_ccc_weiss_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True, prosail_var_dist_type=parser.dist_type)
-        save_weiss_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True, prosail_var_dist_type=parser.dist_type, lai_thresh=lai_thresh)
+    if parser.bvnet_dataset:
+        save_lai_ccc_bvnet_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True, prosail_var_dist_type=parser.dist_type)
+        save_bvnet_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True, prosail_var_dist_type=parser.dist_type, lai_thresh=lai_thresh)
     else:
         save_dataset(data_dir, parser.file_prefix, parser.rsr_dir,
-                        parser.n_samples, parser.noise, weiss_mode=parser.weiss_mode, 
+                        parser.n_samples, parser.noise, bvnet_bands=parser.bvnet_bands, 
                         uniform_mode=False, lai_corr=True, prosail_var_dist_type=parser.dist_type,
                         lai_corr_mode=parser.lai_corr_mode, lai_thresh=lai_thresh)
 

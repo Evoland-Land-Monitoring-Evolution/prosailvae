@@ -56,8 +56,8 @@ def load_params(config_dir, config_file, parser=None):
         params["block_n"] = [1,3]
     if "supervised_kl" not in params.keys():
         params["supervised_kl"] = False
-    if "weiss_bands" not in params.keys():
-        params["weiss_bands"] = False
+    if "bvnet_bands" not in params.keys():
+        params["bvnet_bands"] = False
     params["vae_save_file_path"] = None
     if "supervised_config_file" not in params.keys():
         params["supervised_config_file"] = None

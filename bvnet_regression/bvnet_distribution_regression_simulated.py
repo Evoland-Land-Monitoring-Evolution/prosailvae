@@ -10,9 +10,9 @@ from prosailvae.prosail_var_dists import VariableDistribution
 import argparse
 from dataset.generate_dataset import save_dataset
 import socket
-from snap_regression.snap_nn import SnapNN
+from bvnet_regression.bvnet_utils import initialize_bvnet, get_bvnet_dataloader
 from prosailvae.dist_utils import kl_tntn
-from validation.validation import (get_validation_global_metrics, get_all_campaign_lai_results_SNAP,
+from validation.validation import (get_validation_global_metrics, get_all_campaign_lai_results_BVNET,
                                    get_belsar_x_frm4veg_lai_results)
 
 def get_parser():
@@ -51,7 +51,8 @@ def get_parser():
                         type=bool, default=False)
     return parser
 
-def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000, 
+def simulate_data_sets(n_eval:int=20000, 
+                       n_samples_sub:int=20000, 
                        save_dir:str="",
                        tg_mu: list=[0,4], 
                        tg_sigma:list=[1,4],
@@ -67,8 +68,8 @@ def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000,
                                         loc=tg_sigma_0,
                                         law="gaussian")
     print("Simulating evaluation data...")
-    save_dataset(save_dir, "evaluation_", nb_simus=n_eval, rsr_dir=rsr_dir,weiss_mode=True, 
-                 prosail_var_dist_type="new_v3",lai_var_dist=lai_var_dist)
+    save_dataset(save_dir, "evaluation_", nb_simus=n_eval, rsr_dir=rsr_dir, bvnet_bands=False, 
+                 prosail_var_dist_type="new_v2",lai_var_dist=lai_var_dist)
 
     for i, mu in enumerate(tg_mu):
         for j, sigma in enumerate(tg_sigma):
@@ -79,43 +80,8 @@ def simulate_data_sets(n_eval:int=20000, n_samples_sub:int=20000,
                                                 loc=mu,
                                                 law="gaussian")
             save_dataset(save_dir, f"train_mu_{mu}_sigma_{sigma}_", nb_simus=n_samples_sub, 
-                         rsr_dir=rsr_dir, weiss_mode=True, 
-                         prosail_var_dist_type="new_v3", lai_var_dist=lai_var_dist, lai_thresh=10)
-
-def get_weiss_simloader(data_dir, file_prefix, valid_ratio=0.05, batch_size=1024, shuffle=True):
-    prosail_s2_sim = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
-    vars = [6, 12, 11, 13]
-    prosail_vars = torch.load(data_dir + f"/{file_prefix}prosail_sim_vars.pt")[:,vars]
-    s2_a = prosail_vars[:,1:]
-    lai = prosail_vars[:,:1].float()
-    snap_input = torch.cat((prosail_s2_sim, np.cos(np.deg2rad(s2_a))), 1).float()
-    if valid_ratio == 0.0:
-        dataset = TensorDataset(snap_input, lai)
-        loader = DataLoader(dataset=dataset, batch_size=batch_size, num_workers=0, shuffle=shuffle)
-        return loader
-    n_valid = int(valid_ratio * lai.size(0))
-    seed = 4567895683301
-    g_cpu = torch.Generator()
-    g_cpu.manual_seed(seed)
-    idx = torch.randperm(len(lai), generator=g_cpu)
-    
-    g_cpu = torch.Generator()
-    g_cpu.manual_seed(seed)
-
-    idx = torch.randperm(lai.size(0), generator=g_cpu)
-
-    data_valid = snap_input[idx[:n_valid],:]
-    data_train = snap_input[idx[n_valid:],:]
-    lai_valid = lai[idx[:n_valid],:]
-    lai_train = lai[idx[n_valid:],:]
-    train_dataset = TensorDataset(data_train, lai_train)
-    valid_dataset = TensorDataset(data_valid, lai_valid)
-
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
-                              num_workers=0, shuffle=True)
-    valid_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size,
-                                num_workers=0, shuffle=True)
-    return train_loader, valid_loader
+                         rsr_dir=rsr_dir, bvnet_bands=False, noise=0.01,
+                         prosail_var_dist_type="new_v2", lai_var_dist=lai_var_dist, lai_thresh=None)
 
 def get_dataset_rmse(dataset, model):
     with torch.no_grad():
@@ -123,39 +89,22 @@ def get_dataset_rmse(dataset, model):
         lai_true = dataset[:][1].cpu()
         rmse = (lai_pred - lai_true).pow(2).mean().sqrt().item()
     return rmse
-    
-def initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, n_models=10, n_epochs=20, lr=1e-3):
-    best_valid_loss = np.inf
-    for i in range(n_models):
-        model = SnapNN(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-        optimizer = optim.Adam(model.parameters(), lr=lr)
-        lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=n_epochs,
-                                                threshold=0.001)
-        _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
-                                                        epochs=n_epochs, lr_scheduler=lr_scheduler,
-                                                        disable_tqdm=True, lr_recompute=n_epochs, 
-                                                        loc_bv=loc_bv, scale_bv=scale_bv, res_dir=None)
-        if min(all_valid_losses) < best_valid_loss:
-            model.save_weights(res_dir)
-            best_valid_loss = min(all_valid_losses)
-    model.load_weights(res_dir)
-    return model
 
 def main():
     if socket.gethostname()=='CELL200973':
         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data/",
               "-r", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_distribution_validation/",
-              "-e", "300",
+              "-e", "400",
               "-n", "2",
               "-lr", "0.001",
               '-v', 'True',
               "-s", "True"
               ]
         disable_tqdm=False
-        tg_mu = [1, 2]
-        tg_sigma = [0.5, 3]
-        n_eval = 2000
-        n_samples_sub=2000
+        tg_mu = [2]
+        tg_sigma = [3]
+        n_eval = 40000
+        n_samples_sub=40000
         parser = get_parser().parse_args(args)
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
@@ -163,8 +112,8 @@ def main():
     else:
         disable_tqdm=True
         parser = get_parser().parse_args()
-        # tg_mu = [0, 1, 2, 3, 4]
-        tg_mu = [4]
+        tg_mu = [0, 1, 2, 3, 4]
+        # tg_mu = [4]
         # tg_sigma = [0.5, 1, 2, 3, 4]
         tg_sigma = [0.5, 1, 2]
         # tg_sigma = [3, 4]
@@ -193,8 +142,14 @@ def main():
     rmse_grid = np.zeros((len(tg_mu), len(tg_sigma), parser.n_model_train))
     kl_grid = np.zeros((len(tg_mu), len(tg_sigma)))
     valid_loss_grid = np.zeros((len(tg_mu), len(tg_sigma), parser.n_model_train))
-    eval_loader = get_weiss_simloader(valid_ratio=0.0, file_prefix="evaluation_",
-                                      batch_size=batch_size, data_dir=data_dir)
+
+    bands = [1, 2, 3, 4, 5, 7, 8, 9]
+    vars = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11, 13]
+    prosail_s2_sim = torch.load(os.path.join(data_dir, f"evaluation_prosail_s2_sim_refl.pt"))[:, bands]
+    prosail_vars = torch.load(os.path.join(data_dir, f"evaluation_prosail_sim_vars.pt"))[:, vars]
+    eval_loader, _, _, _ = get_bvnet_dataloader(variable='lai', valid_ratio=0.0, batch_size=batch_size, s2_r=prosail_s2_sim, 
+                                                prosail_vars=prosail_vars, max_samples=50000)
+
     
     tg_mu_list = []
     tg_sigma_list = []
@@ -202,31 +157,29 @@ def main():
     valid_loss_list = []
     rmse_list = []
     lai_terrain_rmse_list = []
+
     for i, mu in enumerate(tg_mu):
-        loc_bv = mu
+        # loc_bv = mu
         for j, sigma in enumerate(tg_sigma):
-            scale_bv = sigma
+            # scale_bv = sigma
             kl = kl_tntn(torch.as_tensor(tg_mu_0), torch.as_tensor(tg_sigma_0), 
                          torch.as_tensor(mu), torch.as_tensor(sigma), lower=torch.as_tensor(lai_low), 
                          upper=torch.as_tensor(lai_high)).item()
             kl_grid[i, j] = kl
-            
-            train_loader, valid_loader = get_weiss_simloader(valid_ratio=0.05,
-                                                             file_prefix=f"train_mu_{mu}_sigma_{sigma}_",
-                                                             batch_size=batch_size,
-                                                             data_dir=data_dir)
+            prosail_s2_sim = torch.load(os.path.join(data_dir, f"train_mu_{mu}_sigma_{sigma}_prosail_s2_sim_refl.pt"))[:, bands]
+            prosail_vars = torch.load(os.path.join(data_dir, f"train_mu_{mu}_sigma_{sigma}_prosail_sim_vars.pt"))[:, vars]
+            train_loader, valid_loader, loc_bv, scale_bv = get_bvnet_dataloader(variable="lai", valid_ratio=0.05,
+                                                              batch_size=batch_size, s2_r=prosail_s2_sim, 
+                                                              prosail_vars=prosail_vars)
             for n in range(parser.n_model_train):
                 tg_mu_list.append(mu)
                 tg_sigma_list.append(sigma)
                 kl_list.append(kl)                
-                # model = SnapNN(ver="3A", variable="lai",
-                #                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
                 model = initialize_bvnet("lai", train_loader, valid_loader, loc_bv, scale_bv, res_dir, 
                                                 n_models=10, n_epochs=10, lr=1e-3)
                 optimizer = optim.Adam(model.parameters(), lr=lr)
-                lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience,
-                                                threshold=0.001)
-                _, all_valid_losses, _ = model.train_model(train_loader, valid_loader, optimizer,
+                lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=patience, threshold=0.001)
+                _, all_valid_losses, all_lr = model.train_model(train_loader, valid_loader, optimizer,
                                                                 epochs=parser.epochs, lr_scheduler=lr_scheduler,
                                                                 disable_tqdm=disable_tqdm, lr_recompute=patience, 
                                                                 loc_bv=loc_bv, scale_bv=scale_bv, res_dir=res_dir)
@@ -243,12 +196,12 @@ def main():
                 if parser.validate_on_terrain:
 
                     (barrax_results, barrax_2021_results, wytham_results, belsar_results, 
-                    all_belsar) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, 
+                    all_belsar) = get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg_2021_data_dir, 
                                                                     belsar_data_dir, res_dir,
                                                                     method="simple_interpolate", get_all_belsar=False, 
-                                                                    remove_files=True, lai_snap=model)    
+                                                                    remove_files=True, lai_bvnet=model)    
                     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
-                                                                frm4veg_lai="lai", get_reconstruction_error=False)
+                                                                  frm4veg_lai="lai", get_reconstruction_error=False)
                     rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")
                     lai_terrain_rmse = rmse['Campaign'][f'lai_rmse_all'].values[0]
                     model_df = pd.concat((model_df, pd.DataFrame({"terrain_rmse":[lai_terrain_rmse]})), axis=1)
@@ -264,9 +217,8 @@ def main():
                        "rmse":rmse_list, 
                        "loss":valid_loss_list})
     if parser.validate_on_terrain:
-        all_results_df = pd.concat((model_df, pd.DataFrame({"terrain_rmse":[lai_terrain_rmse_list]})), axis=1)
-    all_results_df.to_csv(os.path.join(res_dir, "snap_distribution_regression_results_all.csv"), 
-                                                       index=False)
+        all_results_df = pd.concat((model_df, pd.DataFrame({"terrain_rmse":lai_terrain_rmse_list})), axis=1)
+    all_results_df.to_csv(os.path.join(res_dir, "snap_distribution_regression_results_all.csv"), index=False)
     np.save(os.path.join(res_dir, "snap_distribution_regression_rmse.npy"), rmse_grid)
     np.save(os.path.join(res_dir, "snap_distribution_regression_kl.npy"), kl_grid)
     np.save(os.path.join(res_dir, "snap_distribution_regression_loss.npy"), valid_loss_grid)

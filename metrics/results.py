@@ -5,7 +5,7 @@ import socket
 import torch
 from prosailvae import __path__ as PPATH
 TOP_PATH = os.path.join(PPATH[0], os.pardir)
-from .metrics_utils import get_metrics, save_metrics, get_juan_validation_metrics, get_weiss_validation_metrics
+from .metrics_utils import get_metrics, save_metrics, get_juan_validation_metrics, get_bvnet_validation_metrics
 from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_param_dist, plot_pred_vs_tgt, 
                                     plot_refl_dist, pair_plot, plot_rec_error_vs_angles, plot_lat_hist2D, plot_rec_hist2D, 
                                     plot_metric_boxplot, plot_patch_pairs, plot_lai_preds, plot_single_lat_hist_2D,
@@ -13,7 +13,7 @@ from .prosail_plots import (plot_metrics, plot_rec_and_latent, loss_curve, plot_
                                     PROSAIL_2D_aggregated_results, article_2D_aggregated_results,
                                     frm4veg_plots, plot_belsar_metrics, regression_plot, regression_plot_2hues)
 from dataset.loaders import  get_simloader
-from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
+from bvnet_regression.bvnet_utils import get_bvnet_biophyiscal_from_batch
 from prosailvae.ProsailSimus import PROSAILVARS, BANDS
 
 from utils.utils import load_dict, save_dict
@@ -21,8 +21,8 @@ from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from prosailvae.prosail_vae import load_prosail_vae_with_hyperprior
 
 from validation.validation import (get_all_campaign_lai_results, get_belsar_x_frm4veg_lai_results, get_frm4veg_ccc_results, 
-                                   get_validation_global_metrics, get_all_campaign_lai_results_SNAP, 
-                                   get_all_campaign_CCC_results_SNAP)
+                                   get_validation_global_metrics, get_all_campaign_lai_results_BVNET, 
+                                   get_all_campaign_CCC_results_BVNET)
 from article_plots.belsar_plots import get_belsar_sites_time_series, get_belsar_lai_vs_hspot
 from datetime import datetime 
 import shutil
@@ -193,7 +193,7 @@ def save_validation_results(model, res_dir,
     df_results_snap = {}
     if plot_results:
         (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
-         ) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
+         ) = get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                                method=method, get_all_belsar=True, remove_files=remove_files)
         
         df_results_snap['lai'] = get_belsar_x_frm4veg_lai_results(belsar_results_snap, barrax_results_snap, 
@@ -201,7 +201,7 @@ def save_validation_results(model, res_dir,
                                                                     wytham_results_snap, frm4veg_lai="lai", 
                                                                get_reconstruction_error=False)
         
-        barrax_results_snap, barrax_2021_results_snap, wytham_results_snap = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
+        barrax_results_snap, barrax_2021_results_snap, wytham_results_snap = get_all_campaign_CCC_results_BVNET(frm4veg_data_dir, 
                                                                                                 frm4veg_2021_data_dir,
                                                                                                 ccc_snap=None, 
                                                                                                 cab_mode=False)
@@ -447,9 +447,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
     all_vars = []
     all_vars_hyper = []
     all_std_hyper = []
-    all_weiss_lai = []
-    all_weiss_cab = []
-    all_weiss_cw = []
+    all_bvnet_lai = []
+    all_bvnet_cab = []
+    all_bvnet_cw = []
     all_s2_r = []
     all_std = []
     cyclical_ref_lai = []
@@ -482,8 +482,8 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
             cyclical_lai.append(cyclical_sim_image[6,...].reshape(-1))
             cyclical_lai_std.append(cyclical_std_image[6,...].reshape(-1))
             info = info_test_data[i,:]
-            (weiss_lai, weiss_cab,
-                weiss_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r,
+            (bvnet_lai, bvnet_cab,
+                bvnet_cw) = get_bvnet_biophyiscal_from_batch((cropped_s2_r,
                                                               cropped_s2_a),
                                                               patch_size=32, 
                                                               sensor=info[0])
@@ -492,9 +492,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
             if not os.path.isdir(patch_plot_dir):
                 os.makedirs(patch_plot_dir)
             PROSAIL_2D_article_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,
-                                     weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info)
+                                     bvnet_lai, bvnet_cab, bvnet_cw, std_image, i, info=info)
             PROSAIL_2D_res_plots(patch_plot_dir, sim_image, cropped_s2_r.squeeze(), rec_image,
-                                 weiss_lai, weiss_cab, weiss_cw, std_image, i, info=info, 
+                                 bvnet_lai, bvnet_cab, bvnet_cw, std_image, i, info=info, 
                                  var_bounds=PROSAIL_VAE.sim_space.var_bounds)
             all_rec.append(rec_image.reshape(10,-1))
             all_lai.append(sim_image[6,...].reshape(-1))
@@ -504,9 +504,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
             if not socket.gethostname()=='CELL200973':
                 pair_plot(sim_image.reshape(11,-1).squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
                         res_dir=patch_plot_dir, filename='sim_prosail_pair_plot.png')
-            all_weiss_lai.append(weiss_lai.reshape(-1))
-            all_weiss_cab.append(weiss_cab.reshape(-1))
-            all_weiss_cw.append(weiss_cw.reshape(-1))
+            all_bvnet_lai.append(bvnet_lai.reshape(-1))
+            all_bvnet_cab.append(bvnet_cab.reshape(-1))
+            all_bvnet_cw.append(bvnet_cw.reshape(-1))
             all_s2_r.append(cropped_s2_r.reshape(10,-1))
             all_std.append(std_image.reshape(11,-1))
 
@@ -524,9 +524,9 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
         all_cw = torch.cat(all_cw)
         all_vars = torch.cat(all_vars, axis=1)
         all_cw_rel =  1 - all_vars[5,...] / all_cw
-        all_weiss_lai = torch.cat(all_weiss_lai)
-        all_weiss_cab = torch.cat(all_weiss_cab)
-        all_weiss_cw = torch.cat(all_weiss_cw)
+        all_bvnet_lai = torch.cat(all_bvnet_lai)
+        all_bvnet_cab = torch.cat(all_bvnet_cab)
+        all_bvnet_cw = torch.cat(all_bvnet_cw)
         all_s2_r = torch.cat(all_s2_r, axis=1)
         all_std = torch.cat(all_std, axis=1)
         cyclical_ref_lai = torch.cat(cyclical_ref_lai)
@@ -534,13 +534,13 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
         cyclical_lai_std = torch.cat(cyclical_lai_std)
 
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
+                                      all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std, all_vars_hyper=all_vars_hyper, 
                                       all_std_hyper=all_std_hyper,
                                     #   gdf_lai, lai_validation_pred, snap_validation_lai
                                       var_bounds=PROSAIL_VAE.sim_space.var_bounds)
         article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                      all_weiss_lai, all_weiss_cab, all_weiss_cw, all_std, all_ccc, all_cw_rel, 
+                                      all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
                                       var_bounds=PROSAIL_VAE.sim_space.var_bounds)
 
@@ -559,11 +559,11 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
 
 def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
-                 plot_results=False, juan_validation=True, weiss_mode=False, n_samples=1,
+                 plot_results=False, juan_validation=True, bvnet_mode=False, n_samples=1,
                  lai_cyclical_loader=None):
     
     bands_name = np.array(BANDS)[PROSAIL_VAE.encoder.bands.cpu()].tolist()
-    # if weiss_mode:
+    # if bvnet_mode:
     #     bands_name = ["B03", "B04", "B05", "B06", "B07", "B8A", "B11", "B12"]
     device = PROSAIL_VAE.device
     logger = logging.getLogger(LOGGER_NAME)
@@ -604,24 +604,24 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
     nlls = PROSAIL_VAE.compute_lat_nlls(loader).mean(0).squeeze()
     torch.save(nlls, res_dir + "/params_nll.pt")
 
-    if weiss_mode:
-        weiss_validation_dir = res_dir + "/weiss_validation/"
-        if not os.path.isdir(weiss_validation_dir):
-            os.makedirs(weiss_validation_dir)
-        weiss_data_dir_path = os.path.join(data_dir, os.pardir) + "/weiss/"
-        prosail_ref_params = torch.load(weiss_data_dir_path+ "weiss_test_prosail_sim_vars.pt").float().to(PROSAIL_VAE.device)
-        s2_r = torch.load(weiss_data_dir_path + "weiss_test_prosail_s2_sim_refl.pt").float().to(PROSAIL_VAE.device)
+    if bvnet_mode:
+        bvnet_validation_dir = res_dir + "/bvnet_validation/"
+        if not os.path.isdir(bvnet_validation_dir):
+            os.makedirs(bvnet_validation_dir)
+        bvnet_data_dir_path = os.path.join(data_dir, os.pardir) + "/bvnet/"
+        prosail_ref_params = torch.load(bvnet_data_dir_path+ "bvnet_test_prosail_sim_vars.pt").float().to(PROSAIL_VAE.device)
+        s2_r = torch.load(bvnet_data_dir_path + "bvnet_test_prosail_s2_sim_refl.pt").float().to(PROSAIL_VAE.device)
         s2_a = prosail_ref_params[:,-3:]
         prosail_ref_params = prosail_ref_params[:,:-3]
-        lai_nlls, lai_preds, sim_pdfs, sim_supports = get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params)
-        torch.save(lai_nlls.cpu(), weiss_validation_dir + f"/weiss_lai_nll.pt")
-        torch.save(lai_preds.cpu(), weiss_validation_dir + f"/weiss_lai_ref_pred.pt")
+        lai_nlls, lai_preds, sim_pdfs, sim_supports = get_bvnet_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params)
+        torch.save(lai_nlls.cpu(), bvnet_validation_dir + f"/bvnet_lai_nll.pt")
+        torch.save(lai_preds.cpu(), bvnet_validation_dir + f"/bvnet_lai_ref_pred.pt")
         if plot_results:
-            fig, ax = plot_lai_preds(lai_preds[:,1].cpu(), lai_preds[:,0].cpu(), site="weiss")
-            fig.savefig(weiss_validation_dir + f"/weiss_lai_pred_vs_true.png")
+            fig, ax = plot_lai_preds(lai_preds[:,1].cpu(), lai_preds[:,0].cpu(), site="bvnet")
+            fig.savefig(bvnet_validation_dir + f"/bvnet_lai_pred_vs_true.png")
             plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=lai_preds[:,1].cpu(), 
                                     sim_pdf=sim_pdfs[:,6,:].cpu(), sim_support=sim_supports[:,6,:].cpu(),
-                                    res_dir=weiss_validation_dir, fig=None, ax=None, var_name="LAI", nbin=100)
+                                    res_dir=bvnet_validation_dir, fig=None, ax=None, var_name="LAI", nbin=100)
 
     if juan_validation:
         juan_data_dir_path = TOP_PATH + "/field_data/processed/"
@@ -631,7 +631,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
         sites = ["france", "spain1", "italy1", "italy2"]
         (j_list_lai_nlls, list_lai_preds, j_dt_list, 
          j_ndvi_list) = get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
-                                                    sites=sites, weiss_mode=weiss_mode)
+                                                    sites=sites, bvnet_mode=bvnet_mode)
         all_lai_preds = torch.cat(list_lai_preds)
         all_dt_list  = torch.cat(j_dt_list)
         all_ndvi = torch.cat(j_ndvi_list)

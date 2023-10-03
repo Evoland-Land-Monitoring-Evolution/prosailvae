@@ -13,7 +13,7 @@ from utils.utils import NaN_model_params, unstandardize, count_parameters
 from utils.image_utils import unbatchify, crop_s2_input, batchify_batch_latent, check_is_patch
 # from sensorsio.utils import rgb_render
 # import matplotlib.pyplot as plt
-from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch, get_weiss_biophyiscal_from_pixellic_batch
+from bvnet_regression.bvnet_utils import get_bvnet_biophyiscal_from_batch, get_bvnet_biophyiscal_from_pixellic_batch
 
 class SimVAE(nn.Module):
     """
@@ -357,14 +357,14 @@ class SimVAE(nn.Module):
                         snap_s2_r = torch.cat(snap_s2_r.split(1, dim=0),-1)
                         snap_s2_a = torch.cat(snap_s2_a.split(1, dim=0),-1)
                     (snap_lai, snap_cab,
-                    snap_cw) = get_weiss_biophyiscal_from_batch((snap_s2_r, snap_s2_a),
+                    snap_cw) = get_bvnet_biophyiscal_from_batch((snap_s2_r, snap_s2_a),
                                                                 patch_size=s2_r.size(-1), 
                                                                 sensor="2A",
                                                                 device=self.device)
                     snap_lai = snap_lai.reshape(-1, 1)
                 else:
                     (snap_lai, snap_cab,
-                    snap_cw) = get_weiss_biophyiscal_from_pixellic_batch((s2_r, s2_a), 
+                    snap_cw) = get_bvnet_biophyiscal_from_pixellic_batch((s2_r, s2_a), 
                                                                           sensor="2A",
                                                                           device=self.device)
                 snap_sim = torch.cat((torch.zeros_like(snap_lai), torch.zeros_like(snap_lai),

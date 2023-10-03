@@ -17,7 +17,7 @@ if __name__ == "__main__":
 else:
     from validation.validation_utils import var_of_product, simple_interpolate
 from utils.image_utils import get_encoded_image_from_batch
-from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
+from bvnet_regression.bvnet_utils import get_bvnet_biophyiscal_from_batch
 from prosailvae.ProsailSimus import BANDS
 
 BARRAX_FILENAMES = ["2B_20180516_FRM_Veg_Barrax_20180605_V2", "2A_20180613_FRM_Veg_Barrax_20180605_V2"]
@@ -311,43 +311,43 @@ def get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, ref_dict, mode="
     return model_pred #, rec, cropped_s2_r
 
 
-def get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A", lai_snap=None, ccc_snap=None, cab_mode=False):
-    (snap_lai, snap_ccc,  _) = get_weiss_biophyiscal_from_batch((s2_r, s2_a), patch_size=32, sensor=sensor, 
-                                                                lai_snap=lai_snap, ccc_snap=ccc_snap)
+def get_bvnet_frm4veg_results(s2_r, s2_a, site_idx_dict, ref_dict, sensor="2A", lai_bvnet=None, ccc_bvnet=None, cab_mode=False):
+    (bvnet_lai, bvnet_ccc,  _) = get_bvnet_biophyiscal_from_batch((s2_r, s2_a), patch_size=32, sensor=sensor, 
+                                                                lai_bvnet=lai_bvnet, ccc_bvnet=ccc_bvnet)
     if cab_mode:
-        snap_ccc = snap_ccc * snap_lai
-    snap_results = {}
+        bvnet_ccc = bvnet_ccc * bvnet_lai
+    bvnet_results = {}
     for variable in ['lai', 'lai_eff']:
-        snap_results[variable] = snap_lai[..., site_idx_dict[variable]['y_idx'], 
+        bvnet_results[variable] = bvnet_lai[..., site_idx_dict[variable]['y_idx'], 
                                                 site_idx_dict[variable]['x_idx']].numpy()
-        snap_results[f"{variable}_std"] = np.zeros_like(snap_results[variable])
-        snap_results[f"{variable}_rec_err"] = np.zeros_like(snap_results[variable])
-        snap_results[f"ref_{variable}"] = ref_dict[variable]
-        snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
+        bvnet_results[f"{variable}_std"] = np.zeros_like(bvnet_results[variable])
+        bvnet_results[f"{variable}_rec_err"] = np.zeros_like(bvnet_results[variable])
+        bvnet_results[f"ref_{variable}"] = ref_dict[variable]
+        bvnet_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
         for i, band in enumerate(BANDS):
-            snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
+            bvnet_results[f"{variable}_{band}_rec_err"] = np.zeros_like(bvnet_results[variable])
     for variable in ['ccc', 'ccc_eff']:
-        snap_results[variable] = snap_ccc[..., site_idx_dict[variable]['y_idx'], 
+        bvnet_results[variable] = bvnet_ccc[..., site_idx_dict[variable]['y_idx'], 
                                                 site_idx_dict[variable]['x_idx']].numpy()
-        snap_results[f"{variable}_std"] = np.zeros_like(snap_results[variable])
-        snap_results[f"{variable}_rec_err"] = np.zeros_like(snap_results[variable])
-        snap_results[f"ref_{variable}"] = ref_dict[variable]
-        snap_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
+        bvnet_results[f"{variable}_std"] = np.zeros_like(bvnet_results[variable])
+        bvnet_results[f"{variable}_rec_err"] = np.zeros_like(bvnet_results[variable])
+        bvnet_results[f"ref_{variable}"] = ref_dict[variable]
+        bvnet_results[f"ref_{variable}_std"] = ref_dict[f"{variable}_std"]
         for i, band in enumerate(BANDS):
-            snap_results[f"{variable}_{band}_rec_err"] = np.zeros_like(snap_results[variable])
-    return snap_results
+            bvnet_results[f"{variable}_{band}_rec_err"] = np.zeros_like(bvnet_results[variable])
+    return bvnet_results
 
-def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, is_SNAP=False, mode="sim_tg_mean", 
-                                get_reconstruction=True, lai_snap=None, ccc_snap=None, cab_mode=False):
+def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, is_BVNET=False, mode="sim_tg_mean", 
+                                get_reconstruction=True, lai_bvnet=None, ccc_bvnet=None, cab_mode=False):
     sensor = filename.split("_")[0]
     (s2_r, s2_a, site_idx_dict, ref_dict) = get_frm4veg_material(frm4veg_data_dir, filename)
-    if not is_SNAP:
+    if not is_BVNET:
         validation_results = get_model_frm4veg_results(model, s2_r, s2_a, site_idx_dict, 
                                                         ref_dict, mode=mode, 
                                                         get_reconstruction=get_reconstruction)
     else:
-        validation_results = get_snap_frm4veg_results(s2_r, s2_a, site_idx_dict, 
-                                                        ref_dict, sensor=sensor, lai_snap=lai_snap, ccc_snap=ccc_snap, 
+        validation_results = get_bvnet_frm4veg_results(s2_r, s2_a, site_idx_dict, 
+                                                        ref_dict, sensor=sensor, lai_bvnet=lai_bvnet, ccc_bvnet=ccc_bvnet, 
                                                         cab_mode=cab_mode)
     d = datetime.strptime(filename.split("_")[1], '%Y%m%d').date()
     for variable in ["lai", "lai_eff", "ccc", "ccc_eff"]:
@@ -357,18 +357,18 @@ def get_frm4veg_results_at_date(model, frm4veg_data_dir, filename, is_SNAP=False
     return validation_results
 
 def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_after=None, 
-                             method="simple_interpolate", is_SNAP=False, mode="sim_tg_mean",
-                             get_reconstruction=True, bands_idx=torch.arange(10), lai_snap=None, ccc_snap=None, cab_mode=False):
+                             method="simple_interpolate", is_BVNET=False, mode="sim_tg_mean",
+                             get_reconstruction=True, bands_idx=torch.arange(10), lai_bvnet=None, ccc_bvnet=None, cab_mode=False):
     validation_results_before = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_before, 
-                                                            is_SNAP=is_SNAP, mode=mode,
+                                                            is_BVNET=is_BVNET, mode=mode,
                                                             get_reconstruction=get_reconstruction,
-                                                            lai_snap=lai_snap, ccc_snap=ccc_snap, 
+                                                            lai_bvnet=lai_bvnet, ccc_bvnet=ccc_bvnet, 
                                                             cab_mode=cab_mode)
     d_before = datetime.strptime(filename_before.split("_")[1], '%Y%m%d').date()
     validation_results_after = get_frm4veg_results_at_date(model, frm4veg_data_dir, filename_after, 
-                                                            is_SNAP=is_SNAP, mode=mode,
+                                                            is_BVNET=is_BVNET, mode=mode,
                                                             get_reconstruction=get_reconstruction, 
-                                                            lai_snap=lai_snap, ccc_snap=ccc_snap, 
+                                                            lai_bvnet=lai_bvnet, ccc_bvnet=ccc_bvnet, 
                                                             cab_mode=cab_mode)
     d_after = datetime.strptime(filename_after.split("_")[1], '%Y%m%d').date()
     

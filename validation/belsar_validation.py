@@ -19,7 +19,7 @@ from utils.image_utils import tensor_to_raster, get_encoded_image_from_batch
 from datetime import datetime
 import torch
 
-from snap_regression.snap_nn import SnapNN
+from bvnet_regression.bvnet import BVNET
 from sensorsio import utils
 import matplotlib.pyplot as plt
 from prosailvae.ProsailSimus import BANDS
@@ -522,14 +522,14 @@ def save_belsar_predictions(belsar_dir, model, res_dir, list_filenames, model_na
     return
 
 
-def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename, lai_snap=None):
+def save_bvnet_belsar_predictions(belsar_dir, res_dir, list_belsar_filename, lai_bvnet=None):
     NO_DATA = -10000
     # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
     for filename in list_belsar_filename: 
         ver = "3A" if filename[:2] == "2A" else "3B"
-        if lai_snap is None:
-            lai_snap = SnapNN(ver=ver, variable="lai")
-            lai_snap.set_weiss_weights()
+        if lai_bvnet is None:
+            lai_bvnet = BVNET(ver=ver, variable="lai")
+            lai_bvnet.set_snap_weights()
 
         df, s2_r_image, s2_a, mask, xcoords, ycoords, crs = load_belsar_validation_data(belsar_dir, filename)
         s2_r = torch.from_numpy(s2_r_image)[torch.tensor([1, 2, 3, 4, 5, 7, 8, 9]), ...].float()
@@ -542,14 +542,14 @@ def save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filename, lai_
                                                                                    s2_a[0:1,...], 
                                                                                    s2_a[2: ,...]),0)))).float()
         
-        s2_data = torch.concat((s2_r, s2_a_permutated), 0).to(lai_snap.device)
+        s2_data = torch.concat((s2_r, s2_a_permutated), 0).to(lai_bvnet.device)
         with torch.no_grad():
-            lai_pred = torch.clamp(lai_snap.forward(s2_data, spatial_mode=True).cpu(), min=0, max=None)
+            lai_pred = torch.clamp(lai_bvnet.forward(s2_data, spatial_mode=True).cpu(), min=0, max=None)
         dummy_tensor = 0 * NO_DATA * torch.ones(16, lai_pred.size(1), lai_pred.size(2))
         tensor = torch.cat((lai_pred, dummy_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
         resolution = 10
-        file_path = res_dir + f"/{filename}_SNAP.tif"
+        file_path = res_dir + f"/{filename}_BVNET.tif"
         tensor_to_raster(tensor, file_path,
                          crs=crs,
                          resolution=resolution,

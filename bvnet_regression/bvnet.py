@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 from prosailvae import __path__ as PPATH
 TOP_PATH = os.path.join(PPATH[0], os.pardir)
-SNAP_WEIGHTS_PATH = os.path.join(os.path.join(TOP_PATH, "snap_regression"), "weights")
-from dataset.weiss_utils import load_weiss_dataset
+SNAP_WEIGHTS_PATH = os.path.join(os.path.join(TOP_PATH, "bvnet_regression"), "weights")
+from dataset.bvnet_dataset import load_bvnet_dataset
 
 def normalize(unnormalized:torch.Tensor, min_sample:torch.Tensor, max_sample:torch.Tensor):
     """
@@ -24,7 +24,7 @@ def denormalize(normalized:torch.Tensor, min_sample:torch.Tensor, max_sample:tor
     return 0.5 * (normalized + 1) * (max_sample - min_sample) + min_sample
 
 @dataclass
-class NormSnapNNV2:
+class NormBVNETNNV2:
     """
     Min and max snap nn input and output for normalization
     """
@@ -37,7 +37,7 @@ class NormSnapNNV2:
                                             1.0000,  0.936206429175,  1.0000])
 
 
-class NormSnapNNV3B:
+class NormBVNETNNV3B:
     """
     Min and max snap nn input and output for normalization
     """
@@ -49,7 +49,7 @@ class NormSnapNNV3B:
                                             0.741682769861,  0.780987637826,  0.507673379171,  0.502205128583,
                                             1.0000,  0.927484749175,  1.0000])
 
-class NormSnapNNV3A:
+class NormBVNETNNV3A:
     """
     Min and max snap nn input and output for normalization
     """
@@ -108,10 +108,10 @@ class DenormSNAPCWCV3A:
 
 def get_SNAP_norm_factors(ver:str='2', variable='lai'):
     """
-    Get normalization factor for SNAP NN
+    Get normalization factor for BVNET NN
     """
     if ver == "2":
-        snap_norm = NormSnapNNV2()
+        bvnet_norm = NormBVNETNNV2()
         if variable=="lai":
             variable_min = DenormSNAPLAIV2().lai_min
             variable_max = DenormSNAPLAIV2().lai_max
@@ -130,7 +130,7 @@ def get_SNAP_norm_factors(ver:str='2', variable='lai'):
         else:
             raise NotImplementedError
     elif ver=="3B":
-        snap_norm = NormSnapNNV3B()
+        bvnet_norm = NormBVNETNNV3B()
         if variable == "lai":
             variable_min = DenormSNAPLAIV3B().lai_min
             variable_max = DenormSNAPLAIV3B().lai_max
@@ -149,7 +149,7 @@ def get_SNAP_norm_factors(ver:str='2', variable='lai'):
         else:
             raise NotImplementedError
     elif ver=="3A":
-        snap_norm = NormSnapNNV3A()
+        bvnet_norm = NormBVNETNNV3A()
         if variable == "lai":
             variable_min = DenormSNAPLAIV3A().lai_min
             variable_max = DenormSNAPLAIV3A().lai_max
@@ -169,12 +169,12 @@ def get_SNAP_norm_factors(ver:str='2', variable='lai'):
             raise NotImplementedError
     else:
         raise NotImplementedError
-    return snap_norm.input_min, snap_norm.input_max, variable_min, variable_max
+    return bvnet_norm.input_min, bvnet_norm.input_max, variable_min, variable_max
 
 
-class SnapNN(nn.Module):
+class BVNET(nn.Module):
     """
-    Neural Network with SNAP architecture to predict LAI from S2 reflectances and angles
+    Neural Network with BVNET architecture to predict LAI from S2 reflectances and angles
     """
     def __init__(self, device:str='cpu', ver:str="3A", variable='lai', third_layer=False):
         super().__init__()
@@ -234,15 +234,15 @@ class SnapNN(nn.Module):
         
         
 
-    def set_weiss_weights(self):
+    def set_snap_weights(self):
         """
-        Set Neural Network weights and biases to SNAP's original values
+        Set Neural Network weights and biases to BVNET's original values
         """
         self.load_weights(SNAP_WEIGHTS_PATH, prefix="weiss_")
     
     def forward(self, s2_data: torch.Tensor, spatial_mode=False):
         """
-        Forward method of SNAP NN to predict a biophysical variable
+        Forward method of BVNET NN to predict a biophysical variable
         """
         if spatial_mode:
             if len(s2_data.size()) == 3:
@@ -329,43 +329,19 @@ class SnapNN(nn.Module):
         return ((variable_pred - loc_bv) / scale_bv - ((variable.to(self.device) - loc_bv) / scale_bv)).pow(2).mean()
 
 
-# def load_refl_angles(path_to_data_dir: str):
-#     """
-#     Loads simulated s2 reflectance angles and LAI from weiss dataset.
-#     """
-#     path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
-#     assert os.path.isfile(path_to_file)
-#     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
-#     s2_r = df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values
-#     tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))
-#     tto = np.rad2deg(np.arccos(df_validation_data['cos(thetav)'].values))
-#     psi = np.rad2deg(np.arccos(df_validation_data['cos(phiv-phis)'].values))
-#     lai = df_validation_data['lai_true'].values
-#     return s2_r, tto, tts, psi, lai # Warning, inverted tto and tts w.r.t my prosil version
-
-# def load_weiss_dataset(path_to_data_dir: str):
-#     """
-#     Loads simulated s2 reflectance angles and LAI from weiss dataset as aggregated numpy arrays.
-#     """
-#     s2_r, tto, tts, psi, lai = load_refl_angles(path_to_data_dir)
-#     s2_a = np.stack((tto, tts, psi), 1)
-#     return s2_r, s2_a, lai
-
-
-
 def test_snap_nn(ver="2"):
     """
-    Test if SNAP neural network's outputs are identical to that of the translated java
-    code of SNAP
+    Test if BVNET neural network's outputs are identical to that of the translated java
+    code of BVNET
     """
     from weiss_lai_sentinel_hub import (get_norm_factors, get_layer_1_neuron_weights, get_layer_1_neuron_biases,
                                         get_layer_2_weights, get_layer_2_bias, neuron, layer2) 
     import prosailvae
-    s2_r, prosail_vars = load_weiss_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
+    s2_r, prosail_vars = load_bvnet_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", mode="snap")
     s2_a = prosail_vars[:,-3:]
     lai = prosail_vars[:,6].reshape(-1,1)
-    snap_nn = SnapNN(ver=ver, variable="lai")
-    snap_nn.set_weiss_weights()
+    bvnet = BVNET(ver=ver, variable="lai")
+    bvnet.set_snap_weights()
     sample = torch.cat((torch.from_numpy(s2_r), torch.cos(torch.from_numpy(s2_a))), 1).float()
     ver=ver
     norm_factors = get_norm_factors(ver=ver)
@@ -387,7 +363,7 @@ def test_snap_nn(ver="2"):
     relAzim_norm = sample[:,10].unsqueeze(1)
     band_dim = 1
     with torch.no_grad():
-        x_norm = normalize(sample, snap_nn.input_min, snap_nn.input_max)
+        x_norm = normalize(sample, bvnet.input_min, bvnet.input_max)
         snap_input = torch.cat((b03_norm, b04_norm, b05_norm, b06_norm, b07_norm, b8a_norm, b11_norm, b12_norm,
                     viewZen_norm, sunZen_norm, relAzim_norm), axis=band_dim)
         assert torch.isclose(snap_input, x_norm, atol=1e-5,rtol=1e-5).all()
@@ -398,40 +374,38 @@ def test_snap_nn(ver="2"):
         neuron4 = neuron(snap_input, w4, b4, nb_dim, sum_dim=band_dim)
         neuron5 = neuron(snap_input, w5, b5, nb_dim, sum_dim=band_dim)
         linear_1_snap = nn.Linear(11,5)
-        linear_1_snap.weight = snap_nn.net.layer_1.weight
-        linear_1_snap.bias = snap_nn.net.layer_1.bias
-        assert torch.isclose(linear_1_snap(x_norm), snap_nn.net.layer_1.bias
-                             + x_norm @ snap_nn.net.layer_1.weight.transpose(1,0), atol=1e-4).all()
+        linear_1_snap.weight = bvnet.net.layer_1.weight
+        linear_1_snap.bias = bvnet.net.layer_1.bias
+        assert torch.isclose(linear_1_snap(x_norm), bvnet.net.layer_1.bias
+                             + x_norm @ bvnet.net.layer_1.weight.transpose(1,0), atol=1e-4).all()
 
-        n_snap_nn = torch.tanh(snap_nn.net.layer_1.bias + x_norm @ snap_nn.net.layer_1.weight.transpose(1,0))
+        n_snap_nn = torch.tanh(bvnet.net.layer_1.bias + x_norm @ bvnet.net.layer_1.weight.transpose(1,0))
         assert torch.isclose(n_snap_nn, torch.cat((neuron1, neuron2, neuron3, neuron4, neuron5), axis=1), atol=1e-4).all()
 
-        linear_2_snap = snap_nn.net.layer_2
+        linear_2_snap = bvnet.net.layer_2
         # linear_2_snap.weight = snap_nn.net[2].weight
         # linear_2_snap.bias = snap_nn.net[2].bias
-        assert torch.isclose(linear_2_snap(n_snap_nn), snap_nn.net.layer_2.bias
-                             + n_snap_nn @ snap_nn.net.layer_2.weight.transpose(1,0), atol=1e-4).all()
+        assert torch.isclose(linear_2_snap(n_snap_nn), bvnet.net.layer_2.bias
+                             + n_snap_nn @ bvnet.net.layer_2.weight.transpose(1,0), atol=1e-4).all()
         layer_2_output = layer2(neuron1, neuron2, neuron3, neuron4, neuron5, wl2, bl2, sum_dim=band_dim)
-        l_snap_nn = snap_nn.net.layer_2.bias + n_snap_nn @ snap_nn.net.layer_2.weight.transpose(1,0)
-        lai_prenorm_snap = snap_nn.net.forward(x_norm)
+        l_snap_nn = bvnet.net.layer_2.bias + n_snap_nn @ bvnet.net.layer_2.weight.transpose(1,0)
+        lai_prenorm_snap = bvnet.net.forward(x_norm)
         assert torch.isclose(l_snap_nn.squeeze(), layer_2_output.squeeze(), atol=1e-4).all()
         assert torch.isclose(lai_prenorm_snap.squeeze(), layer_2_output.squeeze(), atol=1e-4).all()
         lai = denormalize(layer_2_output, norm_factors["min_sample_lai"], norm_factors["max_sample_lai"])
-        snap_lai = denormalize(l_snap_nn, snap_nn.variable_min, snap_nn.variable_max)
+        snap_lai = denormalize(l_snap_nn, bvnet.variable_min, bvnet.variable_max)
         assert torch.isclose(snap_lai.squeeze(), lai.squeeze(), atol=1e-4).all()
-        assert torch.isclose(snap_nn.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
+        assert torch.isclose(bvnet.forward(sample).squeeze(), lai.squeeze(), atol=1e-4).all()
 
 def main():
-    dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/snap_regression/weights"
+    dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/bvnet_regression/weights"
     if not os.path.isdir(dir):
         os.makedirs(dir)
     for ver in ["2", "3A", "3B"]:
         for variable in ["lai", "cab", "cw"]:
             print(ver, variable)
-            model = SnapNN(ver=ver, variable=variable)
-            model.set_weiss_weights()
-            # model.save_weights(dir, prefix="weiss_")       
-            # model.load_weights(dir, prefix="weiss_")    
+            model = BVNET(ver=ver, variable=variable)
+            model.set_snap_weights() 
     pass
 
 

@@ -15,7 +15,7 @@ from prosailvae.prosail_var_dists import get_prosail_vars_interval_width
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 from dataset.juan_datapoints import get_interpolated_validation_data
-from dataset.weiss_utils import load_weiss_dataset
+from dataset.bvnet_dataset import load_bvnet_dataset
 from utils.image_utils import get_encoded_image_from_batch
 from sklearn.metrics import r2_score
 
@@ -128,7 +128,7 @@ def get_metrics(PROSAIL_VAE, loader,
             sim_supports, ae_percentiles, are_percentiles, piw_percentiles)
 
 def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_max=10, 
-                                sites = ["france", "spain1", "italy1", "italy2"], weiss_mode=False):
+                                sites = ["france", "spain1", "italy1", "italy2"], bvnet_mode=False):
     list_lai_nlls = []
     list_lai_preds = []
     dt_list = []
@@ -140,7 +140,7 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
         b8 = s2_r[:,6]
         ndvi = (b8-b4)/(b8+b4+1e-6)
 
-        if weiss_mode:
+        if bvnet_mode:
             s2_r = s2_r[:, torch.tensor([1,2,3,4,5,7,8,9])]
         prosail_ref_params = torch.zeros((s2_r.size(0), 11))
         prosail_ref_params[:,6] = lais.squeeze()
@@ -159,8 +159,8 @@ def get_juan_validation_metrics(PROSAIL_VAE, juan_data_dir_path, lai_min=0, dt_m
         ndvi_list.append(ndvi)
     return list_lai_nlls, list_lai_preds, dt_list, ndvi_list
 
-def load_weiss_data_from_txt(weiss_data_dir_path, device='cpu'):
-    s2_r, prosail_vars = load_weiss_dataset(weiss_data_dir_path)
+def load_bvnet_data_from_txt(bvnet_data_dir_path, device='cpu'):
+    s2_r, prosail_vars = load_bvnet_dataset(bvnet_data_dir_path)
     s2_a = prosail_vars[:,-3:]
     prosail_ref_params = torch.as_tensor(prosail_vars[:,:11]).float().to(device)
     s2_r = torch.as_tensor(s2_r).float().to(device)
@@ -168,16 +168,16 @@ def load_weiss_data_from_txt(weiss_data_dir_path, device='cpu'):
     return s2_r, s2_a, prosail_ref_params
 
 
-def get_weiss_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_pdf_sample_points=5001):
+def get_bvnet_validation_metrics(PROSAIL_VAE, s2_r, s2_a, prosail_ref_params, n_pdf_sample_points=5001):
     with torch.no_grad():
         lais = torch.as_tensor(prosail_ref_params[:,6]).float().cpu().view(-1,1)
-        weiss_dataset = TensorDataset(s2_r, s2_a, prosail_ref_params)
-        weiss_loader = DataLoader(weiss_dataset, batch_size=512, num_workers=0)
-        lai_nlls = PROSAIL_VAE.compute_lat_nlls(weiss_loader).mean(0).squeeze()[6].cpu()
+        bvnet_dataset = TensorDataset(s2_r, s2_a, prosail_ref_params)
+        bvnet_loader = DataLoader(bvnet_dataset, batch_size=512, num_workers=0)
+        lai_nlls = PROSAIL_VAE.compute_lat_nlls(bvnet_loader).mean(0).squeeze()[6].cpu()
         lai_pred = []
         sim_pdfs = torch.tensor([]).to(PROSAIL_VAE.device)
         sim_supports = torch.tensor([]).to(PROSAIL_VAE.device)
-        for i, b in enumerate(weiss_loader):
+        for i, b in enumerate(bvnet_loader):
             s2_r = b[0]
             s2_a = b[1]
             y, angles = PROSAIL_VAE.encode(s2_r, s2_a)

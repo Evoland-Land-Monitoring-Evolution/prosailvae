@@ -7,50 +7,50 @@ from validation.frm4veg_validation import (interpolate_frm4veg_pred,
                                            get_frm4veg_results_at_date)
 from validation.belsar_validation import (interpolate_belsar_metrics, save_belsar_predictions, 
                                           BELSAR_FILENAMES, ALL_BELSAR_FILENAMES, get_all_belsar_predictions,
-                                          save_snap_belsar_predictions)
+                                          save_bvnet_belsar_predictions)
 from prosailvae.ProsailSimus import BANDS
 
-def get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
-                                      method="simple_interpolate", get_all_belsar=False, remove_files=False, lai_snap=None):
+def get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
+                                      method="simple_interpolate", get_all_belsar=False, remove_files=False, lai_bvnet=None):
     
     all_belsar = None
     list_belsar_filenames = BELSAR_FILENAMES
     if get_all_belsar:
         list_belsar_filenames = ALL_BELSAR_FILENAMES
-    save_snap_belsar_predictions(belsar_data_dir, belsar_pred_dir, list_belsar_filenames, lai_snap=lai_snap)
+    save_bvnet_belsar_predictions(belsar_data_dir, belsar_pred_dir, list_belsar_filenames, lai_bvnet=lai_bvnet)
     if get_all_belsar:
-        all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_SNAP")  
+        all_belsar = get_all_belsar_predictions(belsar_data_dir, belsar_pred_dir, f"_BVNET")  
 
     barrax_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, BARRAX_FILENAMES[0], 
-                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=True, 
-                                              get_reconstruction=False, lai_snap=lai_snap)
+                                              BARRAX_FILENAMES[1],  method=method, is_BVNET=True, 
+                                              get_reconstruction=False, lai_bvnet=lai_bvnet)
     barrax_2021_results = get_frm4veg_results_at_date(None, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
-                                                      is_SNAP=True, get_reconstruction=False, lai_snap=lai_snap)
+                                                      is_BVNET=True, get_reconstruction=False, lai_bvnet=lai_bvnet)
     wytham_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
-                                              WYTHAM_FILENAMES[1],  method=method, is_SNAP=True,
-                                              get_reconstruction=False, lai_snap=lai_snap)
+                                              WYTHAM_FILENAMES[1],  method=method, is_BVNET=True,
+                                              get_reconstruction=False, lai_bvnet=lai_bvnet)
 
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
-                                                file_suffix="_SNAP", method=method)
+                                                file_suffix="_BVNET", method=method)
     if remove_files:
         for filename in list_belsar_filenames:
-            if os.path.isfile(os.path.join(belsar_pred_dir, f"{filename}_SNAP.tif")):
-                os.remove(os.path.join(belsar_pred_dir, f"{filename}_SNAP.tif"))
+            if os.path.isfile(os.path.join(belsar_pred_dir, f"{filename}_BVNET.tif")):
+                os.remove(os.path.join(belsar_pred_dir, f"{filename}_BVNET.tif"))
     return barrax_results, barrax_2021_results, wytham_results, belsar_results, all_belsar
 
-def get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, frm4veg2021_data_dir, method="simple_interpolate", 
-                                      ccc_snap=None, lai_snap=None, cab_mode=False):
+def get_all_campaign_CCC_results_BVNET(frm4veg_data_dir, frm4veg2021_data_dir, method="simple_interpolate", 
+                                      ccc_bvnet=None, lai_bvnet=None, cab_mode=False):
     
     barrax_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, BARRAX_FILENAMES[0], 
-                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=True, 
-                                              get_reconstruction=False, ccc_snap=ccc_snap, lai_snap=lai_snap, 
+                                              BARRAX_FILENAMES[1],  method=method, is_BVNET=True, 
+                                              get_reconstruction=False, ccc_bvnet=ccc_bvnet, lai_bvnet=lai_bvnet, 
                                               cab_mode=cab_mode)
     barrax_2021_results = get_frm4veg_results_at_date(None, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
-                                                      is_SNAP=True, get_reconstruction=False, ccc_snap=ccc_snap, lai_snap=lai_snap, 
+                                                      is_BVNET=True, get_reconstruction=False, ccc_bvnet=ccc_bvnet, lai_bvnet=lai_bvnet, 
                                                         cab_mode=cab_mode)
     wytham_results = interpolate_frm4veg_pred(None, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
-                                              WYTHAM_FILENAMES[1],  method=method, is_SNAP=True,
-                                              get_reconstruction=False, ccc_snap=ccc_snap, lai_snap=lai_snap, 
+                                              WYTHAM_FILENAMES[1],  method=method, is_BVNET=True,
+                                              get_reconstruction=False, ccc_bvnet=ccc_bvnet, lai_bvnet=lai_bvnet, 
                                               cab_mode=cab_mode)
     return barrax_results, barrax_2021_results, wytham_results
 
@@ -59,7 +59,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
                                  save_reconstruction=False, get_all_belsar=False, remove_files=False):
 
     barrax_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, BARRAX_FILENAMES[0], 
-                                              BARRAX_FILENAMES[1],  method=method, is_SNAP=False, 
+                                              BARRAX_FILENAMES[1],  method=method, is_BVNET=False, 
                                               get_reconstruction=save_reconstruction, bands_idx=model.encoder.bands)
     
     all_belsar = None
@@ -76,9 +76,9 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
     
 
     barrax_2021_results = get_frm4veg_results_at_date(model, frm4veg2021_data_dir, BARRAX_2021_FILENAME,
-                                                      is_SNAP=False, get_reconstruction=save_reconstruction)
+                                                      is_BVNET=False, get_reconstruction=save_reconstruction)
     wytham_results = interpolate_frm4veg_pred(model, frm4veg_data_dir, WYTHAM_FILENAMES[0], 
-                                              WYTHAM_FILENAMES[1],  method=method, is_SNAP=False,
+                                              WYTHAM_FILENAMES[1],  method=method, is_BVNET=False,
                                               get_reconstruction=save_reconstruction, 
                                               bands_idx=model.encoder.bands)
 

@@ -166,7 +166,8 @@ def main():
         # tg_mu = [0, 1, 2, 3, 4]
         tg_mu = [4]
         # tg_sigma = [0.5, 1, 2, 3, 4]
-        tg_sigma = [3, 4]
+        tg_sigma = [0.5, 1, 2]
+        # tg_sigma = [3, 4]
         n_eval = 40000
         n_samples_sub=40000
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"

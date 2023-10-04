@@ -190,23 +190,23 @@ def save_validation_results(model, res_dir,
         for key, mestdr_df in global_mestdr_dict.items():
             mestdr_df.to_csv(os.path.join(scatter_dir[variable], f"{model_name}_{key}_{variable}_validation_mestdr.csv"))
     
-    df_results_snap = {}
+    df_results_bvnet = {}
     if plot_results:
-        (barrax_results_snap, barrax_2021_results_snap, wytham_results_snap, belsar_results_snap, all_belsar_snap
+        (barrax_results_bvnet, barrax_2021_results_bvnet, wytham_results_bvnet, belsar_results_bvnet, all_belsar_bvnet
          ) = get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg_2021_data_dir, belsar_data_dir, res_dir,
                                                method=method, get_all_belsar=True, remove_files=remove_files)
         
-        df_results_snap['lai'] = get_belsar_x_frm4veg_lai_results(belsar_results_snap, barrax_results_snap, 
-                                                                  barrax_2021_results_snap, 
-                                                                    wytham_results_snap, frm4veg_lai="lai", 
+        df_results_bvnet['lai'] = get_belsar_x_frm4veg_lai_results(belsar_results_bvnet, barrax_results_bvnet, 
+                                                                  barrax_2021_results_bvnet, 
+                                                                    wytham_results_bvnet, frm4veg_lai="lai", 
                                                                get_reconstruction_error=False)
         
-        barrax_results_snap, barrax_2021_results_snap, wytham_results_snap = get_all_campaign_CCC_results_BVNET(frm4veg_data_dir, 
+        barrax_results_bvnet, barrax_2021_results_bvnet, wytham_results_bvnet = get_all_campaign_CCC_results_BVNET(frm4veg_data_dir, 
                                                                                                 frm4veg_2021_data_dir,
-                                                                                                ccc_snap=None, 
+                                                                                                ccc_bvnet=None, 
                                                                                                 cab_mode=False)
-        df_results_snap['ccc'] = get_frm4veg_ccc_results(barrax_results_snap, barrax_2021_results_snap, 
-                                                         wytham_results_snap, frm4veg_ccc="ccc",
+        df_results_bvnet['ccc'] = get_frm4veg_ccc_results(barrax_results_bvnet, barrax_2021_results_bvnet, 
+                                                         wytham_results_bvnet, frm4veg_ccc="ccc",
                                                          get_reconstruction_error=False)
         
         time_series_dir = os.path.join(res_dir, "time_series")
@@ -216,7 +216,7 @@ def save_validation_results(model, res_dir,
             site = "W" + str(i+1)
             fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
                                                     label="PROSAIL-VAE", use_ref_metrics=True)
-            fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
+            fig, ax = get_belsar_sites_time_series(all_belsar_bvnet, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
                                                     label="SNAP")
             ax.legend()
         axs[-1].set_ylabel("Date")
@@ -226,7 +226,7 @@ def save_validation_results(model, res_dir,
             site = "W" + str(i+1)
             fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                 label="PROSAIL-VAE", use_ref_metrics=True)
-            fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=ax, 
+            fig, ax = get_belsar_sites_time_series(all_belsar_bvnet, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                 label="SNAP")
             ax.legend()
             
@@ -236,7 +236,7 @@ def save_validation_results(model, res_dir,
             site = "M" + str(i+1)
             fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                 label="PROSAIL-VAE", use_ref_metrics=True)
-            fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=ax, 
+            fig, ax = get_belsar_sites_time_series(all_belsar_bvnet, belsar_data_dir, site=site, fig=fig, ax=ax, 
                                                 label="SNAP")
             ax.legend()
             
@@ -249,7 +249,7 @@ def save_validation_results(model, res_dir,
             site = "M" + str(i+1)
             fig, ax = get_belsar_sites_time_series(all_belsar, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
                                                 label="PROSAIL-VAE", use_ref_metrics=True)
-            fig, ax = get_belsar_sites_time_series(all_belsar_snap, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
+            fig, ax = get_belsar_sites_time_series(all_belsar_bvnet, belsar_data_dir, site=site, fig=fig, ax=axs[i], 
                                                 label="SNAP")
         
         fig.savefig(os.path.join(time_series_dir, f"{model_name}_belSAR_LAI_time_series_Maize.png"))
@@ -269,7 +269,7 @@ def save_validation_results(model, res_dir,
 
         for variable in ["lai", "ccc"]:
             fig, axs = plt.subplots(1,2, figsize=(14, 7), dpi=150)
-            _, _ = regression_plot_2hues(df_results_snap[variable], x=f"{variable}", y=f"Predicted {variable}", 
+            _, _ = regression_plot_2hues(df_results_bvnet[variable], x=f"{variable}", y=f"Predicted {variable}", 
                                          hue="Land cover", hue2="Campaign", display_text=False,
                                              error_x=f"{variable} std", 
                                             error_y=None, hue_perfs=False, 
@@ -537,7 +537,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
                                       all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std, all_vars_hyper=all_vars_hyper, 
                                       all_std_hyper=all_std_hyper,
-                                    #   gdf_lai, lai_validation_pred, snap_validation_lai
+                                    #   gdf_lai, lai_validation_pred, bvnet_validation_lai
                                       var_bounds=PROSAIL_VAE.sim_space.var_bounds)
         article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 

@@ -106,10 +106,11 @@ def main():
               ]
         disable_tqdm=False
         tg_mu = [2]
-        tg_sigma = [parser.sigma]
+        
         n_eval = 40000
         n_samples_sub=40000
         parser = get_parser().parse_args(args)
+        tg_sigma = [parser.sigma]
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"

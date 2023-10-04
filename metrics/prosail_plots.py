@@ -161,7 +161,7 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50, bands_name=None):
         # heatmap = heatmap #np.flipud(np.rot90(heatmap))
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         
-        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
+        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='twilight', origin='lower')
         axs[axi, axj].set_ylabel(bands_name[i])
         axs[axi, axj].set_xlabel("rec. " + bands_name[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
@@ -217,7 +217,7 @@ def plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=None, sim_pdf=No
             raise ValueError("Please input either heatmap and extent, or tgt_dist, sim_pdf and sim_support")
     if fig is None or ax is None:
         fig, ax = plt.subplots(dpi=120)
-    ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='BrBG', origin='lower')
+    ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='twilight', origin='lower')
     ax.plot([extent[0], extent[1]], [extent[0], extent[1]], c='w')
     if var_name is not None:
         ax.set_ylabel(f"{var_name}")
@@ -1179,12 +1179,12 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     plt.close('all')
 
     for idx, band in enumerate(BANDS):
+
         fig, ax = plt.subplots(figsize=(2,2), tight_layout=True, dpi=150)
         xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
-        ax.hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
-                            all_rec[idx,:].reshape(-1).cpu().numpy(),
-                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
+        ax.hist2d(all_s2_r[idx,:].reshape(-1).numpy(), all_rec[idx,:].reshape(-1).cpu().numpy(),
+                    range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='twilight')
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1207,7 +1207,8 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
                             all_rec[idx,:].reshape(-1).cpu().numpy(),
-                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='twilight')
+        
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1216,6 +1217,10 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         ax[row, col].set_ylabel(f"Reconstructed {band}")
         ax[row, col].set_xlabel(f"True {band}")
         ax[row, col].set_aspect('equal')
+        _, _, r2_band, rmse_band = regression_metrics(all_s2_r[idx,:].reshape(-1).numpy(), 
+                                                      all_rec[idx,:].reshape(-1).cpu())
+        perf_text = "r2: {:.2f} - RMSE: {:.2f}".format(r2_band, rmse_band)
+        ax[row, col].text(.01, .99, perf_text, ha='left', va='top', transform=ax[row, col].transAxes)
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/2dhist_true_vs_pred.tex")
     plt.close('all')
@@ -1224,7 +1229,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
-              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='BrBG')
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='twilight')
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1482,7 +1487,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
                             all_rec[idx,:].reshape(-1).cpu().numpy(),
-                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='BrBG')
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='twilight')
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1497,7 +1502,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
-              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='BrBG')
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='twilight')
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],

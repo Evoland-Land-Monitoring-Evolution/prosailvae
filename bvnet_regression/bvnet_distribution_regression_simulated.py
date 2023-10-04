@@ -49,6 +49,9 @@ def get_parser():
     
     parser.add_argument("-v", dest="validate_on_terrain",
                         type=bool, default=False)
+    
+    parser.add_argument("-si", dest="sigma",
+                        type=float, default=3)
     return parser
 
 def simulate_data_sets(n_eval:int=20000, 
@@ -64,8 +67,8 @@ def simulate_data_sets(n_eval:int=20000,
 
     lai_var_dist = VariableDistribution(low=lai_low,
                                         high=lai_high,
-                                        scale=tg_mu_0,
-                                        loc=tg_sigma_0,
+                                        scale=tg_sigma_0,
+                                        loc=tg_mu_0,
                                         law="gaussian")
     print("Simulating evaluation data...")
     save_dataset(save_dir, "evaluation_", nb_simus=n_eval, rsr_dir=rsr_dir, bvnet_bands=False, 
@@ -98,11 +101,12 @@ def main():
               "-n", "2",
               "-lr", "0.001",
               '-v', 'True',
-              "-s", "True"
+              "-s", "True",
+              "-si", "3"
               ]
         disable_tqdm=False
         tg_mu = [2]
-        tg_sigma = [3]
+        tg_sigma = [parser.sigma]
         n_eval = 40000
         n_samples_sub=40000
         parser = get_parser().parse_args(args)
@@ -117,6 +121,7 @@ def main():
         # tg_sigma = [0.5, 1, 2, 3, 4]
         # tg_sigma = [0.5, 1, 2]
         tg_sigma = [3, 4]
+        tg_sigma = [parser.sigma]
         n_eval = 40000
         n_samples_sub=40000
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"

@@ -15,12 +15,12 @@ import logging
 import logging.config
 import traceback
 import time
-from prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig, load_params)
+from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, ProsailVAEConfig, load_params)
 # from torch_lr_finder import get_PROSAIL_VAE_lr
 from dataset.loaders import (get_simloader, lr_finder_loader, get_train_valid_test_loader_from_patches)
-from metrics.results import save_results, save_results_2d, get_res_dir_path, save_validation_results, plot_losses
+from metrics.results import save_results_on_sim_data, save_results_on_s2_data, get_res_dir_path, save_validation_results, plot_losses
 from utils.utils import save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow, load_standardize_coeffs, IOStandardizeCoeffs
-from ProsailSimus import get_bands_idx
+from prosailvae.ProsailSimus import get_bands_idx
 import argparse
 import pandas as pd
 from dataset.project_s2_dataset import load_cyclical_data_set
@@ -183,7 +183,6 @@ def initialize_by_training(n_models:int,
                                                 n_epochs,
                                                 train_loader,
                                                 valid_loader,
-                                                lrtrainloader=None,
                                                 res_dir=None,
                                                 n_samples=n_samples,
                                                 lr_recompute=None,
@@ -215,7 +214,7 @@ def initialize_by_training(n_models:int,
     #                                                     logger_name=LOGGER_NAME)
     # return best_prosail_vae
 
-def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader, lrtrainloader,
+def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
                   plot_gradient=False, lr_recompute_mode=True, cycle_training=False,
                   accum_iter=1, lrs_threshold=0.01, lr_init=5e-4, validation_at_every_epoch=None,
@@ -365,7 +364,7 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_hyper_3.json",
+              "-c", "config_reg_rnn_n3.json",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
@@ -386,8 +385,7 @@ def setup_training():
         frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
         belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
         cyclical_data_dir =  "/work/scratch/zerahy/prosailvae/data/projected_data"
- 
-    root_dir = TOP_PATH
+
     xp_array = parser.xp_array
     job_array_dir = None
     if xp_array:
@@ -395,10 +393,9 @@ def setup_training():
     config_dir = parser.config_dir
     params = load_params(config_dir, config_file=parser.config_file, parser=parser)
     model_name = parser.config_file[:-5]
-    if "data_dir" not in params.keys():
-        data_dir = os.path.join(root_dir,"data/")
-    else:
-        data_dir = params["data_dir"]
+
+    sim_data_dir = params["sim_data_dir"]
+    s2_data_dir = params["s2_data_dir"]
     assert parser.n_fold < parser.n_xp
     if len(parser.root_results_dir)==0:
         root_results_dir = os.path.join(TOP_PATH,"results/")
@@ -441,31 +438,29 @@ def setup_training():
     else:
         params_sup_kl_model = None
         sup_kl_io_coeffs = None
-    return (params, parser, res_dir, data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
+    return (params, parser, res_dir, sim_data_dir, s2_data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
             frm4veg_data_dir, frm4veg_2021_data_dir, belsar_dir, cyclical_data_dir, model_name)
 
-def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
-                     sup_kl_io_coeffs, validation_dir=None,frm4veg_data_dir=None,
-                     frm4veg_2021_data_dir=None, belsar_data_dir=None, lai_cyclical_loader=None):
-    """
-    Intializes and trains a prosail instance
-    """
-    logger = logging.getLogger(LOGGER_NAME)
-    logger.info(f"Loading training and validation loader in"
-                f" {data_dir}/{params['dataset_file_prefix']}...")
+def get_training_data(params, logger):
+    s2_data_dir = params['s2_data_dir']
+    sim_data_dir = params['sim_data_dir']
     bands, prosail_bands = get_bands_idx(params["weiss_bands"])
     if params["simulated_dataset"]:
+        logger.info(f"Loading training and validation loader in"
+                    f" {sim_data_dir}/{params['dataset_file_prefix']}...")
         if params["batch_size"] < 2:
             raise ValueError("With simulated data, batch_size cannot be inferior to 2.")
         train_loader, valid_loader = get_simloader(valid_ratio=params["valid_ratio"],
-                                                    file_prefix=params["dataset_file_prefix"],
-                                                    sample_ids=None,
-                                                    batch_size=params["batch_size"],
-                                                    data_dir=data_dir)
-        lai_cyclical_loader = None
+                                                   file_prefix=params["dataset_file_prefix"],
+                                                   sample_ids=None,
+                                                   batch_size=params["batch_size"],
+                                                   data_dir=sim_data_dir)
+        data_dir = sim_data_dir
     else:
-        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(data_dir, batch_size=params["batch_size"],
+        train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(s2_data_dir, 
+                                                                                 batch_size=params["batch_size"],
                                                                                  num_workers=0, max_valid_samples=1000)
+        data_dir = s2_data_dir
 
     if params["apply_norm_rec"]:
         io_coeffs = load_standardize_coeffs(data_dir, params["dataset_file_prefix"], n_idx=0 if params["weiss_bands"] else 4)
@@ -474,8 +469,20 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
 
     logger.info(f'Training ({len(train_loader.dataset)} samples) '
                 f'and validation ({len(valid_loader.dataset)} samples) loaders, loaded.')
-    logger.info(f"Weiss mode : {parser.weiss_mode}")
 
+    return train_loader, valid_loader, io_coeffs, bands, prosail_bands
+
+
+
+def train_prosailvae(params, parser, res_dir, params_sup_kl_model,
+                     sup_kl_io_coeffs, validation_dir=None,frm4veg_data_dir=None,
+                     frm4veg_2021_data_dir=None, belsar_data_dir=None, 
+                     lai_cyclical_loader=None):
+    """
+    Intializes and trains a prosail instance
+    """
+    logger = logging.getLogger(LOGGER_NAME)
+    (train_loader, valid_loader, io_coeffs, bands, prosail_bands) = get_training_data(params, logger)
     if params["load_model"]:
         vae_load_file_path = os.path.join(params["vae_load_dir_path"], "prosailvae_weights.tar")
         io_coeffs = load_standardize_coeffs(params["vae_load_dir_path"], 
@@ -511,21 +518,21 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
         n_models=params["n_init_models"]
         lr = params['init_lr']
         n_epochs=params["n_init_epochs"]
-        if socket.gethostname()=='CELL200973':
-            n_epochs = 1
-            n_models = 2
+        # if socket.gethostname()=='CELL200973':
+        #     n_epochs = 1
+        #     n_models = 2
 
         broke_at_rec = initialize_by_training(n_models=n_models,
-                               n_epochs=n_epochs,
-                               train_loader=train_loader,
-                               valid_loader=valid_loader,
-                               lr=lr,
-                               logger=logger,
-                               n_samples=training_config.n_samples,
-                               pv_config=pv_config,
-                               pv_config_hyper=pv_config_hyper,
-                               break_at_rec_loss=params["break_init_at_rec_loss"]
-                            )
+                                                n_epochs=n_epochs,
+                                                train_loader=train_loader,
+                                                valid_loader=valid_loader,
+                                                lr=lr,
+                                                logger=logger,
+                                                n_samples=training_config.n_samples,
+                                                pv_config=pv_config,
+                                                pv_config_hyper=pv_config_hyper,
+                                                break_at_rec_loss=params["break_init_at_rec_loss"]
+                                                )
         if params["break_init_at_rec_loss"] is not None and not broke_at_rec:
             broke_at_rec = initialize_by_training(n_models=n_models,
                                                     n_epochs=n_epochs,
@@ -550,32 +557,7 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     pv_config_hyper=pv_config_hyper,
                                                     logger_name=LOGGER_NAME)
     lr = params['lr']
-    lrtrainloader = None
-    tensor_dir=None
-    if not params["simulated_dataset"]:
-        tensor_dir = parser.tensor_dir
-    lrtrainloader = lr_finder_loader(
-                    file_prefix=params["dataset_file_prefix"],
-                    sample_ids=None,
-                    batch_size=64,
-                    data_dir=data_dir,
-                    supervised=prosail_vae.supervised,
-                    tensors_dir=tensor_dir)
     lr_recompute_mode = params["lr_recompute_mode"]
-    # if lr is None:
-    #     try:
-    #         # raise NotImplementedError
-    #         lr = get_PROSAIL_VAE_lr(prosail_vae, lrtrainloader, n_samples=params["n_samples"], 
-    #                                 disable_tqdm=not socket.gethostname()=='CELL200973')
-    #         logger.info('LR computed ! using lr = {:.2E}'.format(lr))
-    #     except Exception as exc:
-    #         traceback.print_exc()
-    #         print(exc)
-    #         lr = 1e-4
-    #         logger.error(f"Couldn't recompute lr at initialization ! Using lr={lr}")
-    #         logger.error(f"{exc}")
-    #         print(f"Couldn't recompute lr at initialization ! Using lr={lr}")
-
     optimizer = optim.Adam(prosail_vae.parameters(), lr=lr, weight_decay=1e-2)
     logger.info('PROSAIL-VAE and optimizer initialized.')
     
@@ -588,7 +570,6 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                         params['epochs'],
                                         train_loader,
                                         valid_loader,
-                                        lrtrainloader,
                                         res_dir=res_dir,
                                         n_samples=params["n_samples"],
                                         lr_recompute=params['lr_recompute'],
@@ -618,7 +599,6 @@ def train_prosailvae(params, parser, res_dir, data_dir:str, params_sup_kl_model,
                                                     pv_config_hyper=pv_config_hyper,
                                                     logger_name=LOGGER_NAME)
     if len(all_cyclical_rmse):
-        # pd.DataFrame(all_cyclical_loss).to_csv(os.path.join(res_dir, "cyclical_loss.csv"))
         pd.DataFrame(all_cyclical_rmse).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
     return prosail_vae, all_train_loss_df, all_valid_loss_df, info_df
 
@@ -645,7 +625,7 @@ def save_array_xp_path(job_array_dir, res_dir):
                 outfile.write(f"{res_dir}\n")
 
 def main():
-    (params, parser, res_dir, data_dir, params_sup_kl_model,
+    (params, parser, res_dir, sim_data_dir, s2_data_dir, params_sup_kl_model,
      job_array_dir, sup_kl_io_coeffs,
      frm4veg_data_dir, frm4veg_2021_data_dir, 
      belsar_data_dir, cyclical_data_dir, model_name) = setup_training()
@@ -658,14 +638,14 @@ def main():
         validation_dir = os.path.join(res_dir, "validation")
         os.makedirs(validation_dir)
         (prosail_vae, all_train_loss_df, all_valid_loss_df,
-         info_df) = train_prosailvae(params, parser, res_dir, data_dir, params_sup_kl_model,
+         info_df) = train_prosailvae(params, parser, res_dir, params_sup_kl_model,
                                      sup_kl_io_coeffs=sup_kl_io_coeffs, 
                                      validation_dir=validation_dir,
                                      frm4veg_data_dir=frm4veg_data_dir,
                                      frm4veg_2021_data_dir=frm4veg_2021_data_dir,
                                      belsar_data_dir=belsar_data_dir, lai_cyclical_loader=lai_cyclical_loader)
         plot_losses(res_dir, all_train_loss_df, all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                        plot_results=parser.plot_results)
+                    plot_results=parser.plot_results)
         min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
         min_loss_df = pd.DataFrame({"Loss":[min_loss]})
         if True and not socket.gethostname()=='CELL200973':
@@ -676,22 +656,22 @@ def main():
                                                                 model_name="pvae",
                                                                 method="simple_interpolate",
                                                                 mode="sim_tg_mean", 
-                                                                remove_files=True, plot_results=parser.plot_results)
-        
+                                                                remove_files=True, plot_results=parser.plot_results,
+                                                                save_reconstruction=False)
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[1.0]})
-        if not params['supervised']:
-            _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(data_dir, bands = torch.arange(10),
-                                                                                    batch_size=1, num_workers=0,
-                                                                                    max_valid_samples=None)
-            cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
-            cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
-            lai_cyclical_loader = valid_loader
-            info_test_data = np.load(os.path.join(data_dir, "test_info.npy"))
+        _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(params["s2_data_dir"], 
+                                                                                bands = torch.arange(10),
+                                                                                batch_size=1, num_workers=0,
+                                                                                max_valid_samples=None)
+        cyclical_rmse = prosail_vae.get_cyclical_rmse_from_loader(valid_loader, lai_precomputed=False)
+        cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]})
+        lai_cyclical_loader = valid_loader
+        info_test_data = np.load(os.path.join(params["s2_data_dir"], "test_info.npy"))
 
-            save_results_2d(prosail_vae, test_loader, res_dir, LOGGER_NAME=LOGGER_NAME,
-                            plot_results=parser.plot_results, info_test_data=info_test_data, 
-                            max_test_patch=50 if not socket.gethostname()=='CELL200973' else 2,
-                            lai_cyclical_loader=lai_cyclical_loader)
+        save_results_on_s2_data(prosail_vae, test_loader, res_dir, LOGGER_NAME=LOGGER_NAME,
+                                plot_results=parser.plot_results, info_test_data=info_test_data, 
+                                max_test_patch=50 if not socket.gethostname()=='CELL200973' else 2,
+                                lai_cyclical_loader=lai_cyclical_loader)
         global_results_df = pd.concat((pd.DataFrame({'model':[model_name]}),
                                         cyclical_rmse_df,
                                         min_loss_df), axis=1)
@@ -704,12 +684,12 @@ def main():
         else: # else it exists so append without writing the header
             global_results_df.to_csv(res_df_filename, mode='a', index=False, header=False)
 
-        if not params['encoder_type'] in spatial_encoder_types:
-            save_results(prosail_vae, res_dir, data_dir, all_train_loss_df,
-                         all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
-                         plot_results=parser.plot_results, 
-                         weiss_mode=parser.weiss_mode, n_samples=params["n_samples"],
-                         lai_cyclical_loader=lai_cyclical_loader)
+        if not params['encoder_type'] in spatial_encoder_types: # If encoder is not CNN
+            save_results_on_sim_data(prosail_vae, res_dir, params["sim_data_dir"], all_train_loss_df,
+                                     all_valid_loss_df, info_df, LOGGER_NAME=LOGGER_NAME,
+                                     plot_results=parser.plot_results, 
+                                     bvnet_mode=parser.weiss_mode, n_samples=params["n_samples"],
+                                     lai_cyclical_loader=lai_cyclical_loader)
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)

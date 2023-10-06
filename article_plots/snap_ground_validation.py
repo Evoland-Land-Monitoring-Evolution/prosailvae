@@ -3,10 +3,10 @@ import os
 import numpy as np
 import pandas as pd
 
-from snap_regression.snap_nn import SnapNN
+from bvnet_regression.bvnet import BVNET
 import matplotlib.pyplot as plt
-from validation.validation import (get_all_campaign_CCC_results_SNAP, get_frm4veg_ccc_results, 
-                                   get_validation_global_metrics, get_all_campaign_lai_results_SNAP,
+from validation.validation import (get_all_campaign_CCC_results_BVNET, get_frm4veg_ccc_results, 
+                                   get_validation_global_metrics, get_all_campaign_lai_results_BVNET,
                                    get_belsar_x_frm4veg_lai_results)
 from metrics.prosail_plots import regression_plot, regression_plot_2hues
 import tikzplotlib
@@ -24,19 +24,19 @@ def main():
     frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
     frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
     belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
-    belsar_pred_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_belsar_pred/"
+    belsar_pred_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/bvnet_belsar_pred/"
     if not os.path.isdir(belsar_pred_dir):
         os.makedirs(belsar_pred_dir)
-    res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/snap_ground_validation/"
+    res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/bvnet_ground_validation/"
     if not os.path.isdir(res_dir):
         os.makedirs(res_dir)
 
 
     (barrax_results, barrax_2021_results, wytham_results, belsar_results, 
-    all_belsar) = get_all_campaign_lai_results_SNAP(frm4veg_data_dir, frm4veg_2021_data_dir, 
+    all_belsar) = get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg_2021_data_dir, 
                                                     belsar_data_dir, belsar_pred_dir,
                                                     method="simple_interpolate", get_all_belsar=False, 
-                                                    remove_files=True, lai_snap=None)    
+                                                    remove_files=True, lai_bvnet=None)    
     df_results_lai = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                     frm4veg_lai="lai", get_reconstruction_error=False)
     hue_elem = pd.unique(df_results_lai["Land cover"])
@@ -56,14 +56,14 @@ def main():
                                     title_hue="Land cover", title_hue2="\n Site", 
                                     hue_color_dict=hue_color_dict, 
                                     hue2_markers_dict=hue2_markers_dict)
-    fig.savefig(os.path.join(res_dir, f"snap_{variable}_regression_campaign.png"))
+    fig.savefig(os.path.join(res_dir, f"bvnet_{variable}_regression_campaign.png"))
     tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(os.path.join(res_dir, f"snap_{variable}_regression_campaign.tex"))
+    tikzplotlib.save(os.path.join(res_dir, f"bvnet_{variable}_regression_campaign.tex"))
     rmse_lai, mpiw_lai, picp_lai, _ = get_validation_global_metrics(df_results_lai, decompose_along_columns=["Campaign"], variable="lai")
 
-    barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_SNAP(frm4veg_data_dir, 
+    barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_BVNET(frm4veg_data_dir, 
                                                                                             frm4veg_2021_data_dir,
-                                                                                            ccc_snap=None, 
+                                                                                            ccc_bvnet=None, 
                                                                                             cab_mode=False)
     df_results_ccc = get_frm4veg_ccc_results(barrax_results, barrax_2021_results, wytham_results, frm4veg_ccc="ccc",
                                          get_reconstruction_error=False)
@@ -76,9 +76,9 @@ def main():
                                     title_hue="Land cover", title_hue2="\n Site",
                                     hue_color_dict=hue_color_dict, 
                                     hue2_markers_dict=hue2_markers_dict)
-    fig.savefig(os.path.join(res_dir, f"snap_{variable}_regression_campaign.png"))
+    fig.savefig(os.path.join(res_dir, f"bvnet_{variable}_regression_campaign.png"))
     tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(os.path.join(res_dir, f"snap_{variable}_regression_campaign.tex"))
+    tikzplotlib.save(os.path.join(res_dir, f"bvnet_{variable}_regression_campaign.tex"))
     rmse_ccc, mpiw_ccc, picp_ccc, _ = get_validation_global_metrics(df_results_ccc, decompose_along_columns=["Campaign"], variable="ccc")
             
 

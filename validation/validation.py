@@ -84,7 +84,7 @@ def get_all_campaign_lai_results(model, frm4veg_data_dir, frm4veg2021_data_dir, 
 
     belsar_results = interpolate_belsar_metrics(belsar_data_dir=belsar_data_dir, belsar_pred_dir=belsar_pred_dir,
                                                 file_suffix=f"_{model_name}_{mode}", method=method, 
-                                                bands_idx=model.encoder.bands)
+                                                bands_idx=model.encoder.bands, get_error=save_reconstruction)
     if remove_files:
         for filename in list_belsar_filenames:
             if os.path.isfile(os.path.join(belsar_pred_dir, f"{filename}_{model_name}_{mode}.tif")):

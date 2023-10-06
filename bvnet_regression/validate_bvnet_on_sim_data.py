@@ -105,10 +105,11 @@ def main():
         args = [
             "-sd", "True",
             # "-p", "True",
+            "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data",
             "-l", "True"
                 ]
         parser = get_parser().parse_args(args)
-        file_prefix = ""
+        file_prefix = "evaluation_"
         
     else:
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"

@@ -72,7 +72,7 @@ def simulate_data_sets(n_eval:int=20000,
                                         law="gaussian")
     print("Simulating evaluation data...")
     save_dataset(save_dir, "evaluation_", nb_simus=n_eval, rsr_dir=rsr_dir, bvnet_bands=False, 
-                 prosail_var_dist_type="new_v2",lai_var_dist=lai_var_dist)
+                 prosail_var_dist_type="new_v2", lai_var_dist=lai_var_dist, lai_corr_mode="v2", noise=0.01, lai_thresh=None)
 
     for i, mu in enumerate(tg_mu):
         for j, sigma in enumerate(tg_sigma):

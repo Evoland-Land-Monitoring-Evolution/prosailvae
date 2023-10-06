@@ -8,7 +8,7 @@ Created on Thu Nov 17 11:46:20 2022
 
 import matplotlib.pyplot as plt
 import socket
-
+from matplotlib.colors import LogNorm
 # plt.rcParams.update({
 #   "text.usetex": True,
 #   "font.family": "Helvetica"
@@ -161,11 +161,11 @@ def plot_rec_hist2D(prosail_VAE, loader, res_dir, nbin=50, bands_name=None):
         # heatmap = heatmap #np.flipud(np.rot90(heatmap))
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         
-        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='twilight', origin='lower')
+        axs[axi, axj].imshow(heatmap, extent=extent, interpolation='nearest',cmap='viridis', origin='lower', norm=LogNorm())
         axs[axi, axj].set_ylabel(bands_name[i])
         axs[axi, axj].set_xlabel("rec. " + bands_name[i])
         axs[axi, axj].plot([min_b, max_b], [min_b, max_b], c='w')
-    plt.show()
+    # plt.show()
     fig.savefig(res_dir + '/2d_rec_dist.svg')
     plt.close('all')
     prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
@@ -217,7 +217,7 @@ def plot_single_lat_hist_2D(heatmap=None, extent=None, tgt_dist=None, sim_pdf=No
             raise ValueError("Please input either heatmap and extent, or tgt_dist, sim_pdf and sim_support")
     if fig is None or ax is None:
         fig, ax = plt.subplots(dpi=120)
-    ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='twilight', origin='lower')
+    ax.imshow(heatmap, extent=extent, interpolation='nearest',cmap='viridis', origin='lower', norm=LogNorm())
     ax.plot([extent[0], extent[1]], [extent[0], extent[1]], c='w')
     if var_name is not None:
         ax.set_ylabel(f"{var_name}")
@@ -324,7 +324,7 @@ def plot_rec_and_latent(prosail_VAE, loader, res_dir, n_plots=10, bands_name=Non
             
         # Save the figure and show
         plt.tight_layout()
-        plt.show()
+        # plt.show()
         fig.savefig(res_dir + f'/reflectance_rec_{i}.svg')
         plt.close('all')
     prosail_VAE.decoder.ssimulator.apply_norm = original_prosail_s2_norm
@@ -519,7 +519,7 @@ def plot_param_dist(res_dir, sim_dist, tgt_dist, var_bounds_type="legacy"):
         
     # Save the figure and show
     plt.tight_layout()
-    plt.show()
+    # plt.show()
     fig.savefig(res_dir + '/prosail_dist.svg')
 
 def plot_pred_vs_tgt(res_dir, sim_dist, tgt_dist, var_bounds_type="legacy"):
@@ -603,7 +603,7 @@ def plot_refl_dist(rec_dist, refl_dist, res_dir, normalized=False, ssimulator=No
         
     # Save the figure and show
     plt.tight_layout()
-    plt.show()
+    # plt.show()
     if res_dir is not None:
         fig.savefig(res_dir + filename)
     return fig, ax2
@@ -672,14 +672,14 @@ def plot_param_compare_dist(rec_dist, refl_dist, res_dir, normalized=False, para
         
     # Save the figure and show
     plt.tight_layout()
-    plt.show()
+    # plt.show()
     if res_dir is not None:
         fig.savefig(res_dir + filename)
     return fig, ax2
 
 def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='', 
               filename='pair_plot.png'):
-    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap, bins=100):
+    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap, xmin, xmax, ymin, ymax, bins=100):
         """Plots single pair of features.
     
         Parameters
@@ -710,14 +710,27 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
             tdf['target'] = _y
             for c in colormap.keys():
                 tdf_filtered = tdf.loc[tdf['target']==c]
-                ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = bins)
+                hist, bin_edges = np.histogram(tdf_filtered[_features[feature_ind1]], bins=bins, density=True)
+                ax[feature_ind1, feature_ind2].plot(bin_edges, np.concatenate((np.array([0]), hist)), 
+                                                    lw=1, color = colormap[c])
+                # ax[feature_ind1, feature_ind2].hist(tdf_filtered[_features[feature_ind1]], color = colormap[c], bins = bins)
         else:
             # other wise plot the pair-wise scatter plot
-            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], _features[feature_ind2]])
+            tdf = pd.DataFrame(_X[:, [feature_ind1, feature_ind2]], columns = [_features[feature_ind1], 
+                                                                               _features[feature_ind2]])
             tdf['target'] = _y
             for c in colormap.keys():
                 tdf_filtered = tdf.loc[tdf['target']==c]
-                ax[feature_ind1, feature_ind2].scatter(x = tdf_filtered[_features[feature_ind2]], y = tdf_filtered[_features[feature_ind1]], color=colormap[c], marker='.',s=2)
+                ax[feature_ind1, feature_ind2].hist2d(x=tdf_filtered[_features[feature_ind2]].values, 
+                                                      y=tdf_filtered[_features[feature_ind1]].values,
+                                                      range = [[xmin, xmax], [ymin, ymax]], 
+                                                      bins=bins, cmap='viridis', 
+                                                      norm=LogNorm()
+                                                      )
+                # ax[feature_ind1, feature_ind2].scatter(x = tdf_filtered[_features[feature_ind2]], 
+                #                                        y = tdf_filtered[_features[feature_ind1]], 
+                #                                        color=colormap[c], 
+                #                                        marker='.', s=2)
     
         # Print the feature labels only on the left side of the pair-plot figure
         # and bottom side of the pair-plot figure. 
@@ -754,19 +767,26 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
         fig.set_size_inches(feature_count * 4, feature_count * 4)
     
         # Iterate through features to plot pairwise.
-        for i in range(0, feature_count):
-            for j in range(0, feature_count):
-                plot_single_pair(axis, i, j, X, y, features, colormap, bins=bins)
-                axis[j, i].set_xlim(np.min(X[:,i]), np.max(X[:,i]))
+        for i in range(0, feature_count): # column
+            for j in range(0, feature_count): # row
+                xmin = np.min(X[:,j])
+                xmax = np.max(X[:,j])
+                ymin = np.min(X[:,i])
+                ymax = np.max(X[:,i])
+                plot_single_pair(axis, i, j, X, y, features, colormap, bins=bins, 
+                                 xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+                axis[i, j].set_xlim(xmin, xmax)
+                if i!=j:
+                    axis[i, j].set_ylim(ymin, ymax)
 
-        plt.show()
+        # plt.show()
         return fig, axis
     X = tensor_1.detach().cpu().numpy()
     y = np.zeros(tensor_1.size(0))
     if tensor_2 is not None:
         X = np.concatenate((X,tensor_2.detach().cpu().numpy()))
         y = np.concatenate((y,np.ones(tensor_2.size(0))))
-    fig, ax = myplotGrid(X, y, features, colormap={0:'blue', 1:'red'})
+    fig, ax = myplotGrid(X, y, features, colormap={0:'blue'})
     if res_dir is not None:
         fig.savefig(res_dir + filename)
     return fig, ax
@@ -1150,7 +1170,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     
     for idx, prosail_var in enumerate(PROSAILVARS):
         fig, ax = plt.subplots(tight_layout=True, dpi=150)
-        ax.hist(all_vars[idx,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
+        ax.hist(all_vars[idx,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
         ax.set_yticks([])
         ax.set_xlabel(prosail_var)
         ax.set_xlim(var_bounds.asdict()[PROSAILVARS[idx]]['low'],
@@ -1184,7 +1204,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xmin = min(all_s2_r[idx,:].cpu().min().item(), all_rec[idx,:].cpu().min().item())
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax.hist2d(all_s2_r[idx,:].reshape(-1).numpy(), all_rec[idx,:].reshape(-1).cpu().numpy(),
-                    range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='twilight')
+                    range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
         ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1207,7 +1227,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
                             all_rec[idx,:].reshape(-1).cpu().numpy(),
-                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='twilight')
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
         
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
@@ -1229,7 +1249,7 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
-              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='twilight')
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1320,16 +1340,28 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     for j, varname in enumerate(PROSAILVARS):
         row = j // 2
         col = (j % 2) * 2
-        axs[row, col].hist(all_vars[j,...].reshape(-1).cpu(), bins=50, density=True, histtype='step')
+        hist, bin_edges = np.histogram(all_vars[j,...].reshape(-1).cpu(), bins=100, density=True)
+        axs[row, col].plot(np.concatenate((np.array([var_bounds.asdict()[PROSAILVARS[j]]['low']]), 
+                                           bin_edges,
+                                           np.array([var_bounds.asdict()[PROSAILVARS[j]]['high']])
+                                           )), np.concatenate((np.array([0, 0]), hist, np.array([0]))), lw=1)
+        axs[row, col].set_xlim(var_bounds.asdict()[PROSAILVARS[j]]['low'],
+                            var_bounds.asdict()[PROSAILVARS[j]]['high'])
         axs[row, col].set_xlabel(varname)    
         axs[row, col].set_yticks([])  
-        axs[row, col+1].hist(all_sigma[j,...].reshape(-1).cpu(), bins=100, density=True, histtype='step')
+        hist, bin_edges = np.histogram(all_sigma[j,...].reshape(-1).cpu(), bins=100, density=True)
+        axs[row, col+1].plot(bin_edges, np.concatenate((np.array([0]),hist)), lw=1)
+        # axs[row, col+1].hist(all_sigma[j,...].reshape(-1).cpu(), bins=100, density=True)#, histtype='step')
         axs[row, col+1].set_yticks([])
         axs[row, col+1].set_xlabel(f"{varname} std")
-        j += 1
+        # j += 1
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{article_plot_dir}/aggregated_all_vars_and_std.tex')
-    
+    if not socket.gethostname()=='CELL200973':
+        fig, ax = pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
+                            res_dir=article_plot_dir, filename='prosail_vars_pair_plot.png')
+        tikzplotlib_fix_ncols(fig)
+        tikzplotlib.save(f'{article_plot_dir}/prosail_vars_pair_plot.tex')
 
 def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw,
                                   all_vars, all_weiss_lai, all_weiss_cab, all_weiss_cw, all_sigma, all_ccc,
@@ -1487,7 +1519,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         xmax = max(all_s2_r[idx,:].cpu().max().item(), all_rec[idx,:].cpu().max().item())
         ax[row, col].hist2d(all_s2_r[idx,:].reshape(-1).numpy(),
                             all_rec[idx,:].reshape(-1).cpu().numpy(),
-                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='twilight')
+                            range = [[xmin,xmax],[xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
         xlim = ax[row, col].get_xlim()
         ylim = ax[row, col].get_ylim()
         ax[row, col].plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
@@ -1502,7 +1534,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
     ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
-              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='twilight')
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],

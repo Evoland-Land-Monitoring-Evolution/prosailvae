@@ -420,7 +420,7 @@ def plot_losses(res_dir, all_train_loss_df=None, all_valid_loss_df=None, info_df
                            info_df, save_file=loss_dir+"all_loss_sum.svg")
             all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, save_file=loss_dir+"all_loss.svg")
 
-def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logger', 
+def save_results_on_s2_data(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logger', 
                     plot_results=False, info_test_data=None, max_test_patch=50, 
                     lai_cyclical_loader=None):
     cyclical_lai_precomputed=False
@@ -533,16 +533,18 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
         cyclical_lai = torch.cat(cyclical_lai)
         cyclical_lai_std = torch.cat(cyclical_lai_std)
 
+        article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
+                                      all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 
+                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
+                                      var_bounds=PROSAIL_VAE.sim_space.var_bounds)
+        
         PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
                                       all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 
                                       cyclical_ref_lai, cyclical_lai, cyclical_lai_std, all_vars_hyper=all_vars_hyper, 
                                       all_std_hyper=all_std_hyper,
                                     #   gdf_lai, lai_validation_pred, bvnet_validation_lai
                                       var_bounds=PROSAIL_VAE.sim_space.var_bounds)
-        article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab, all_cw, all_vars,
-                                      all_bvnet_lai, all_bvnet_cab, all_bvnet_cw, all_std, all_ccc, all_cw_rel, 
-                                      cyclical_ref_lai, cyclical_lai, cyclical_lai_std,
-                                      var_bounds=PROSAIL_VAE.sim_space.var_bounds)
+
 
     logger.info("Metrics computed.")
     rec_var = get_rec_var(PROSAIL_VAE, loader, max_batch=10, n_samples=10, sample_dim=1, bands_dim=2, n_bands=10)
@@ -557,7 +559,7 @@ def save_results_2d(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-VAE logge
     fig.savefig(os.path.join(plot_dir, "rec_var.png"))
     return 
 
-def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
+def save_results_on_sim_data(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
                  all_valid_loss_df=None, info_df=None, LOGGER_NAME='PROSAIL-VAE logger', 
                  plot_results=False, juan_validation=True, bvnet_mode=False, n_samples=1,
                  lai_cyclical_loader=None):
@@ -586,10 +588,7 @@ def save_results(PROSAIL_VAE, res_dir, data_dir, all_train_loss_df=None,
             loss_curve(info_df, save_file=loss_dir+"lr.svg")
             all_loss_curve(all_train_loss_df, all_valid_loss_df, info_df, 
                            save_file=loss_dir+"all_loss.svg")
-    # cyclical_rmse = PROSAIL_VAE.get_cyclical_rmse_from_loader(lai_cyclical_loader, 
-    #                                                           lai_precomputed=False)
-    # pd.DataFrame(data={"cyclical_rmse":[cyclical_rmse.item()]}).to_csv(os.path.join(res_dir, "cyclical_rmse.csv"))
-    # Computing metrics
+
     logger.info("Loading test loader...")
     loader = get_simloader(file_prefix="test_", data_dir=data_dir)
     logger.info("Test loader, loaded.")

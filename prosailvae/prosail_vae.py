@@ -5,6 +5,9 @@ Created on Tue Nov  8 14:45:12 2022
 
 @author: yoel
 """
+import os
+from prosailvae import __path__ as PPATH
+TOP_PATH = os.path.join(PPATH[0], os.pardir)
 from dataclasses import dataclass,field
 import torch
 from prosailvae.simvae import SimVAE
@@ -99,6 +102,10 @@ def load_params(config_dir, config_file, parser=None):
         params["prosail_vars_dist_type"] = "legacy"
     if "lat_idx" not in params.keys():
         params["lat_idx"] = []
+    if "sim_data_dir" not in params.keys():
+        params["sim_data_dir"] = os.path.join(TOP_PATH, "data/")
+    if "s2_data_dir" not in params.keys():
+        params["s2_data_dir"] = os.path.join(TOP_PATH, "data/")
     return params
 
 @dataclass

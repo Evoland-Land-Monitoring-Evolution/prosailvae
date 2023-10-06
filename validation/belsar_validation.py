@@ -341,7 +341,8 @@ after_filename_dict =  {"2018-05-17" : "2A_20180518_both_BelSAR_agriculture_data
                          }
 
 def get_belsar_image_metrics(sites_geometry, validation_df, belsar_pred_dir, belsar_pred_filename, 
-                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_error=True, bands_idx=torch.arange(10)):
+                             belsar_pred_file_suffix, date, delta_t, NO_DATA=-10000, get_error=True, 
+                             bands_idx=torch.arange(10)):
     """
     Get metrics df for single image prediction for all sites
     """

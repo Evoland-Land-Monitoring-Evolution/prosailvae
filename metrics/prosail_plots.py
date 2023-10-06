@@ -678,8 +678,9 @@ def plot_param_compare_dist(rec_dist, refl_dist, res_dir, normalized=False, para
     return fig, ax2
 
 def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='', 
-              filename='pair_plot.png'):
-    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap, xmin, xmax, ymin, ymax, bins=100):
+              filename='pair_plot.png', label_axis=True):
+    def plot_single_pair(ax, feature_ind1, feature_ind2, _X, _y, _features, colormap, xmin, xmax, ymin, ymax, 
+                         bins=100, label_axis=True):
         """Plots single pair of features.
     
         Parameters
@@ -735,15 +736,18 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
         # Print the feature labels only on the left side of the pair-plot figure
         # and bottom side of the pair-plot figure. 
         # Here avoiding printing the labels for inner axis plots.
-        if feature_ind1 == len(_features) - 1:
-            ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel='')
-        if feature_ind2 == 0:
+        if label_axis:
+            ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel=_features[feature_ind1])
+        else:
             if feature_ind1 == len(_features) - 1:
-                ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel=_features[feature_ind1])
-            else:
-                ax[feature_ind1, feature_ind2].set(xlabel='', ylabel=_features[feature_ind1])
+                ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel='')
+            if feature_ind2 == 0:
+                if feature_ind1 == len(_features) - 1:
+                    ax[feature_ind1, feature_ind2].set(xlabel=_features[feature_ind2], ylabel=_features[feature_ind1])
+                else:
+                    ax[feature_ind1, feature_ind2].set(xlabel='', ylabel=_features[feature_ind1])
     
-    def myplotGrid(X, y, features, colormap={0: "red", 1: "green", 2: "blue"}, bins=100):
+    def myplotGrid(X, y, features, colormap={0: "red", 1: "green", 2: "blue"}, bins=100, label_axis=True):
         """Plots a pair grid of the given features.
     
         Parameters
@@ -774,7 +778,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
                 ymin = np.min(X[:,i])
                 ymax = np.max(X[:,i])
                 plot_single_pair(axis, i, j, X, y, features, colormap, bins=bins, 
-                                 xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+                                 xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label_axis=label_axis)
                 axis[i, j].set_xlim(xmin, xmax)
                 if i!=j:
                     axis[i, j].set_ylim(ymin, ymax)
@@ -786,7 +790,7 @@ def pair_plot(tensor_1, tensor_2=None, features = ["",""], res_dir='',
     if tensor_2 is not None:
         X = np.concatenate((X,tensor_2.detach().cpu().numpy()))
         y = np.concatenate((y,np.ones(tensor_2.size(0))))
-    fig, ax = myplotGrid(X, y, features, colormap={0:'blue'})
+    fig, ax = myplotGrid(X, y, features, colormap={0:'blue'}, label_axis=label_axis)
     if res_dir is not None:
         fig.savefig(res_dir + filename)
     return fig, ax
@@ -1254,11 +1258,11 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
             [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
-    ax.set_ylabel("Predicted LAI")
-    ax.set_xlabel("SNAP LAI")
+    ax.set_ylabel("PROSAIL-VAE LAI")
+    ax.set_xlabel("SL2P LAI")
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_lai_2dhist_true_vs_pred.tex")
+    tikzplotlib.save(f"{article_plot_dir}/all_lai_2dhist_pvae_vs_snap.tex")
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     m, b, r2, rmse = regression_metrics(all_weiss_lai.detach().cpu().numpy(), 
@@ -1274,8 +1278,8 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
-    ax.set_ylabel("Predicted LAI")
-    ax.set_xlabel("SNAP LAI")
+    ax.set_ylabel("PROSAIL-VAE LAI")
+    ax.set_xlabel("SL2P LAI")
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/all_lai_scatter_true_vs_pred.tex")
@@ -1296,11 +1300,43 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
                     [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
-    ax.set_ylabel(f"Predicted CCC")
-    ax.set_xlabel(f"SNAP CCC")
+    ax.set_ylabel(f"PROSAIL-VAE CCC")
+    ax.set_xlabel(f"SL2P CCC")
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_ccc_scatter_true_vs_pred.tex")
+    tikzplotlib.save(f"{article_plot_dir}/all_ccc_scatter_pvae_vs_snap.tex")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+    xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
+    ax.hist2d(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(),
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
+    ax.legend()
+    ax.set_ylabel(f"PROSAIL-VAE CCC")
+    ax.set_xlabel(f"SL2P CCC")
+    ax.set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/all_ccc_2dhist_pvae_vs_snap.tex")
+
+    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+    xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    ax.hist2d(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy(),
+              range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
+            [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
+    ax.legend()
+    ax.set_ylabel(f"PROSAIL-VAE CWC")
+    ax.set_xlabel(f"SL2P CWC")
+    ax.set_aspect('equal')
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f"{article_plot_dir}/all_cwc_2dhist_pvae_vs_snap.tex")
 
     fig, ax = plt.subplots()
     err = (all_s2_r - all_rec).reshape(len(BANDS), -1).abs().cpu()
@@ -1392,7 +1428,7 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
 
     if not socket.gethostname()=='CELL200973':
         pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
-                res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
+                  res_dir=plot_dir, filename='sim_prosail_pair_plot.png')
     
     fig, ax = plt.subplots()
     ax.scatter((all_lai - all_weiss_lai), all_sigma[6,:], s=0.5)

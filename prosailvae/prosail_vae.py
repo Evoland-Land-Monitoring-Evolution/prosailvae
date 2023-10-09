@@ -130,6 +130,7 @@ class ProsailVAEConfig:
     R_down:int=1
     deterministic:bool=False
     prosail_vars_dist_type:str="legacy"
+    prospect_version:str="5"
 
 def get_prosail_vae_config(params, bands, io_coeffs,
                            inference_mode, prosail_bands, rsr_dir, lai_ccc_mode=False):
@@ -186,7 +187,8 @@ def get_prosail_vae_config(params, bands, io_coeffs,
                             disabled_latent_values=params["disabled_latent_values"],
                             R_down=params["R_down"], 
                             deterministic=params["deterministic"], 
-                            prosail_vars_dist_type=params["prosail_vars_dist_type"])
+                            prosail_vars_dist_type=params["prosail_vars_dist_type"],
+                            prospect_version=params['prospect_version'])
 
 
 def get_prosail_vae(pv_config:ProsailVAEConfig,
@@ -219,7 +221,7 @@ def get_prosail_vae(pv_config:ProsailVAEConfig,
                                     #  z2sim_offset=z2sim_offset,
                                     #  sim_pdf_support_span=sim_pdf_support_span,
                                      device='cpu', var_bounds_type=pv_config.prosail_vars_dist_type)
-    psimulator = ProsailSimulator(device='cpu', R_down=pv_config.R_down)
+    psimulator = ProsailSimulator(device='cpu', R_down=pv_config.R_down, prospect_version=pv_config.prospect_version)
     if load_simulator:
         ssimulator = SensorSimulator(pv_config.rsr_dir + "/sentinel2.rsr", device='cpu',
                                      bands_loc=pv_config.encoder_config.io_coeffs.bands.loc,

@@ -1157,20 +1157,20 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_rec_err.tex")
 
-    fig, ax = plt.subplots()
-    ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
-    ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
-    ax.set_ylabel('Cab latent sigma')
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/cab_err_vs_sigma.tex")
+    # fig, ax = plt.subplots()
+    # ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
+    # ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
+    # ax.set_ylabel('Cab latent sigma')
+    # tikzplotlib_fix_ncols(fig)
+    # tikzplotlib.save(f"{article_plot_dir}/cab_err_vs_sigma.tex")
 
-    fig, ax = plt.subplots()
-    ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
-    ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
-    ax.set_ylabel('Cw latent sigma')
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/cw_err_vs_sigma.tex")
-    plt.close('all')
+    # fig, ax = plt.subplots()
+    # ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
+    # ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
+    # ax.set_ylabel('Cw latent sigma')
+    # tikzplotlib_fix_ncols(fig)
+    # tikzplotlib.save(f"{article_plot_dir}/cw_err_vs_sigma.tex")
+    # plt.close('all')
     
     for idx, prosail_var in enumerate(PROSAILVARS):
         fig, ax = plt.subplots(tight_layout=True, dpi=150)
@@ -1323,9 +1323,10 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     tikzplotlib.save(f"{article_plot_dir}/all_ccc_2dhist_pvae_vs_snap.tex")
 
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    xmin = min(all_cw.cpu().min().item(), all_weiss_cw.cpu().min().item())
-    xmax = max(all_cw.cpu().max().item(), all_weiss_cw.cpu().max().item())
-    ax.hist2d(all_weiss_cw.cpu().numpy(), all_cw.cpu().numpy(),
+    all_cwc = all_lai * all_cw
+    xmin = min(all_cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
+    xmax = max(all_cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
+    ax.hist2d(all_weiss_cw.cpu().numpy(), all_cwc.cpu().numpy(),
               range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -1393,6 +1394,20 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
         # j += 1
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f'{article_plot_dir}/aggregated_all_vars_and_std.tex')
+
+    fig, axs = plt.subplots(6, 2, figsize=(4*2, 10*2), dpi=150)
+    for j, varname in enumerate(PROSAILVARS):
+        row = j // 2
+        col = j % 2
+        axs[row, col].hist2d(all_vars[j,...].reshape(-1).cpu().numpy(), all_sigma[j,...].reshape(-1).cpu().numpy(),
+                             bins=100, cmap='viridis', norm=LogNorm())
+        hist, bin_edges = np.histogram(all_vars[j,...].reshape(-1).cpu(), bins=100, density=True)
+        axs[row, col].set_xlabel(f"{varname}")
+        axs[row, col].set_ylabel(f"{varname} std")
+        # j += 1
+    tikzplotlib_fix_ncols(fig)
+    tikzplotlib.save(f'{article_plot_dir}/aggregated_all_vars_vs_std.tex')
+
     if not socket.gethostname()=='CELL200973':
         fig, ax = pair_plot(all_vars.squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
                             res_dir=article_plot_dir, filename='prosail_vars_pair_plot.png')
@@ -1452,17 +1467,17 @@ def PROSAIL_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     # ax.set_xlabel('Pixel reconstruction error')
     fig.savefig(f"{plot_dir}/lai_err_vs_rec_err.png")
 
-    fig, ax = plt.subplots()
-    ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
-    ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
-    ax.set_ylabel('Cab latent sigma')
-    fig.savefig(f"{plot_dir}/cab_err_vs_sigma.png")
+    # fig, ax = plt.subplots()
+    # ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
+    # ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
+    # ax.set_ylabel('Cab latent sigma')
+    # fig.savefig(f"{plot_dir}/cab_err_vs_sigma.png")
     
-    fig, ax = plt.subplots()
-    ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
-    ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
-    ax.set_ylabel('Cw latent sigma')
-    fig.savefig(f"{plot_dir}/cw_err_vs_sigma.png")
+    # fig, ax = plt.subplots()
+    # ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
+    # ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
+    # ax.set_ylabel('Cw latent sigma')
+    # fig.savefig(f"{plot_dir}/cw_err_vs_sigma.png")
 
     if len(all_vars_hyper) > 0:
         n_cols = 4

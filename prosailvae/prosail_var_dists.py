@@ -91,7 +91,7 @@ class SamplingProsailVarsDistV2:
     lidfa :VariableDistribution = VariableDistribution(low=30.0,   high=80.0,  loc=60,    scale=30,    C_lai_min=55,     C_lai_max=65,    law="gaussian", lai_conv=10)
     hspot :VariableDistribution = VariableDistribution(low=0.1,    high=0.5,   loc=0.2,   scale=0.5,   C_lai_min=0.1,    C_lai_max=0.5,   law="gaussian", lai_conv=None)
     psoil :VariableDistribution = VariableDistribution(low=0.0,    high=1.0,   loc=0.5,   scale=0.5,   C_lai_min=0,      C_lai_max=1,     law="uniform",  lai_conv=None)
-    rsoil :VariableDistribution = VariableDistribution(low=0.5,    high=3.5,   loc=1.2,   scale=2,     C_lai_min=0.5,    C_lai_max=1.2,   law="gaussian", lai_conv=10)
+    rsoil :VariableDistribution = VariableDistribution(low=0.3,    high=3.5,   loc=1.2,   scale=2,     C_lai_min=0.5,    C_lai_max=1.2,   law="gaussian", lai_conv=10)
     def asdict(self):
         return asdict(self)
 
@@ -126,7 +126,7 @@ class ProsailVarsBounds:
     cbrown:VariableBounds = VariableBounds(low=0,      high=2       )
     cw:VariableBounds     = VariableBounds(low=0.0,    high=0.01    )
     cm:VariableBounds     = VariableBounds(low=0.0,    high=0.02    )
-    lai:VariableBounds    = VariableBounds(low=0,      high=15      )
+    lai:VariableBounds    = VariableBounds(low=0,      high=10      )
     lidfa:VariableBounds  = VariableBounds(low=30.0,   high=80.0    )
     hspot:VariableBounds  = VariableBounds(low=0.0,    high=0.5     )
     psoil:VariableBounds  = VariableBounds(low=0,      high=1       )

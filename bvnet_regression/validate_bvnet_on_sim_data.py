@@ -52,6 +52,9 @@ def get_parser():
     parser.add_argument('-l', dest="lai_mode",
                         help="toggle lai instead of cab",
                         type=bool, default=False)
+    parser.add_argument('-fp', dest="file_prefix",
+                        help="prefix of simulated_data_set",
+                        type=bool, default="")
     return parser
 
 def convert_prosail_data_set(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
@@ -120,7 +123,7 @@ def main():
         rsr_dir = "/work/scratch/zerahy/prosailvae/data/"
         epochs=500
         n_models=parser.n_models
-        file_prefix = "train_"
+        file_prefix = parser.file_prefix
         # data_dir = "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_old_corr/"
     data_dir = parser.data_dir
     belsar_pred_dir = parser.res_dir

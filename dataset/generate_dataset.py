@@ -196,23 +196,23 @@ def partial_sample_prosail_vars(var_dists, lai=None, tts=None, tto=None, psi=Non
 #                 prosail_s2_sim[i,:] = mean
 #     return prosail_vars, prosail_s2_sim
 
-def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
-                                n_samples_per_batch=1024, uniform_mode=False, lai_corr=True,
-                                prosail_var_dist_type="legacy", lai_var_dist:VariableDistribution|None=None,
-                                lai_corr_mode="v2", lai_thresh=None):
-    prosail_vars = np.zeros((nb_simus, 14))
-    prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
+def sample_prosail_vars(nb_simus=2048, prosail_var_dist_type="legacy", uniform_mode=False, lai_corr=True, 
+                        lai_var_dist:VariableDistribution|None=None, lai_corr_mode="v2", lai_thresh=None):
     prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
+    return partial_sample_prosail_vars(prosail_var_dist, n_samples=nb_simus, 
+                                       uniform_mode=uniform_mode, lai_corr=lai_corr, 
+                                       lai_var_dist=lai_var_dist, lai_corr_mode=lai_corr_mode,
+                                       lai_thresh=lai_thresh)
+
+def simulate_reflectances(prosail_vars, noise=0, psimulator=None, ssimulator=None, n_samples_per_batch=1024):
+    nb_simus = prosail_vars.shape[0]
+    prosail_s2_sim = np.zeros((nb_simus, ssimulator.rsr.size(1)))
     n_full_batch = nb_simus // n_samples_per_batch
     last_batch = nb_simus - nb_simus // n_samples_per_batch * n_samples_per_batch
 
     for i in range(n_full_batch):
-        prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,
-                     :] = partial_sample_prosail_vars(prosail_var_dist, n_samples=n_samples_per_batch, 
-                                                      uniform_mode=uniform_mode, lai_corr=lai_corr, 
-                                                      lai_var_dist=lai_var_dist, lai_corr_mode=lai_corr_mode,
-                                                      lai_thresh=lai_thresh)
-        prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:]).view(n_samples_per_batch,-1).float())
+        prosail_r = psimulator(torch.from_numpy(prosail_vars[i*n_samples_per_batch : (i+1) * n_samples_per_batch,
+                                                             :]).view(n_samples_per_batch,-1).float())
         sim_s2_r = ssimulator(prosail_r).numpy()
         if noise>0:
             sigma = np.random.rand(n_samples_per_batch,1) * noise * np.ones_like(sim_s2_r)
@@ -220,17 +220,62 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
             sim_s2_r += add_noise
         prosail_s2_sim[i*n_samples_per_batch : (i+1) * n_samples_per_batch,:] = sim_s2_r
     if last_batch > 0:
-        prosail_vars[n_full_batch*n_samples_per_batch:,
-                     :] = partial_sample_prosail_vars(prosail_var_dist, n_samples=last_batch, uniform_mode=uniform_mode, 
-                                                      lai_corr=lai_corr, lai_var_dist=lai_var_dist, lai_corr_mode=lai_corr_mode,
-                                                      lai_thresh=lai_thresh)
-        sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,:]).view(last_batch,-1).float())).numpy()
+        sim_s2_r = ssimulator(psimulator(torch.from_numpy(prosail_vars[n_full_batch*n_samples_per_batch:,
+                                                                       :]).view(last_batch,-1).float())).numpy()
         if noise>0:
             sigma = np.random.rand(last_batch,1) * noise * np.ones_like(sim_s2_r)
             add_noise = np.random.normal(loc = np.zeros_like(sim_s2_r), scale=sigma, size=sim_s2_r.shape)
             sim_s2_r += add_noise
         prosail_s2_sim[n_full_batch*n_samples_per_batch:,:] = sim_s2_r
+    return prosail_s2_sim
+
+def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
+                                n_samples_per_batch=1024, uniform_mode=False, lai_corr=True,
+                                prosail_var_dist_type="legacy", lai_var_dist:VariableDistribution|None=None,
+                                lai_corr_mode="v2", lai_thresh=None):
+    
+    prosail_vars = sample_prosail_vars(nb_simus=nb_simus, prosail_var_dist_type=prosail_var_dist_type, 
+                                       uniform_mode=uniform_mode, lai_corr=lai_corr, lai_var_dist=lai_var_dist, 
+                                       lai_corr_mode=lai_corr_mode, lai_thresh=lai_thresh)
+    prosail_s2_sim = simulate_reflectances(prosail_vars, noise=noise, psimulator=psimulator, ssimulator=ssimulator, 
+                                            n_samples_per_batch=n_samples_per_batch)
     return prosail_vars, prosail_s2_sim
+
+def save_prosail_data_set_with_all_prospect_versions(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, bvnet_bands=False,
+                                                        n_samples_per_batch=1024, uniform_mode=False, 
+                                                        lai_corr=True, prosail_var_dist_type="legacy", 
+                                                        lai_var_dist:VariableDistribution|None=None,
+                                                        lai_corr_mode="v2", lai_thresh=None):
+    prosail_vars = sample_prosail_vars(nb_simus=nb_simus, prosail_var_dist_type=prosail_var_dist_type, 
+                                       uniform_mode=uniform_mode, lai_corr=lai_corr, lai_var_dist=lai_var_dist, 
+                                       lai_corr_mode=lai_corr_mode, lai_thresh=lai_thresh)
+    
+    bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12] # B2, B3, B4, B5, B6, B7, B8, B8A, B11, B12
+    if bvnet_bands:
+        bands = [2, 3, 4, 5, 6, 8, 11, 12] #       B3, B4, B5, B6, B7,     B8A, B11, B12
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)    
+    for prospect_version in ["5", "D", "PRO"]:
+        psimulator = ProsailSimulator(prospect_version=prospect_version)
+        prosail_s2_sim = simulate_reflectances(prosail_vars, noise=noise, psimulator=psimulator, ssimulator=ssimulator, 
+                                                n_samples_per_batch=n_samples_per_batch)
+        (norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_loc, 
+        idx_scale) = get_bands_norm_factors(torch.from_numpy(prosail_s2_sim).float().transpose(1,0), mode='quantile')
+        torch.save(torch.from_numpy(prosail_vars), 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_prosail_sim_vars.pt"))
+        torch.save(torch.from_numpy(prosail_s2_sim), 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_prosail_s2_sim_refl.pt"))
+        torch.save(norm_mean, 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_norm_mean.pt"))
+        torch.save(norm_std, 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_norm_std.pt"))
+        torch.save(cos_angles_loc, 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_angles_loc.pt"))
+        torch.save(cos_angles_scale, 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_angles_scale.pt"))
+        torch.save(idx_loc, 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_idx_loc.pt"))
+        torch.save(idx_scale, 
+                   os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_idx_scale.pt"))
 
 
 def simulate_prosail_samples_close_to_ref(s2_r_ref, noise=0, psimulator=None, ssimulator=None, lai=None, tts=None, 
@@ -313,7 +358,7 @@ def simulate_lai_with_rec_error_hist(s2_r_ref, noise=0, psimulator=None, ssimula
             ys = mare
             hist, xedges, yedges = np.histogram2d(
                 xs, ys, bins=[xedges, yedges])
-            heatmap += hist
+            heatmap += histpartial_sample_prosail_vars
             best_mae_iter = mare.min()
             if best_mae_iter < best_mae:
                 best_mae = best_mae_iter
@@ -426,9 +471,9 @@ def get_bands_norm_factors(s2_r_samples, mode='mean'):
 
 def save_dataset(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, bvnet_bands=False, uniform_mode=False, 
                  lai_corr=True, prosail_var_dist_type="legacy", lai_var_dist:VariableDistribution|None=None, 
-                 lai_corr_mode="v2", lai_thresh=None):
+                 lai_corr_mode="v2", lai_thresh=None, prospect_version="5"):
 
-    psimulator = ProsailSimulator()
+    psimulator = ProsailSimulator(prospect_version=prospect_version)
     bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12] # B2, B3, B4, B5, B6, B7, B8, B8A, B11, B12
     if bvnet_bands:
         bands = [2, 3, 4, 5, 6, 8, 11, 12] #       B3, B4, B5, B6, B7,     B8A, B11, B12
@@ -533,6 +578,10 @@ def get_data_generation_parser():
     parser.add_argument("-file_prefix", "-p", dest="file_prefix",
                         help="number of samples in simulated dataset",
                         type=str, default="")
+
+    parser.add_argument("-prospect_version", "-pv", dest="prospect_version",
+                        help="version of PROSPECT model (5, D or PRO)",
+                        type=str, default="5")
     
     parser.add_argument("-data_dir", "-d", dest="data_dir",
                         help="number of samples in simulated dataset",
@@ -569,6 +618,10 @@ def get_data_generation_parser():
     parser.add_argument("-lt", dest="lai_thresh",
                         help="toggle lai threshold for co distribution",
                         type=bool, default=False)     
+    
+    parser.add_argument("-psa", dest="simulate_with_all_prospect",
+                        help="samples prosil parameters and uses all available prospect versions to simulate reflectances",
+                        type=bool, default=False)    
     return parser
 
 if  __name__ == "__main__":
@@ -576,10 +629,12 @@ if  __name__ == "__main__":
         args=[
             # "-wd", "True",
             #   "-w", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test_prospect_vD/",
               "-dt", "new_v2",
-              "-n", "40000",
-              "-m", "v2"]
+              "-n", "2048",
+              "-m", "v2",
+              "-pv", "D", 
+              "-psa", "True"]
         parser = get_data_generation_parser().parse_args(args)
     else:
         parser = get_data_generation_parser().parse_args()
@@ -596,11 +651,17 @@ if  __name__ == "__main__":
     if parser.bvnet_dataset:
         save_lai_ccc_bvnet_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True, prosail_var_dist_type=parser.dist_type)
         save_bvnet_dataset(data_dir, parser.rsr_dir, parser.noise, lai_corr=True, prosail_var_dist_type=parser.dist_type, lai_thresh=lai_thresh)
+    if parser.simulate_with_all_prospect:
+        save_prosail_data_set_with_all_prospect_versions(data_dir, parser.file_prefix, parser.rsr_dir,
+                                                        parser.n_samples, parser.noise, bvnet_bands=parser.bvnet_bands, 
+                                                        uniform_mode=False, lai_corr=True, 
+                                                        prosail_var_dist_type=parser.dist_type,
+                                                        lai_corr_mode=parser.lai_corr_mode, lai_thresh=lai_thresh)
     else:
         save_dataset(data_dir, parser.file_prefix, parser.rsr_dir,
                         parser.n_samples, parser.noise, bvnet_bands=parser.bvnet_bands, 
                         uniform_mode=False, lai_corr=True, prosail_var_dist_type=parser.dist_type,
-                        lai_corr_mode=parser.lai_corr_mode, lai_thresh=lai_thresh)
+                        lai_corr_mode=parser.lai_corr_mode, lai_thresh=lai_thresh, prospect_version = parser.prospect_version)
 
 
     

@@ -106,6 +106,8 @@ def load_params(config_dir, config_file, parser=None):
         params["sim_data_dir"] = os.path.join(TOP_PATH, "data/")
     if "s2_data_dir" not in params.keys():
         params["s2_data_dir"] = os.path.join(TOP_PATH, "data/")
+    if "prospect_version" not in params.keys():
+        params["prospect_version"] = "5"
     return params
 
 @dataclass

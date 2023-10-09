@@ -40,5 +40,6 @@
     "init_lr":5e-3,
     "accum_iter": 5,
     "cycle_training":true,
-    "lat_loss_type":"all_nll"
+    "lat_loss_type":"all_nll", 
+    "prospect_version":"D"
 }

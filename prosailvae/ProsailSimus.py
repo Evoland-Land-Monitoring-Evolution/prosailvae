@@ -222,12 +222,17 @@ RSR of the sensor.
         return loss
 
 class ProsailSimulator():
-    def __init__(self, factor: str = "SDR", typelidf: int = 2, device='cpu', R_down=1):
+    def __init__(self, factor: str = "SDR", 
+                 typelidf: int = 2, 
+                 device='cpu', 
+                 R_down:int=1, 
+                 prospect_version="5"):
         super().__init__()
         self.factor = factor
         self.typelidf = typelidf
         self.device = device
         self.R_down = R_down
+        self.prospect_version=prospect_version
         [self.soil_spectrum1,
          self.soil_spectrum2,
          self.nr,
@@ -236,7 +241,12 @@ class ProsailSimulator():
          self.kbrown,
          self.kw,
          self.km,
-         self.lambdas] = init_prosail_spectra(R_down=self.R_down, device=self.device)
+         self.kant,
+         self.kprot,
+         self.kcbc,
+         self.lambdas] = init_prosail_spectra(R_down=self.R_down, 
+                                              device=self.device, 
+                                              prospect_version=self.prospect_version)
         
     def __call__(self, params):
         return self.forward(params)
@@ -251,10 +261,13 @@ class ProsailSimulator():
         self.kbrown = self.kbrown.to(device)
         self.kw = self.kw.to(device)
         self.km = self.km.to(device)
+        self.kant = self.kant.to(device)
+        self.kprot = self.kprot.to(device)
+        self.kcbc = self.kcbc.to(device)
         self.lambdas = self.lambdas.to(device)
         pass
 
-    def forward(self, params):
+    def forward(self, params:torch.Tensor):
         # params.shape == [x] => single sample
         # params.shape == [x,y] => batch
         assert params.shape[-1] == 14, f"{params.shape[-1]}"
@@ -273,8 +286,14 @@ class ProsailSimulator():
             kbrown=self.kbrown,
             kw=self.kw,
             km=self.km,
+            kant=self.kant,
+            kprot=self.kprot,
+            kcbc=self.kcbc,
             lambdas=self.lambdas,
-            R_down=1#self.R_down
+            R_down=1, 
+            init_spectra=False,
+            prospect_version=self.prospect_version,
+            zero_ant_prot_cbc_override=True
         ).float()
         
         return prosail_refl

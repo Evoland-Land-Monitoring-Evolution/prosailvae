@@ -54,7 +54,7 @@ def get_parser():
                         type=bool, default=False)
     parser.add_argument('-fp', dest="file_prefix",
                         help="prefix of simulated_data_set",
-                        type=bool, default="")
+                        type=str, default="")
     return parser
 
 def convert_prosail_data_set(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 

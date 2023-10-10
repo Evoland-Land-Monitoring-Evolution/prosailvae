@@ -50,30 +50,32 @@ def correlate_with_lai_V2(lai, V, Vmin_0, Vmax_0, Vmin_lai_max, Vmax_lai_max, la
 def correlate_sample_with_lai(sample, lai, param_dist:VariableDistribution, 
                                 lai_corr_mode:str="v2", lai_conv_override:bool|None=None, 
                                 lai_max:float=15, lai_thresh:float|None=None):
+    
     if lai_corr_mode=="v2":
         if param_dist.C_lai_min is not None:
-            sample = correlate_with_lai_V2(lai, sample, param_dist.low, param_dist.high, param_dist.C_lai_min, 
+            correlated_sample = correlate_with_lai_V2(lai, sample, param_dist.low, param_dist.high, param_dist.C_lai_min, 
                                            param_dist.C_lai_max, lai_max=lai_max, lai_thresh=lai_thresh)
     else:
         if lai is not None and (param_dist.lai_conv is not None or lai_conv_override is not None):
             lai_conv = lai_conv_override if lai_conv_override is not None else param_dist.lai_conv
             if param_dist.loc is None : 
-                sample = correlate_with_lai_V1(lai, sample, 
+                correlated_sample = correlate_with_lai_V1(lai, sample, 
                                             (param_dist.high - param_dist.low)/2, 
                                             lai_conv)
             else:
-                sample = correlate_with_lai_V1(lai, sample, param_dist.loc, lai_conv)
-    return sample
+                correlated_sample = correlate_with_lai_V1(lai, sample, param_dist.loc, lai_conv)
+    return correlated_sample
 
 def correlate_all_variables_with_lai(samples, var_dists, lai_conv_override=None, lai_corr_mode="v2", lai_thresh=None):
     variable_idx_dict = {"N":0, "cab":1, "car":2, "cbrown":3, "cw":4, "cm":5, "lidfa":7, "hspot":8, "psoil":9, "rsoil":10}
+    correlated_samples = samples.copy()
     for variable, idx in variable_idx_dict.items(): 
         variable_dist = VariableDistribution(**var_dists.asdict()[variable])
-        samples[:,idx] = correlate_sample_with_lai(samples[:,idx], samples[:,6], variable_dist, lai_corr_mode=lai_corr_mode, 
-                                                    lai_conv_override=lai_conv_override, lai_max=var_dists.lai.high, 
-                                                    lai_thresh=lai_thresh)
+        correlated_samples[:,idx] = correlate_sample_with_lai(samples[:,idx], samples[:,6], variable_dist, lai_corr_mode=lai_corr_mode, 
+                                                                lai_conv_override=lai_conv_override, lai_max=var_dists.lai.high, 
+                                                                lai_thresh=lai_thresh)
 
-    return samples
+    return correlated_samples
 
 def np_sample_param(param_dist, lai=None, n_samples=1, uniform_mode=True, lai_conv_override=None, 
                     lai_corr_mode="v2", lai_max=15, lai_thresh=None):
@@ -211,7 +213,7 @@ def save_prosail_data_set_with_all_prospect_versions(data_dir, data_file_prefix,
                                        uniform_mode=uniform_mode, lai_corr=False, lai_var_dist=lai_var_dist, 
                                        lai_corr_mode="", lai_thresh=None)
     
-    for lai_corr_mode in ["v1", "v2"]:
+    for lai_corr_mode in ["v2", "v1"]:
         prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
         correlated_prosail_vars = correlate_all_variables_with_lai(prosail_vars, prosail_var_dist, 
                                                                     lai_corr_mode=lai_corr_mode,

@@ -64,6 +64,8 @@ def correlate_sample_with_lai(sample, lai, param_dist:VariableDistribution,
                                             lai_conv)
             else:
                 correlated_sample = correlate_with_lai_V1(lai, sample, param_dist.loc, lai_conv)
+        else:
+            correlated_sample = sample.copy()
     return correlated_sample
 
 def correlate_all_variables_with_lai(samples, var_dists, lai_conv_override=None, lai_corr_mode="v2", lai_thresh=None):
@@ -213,7 +215,7 @@ def save_prosail_data_set_with_all_prospect_versions(data_dir, data_file_prefix,
                                        uniform_mode=uniform_mode, lai_corr=False, lai_var_dist=lai_var_dist, 
                                        lai_corr_mode="", lai_thresh=None)
     
-    for lai_corr_mode in ["v2", "v1"]:
+    for lai_corr_mode in ["v1", "v2"]:
         prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
         correlated_prosail_vars = correlate_all_variables_with_lai(prosail_vars, prosail_var_dist, 
                                                                     lai_corr_mode=lai_corr_mode,

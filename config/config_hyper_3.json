@@ -1,6 +1,6 @@
 {
     "batch_size": 1,
-    "epochs": 0,
+    "epochs": 10,
     "lr": 0.001,
     "test_size": 0.01,
     "valid_ratio": 0.01,
@@ -21,7 +21,8 @@
     "encoder_type": "rcnn",
     "load_model": true,
     "vae_load_dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/hyperprior_lai_cab_b1000/",
-    "data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+"sim_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data/",
+    "s2_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
     "lr_recompute_mode": false,
     "first_layer_kernel": 3,
     "first_layer_size": 32,
@@ -38,7 +39,7 @@
         3
     ],
     "weiss_bands": false,
-    "supervised_kl": true,
+    "supervised_kl": false,
     "supervised_config_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/hyperprior_lai_cab_b1000/sup_kl_model_config.json",
     "supervised_weight_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/hyperprior_lai_cab_b1000/sup_kl_model_weights.tar",
     "disabled_latent": [],
@@ -80,5 +81,6 @@
     "snap_cyclical": false,
     "lrs_threshold": 0.005,
     "validation_at_every_epoch": null,
-    "prosail_vars_dist_type": "legacy"
+    "prosail_vars_dist_type": "legacy",
+    "prospect_version":"D"
 }

@@ -364,7 +364,7 @@ def setup_training():
     """
     if socket.gethostname()=='CELL200973':
         args=["-n", "0",
-              "-c", "config_reg_rnn_n3.json",
+              "-c", "config_hyper_3.json",
               "-x", "1",
               "-o", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",

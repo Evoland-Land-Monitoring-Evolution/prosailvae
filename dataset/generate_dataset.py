@@ -15,7 +15,7 @@ import torch
 import os 
 import argparse
 import prosailvae
-from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
+from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, BANDS, PROSAILVARS
 from prosailvae.prosail_var_dists import get_prosail_var_dist
 from dataset.bvnet_dataset import load_bvnet_dataset
 from tqdm import trange
@@ -25,10 +25,6 @@ from prosailvae.spectral_indices import get_spectral_idx
 import socket
 from prosailvae.prosail_var_dists import VariableDistribution
 
-PROSAILVARS = [
-    "N", "cab", "car", "cbrown", "cw", "cm",
-    "lai", "lidfa", "hspot", "psoil", "rsoil"
-]
 def correlate_with_lai(lai, V, V_mean, lai_conv):
     # V_corr = np.zeros_like(V)
     # V_corr[V >= V_mean] = V[V >= V_mean]
@@ -631,9 +627,9 @@ if  __name__ == "__main__":
             #   "-w", "True",
               "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test_prospect_vD/",
               "-dt", "new_v2",
-              "-n", "2048",
+              "-n", "42000",
               "-m", "v2",
-              "-pv", "D", 
+            #   "-pv", "D", 
               "-psa", "True"]
         parser = get_data_generation_parser().parse_args(args)
     else:
@@ -663,5 +659,26 @@ if  __name__ == "__main__":
                         uniform_mode=False, lai_corr=True, prosail_var_dist_type=parser.dist_type,
                         lai_corr_mode=parser.lai_corr_mode, lai_thresh=lai_thresh, prospect_version = parser.prospect_version)
 
-
-    
+# import matplotlib.pyplot as plt
+# from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator, BANDS, PROSAILVARS
+# from matplotlib.colors import LogNorm
+# from metrics.metrics_utils import regression_metrics
+# fig, ax = plt.subplots(2, 5, dpi=150, tight_layout=True, figsize=(20, 8))
+# bins=100
+# for i, band in enumerate(BANDS):
+#     row = i // 5
+#     col = i % 5
+#     xmin = min(prosail_s2_sim_5[:, i].min().item(), prosail_s2_sim[:, i].min())
+#     xmax = max(prosail_s2_sim_5[:, i].max().item(), prosail_s2_sim[:, i].max())
+#     ax[row, col].hist2d(prosail_s2_sim_5[:, i].numpy(), prosail_s2_sim[:, i], range = [[xmin, xmax], [xmin, xmax]], 
+#                                                       bins=bins, cmap='viridis', 
+#                                                       norm=LogNorm())
+#     ax[row, col].set_aspect('equal')
+#     ax[row, col].plot([xmin, xmax], [xmin, xmax], 'k')
+#     ax[row, col].set_xlabel(f'PROSPECT-5 {band}')
+#     ax[row, col].set_ylabel(f'PROSPECT-D {band}')
+#     _, _, r2_band, rmse_band = regression_metrics(prosail_s2_sim_5[:, i].reshape(-1).numpy(), 
+#                                                       prosail_s2_sim[:, i].reshape(-1))
+#     perf_text = "r2: {:.2f} - RMSE: {:.2f}".format(r2_band, rmse_band)
+#     ax[row, col].text(.01, .99, perf_text, ha='left', va='top', transform=ax[row, col].transAxes)
+# fig.savefig(os.path.join(data_dir, f"5_vs_D_band_scatter.png"))

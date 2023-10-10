@@ -52,6 +52,7 @@ def get_parser():
     parser.add_argument('-l', dest="lai_mode",
                         help="toggle lai instead of cab",
                         type=bool, default=False)
+    
     parser.add_argument('-fp', dest="file_prefix",
                         help="prefix of simulated_data_set",
                         type=str, default="")
@@ -100,7 +101,7 @@ def main():
         frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
         frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
         belsar_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
-        res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/bvnet_lai/" 
+        res_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/bvnet_lai_prospect_d/" 
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
         epochs=500
@@ -108,11 +109,13 @@ def main():
         args = [
             "-sd", "True",
             # "-p", "True",
-            "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data",
-            "-l", "True"
+            "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test_prospect_vD",
+            "-l", "True",
+            "-fp", "PROSPECTD_"
                 ]
         parser = get_parser().parse_args(args)
-        file_prefix = "evaluation_"
+        # file_prefix = "evaluation_"
+        file_prefix = parser.file_prefix
         
     else:
         frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"

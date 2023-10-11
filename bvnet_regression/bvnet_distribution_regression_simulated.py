@@ -85,6 +85,7 @@ def simulate_data_sets(n_eval:int=20000,
             save_dataset(save_dir, f"train_mu_{mu}_sigma_{sigma}_", nb_simus=n_samples_sub, 
                          rsr_dir=rsr_dir, bvnet_bands=False, noise=0.01,
                          prosail_var_dist_type="new_v2", lai_var_dist=lai_var_dist, lai_thresh=None)
+    
 
 def get_dataset_rmse(dataset, model):
     with torch.no_grad():

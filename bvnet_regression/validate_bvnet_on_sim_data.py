@@ -107,11 +107,11 @@ def main():
         epochs=500
         n_models=2
         args = [
-            "-sd", "True",
-            # "-p", "True",
-            "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test_prospect_vD",
-            "-l", "True",
-            "-fp", "PROSPECTD_"
+            # "-sd", "True",
+            "-p", "True",
+            # "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_like_jordi",
+            # "-l", "True",
+            # "-fp", "PROSPECT5_corr_v2_"
                 ]
         parser = get_parser().parse_args(args)
         # file_prefix = "evaluation_"
@@ -141,7 +141,7 @@ def main():
     data_set_txt = "weiss"
     variable = "lai" if parser.lai_mode else "ccc"
     if parser.last_prosail:
-        psimulator = ProsailSimulator()
+        psimulator = ProsailSimulator(prospect_version="5")
         bands = [2, 3, 4, 5, 6, 8, 11, 12]
         ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)
         prosail_vars, prosail_s2_sim = convert_prosail_data_set(nb_simus=41000,

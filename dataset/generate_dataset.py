@@ -201,6 +201,39 @@ def np_simulate_prosail_dataset(nb_simus=2048, noise=0, psimulator=None, ssimula
     
     return prosail_vars, prosail_s2_sim
 
+def save_jordi_like_data_set(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, 
+                             n_samples_per_batch=1024, prosail_var_dist_type="legacy"):
+    bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+    ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)   
+    prosail_vars = sample_prosail_vars(nb_simus=nb_simus, prosail_var_dist_type=prosail_var_dist_type, 
+                                       uniform_mode=False, lai_corr=True, lai_var_dist=None, 
+                                       lai_corr_mode="v2", lai_thresh=None)
+    prosail_vars[:, 2] = prosail_vars[:, 1] / 4
+    prosail_vars[:, 9] = 0.3
+    for prospect_version in ["5", "D", "PRO"]:
+        psimulator = ProsailSimulator(prospect_version=prospect_version)
+        prosail_s2_sim = simulate_reflectances(prosail_vars, noise=noise, psimulator=psimulator, 
+                                                ssimulator=ssimulator, n_samples_per_batch=n_samples_per_batch)
+        (norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_loc, 
+        idx_scale) = get_bands_norm_factors(torch.from_numpy(prosail_s2_sim).float().transpose(1,0), mode='quantile')
+        torch.save(torch.from_numpy(prosail_vars), 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_prosail_sim_vars.pt"))
+        torch.save(torch.from_numpy(prosail_s2_sim), 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_prosail_s2_sim_refl.pt"))
+        torch.save(norm_mean, 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_norm_mean.pt"))
+        torch.save(norm_std, 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_norm_std.pt"))
+        torch.save(cos_angles_loc, 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_angles_loc.pt"))
+        torch.save(cos_angles_scale, 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_angles_scale.pt"))
+        torch.save(idx_loc, 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_idx_loc.pt"))
+        torch.save(idx_scale, 
+                os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_idx_scale.pt"))
+    return
+
 def save_prosail_data_set_with_all_prospect_versions(data_dir, data_file_prefix, rsr_dir, nb_simus, noise=0, bvnet_bands=False,
                                                      n_samples_per_batch=1024, uniform_mode=False, prosail_var_dist_type="legacy", 
                                                      lai_var_dist:VariableDistribution|None=None,
@@ -425,6 +458,10 @@ def get_data_generation_parser():
     parser.add_argument("-psa", dest="simulate_with_all_prospect",
                         help="samples prosil parameters and uses all available prospect versions to simulate reflectances",
                         type=bool, default=False)    
+    
+    parser.add_argument("-j", dest="simulate_like_jordi",
+                        help="samples prosil parameters and uses all available prospect versions to simulate reflectances",
+                        type=bool, default=False)   
     return parser
 
 if  __name__ == "__main__":
@@ -432,12 +469,12 @@ if  __name__ == "__main__":
         args=[
             # "-wd", "True",
             #   "-w", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_test_prospect_vD/",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data_corr_v2_like_jordi/",
               "-dt", "new_v2",
               "-n", "42000",
               "-m", "v2",
             #   "-pv", "D", 
-              "-psa", "True"]
+              "-j", "True"]
         parser = get_data_generation_parser().parse_args(args)
     else:
         parser = get_data_generation_parser().parse_args()
@@ -459,6 +496,9 @@ if  __name__ == "__main__":
                                                          parser.n_samples, parser.noise, bvnet_bands=parser.bvnet_bands, 
                                                          uniform_mode=False, prosail_var_dist_type=parser.dist_type,
                                                          lai_thresh=lai_thresh)
+    if parser.simulate_like_jordi:
+        save_jordi_like_data_set(data_dir, parser.file_prefix, parser.rsr_dir, parser.n_samples, parser.noise,
+                                    n_samples_per_batch=1024, prosail_var_dist_type=parser.dist_type)
     else:
         save_dataset(data_dir, parser.file_prefix, parser.rsr_dir, parser.n_samples, parser.noise, 
                      bvnet_bands=parser.bvnet_bands, uniform_mode=False, lai_corr=True, 

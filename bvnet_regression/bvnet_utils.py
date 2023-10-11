@@ -12,7 +12,8 @@ import prosailvae
 def initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res_dir, n_models=10, n_epochs=20, lr=1e-3):
     best_valid_loss = np.inf
     for i in range(n_models):
-        model = BVNET(ver="3A", variable=variable, device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        model = BVNET(ver="3A", variable=variable, 
+                      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
         optimizer = optim.Adam(model.parameters(), lr=lr)
         lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, patience=n_epochs,
                                                 threshold=0.001)
@@ -30,7 +31,7 @@ def initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res
 def get_bvnet_dataloader(variable='lai', valid_ratio=0.05, batch_size=2048, s2_r=None, prosail_vars=None, max_samples=50000):
     if prosail_vars is None or s2_r is None:
         s2_r, prosail_vars = load_bvnet_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
-                                                mode="bvnet")
+                                                mode="bvnet", rsoil0=0.3)
     s2_r = s2_r[:max_samples, :]
     prosail_vars = prosail_vars[:max_samples, :]
     s2_a = prosail_vars[:,-3:]

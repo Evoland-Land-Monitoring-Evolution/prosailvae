@@ -9,19 +9,19 @@ from utils.image_utils import get_encoded_image_from_batch, crop_s2_input
 from metrics.metrics_utils import regression_metrics
 from prosailvae.prosail_vae import (load_prosail_vae_with_hyperprior, get_prosail_vae_config, load_params)
 from dataset.loaders import  get_train_valid_test_loader_from_patches
-from prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics, regression_plot
+from metrics.prosail_plots import plot_patches, patch_validation_reg_scatter_plot, plot_belsar_metrics, regression_plot
 from prosailvae.ProsailSimus import get_bands_idx, BANDS
-from snap_regression.snap_utils import get_weiss_biophyiscal_from_batch
+from bvnet_regression.bvnet_utils import get_bvnet_biophyiscal_from_batch
 from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import prosailvae
-from snap_regression.snap_nn import SnapNN
+from bvnet_regression.bvnet import BVNET
 from validation.frm4veg_validation import (load_frm4veg_data, interpolate_frm4veg_pred, BARRAX_FILENAMES, WYTHAM_FILENAMES, 
                                            BARRAX_2021_FILENAME, get_frm4veg_results_at_date)
 from tqdm import trange, tqdm
-from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_snap_belsar_predictions
+from validation.belsar_validation import interpolate_belsar_metrics, save_belsar_predictions, save_bvnet_belsar_predictions
 from validation.validation import get_belsar_x_frm4veg_lai_results, get_validation_global_metrics, get_frm4veg_ccc_results
 from dataset.project_s2_dataset import save_common_cyclical_dataset, load_cyclical_data_set
 
@@ -147,7 +147,7 @@ def get_model_results(model_dict: dict, test_loader, info_test_data, max_patch =
             info = info_test_data[i,:]
             try:
                 (snap_lai, snap_cab,
-                snap_cw) = get_weiss_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
+                snap_cw) = get_bvnet_biophyiscal_from_batch((cropped_s2_r, cropped_s2_a),
                                                              patch_size=32, sensor=info[0])
             except Exception as exc:
                 print(exc)
@@ -476,7 +476,7 @@ def compare_snap_versions_on_real_data(test_loader, res_dir):
         sensor_cw = []
         for _, batch in enumerate(tqdm(test_loader)):
             (snap_lai, snap_cab,
-            snap_cw) = get_weiss_biophyiscal_from_batch(batch, patch_size=32,
+            snap_cw) = get_bvnet_biophyiscal_from_batch(batch, patch_size=32,
                                                         ver=ver)
             sensor_lai.append(snap_lai.reshape(-1))
             sensor_cab.append(snap_cab.reshape(-1))
@@ -518,7 +518,7 @@ def compare_snap_versions_on_weiss_data(res_dir):
     for ver in snap_ver:
         sensor_lai = []
         with torch.no_grad():
-            lai_snap = SnapNN(variable='lai', ver=ver)
+            lai_snap = BVNET(variable='lai', ver=ver)
             lai_snap.set_weiss_weights()
             snap_lai = lai_snap.forward(s2_data)
         sensor_lai.append(snap_lai.reshape(-1))
@@ -605,7 +605,7 @@ def compare_validation_regressions(model_dict, belsar_dir, frm4veg_data_dir, frm
                                    res_dir, list_belsar_filenames, recompute=True, mode="lat_mode", 
                                    get_error=True, method="simple_interpolate"):
     if recompute:
-        save_snap_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
+        save_bvnet_belsar_predictions(belsar_dir, res_dir, list_belsar_filenames)
     for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
         model = model_info["model"]
         if recompute:

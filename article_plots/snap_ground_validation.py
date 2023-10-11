@@ -59,7 +59,8 @@ def main():
     fig.savefig(os.path.join(res_dir, f"bvnet_{variable}_regression_campaign.png"))
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(os.path.join(res_dir, f"bvnet_{variable}_regression_campaign.tex"))
-    rmse_lai, mpiw_lai, picp_lai, _ = get_validation_global_metrics(df_results_lai, decompose_along_columns=["Campaign"], variable="lai")
+    rmse_lai, mpiw_lai, picp_lai, _ = get_validation_global_metrics(df_results_lai, decompose_along_columns=["Campaign"], 
+                                                                    variable="lai")
 
     barrax_results, barrax_2021_results, wytham_results = get_all_campaign_CCC_results_BVNET(frm4veg_data_dir, 
                                                                                             frm4veg_2021_data_dir,

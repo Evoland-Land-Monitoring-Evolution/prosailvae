@@ -467,16 +467,16 @@ def interpolate_frm4veg_pred(model, frm4veg_data_dir, filename_before, filename_
 def main():
     if socket.gethostname()=='CELL200973':
         # args=["-f", "FRM_Veg_Wytham_20180703_V2",
-        # args=["-f", "FRM_Veg_Barrax_20180605_V2",
-        args=["-f", "FRM_Veg_Barrax_20210719",
-            #   "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation/",
+        args=["-f", "FRM_Veg_Barrax_20180605_V2",
+        # args=["-f", "FRM_Veg_Barrax_20210719",
+              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation/",
+            #   "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation/",
             #   "-p", "SENTINEL2A_20180703-105938-887_L2A_T30SWJ_D_V1-8"]
             #   "-p", "SENTINEL2B_20180516-105351-101_L2A_T30SWJ_D_V1-7"]
             #   "-p", "SENTINEL2A_20180706-110918-241_L2A_T30UXC_C_V1-0"]
         # "-p", "SENTINEL2A_20180629-112537-824_L2A_T30UXC_C_V1-0"]
-        # "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
-        "-p", "SENTINEL2B_20210722-111020-007_L2A_T30SWJ_C_V3-0"]
+        "-p", "SENTINEL2A_20180613-110957-425_L2A_T30SWJ_D_V1-8"]
+        # "-p", "SENTINEL2B_20210722-111020-007_L2A_T30SWJ_C_V3-0"]
         
         parser = get_prosailvae_train_parser().parse_args(args)
     else:
@@ -485,7 +485,7 @@ def main():
     s2_product_name = parser.product_name
 
     output_file_names = compute_frm4veg_data(parser.data_dir, parser.data_filename, s2_product_name,
-                                             date='2018-07-06', no_angle_data=False)
+                                             date='2018-06-13', no_angle_data=False)
     print(output_file_names)
 if __name__ == "__main__":
     main()

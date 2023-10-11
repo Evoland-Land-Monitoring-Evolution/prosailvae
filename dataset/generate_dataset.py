@@ -205,18 +205,22 @@ def save_jordi_like_data_set(data_dir, data_file_prefix, rsr_dir, nb_simus, nois
                              n_samples_per_batch=1024, prosail_var_dist_type="legacy"):
     bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)   
+    prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
     prosail_vars = sample_prosail_vars(nb_simus=nb_simus, prosail_var_dist_type=prosail_var_dist_type, 
-                                       uniform_mode=False, lai_corr=True, lai_var_dist=None, 
-                                       lai_corr_mode="v2", lai_thresh=None)
-    prosail_vars[:, 2] = prosail_vars[:, 1] / 4
-    prosail_vars[:, 9] = 0.3
+                                       uniform_mode=False, lai_corr=False, lai_var_dist=None, 
+                                       lai_corr_mode=None, lai_thresh=10)
+    correlated_prosail_vars = correlate_all_variables_with_lai(prosail_vars, prosail_var_dist, 
+                                                                lai_corr_mode="v2",
+                                                                lai_thresh=10)
+    correlated_prosail_vars[:, 2] = correlated_prosail_vars[:, 1] / 4
+    correlated_prosail_vars[:, 9] = 0.3
     for prospect_version in ["5", "D", "PRO"]:
         psimulator = ProsailSimulator(prospect_version=prospect_version)
-        prosail_s2_sim = simulate_reflectances(prosail_vars, noise=noise, psimulator=psimulator, 
+        prosail_s2_sim = simulate_reflectances(correlated_prosail_vars, noise=noise, psimulator=psimulator, 
                                                 ssimulator=ssimulator, n_samples_per_batch=n_samples_per_batch)
         (norm_mean, norm_std, cos_angles_loc, cos_angles_scale, idx_loc, 
         idx_scale) = get_bands_norm_factors(torch.from_numpy(prosail_s2_sim).float().transpose(1,0), mode='quantile')
-        torch.save(torch.from_numpy(prosail_vars), 
+        torch.save(torch.from_numpy(correlated_prosail_vars), 
                 os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_prosail_sim_vars.pt"))
         torch.save(torch.from_numpy(prosail_s2_sim), 
                 os.path.join(data_dir, f"{data_file_prefix}PROSPECT{prospect_version}_corr_v2_prosail_s2_sim_refl.pt"))
@@ -242,14 +246,14 @@ def save_prosail_data_set_with_all_prospect_versions(data_dir, data_file_prefix,
     bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12] # B2, B3, B4, B5, B6, B7, B8, B8A, B11, B12
     if bvnet_bands:
         bands = [2, 3, 4, 5, 6, 8, 11, 12] #       B3, B4, B5, B6, B7,     B8A, B11, B12
-
+    prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
     ssimulator = SensorSimulator(rsr_dir + "/sentinel2.rsr", bands=bands)   
     prosail_vars = sample_prosail_vars(nb_simus=nb_simus, prosail_var_dist_type=prosail_var_dist_type, 
                                        uniform_mode=uniform_mode, lai_corr=False, lai_var_dist=lai_var_dist, 
                                        lai_corr_mode="", lai_thresh=None)
     
     for lai_corr_mode in ["v1", "v2"]:
-        prosail_var_dist = get_prosail_var_dist(prosail_var_dist_type)
+        
         correlated_prosail_vars = correlate_all_variables_with_lai(prosail_vars, prosail_var_dist, 
                                                                     lai_corr_mode=lai_corr_mode,
                                                                     lai_thresh=lai_thresh)

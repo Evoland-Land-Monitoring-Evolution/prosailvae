@@ -105,7 +105,7 @@ def main():
         rsr_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data"
 
         epochs=500
-        n_models=2
+        n_models=5
         args = [
             # "-sd", "True",
             "-p", "True",

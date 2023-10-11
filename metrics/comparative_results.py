@@ -558,15 +558,15 @@ def get_frm4veg_validation_metrics(model_dict, frm4veg_data_dir, filenames, meth
     if isinstance(filenames, str):
         for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
             frm4veg_results[model_name] = get_frm4veg_results_at_date(model_info["model"], frm4veg_data_dir, BARRAX_2021_FILENAME,
-                                                                      is_SNAP=False, get_reconstruction=get_error)
+                                                                      is_BVNET=False, get_reconstruction=get_error)
         frm4veg_results["SNAP"] = get_frm4veg_results_at_date(model_info["model"], frm4veg_data_dir, BARRAX_2021_FILENAME,
-                                                                      is_SNAP=True, get_reconstruction=get_error)
+                                                                      is_BVNET=True, get_reconstruction=get_error)
     else:
         for _, (model_name, model_info) in enumerate(tqdm(model_dict.items())):
             frm4veg_results[model_name] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
-                                                                filenames[1],  method=method,  is_SNAP=False, mode=mode)
+                                                                filenames[1],  method=method,  is_BVNET=False, mode=mode)
         frm4veg_results["SNAP"] = interpolate_frm4veg_pred(model_info["model"], frm4veg_data_dir, filenames[0], 
-                                                           filenames[1],  method=method, is_SNAP=True, mode=mode)
+                                                           filenames[1],  method=method, is_BVNET=True, mode=mode)
     return frm4veg_results
 
 def get_belsar_x_frm4veg_lai_validation_results(model_dict, belsar_results, barrax_results, barrax_2021_results, wytham_results,

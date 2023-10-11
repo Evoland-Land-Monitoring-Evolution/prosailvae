@@ -204,9 +204,9 @@ def main():
 
                     (barrax_results, barrax_2021_results, wytham_results, belsar_results, 
                     all_belsar) = get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg_2021_data_dir, 
-                                                                    belsar_data_dir, res_dir,
-                                                                    method="simple_interpolate", get_all_belsar=False, 
-                                                                    remove_files=True, lai_bvnet=model)    
+                                                                     belsar_data_dir, res_dir,
+                                                                     method="simple_interpolate", get_all_belsar=False, 
+                                                                     remove_files=True, lai_bvnet=model)    
                     df_results = get_belsar_x_frm4veg_lai_results(belsar_results, barrax_results, barrax_2021_results, wytham_results,
                                                                   frm4veg_lai="lai", get_reconstruction_error=False)
                     rmse, _, _, _ = get_validation_global_metrics(df_results, decompose_along_columns=["Campaign"], variable="lai")

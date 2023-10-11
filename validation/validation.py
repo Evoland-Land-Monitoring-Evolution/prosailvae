@@ -11,7 +11,7 @@ from validation.belsar_validation import (interpolate_belsar_metrics, save_belsa
 from prosailvae.ProsailSimus import BANDS
 
 def get_all_campaign_lai_results_BVNET(frm4veg_data_dir, frm4veg2021_data_dir, belsar_data_dir, belsar_pred_dir,
-                                      method="simple_interpolate", get_all_belsar=False, remove_files=False, lai_bvnet=None):
+                                       method="simple_interpolate", get_all_belsar=False, remove_files=False, lai_bvnet=None):
     
     all_belsar = None
     list_belsar_filenames = BELSAR_FILENAMES

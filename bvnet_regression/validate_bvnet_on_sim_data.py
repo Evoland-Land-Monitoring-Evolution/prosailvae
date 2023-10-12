@@ -59,14 +59,21 @@ def get_parser():
     return parser
 
 def convert_prosail_data_set(nb_simus=2048, noise=0, psimulator=None, ssimulator=None, 
-                                        n_samples_per_batch=1024):
+                                        n_samples_per_batch=1024, psoil0=0.3, constant_psoil=True):
     nb_simus = min(nb_simus, 41474)
     _, prosail_vars_pvae_like = load_bvnet_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
-                                                        mode="pvae", psoil0=0.3)
+                                                        mode="pvae", psoil0=psoil0)
     _, prosail_vars_bvnet = load_bvnet_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
-                                                      mode="bvnet", psoil0=0.3)
+                                                      mode="bvnet", psoil0=psoil0)
+
     prosail_vars_pvae_like = prosail_vars_pvae_like[:nb_simus,:]
     prosail_vars_bvnet = prosail_vars_bvnet[:nb_simus,:]
+
+    if not constant_psoil:
+        psoil = np.random.rand(nb_simus)
+        prosail_vars_pvae_like[:,9] = psoil
+        prosail_vars_bvnet[:,9] = psoil
+
     s2_a_bvnet = prosail_vars_bvnet[:,-3:]
     
     n_full_batch = nb_simus // n_samples_per_batch
@@ -148,7 +155,8 @@ def main():
                                                                 noise=0,
                                                                 psimulator=psimulator,
                                                                 ssimulator=ssimulator,
-                                                                n_samples_per_batch=1024)
+                                                                n_samples_per_batch=1024, 
+                                                                constant_psoil=False)
         data_set_txt = "projected"
         print("Projecting samples with PROSPECT-D + 4SAIL")
     elif parser.sim_data:

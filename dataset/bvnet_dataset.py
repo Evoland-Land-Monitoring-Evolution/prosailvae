@@ -1,12 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
+from prosailvae_types import ProsailBV, S2R, S2A, GROUP_BAND_BVNET, GROUP_P5_BV 
 
 def load_refl_angles(path_to_data_dir):
     path_to_file = path_to_data_dir + "/InputNoNoise_2.csv"
     assert os.path.isfile(path_to_file)
     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
-    n_obs = len(df_validation_data)
     s2_r = df_validation_data[['B3', 'B4', 'B5', 'B6', 'B7', 'B8A', 'B11', 'B12']].values
    
     tts = np.rad2deg(np.arccos(df_validation_data['cos(thetas)'].values))

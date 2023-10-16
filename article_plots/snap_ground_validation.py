@@ -1,14 +1,9 @@
-import torch
 import os
-import numpy as np
 import pandas as pd
-
-from bvnet_regression.bvnet import BVNET
-import matplotlib.pyplot as plt
 from validation.validation import (get_all_campaign_CCC_results_BVNET, get_frm4veg_ccc_results, 
                                    get_validation_global_metrics, get_all_campaign_lai_results_BVNET,
                                    get_belsar_x_frm4veg_lai_results)
-from metrics.prosail_plots import regression_plot, regression_plot_2hues
+from metrics.prosail_plots import regression_plot_2hues
 import tikzplotlib
 
 def tikzplotlib_fix_ncols(obj):

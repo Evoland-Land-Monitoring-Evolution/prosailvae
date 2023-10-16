@@ -28,7 +28,8 @@ def initialize_bvnet(variable, train_loader, valid_loader, loc_bv, scale_bv, res
     return model
 
 
-def get_bvnet_dataloader(variable='lai', valid_ratio=0.05, batch_size=2048, s2_r=None, prosail_vars=None, max_samples=50000, psoil0=0.3):
+def get_bvnet_dataloader(variable='lai', valid_ratio=0.05, batch_size=2048, s2_r=None, prosail_vars=None, 
+                         max_samples=50000, psoil0=0.3):
     if prosail_vars is None or s2_r is None:
         s2_r, prosail_vars = load_bvnet_dataset(os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/", 
                                                 mode="bvnet", psoil0=psoil0)

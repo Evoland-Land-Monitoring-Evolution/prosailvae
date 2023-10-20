@@ -271,7 +271,7 @@ def save_validation_results(model, res_dir,
             fig, axs = plt.subplots(1,2, figsize=(14, 7), dpi=150)
             _, _ = regression_plot_2hues(df_results_bvnet[variable], x=f"{variable}", y=f"Predicted {variable}", 
                                          hue="Land cover", hue2="Campaign", display_text=False,
-                                             error_x=f"{variable} std", 
+                                            error_x=f"{variable} std", 
                                             error_y=None, hue_perfs=False, 
                                             title_hue="Land cover", title_hue2="\n Site",
                                             hue_color_dict=hue_color_dict, 
@@ -367,11 +367,15 @@ def save_validation_results(model, res_dir,
             sns.scatterplot(data = results[variable], x=f"{variable} std", y=f"Predicted {variable} std", hue="Campaign", ax=ax)
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_std_vs_{variable}_pred_std_campaign.png"))
 
-            fig, ax = fig, ax = plt.subplots(dpi=150)
+            fig, ax = plt.subplots(dpi=150)
             sns.scatterplot(data = results[variable], x=f"{variable} error", y=f"Reconstruction error", hue="Campaign", ax=ax)
             fig.savefig(os.path.join(scatter_dir[variable], f"{model_name}_{variable}_error_vs_reconstruction_error_Campaign.png"))
             plt.close('all')
 
+            fig, ax = plt.subplots(dpi=150)
+            ax.scatter(results[variable][f"Predicted {variable}"], df_results_bvnet[variable][f"Predicted {variable}"], c='k', s=1)
+            tikzplotlib_fix_ncols(fig)
+            tikzplotlib.save(os.path.join(scatter_dir[variable], f"{model_name}_vs_sl2p_{variable}_scatterplot.tex"))
     return global_metrics
         
     

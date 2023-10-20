@@ -1252,14 +1252,17 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
-    ax.hist2d(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(),
+    m, b, r2, rmse = regression_metrics(all_lai.detach().cpu().numpy(),
+                                        all_weiss_lai.detach().cpu().numpy())
+    ax.hist2d(all_lai.cpu().numpy(), all_weiss_lai.cpu().numpy(),
               range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
             [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
-    ax.set_ylabel("PROSAIL-VAE LAI")
-    ax.set_xlabel("SL2P LAI")
+    ax.set_xlabel("PROSAIL-VAE LAI")
+    ax.set_ylabel("SL2P LAI")
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/all_lai_2dhist_pvae_vs_snap.tex")
@@ -1309,15 +1312,16 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
     xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
     xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
-    ax.hist2d(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(),
+    ax.hist2d(all_weiss_cab.cpu().numpy(), all_ccc.cpu().numpy(), 
               range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
             [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
-    ax.set_ylabel(f"PROSAIL-VAE CCC")
-    ax.set_xlabel(f"SL2P CCC")
+    ax.set_xlabel(f"PROSAIL-VAE CCC")
+    ax.set_ylabel(f"SL2P CCC")
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/all_ccc_2dhist_pvae_vs_snap.tex")
@@ -1326,15 +1330,16 @@ def article_2D_aggregated_results(plot_dir, all_s2_r, all_rec, all_lai, all_cab,
     all_cwc = all_lai * all_cw
     xmin = min(all_cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
     xmax = max(all_cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
-    ax.hist2d(all_weiss_cw.cpu().numpy(), all_cwc.cpu().numpy(),
+    ax.hist2d(all_weiss_cw.cpu().numpy(), all_cwc.cpu().numpy(), 
               range = [[xmin,xmax], [xmin,xmax]], bins=100, cmap='viridis', norm=LogNorm())
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
+    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b],'r')
     ax.plot([min(xlim[0],ylim[0]), max(xlim[1],ylim[1])],
             [min(xlim[0],ylim[0]), max(xlim[1],ylim[1]), ],'k')
     ax.legend()
-    ax.set_ylabel(f"PROSAIL-VAE CWC")
-    ax.set_xlabel(f"SL2P CWC")
+    ax.set_xlabel(f"PROSAIL-VAE CWC")
+    ax.set_ylabel(f"SL2P CWC")
     ax.set_aspect('equal')
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(f"{article_plot_dir}/all_cwc_2dhist_pvae_vs_snap.tex")

@@ -274,7 +274,20 @@ class ProsailSimulator():
         if len(params.shape) == 1:
             params = params.unsqueeze(0)
         prosail_refl = prosail.run_prosail(
-            params,
+            N=params[...,0].unsqueeze(-1), # change input (use dictionnary for instance)
+            cab=params[...,1].unsqueeze(-1), 
+            car=params[...,2].unsqueeze(-1), 
+            cbrown=params[...,3].unsqueeze(-1), 
+            cw=params[...,4].unsqueeze(-1), 
+            cm=params[...,5].unsqueeze(-1), 
+            lai=params[...,6].unsqueeze(-1), 
+            lidfa=params[...,7].unsqueeze(-1), 
+            hspot=params[...,8].unsqueeze(-1), 
+            rsoil=params[...,9].unsqueeze(-1), 
+            psoil=params[...,10].unsqueeze(-1), 
+            tts=params[...,11].unsqueeze(-1), 
+            tto=params[...,12].unsqueeze(-1), 
+            psi=params[...,13].unsqueeze(-1), 
             typelidf=torch.as_tensor(self.typelidf),
             factor=self.factor,
             device=self.device,
@@ -292,8 +305,7 @@ class ProsailSimulator():
             lambdas=self.lambdas,
             R_down=1, 
             init_spectra=False,
-            prospect_version=self.prospect_version,
-            zero_ant_prot_cbc_override=True
+            prospect_version=self.prospect_version
         ).float()
         
         return prosail_refl

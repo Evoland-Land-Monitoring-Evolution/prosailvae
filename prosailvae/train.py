@@ -98,7 +98,7 @@ def get_prosailvae_train_parser():
                         type=bool, default=True)
 
     parser.add_argument("-r", dest="root_results_dir",
-                        help="path to root results direcotry",
+                        help="path to root results directory",
                         type=str, default="")
 
     parser.add_argument("-rsr", dest="rsr_dir",
@@ -114,7 +114,7 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)
 
     parser.add_argument("-w", dest="weiss_mode",
-                        help="removes B2 and B8 bands for validation with weiss data",
+                        help="removes B2 and B8 bands for validation with weiss data", #TODO replace weiss mode with explicit band selection
                         type=bool, default=False)
     return parser
 
@@ -340,16 +340,8 @@ def setup_training():
               "-p", "False",
               "-cd", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config/']
         parser = get_prosailvae_train_parser().parse_args(args)
-        frm4veg_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation"
-        frm4veg_2021_data_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation"
-        belsar_dir = "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation"
-        cyclical_data_dir =  "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/projected_data"
     else:
         parser = get_prosailvae_train_parser().parse_args()
-        frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
-        frm4veg_2021_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
-        belsar_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
-        cyclical_data_dir =  "/work/scratch/zerahy/prosailvae/data/projected_data"
 
     xp_array = parser.xp_array
     job_array_dir = None
@@ -403,6 +395,9 @@ def setup_training():
     else:
         params_sup_kl_model = None
         sup_kl_io_coeffs = None
+    frm4veg_data_dir = params["frm4veg_data_dir"] 
+    frm4veg_2021_data_dir = params["frm4veg_2021_data_dir"] 
+    belsar_dir = params["belsar_dir"] 
     return (params, parser, res_dir, sim_data_dir, s2_data_dir, params_sup_kl_model, job_array_dir, sup_kl_io_coeffs, 
             frm4veg_data_dir, frm4veg_2021_data_dir, belsar_dir, cyclical_data_dir, model_name)
 

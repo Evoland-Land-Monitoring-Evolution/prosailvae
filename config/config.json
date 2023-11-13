@@ -8,7 +8,7 @@
     "encoder_last_activation": null,
     "n_samples": 5,
     "supervised": false,
-    "beta_kl": 1000000,
+    "beta_kl": 2,
     "beta_index": 0,
     "k_fold": 1,
     "dataset_file_prefix": "",
@@ -20,9 +20,13 @@
     "exp_lr_decay": 0.98,
     "encoder_type": "rcnn",
     "load_model": true,
-    "vae_load_dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/hyperprior_lai_cab_b1000/",
-"sim_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data/",
+    "vae_load_dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/trained_models/pvae_spatial_lai_uniform_prior_b_kl_2",
+    "sim_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data/",
     "s2_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/patches/",
+    "frm4veg_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation",
+    "frm4veg_2021_data_dir":"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation",
+    "belsar_dir":"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation",
+    "cyclical_data_dir":"/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/projected_data",
     "lr_recompute_mode": false,
     "first_layer_kernel": 3,
     "first_layer_size": 32,
@@ -82,5 +86,5 @@
     "lrs_threshold": 0.005,
     "validation_at_every_epoch": null,
     "prosail_vars_dist_type": "legacy",
-    "prospect_version":"D"
+    "prospect_version":"5"
 }

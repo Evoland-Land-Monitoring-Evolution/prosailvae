@@ -25,7 +25,7 @@ from utils.utils import load_dict
 
 def load_params(config_dir, config_file, parser=None):
     """
-    Load parameter dict form prosail vae and training
+    Load parameter dict form prosail vae and training, with default options
     """
     params = load_dict(config_dir + config_file)
     if params["supervised"]:
@@ -108,6 +108,14 @@ def load_params(config_dir, config_file, parser=None):
         params["s2_data_dir"] = os.path.join(TOP_PATH, "data/")
     if "prospect_version" not in params.keys():
         params["prospect_version"] = "5"
+    if "frm4veg_data_dir" not in params.keys():
+        params["frm4veg_data_dir"] = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
+    if "frm4veg_2021_data_dir" not in params.keys():
+        params["frm4veg_2021_data_dir"] = "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
+    if "belsar_dir" not in params.keys():
+        params["belsar_dir"] = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
+    if "cyclical_data_dir" not in params.keys():
+        params["cyclical_data_dir"] =  "/work/scratch/zerahy/prosailvae/data/projected_data"
     return params
 
 @dataclass

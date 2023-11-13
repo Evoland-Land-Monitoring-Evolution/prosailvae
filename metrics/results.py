@@ -37,6 +37,7 @@ from torchutils.patches import patchify
 import tikzplotlib
 
 LOGGER_NAME = "PROSAIL-VAE results logger"
+PC_SOCKET_NAME = 'CELL200973' # toggle options for dev and debug on PC
 
 def tikzplotlib_fix_ncols(obj):
     """
@@ -505,7 +506,7 @@ def save_results_on_s2_data(PROSAIL_VAE, loader, res_dir, LOGGER_NAME='PROSAIL-V
             all_cab.append(sim_image[1,...].reshape(-1))
             all_cw.append(sim_image[4,...].reshape(-1))
             all_vars.append(sim_image.reshape(11,-1))
-            if not socket.gethostname()=='CELL200973':
+            if not socket.gethostname()==PC_SOCKET_NAME:
                 pair_plot(sim_image.reshape(11,-1).squeeze().permute(1,0), tensor_2=None, features=PROSAILVARS,
                         res_dir=patch_plot_dir, filename='sim_prosail_pair_plot.png')
             all_bvnet_lai.append(bvnet_lai.reshape(-1))
@@ -786,7 +787,7 @@ def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
             else:
                 raise ValueError(f"The same experiment (fold) has already been carried out at {same_fold_dir}.\n Please change the number of fold or allow overwrite")
     else:
-        if not socket.gethostname()=='CELL200973':
+        if not socket.gethostname()==PC_SOCKET_NAME:
             res_dir = f"{root_results_dir}/{n_xp}"#_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
         else:
             res_dir = f"{root_results_dir}/{n_xp}_d{date}_supervised_{params['supervised']}_{params['dataset_file_prefix']}"
@@ -795,7 +796,7 @@ def get_res_dir_path(root_results_dir, params, n_xp=None, overwrite_xp=False):
     return res_dir
 
 # def setupResults():
-#     if socket.gethostname()=='CELL200973':
+#     if socket.gethostname()==PC_SOCKET_NAME:
 #         args=["-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
 #               "-r", "",
 #               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',

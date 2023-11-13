@@ -23,9 +23,9 @@ from utils.utils import save_dict, get_RAM_usage, get_total_RAM, plot_grad_flow,
 from prosailvae.ProsailSimus import get_bands_idx
 import argparse
 import pandas as pd
-from dataset.project_s2_dataset import load_cyclical_data_set
 
 import socket
+
 import os
 import numpy as np
 import torch.optim as optim
@@ -37,6 +37,7 @@ torch.autograd.set_detect_anomaly(True)
 
 CUDA_LAUNCH_BLOCKING=1
 LOGGER_NAME = 'PROSAIL-VAE logger'
+PC_SOCKET_NAME = 'CELL200973' # toggle options for dev and debug on PC
 
 @dataclass
 class DatasetConfig:
@@ -96,10 +97,6 @@ def get_prosailvae_train_parser():
                         help="Allow overwrite of experiment (fold)",
                         type=bool, default=True)
 
-    parser.add_argument("-d", dest="data_dir",
-                        help="path to data direcotry",
-                        type=str, default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/")
-
     parser.add_argument("-r", dest="root_results_dir",
                         help="path to root results direcotry",
                         type=str, default="")
@@ -107,11 +104,6 @@ def get_prosailvae_train_parser():
     parser.add_argument("-rsr", dest="rsr_dir",
                         help="directory of rsr_file",
                         type=str, default='/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/')
-
-    parser.add_argument("-t", dest="tensor_dir",
-                        help="directory of mmdc tensor files",
-                        type=str,
-                        default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/real_data/torchfiles/")
 
     parser.add_argument("-a", dest="xp_array",
                         help="array training (false for single xp) ",
@@ -126,25 +118,6 @@ def get_prosailvae_train_parser():
                         type=bool, default=False)
     return parser
 
-# def recompute_lr(lr_scheduler, PROSAIL_VAE, epoch, lr_recompute, exp_lr_decay, logger, optimizer, lrtrainloader, 
-#                  old_lr=1.0, n_samples=1):
-#     new_lr=old_lr
-#     if epoch > 0 and lr_recompute is not None:
-#         if epoch % lr_recompute == 0:
-#             try:
-#                 new_lr = get_PROSAIL_VAE_lr(PROSAIL_VAE, lrtrainloader, 
-#                                             old_lr=old_lr, old_lr_max_ratio=10, n_samples=n_samples)
-#                 optimizer = optim.Adam(PROSAIL_VAE.parameters(), lr=new_lr, weight_decay=1e-2)
-#                 if exp_lr_decay>0:
-#                     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, 
-#                                                                           gamma=exp_lr_decay)
-#             except Exception as exc:
-#                 traceback.print_exc()
-#                 print(exc)
-#                 logger.error(f"Couldn't recompute lr at epoch {epoch} !")
-#                 logger.error(f"{exc}")
-#                 print(f"Couldn't recompute lr at epoch {epoch} !")
-#     return lr_scheduler, optimizer, new_lr
 
 def switch_loss(epoch, n_epoch, PROSAIL_VAE, swith_ratio = 0.75):
     loss_type = PROSAIL_VAE.decoder.loss_type
@@ -209,10 +182,6 @@ def initialize_by_training(n_models:int,
     logger.info(f'Best model is model {best_model_idx}.')
     logger.info(f'=====================================================================')
     return broke_at_rec
-    # best_prosail_vae = load_prosail_vae_with_hyperprior(pv_config=pv_config,
-    #                                                     pv_config_hyper=pv_config_hyper,
-    #                                                     logger_name=LOGGER_NAME)
-    # return best_prosail_vae
 
 def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader,
                   res_dir=None, n_samples=20, lr_recompute=None, exp_lr_decay=0,
@@ -249,10 +218,9 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader,
 
     max_train_samples_per_epoch = 50
     max_valid_samples_per_epoch = 200
-    if socket.gethostname()=='CELL200973':
+    if socket.gethostname()==PC_SOCKET_NAME:
         max_train_samples_per_epoch = 5
         max_valid_samples_per_epoch = 2
-    # all_cyclical_loss = []
     all_cyclical_rmse = []
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc='PROSAIL-VAE training', leave=True):
@@ -262,7 +230,6 @@ def training_loop(prosail_vae, optimizer, n_epoch, train_loader, valid_loader,
                     os.makedirs(validation_dir_at_epoch)
                     _, cyclical_rmse = prosail_vae.get_cyclical_metrics_from_loader(lai_cyclical_loader, 
                                                                                     lai_precomputed=cyclical_lai_precomputed)
-                    # all_cyclical_loss.append(cyclical_loss.cpu().item())
                     all_cyclical_rmse.append(cyclical_rmse.cpu().item())
                     save_validation_results(prosail_vae, validation_dir_at_epoch,
                                             frm4veg_data_dir=frm4veg_data_dir,
@@ -362,15 +329,13 @@ def setup_training():
     """
     Read parser and config files to launch training
     """
-    if socket.gethostname()=='CELL200973':
+    if socket.gethostname()==PC_SOCKET_NAME:
         args=["-n", "0",
-              "-c", "config_hyper_3.json",
+              "-c", "config.json",
               "-x", "1",
               "-o", "True",
-              "-d", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",#patches/",
               "-r", "",
               "-rsr", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/',
-              "-t", "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/validation_tiles/",
               "-a", "False",
               "-p", "False",
               "-cd", '/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/config/']
@@ -518,7 +483,7 @@ def train_prosailvae(params, parser, res_dir, params_sup_kl_model,
         n_models=params["n_init_models"]
         lr = params['init_lr']
         n_epochs=params["n_init_epochs"]
-        # if socket.gethostname()=='CELL200973':
+        # if socket.gethostname()==PC_SOCKET_NAME:
         #     n_epochs = 1
         #     n_models = 2
 
@@ -648,7 +613,7 @@ def main():
                     plot_results=parser.plot_results)
         min_loss = all_valid_loss_df['rec_loss'].min() if 'rec_loss' in all_valid_loss_df.columns else all_valid_loss_df['loss_sum'].min()
         min_loss_df = pd.DataFrame({"Loss":[min_loss]})
-        if True and not socket.gethostname()=='CELL200973':
+        if True and not socket.gethostname()==PC_SOCKET_NAME:
             global_validation_metrics = save_validation_results(prosail_vae, validation_dir,
                                                                 frm4veg_data_dir=frm4veg_data_dir,
                                                                 frm4veg_2021_data_dir=frm4veg_2021_data_dir,
@@ -670,7 +635,7 @@ def main():
 
         save_results_on_s2_data(prosail_vae, test_loader, res_dir, LOGGER_NAME=LOGGER_NAME,
                                 plot_results=parser.plot_results, info_test_data=info_test_data, 
-                                max_test_patch=50 if not socket.gethostname()=='CELL200973' else 2,
+                                max_test_patch=50 if not socket.gethostname()==PC_SOCKET_NAME else 2,
                                 lai_cyclical_loader=lai_cyclical_loader)
         global_results_df = pd.concat((pd.DataFrame({'model':[model_name]}),
                                         cyclical_rmse_df,

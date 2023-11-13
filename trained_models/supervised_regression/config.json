@@ -1,0 +1,72 @@
+{
+    "batch_size": 1024,
+    "epochs": 5000,
+    "lr": 0.001,
+    "test_size": 0.01,
+    "valid_ratio": 0.01,
+    "workers": 0,
+    "encoder_last_activation": null,
+    "n_samples": 10,
+    "supervised": true,
+    "beta_kl": 0,
+    "beta_index": 0,
+    "k_fold": 1,
+    "dataset_file_prefix": "train_",
+    "n_fold": null,
+    "simulated_dataset": true,
+    "lr_recompute": 10,
+    "loss_type": "diag_nll",
+    "apply_norm_rec": true,
+    "exp_lr_decay": 0.98,
+    "encoder_type": "rnn",
+    "load_model": false,
+    "vae_load_dir_path": "/home/uz/zerahy/scratch/prosailvae/results/+50427068_config_reg_rnn_n3/1",
+    "s2_data_dir": "/work/scratch/zerahy/prosailvae/data/curated_europe_theia/",
+    "sim_data_dir": "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_corr_type_2/",
+    "lr_recompute_mode": false,
+    "first_layer_kernel": 3,
+    "first_layer_size": 32,
+    "block_layer_sizes": [
+        32
+    ],
+    "block_layer_depths": [
+        2
+    ],
+    "block_kernel_sizes": [
+        1
+    ],
+    "block_n": [
+        3
+    ],
+    "weiss_bands": false,
+    "init_model": true,
+    "supervised_kl": false,
+    "supervised_config_file": "/work/scratch/zerahy/prosailvae/results/39629464_jobarray/1_d2023_03_24_15_15_47_supervised_True_weiss_/config.json",
+    "supervised_weight_file": "/work/scratch/zerahy/prosailvae/results/39629464_jobarray/1_d2023_03_24_15_15_47_supervised_True_weiss_/prosailvae_weights.tar",
+    "n_init_models": 10,
+    "n_init_epochs": 9,
+    "init_lr": 0.0005,
+    "accum_iter": 5,
+    "cycle_training": true,
+    "lat_loss_type": "all_nll",
+    "layer_sizes": [
+        512,
+        512
+    ],
+    "kernel_sizes": [
+        3,
+        3
+    ],
+    "vae_save_file_path": null,
+    "disabled_latent": [],
+    "disabled_latent_values": [],
+    "R_down": 1,
+    "break_init_at_rec_loss": null,
+    "rec_bands_loss_coeffs": null,
+    "deterministic": false,
+    "beta_cyclical": 0,
+    "snap_cyclical": false,
+    "lrs_threshold": 0.005,
+    "validation_at_every_epoch": null,
+    "prosail_vars_dist_type": "legacy"
+}

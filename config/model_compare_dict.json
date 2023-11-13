@@ -1,0 +1,14 @@
+{   
+    "rnn_pvae_b2": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/trained_models/pvae_pixellic_lai_uniform_prior_b_kl_2/",
+                                "type":"simvae",
+                                "plot_name":"Pixellic PROSAIL-VAE \n (beta = 2)"
+    },
+    "rcnn_pvae_b2": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/trained_models/pvae_spatial_lai_uniform_prior_b_kl_2",
+                                "type":"simvae",
+                                "plot_name":"Spatial PROSAIL-VAE \n (beta = 2)"
+    },
+    "rnn_regression": {"dir_path": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/trained_models/supervised_regression/",
+                                "type":"simvae",
+                                "plot_name":"Supervised regression"
+    }
+}

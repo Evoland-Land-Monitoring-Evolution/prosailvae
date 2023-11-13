@@ -1,0 +1,87 @@
+{
+    "batch_size": 1,
+    "epochs": 0,
+    "lr": 0.001,
+    "test_size": 0.01,
+    "valid_ratio": 0.01,
+    "workers": 0,
+    "encoder_last_activation": null,
+    "n_samples": 70,
+    "supervised": false,
+    "beta_kl": 2,
+    "beta_index": 0,
+    "k_fold": 1,
+    "dataset_file_prefix": "",
+    "n_fold": null,
+    "simulated_dataset": false,
+    "lr_recompute": 10,
+    "loss_type": "diag_nll",
+    "apply_norm_rec": true,
+    "exp_lr_decay": 0.98,
+    "encoder_type": "rnn",
+    "load_model": true,
+    "vae_load_dir_path": "/home/uz/zerahy/scratch/prosailvae/results/pvae_lai_only/52624179_pvae_lai_only/2_config_rnn_pvae_b2_n3/1/",
+    "s2_data_dir": "/work/scratch/zerahy/prosailvae/data/curated_europe_theia/",
+    "sim_data_dir": "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_corr_type_2/",
+    "lr_recompute_mode": false,
+    "first_layer_kernel": 3,
+    "first_layer_size": 32,
+    "block_layer_sizes": [
+        32
+    ],
+    "block_layer_depths": [
+        2
+    ],
+    "block_kernel_sizes": [
+        1
+    ],
+    "block_n": [
+        3
+    ],
+    "weiss_bands": false,
+    "supervised_kl": false,
+    "supervised_config_file": "/work/scratch/zerahy/prosailvae/results/+++cnn_42585459_jobarray/1_d2023_05_04_17_28_02_supervised_True_train_/config.json",
+    "supervised_weight_file": "/work/scratch/zerahy/prosailvae/results/+++cnn_42585459_jobarray/1_d2023_05_04_17_28_02_supervised_True_train_/prosailvae_weights.tar",
+    "disabled_latent": [],
+    "disabled_latent_values": [],
+    "cycle_training": true,
+    "R_down": 7,
+    "init_model": false,
+    "break_init_at_rec_loss": null,
+    "n_init_models": 10,
+    "n_init_epochs": 9,
+    "init_lr": 0.001,
+    "rec_bands_loss_coeffs": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+    ],
+    "accum_iter": 10,
+    "beta_cyclical": 0,
+    "lat_loss_type": "lai_nll",
+    "lat_idx": [
+        6
+    ],
+    "layer_sizes": [
+        512,
+        512
+    ],
+    "kernel_sizes": [
+        3,
+        3
+    ],
+    "bvnet_bands": false,
+    "vae_save_file_path": null,
+    "deterministic": false,
+    "snap_cyclical": false,
+    "lrs_threshold": 0.005,
+    "validation_at_every_epoch": null,
+    "prosail_vars_dist_type": "legacy",
+    "prospect_version": "5"
+}

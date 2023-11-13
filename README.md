@@ -15,6 +15,6 @@ The in-situ data was preprocessed for faster validation, using `validation/belsa
 ### Computing results
 Computing results for a trained model is done automatically after training with `prosailvae/train.py`. To recompute results, for a trained model, simply load the model with appropriate options in the config file, and set 0 epochs for training.
 
-## Note
+## Config note
 Due to the tensor dimensions being different with a pixellic and a spatial model, the loss must be slected adequately.
 For a pixellic model `rnn`, please use `diag_nll` as loss. For a spatial model, use `spatial_nll` as loss

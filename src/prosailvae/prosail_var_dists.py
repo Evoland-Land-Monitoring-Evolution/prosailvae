@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 
-@dataclass
+@dataclass(frozen=True)
 class VariableDistribution:
     low: float | None = None
     high: float | None = None
@@ -22,7 +22,7 @@ class VariableDistribution:
     law: str = "gaussian"
 
 
-@dataclass
+@dataclass(frozen=True)
 class VariableBounds:
     low: float | None = None
     high: float | None = None

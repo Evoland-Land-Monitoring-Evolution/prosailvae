@@ -7,33 +7,26 @@ Created on Mon Oct 24 10:46:58 2022
 import argparse
 import os
 import socket
+from pathlib import Path
 
-import jax.numpy as jnp
 import numpy as np
-import numpyro
-import numpyro.distributions as dist
 import pandas as pd
 import scipy.stats as stats
 import torch
-from tqdm import trange
 
 import prosailvae
 from dataset.bvnet_dataset import load_bvnet_dataset
 from dataset.dataset_utils import min_max_to_loc_scale
 from prosailvae.prosail_var_dists import VariableDistribution, get_prosail_var_dist
-from prosailvae.ProsailSimus import (
-    BANDS,
-    PROSAILVARS,
-    ProsailSimulator,
-    SensorSimulator,
-)
+from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 from prosailvae.spectral_indices import get_spectral_idx
 
 
 def correlate_with_lai_V1(lai, V, V_mean, lai_conv):
     # V_corr = np.zeros_like(V)
     # V_corr[V >= V_mean] = V[V >= V_mean]
-    # V_corr[V < V_mean] = V_mean + (V[V < V_mean] - V_mean) * np.maximum((lai_conv - lai[V < V_mean]), 0) / lai_conv
+    # V_corr[V < V_mean] = V_mean + (V[V < V_mean] - V_mean) *
+    #     np.maximum((lai_conv - lai[V < V_mean]), 0) / lai_conv
     # V_corr[lai > 10] = V_mean
     V_corr = V_mean + (V - V_mean) * np.maximum((lai_conv - lai), 0) / lai_conv
     return V_corr
@@ -67,6 +60,7 @@ def correlate_sample_with_lai(
     lai_max: float = 15,
     lai_thresh: float | None = None,
 ):
+    correlated_sample = sample.copy()
     if lai_corr_mode == "v2":
         if param_dist.C_lai_min is not None:
             correlated_sample = correlate_with_lai_V2(
@@ -180,11 +174,11 @@ def np_sample_param(
 
 
 def sample_angles(n_samples=100):
-    PATH_TO_DATA_DIR = (
-        os.path.join(prosailvae.__path__[0], os.pardir) + "/field_data/lai/"
+    path_to_file = (
+        f"{Path( __file__ ).parent.absolute()}"
+        "/../../field_data/lai/InputNoNoise_2.csv"
     )
-    path_to_file = PATH_TO_DATA_DIR + "/InputNoNoise_2.csv"
-    assert os.path.isfile(path_to_file)
+    assert os.path.isfile(path_to_file), f"{path_to_file} is not a file"
     df_validation_data = pd.read_csv(path_to_file, sep=" ", engine="python")
     tts_w = np.rad2deg(np.arccos(df_validation_data["cos(thetas)"].values))
     tto_w = np.rad2deg(np.arccos(df_validation_data["cos(thetav)"].values))
@@ -249,21 +243,6 @@ def partial_sample_prosail_vars(
     prosail_vars[:, 13] = psi
 
     return prosail_vars
-
-
-# def simulate_prosail_dataset(nb_simus=100, noise=0, psimulator=None, ssimulator=None, static_angles=False):
-#     prosail_vars = np.zeros((nb_simus, 14))
-#     prosail_s2_sim = np.zeros((nb_simus, 10))
-#     with numpyro.handlers.seed(rng_seed=5):
-#         for i in trange(nb_simus):
-#             prosail_vars[i,:] = sample_prosail_vars(ProsailVarsDist, static_angles=static_angles)
-#             mean = ssimulator(psimulator(torch.from_numpy(prosail_vars[i,:]).view(1,-1).float())).numpy()
-#             if noise>0:
-#                 sigma = numpyro.sample("sigma", dist.Uniform(0., noise))
-#                 prosail_s2_sim[i,:] = numpyro.sample("obs", dist.Normal(mean, sigma))
-#             else:
-#                 prosail_s2_sim[i,:] = mean
-#     return prosail_vars, prosail_s2_sim
 
 
 def sample_prosail_vars(
@@ -918,7 +897,6 @@ def get_data_generation_parser():
         dest="data_dir",
         help="number of samples in simulated dataset",
         type=str,
-        default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/sim_data/",
     )
 
     parser.add_argument(
@@ -934,7 +912,7 @@ def get_data_generation_parser():
         dest="rsr_dir",
         help="directory of rsr_file",
         type=str,
-        default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data",
+        default=f"{Path( __file__ ).parent.absolute()}/../../data",
     )
 
     parser.add_argument(

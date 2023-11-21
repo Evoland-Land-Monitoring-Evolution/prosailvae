@@ -19,6 +19,7 @@ import socket
 import time
 import traceback
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -119,7 +120,12 @@ def get_prosailvae_train_parser():
     )
 
     parser.add_argument(
-        "-cd", dest="config_dir", help="path to config directory", type=str, default=""
+        "-cd",
+        dest="config_dir",
+        help="path to config directory",
+        type=str,
+        default="",
+        required=True,
     )
 
     parser.add_argument(
@@ -143,15 +149,11 @@ def get_prosailvae_train_parser():
         dest="root_results_dir",
         help="path to root results directory",
         type=str,
-        default="",
+        required=True,
     )
 
     parser.add_argument(
-        "-rsr",
-        dest="rsr_dir",
-        help="directory of rsr_file",
-        type=str,
-        default="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/",
+        "-rsr", dest="rsr_dir", help="directory of rsr_file", type=str, required=True
     )
 
     parser.add_argument(
@@ -595,7 +597,6 @@ def setup_training():
         frm4veg_data_dir,
         frm4veg_2021_data_dir,
         belsar_dir,
-        cyclical_data_dir,
         model_name,
     )
 
@@ -859,17 +860,16 @@ def main():
         frm4veg_data_dir,
         frm4veg_2021_data_dir,
         belsar_data_dir,
-        cyclical_data_dir,
         model_name,
     ) = setup_training()
     tracker, useEmissionTracker = configureEmissionTracker(parser)
     spatial_encoder_types = ["cnn", "rcnn"]
     try:
-        # lai_cyclical_loader = load_cyclical_data_set(cyclical_data_dir, batch_size=params["batch_size"])
         lai_cyclical_loader = None
 
         validation_dir = os.path.join(res_dir, "validation")
-        os.makedirs(validation_dir)
+        if not Path(validation_dir).exists():
+            os.makedirs(validation_dir)
         (prosail_vae, all_train_loss_df, all_valid_loss_df, info_df) = train_prosailvae(
             params,
             parser,
@@ -951,7 +951,7 @@ def main():
                 axis=1,
             )
         res_df_filename = os.path.join(
-            os.path.join(os.path.join(res_dir, os.pardir), os.pardir),
+            res_dir,
             "model_results.csv",
         )
         if not os.path.isfile(res_df_filename):

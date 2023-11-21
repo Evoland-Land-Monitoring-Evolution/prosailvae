@@ -10,6 +10,7 @@ from prosailvae import __path__ as PPATH
 
 TOP_PATH = os.path.join(PPATH[0], os.pardir)
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import torch
 
@@ -38,6 +39,10 @@ def load_params(config_dir, config_file, parser=None):
         params["load_model"] = False
     if not "vae_load_dir_path" in params.keys():
         params["vae_load_dir_path"] = None
+    else:
+        params[
+            "vae_load_dir_path"
+        ] = f"{Path( __file__ ).parent.absolute()}/../../trained_models/{params['vae_load_dir_path']}"
     if not "lr_recompute_mode" in params.keys():
         params["lr_recompute_mode"] = False
     if not "init_model" in params.keys():

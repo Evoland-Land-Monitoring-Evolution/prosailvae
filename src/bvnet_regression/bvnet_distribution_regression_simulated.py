@@ -164,11 +164,9 @@ def main():
         tg_sigma = [parser.sigma]
         n_eval = 40000
         n_samples_sub = 40000
-        frm4veg_data_dir = "/work/scratch/zerahy/prosailvae/data/frm4veg_validation"
-        frm4veg_2021_data_dir = (
-            "/work/scratch/zerahy/prosailvae/data/frm4veg_2021_validation"
-        )
-        belsar_data_dir = "/work/scratch/zerahy/prosailvae/data/belSAR_validation"
+        frm4veg_data_dir = "/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/validation_data/frm4veg_validation"
+        frm4veg_2021_data_dir = "/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/validation_data/frm4veg_2021_validation"
+        belsar_data_dir = "/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/validation_data/belSAR_validation"
     tg_mu_0 = 2
     tg_sigma_0 = 3
     batch_size = 4096

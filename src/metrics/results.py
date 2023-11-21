@@ -11,6 +11,7 @@ TOP_PATH = os.path.join(PPATH[0], os.pardir)
 import shutil
 import warnings
 from datetime import datetime
+from pathlib import Path
 from time import sleep
 
 import matplotlib.pyplot as plt
@@ -203,9 +204,9 @@ def get_prosailvae_results_parser():
 def save_validation_results(
     model,
     res_dir,
-    frm4veg_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_validation",
-    frm4veg_2021_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/frm4veg_2021_validation",
-    belsar_data_dir="/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belsar_validation",
+    frm4veg_data_dir,
+    frm4veg_2021_data_dir,
+    belsar_data_dir,
     model_name="pvae",
     method="simple_interpolate",
     mode="sim_tg_mean",
@@ -261,9 +262,11 @@ def save_validation_results(
         bands_idx=model.encoder.bands,
     )
     lai_dir = os.path.join(res_dir, "lai_scatter")
-    os.makedirs(lai_dir)
+    if not Path(lai_dir).exists():
+        os.makedirs(lai_dir)
     ccc_dir = os.path.join(res_dir, "ccc_scatter")
-    os.makedirs(ccc_dir)
+    if not Path(ccc_dir).exists:
+        os.makedirs(ccc_dir)
     scatter_dir = {"lai": lai_dir, "ccc": ccc_dir}
     global_metrics = {}
 
@@ -357,7 +360,8 @@ def save_validation_results(
         )
 
         time_series_dir = os.path.join(res_dir, "time_series")
-        os.makedirs(time_series_dir)
+        if not Path(time_series_dir).exists():
+            os.makedirs(time_series_dir)
         fig, axs = plt.subplots(
             10, 1, dpi=150, sharex=True, tight_layout=True, figsize=(10, 2 * 10)
         )

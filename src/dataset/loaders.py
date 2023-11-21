@@ -7,11 +7,14 @@ Created on Tue Oct 25 13:39:40 2022
 import argparse
 import os
 import socket
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
-from mmdc_singledate.datamodules.components.datamodule_utils import create_tensors_path
+from mmdc_singledate.datamodules.components.datamodule_utils import (
+    create_tensors_path_set,
+)
 from mmdc_singledate.datamodules.mmdc_datamodule import (
     IterableMMDCDataset,
     destructure_batch,
@@ -19,7 +22,7 @@ from mmdc_singledate.datamodules.mmdc_datamodule import (
 )
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
-from torchutils.patches import patchify, unpatchify
+from torchutils.patches import patchify
 
 import prosailvae
 
@@ -190,9 +193,7 @@ def lr_finder_loader(
 ):
     if tensors_dir is None:
         if data_dir is None:
-            data_dir = os.path.join(
-                os.path.join(os.path.dirname(prosailvae.__file__), os.pardir), "data/"
-            )
+            data_dir = Path(f"{Path( __file__ ).parent.absolute()}/../../data/")
         s2_refl = torch.load(data_dir + f"/{file_prefix}prosail_s2_sim_refl.pt")
         len_dataset = s2_refl.size(0)
 
@@ -421,20 +422,20 @@ def get_mmdc_loaders(
 ):
     train_data_files = [
         list(i)
-        for i in create_tensors_path(
+        for i in create_tensors_path_set(
             path_to_exported_files=f"{tensors_dir}/", datasplit="train"
         )
     ]
     # print(f"{train_data_files}")
     val_data_files = [
         list(i)
-        for i in create_tensors_path(
+        for i in create_tensors_path_set(
             path_to_exported_files=f"{tensors_dir}/", datasplit="val"
         )
     ]
     test_data_files = [
         list(i)
-        for i in create_tensors_path(
+        for i in create_tensors_path_set(
             path_to_exported_files=f"{tensors_dir}/", datasplit="test"
         )
     ]

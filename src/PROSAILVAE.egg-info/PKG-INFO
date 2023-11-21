@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: PROSAILVAE
+Version: 0.0.0
+Summary: Add a short description here!
+Home-page: https://src.koda.cnrs.fr/mmdc/prosailvae
+Author: Yoel Zerah
+Author-email: yoel.zerah@univ-toulouse.fr
+License: AGPL-3.0
+Project-URL: Documentation, https://src.koda.cnrs.fr/mmdc
+Platform: any
+Classifier: Development Status :: 4 - Beta
+Classifier: Programming Language :: Python
+Description-Content-Type: text/x-rst; charset=UTF-8
+Requires-Dist: importlib-metadata; python_version < "3.8"
+Provides-Extra: testing
+Requires-Dist: setuptools; extra == "testing"
+Requires-Dist: pytest; extra == "testing"
+Requires-Dist: pytest-cov; extra == "testing"

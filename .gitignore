@@ -17,3 +17,5 @@ config/config_dev.json
 *.gpkg
 field_data/*/.gpkg
 data/validation_tiles/*
+/thirdparties/
+__pycache__/

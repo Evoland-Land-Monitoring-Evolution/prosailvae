@@ -19,7 +19,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import tikzplotlib
+
+# import tikzplotlib
 import torch
 from matplotlib.colors import LogNorm
 from matplotlib.patches import Rectangle
@@ -34,15 +35,14 @@ from utils.image_utils import rgb_render
 from validation.frm4veg_validation import load_frm4veg_data
 from validation.validation_utils import var_of_product
 
-
-def tikzplotlib_fix_ncols(obj):
-    """
-    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
-    """
-    if hasattr(obj, "_ncols"):
-        obj._ncol = obj._ncols
-    for child in obj.get_children():
-        tikzplotlib_fix_ncols(child)
+# def tikzplotlib_fix_ncols(obj):
+#     """
+#     workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
+#     """
+#     if hasattr(obj, "_ncols"):
+#         obj._ncol = obj._ncols
+#     for child in obj.get_children():
+#         tikzplotlib_fix_ncols(child)
 
 
 def plot_patches(
@@ -1463,519 +1463,519 @@ def plot_hist_and_cumhist_from_samples(samples, bins=50):
     return fig, ax
 
 
-def article_2D_aggregated_results(
-    plot_dir,
-    all_s2_r,
-    all_rec,
-    all_lai,
-    all_cab,
-    all_cw,
-    all_vars,
-    all_weiss_lai,
-    all_weiss_cab,
-    all_weiss_cw,
-    all_sigma,
-    all_ccc,
-    all_cw_rel,
-    cyclical_ref_lai,
-    cyclical_lai,
-    cyclical_lai_sigma,
-    #   gdf_lai, model_patch_pred, snap_patch_pred,
-    max_sigma=1.4,
-    n_sigma=2,
-    var_bounds=None,
-):
-    # var_bounds = get_prosail_var_bounds(var_bounds_type)
-    article_plot_dir = os.path.join(plot_dir, "article_aggregated_plots")
-    os.makedirs(article_plot_dir)
-    cyclical_piw = n_sigma * cyclical_lai_sigma
-    cyclical_mpiw = torch.mean(cyclical_piw)
-    cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
-    estdr = cyclical_lai_abs_error / cyclical_lai_sigma  # Error to std ration
-    fig, ax = plot_hist_and_cumhist_from_samples(estdr, bins=50)
-    ax.set_xlabel("Ratio of LAI error to predicted std.")
+# def article_2D_aggregated_results(
+#     plot_dir,
+#     all_s2_r,
+#     all_rec,
+#     all_lai,
+#     all_cab,
+#     all_cw,
+#     all_vars,
+#     all_weiss_lai,
+#     all_weiss_cab,
+#     all_weiss_cw,
+#     all_sigma,
+#     all_ccc,
+#     all_cw_rel,
+#     cyclical_ref_lai,
+#     cyclical_lai,
+#     cyclical_lai_sigma,
+#     #   gdf_lai, model_patch_pred, snap_patch_pred,
+#     max_sigma=1.4,
+#     n_sigma=2,
+#     var_bounds=None,
+# ):
+#     # var_bounds = get_prosail_var_bounds(var_bounds_type)
+#     article_plot_dir = os.path.join(plot_dir, "article_aggregated_plots")
+#     os.makedirs(article_plot_dir)
+#     cyclical_piw = n_sigma * cyclical_lai_sigma
+#     cyclical_mpiw = torch.mean(cyclical_piw)
+#     cyclical_lai_abs_error = (cyclical_ref_lai - cyclical_lai).abs()
+#     estdr = cyclical_lai_abs_error / cyclical_lai_sigma  # Error to std ration
+#     fig, ax = plot_hist_and_cumhist_from_samples(estdr, bins=50)
+#     ax.set_xlabel("Ratio of LAI error to predicted std.")
 
-    cyclical_pic = (
-        torch.logical_and(
-            cyclical_ref_lai < cyclical_lai + n_sigma / 2 * cyclical_lai_sigma,
-            cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma,
-        )
-        .int()
-        .float()
-    )
-    cyclical_picp = torch.mean(cyclical_pic)
-    ax.set_title(f"PICP:{cyclical_picp}, MESTDR:{estdr.mean().item()}")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/cyclical_lai_estdr.tex")
+#     cyclical_pic = (
+#         torch.logical_and(
+#             cyclical_ref_lai < cyclical_lai + n_sigma / 2 * cyclical_lai_sigma,
+#             cyclical_ref_lai >= cyclical_lai - n_sigma / 2 * cyclical_lai_sigma,
+#         )
+#         .int()
+#         .float()
+#     )
+#     cyclical_picp = torch.mean(cyclical_pic)
+#     ax.set_title(f"PICP:{cyclical_picp}, MESTDR:{estdr.mean().item()}")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/cyclical_lai_estdr.tex")
 
-    fig, ax = regression_plot(
-        pd.DataFrame(
-            {
-                "Simulated LAI": cyclical_ref_lai.detach().cpu().numpy(),
-                "Predicted LAI": cyclical_lai.detach().cpu().numpy(),
-            }
-        ),
-        "Simulated LAI",
-        "Predicted LAI",
-        hue=None,
-    )
-    ax.set_title(f"PICP: {cyclical_picp}")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/cyclical_lai_scatter.tex")
+#     fig, ax = regression_plot(
+#         pd.DataFrame(
+#             {
+#                 "Simulated LAI": cyclical_ref_lai.detach().cpu().numpy(),
+#                 "Predicted LAI": cyclical_lai.detach().cpu().numpy(),
+#             }
+#         ),
+#         "Simulated LAI",
+#         "Predicted LAI",
+#         hue=None,
+#     )
+#     ax.set_title(f"PICP: {cyclical_picp}")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/cyclical_lai_scatter.tex")
 
-    fig, ax = pair_plot(
-        all_vars.squeeze().permute(1, 0),
-        tensor_2=None,
-        features=PROSAILVARS,
-        res_dir=None,
-        filename=None,
-    )
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/sim_prosail_pair_plot.tex")
+#     fig, ax = pair_plot(
+#         all_vars.squeeze().permute(1, 0),
+#         tensor_2=None,
+#         features=PROSAILVARS,
+#         res_dir=None,
+#         filename=None,
+#     )
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/sim_prosail_pair_plot.tex")
 
-    fig, ax = plt.subplots()
-    ax.scatter((all_lai - all_weiss_lai), all_sigma[6, :], s=0.5)
-    ax.set_xlabel("LAI difference (SNAP LAI - predicted LAI)")
-    ax.set_ylabel("LAI latent sigma")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_sigma.tex")
+#     fig, ax = plt.subplots()
+#     ax.scatter((all_lai - all_weiss_lai), all_sigma[6, :], s=0.5)
+#     ax.set_xlabel("LAI difference (SNAP LAI - predicted LAI)")
+#     ax.set_ylabel("LAI latent sigma")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_sigma.tex")
 
-    fig, ax = plt.subplots()
-    ax.scatter(all_lai, all_sigma[6, :], s=0.5)
-    ax.set_xlabel("Predicted LAI")
-    ax.set_ylabel("LAI std")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/lai_vs_lai_std.tex")
+#     fig, ax = plt.subplots()
+#     ax.scatter(all_lai, all_sigma[6, :], s=0.5)
+#     ax.set_xlabel("Predicted LAI")
+#     ax.set_ylabel("LAI std")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/lai_vs_lai_std.tex")
 
-    fig, ax = plt.subplots()
-    ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)
-    sns.kdeplot(
-        data=pd.DataFrame(
-            {
-                "Reconstruction error": (all_s2_r - all_rec).abs().mean(0),
-                "LAI difference (Prediction - SNAP)": (all_lai - all_weiss_lai),
-            }
-        ),
-        x="Reconstruction error",
-        y="LAI difference (Prediction - SNAP)",
-        levels=5,
-        thresh=0.2,
-        ax=ax,
-        color="red",
-    )
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_rec_err.tex")
+#     fig, ax = plt.subplots()
+#     ax.scatter((all_s2_r - all_rec).abs().mean(0), (all_lai - all_weiss_lai), s=0.5)
+#     sns.kdeplot(
+#         data=pd.DataFrame(
+#             {
+#                 "Reconstruction error": (all_s2_r - all_rec).abs().mean(0),
+#                 "LAI difference (Prediction - SNAP)": (all_lai - all_weiss_lai),
+#             }
+#         ),
+#         x="Reconstruction error",
+#         y="LAI difference (Prediction - SNAP)",
+#         levels=5,
+#         thresh=0.2,
+#         ax=ax,
+#         color="red",
+#     )
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/lai_err_vs_rec_err.tex")
 
-    # fig, ax = plt.subplots()
-    # ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
-    # ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
-    # ax.set_ylabel('Cab latent sigma')
-    # tikzplotlib_fix_ncols(fig)
-    # tikzplotlib.save(f"{article_plot_dir}/cab_err_vs_sigma.tex")
+#     # fig, ax = plt.subplots()
+#     # ax.scatter((all_cab - all_weiss_cab).abs(), all_sigma[1,:], s=0.5)
+#     # ax.set_xlabel('Cab absolute difference (SNAP Cab - predicted Cab)')
+#     # ax.set_ylabel('Cab latent sigma')
+#     # tikzplotlib_fix_ncols(fig)
+#     # tikzplotlib.save(f"{article_plot_dir}/cab_err_vs_sigma.tex")
 
-    # fig, ax = plt.subplots()
-    # ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
-    # ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
-    # ax.set_ylabel('Cw latent sigma')
-    # tikzplotlib_fix_ncols(fig)
-    # tikzplotlib.save(f"{article_plot_dir}/cw_err_vs_sigma.tex")
-    # plt.close('all')
+#     # fig, ax = plt.subplots()
+#     # ax.scatter((all_cw - all_weiss_cw).abs(), all_sigma[4,:], s=0.5)
+#     # ax.set_xlabel('Cw absolute difference (SNAP Cw - predicted Cw)')
+#     # ax.set_ylabel('Cw latent sigma')
+#     # tikzplotlib_fix_ncols(fig)
+#     # tikzplotlib.save(f"{article_plot_dir}/cw_err_vs_sigma.tex")
+#     # plt.close('all')
 
-    for idx, prosail_var in enumerate(PROSAILVARS):
-        fig, ax = plt.subplots(tight_layout=True, dpi=150)
-        ax.hist(
-            all_vars[idx, ...].reshape(-1).cpu(),
-            bins=100,
-            density=True,
-            histtype="step",
-        )
-        ax.set_yticks([])
-        ax.set_xlabel(prosail_var)
-        ax.set_xlim(
-            var_bounds.asdict()[PROSAILVARS[idx]]["low"],
-            var_bounds.asdict()[PROSAILVARS[idx]]["high"],
-        )
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_pred_dist.tex")
-    plt.close("all")
+#     for idx, prosail_var in enumerate(PROSAILVARS):
+#         fig, ax = plt.subplots(tight_layout=True, dpi=150)
+#         ax.hist(
+#             all_vars[idx, ...].reshape(-1).cpu(),
+#             bins=100,
+#             density=True,
+#             histtype="step",
+#         )
+#         ax.set_yticks([])
+#         ax.set_xlabel(prosail_var)
+#         ax.set_xlim(
+#             var_bounds.asdict()[PROSAILVARS[idx]]["low"],
+#             var_bounds.asdict()[PROSAILVARS[idx]]["high"],
+#         )
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_pred_dist.tex")
+#     plt.close("all")
 
-    fig, ax = plt.subplots(tight_layout=True, dpi=150)
-    for idx, prosail_var in enumerate(PROSAILVARS):
-        ax.hist(
-            all_sigma[idx, ...].reshape(-1).cpu(),
-            bins=100,
-            density=True,
-            histtype="step",
-        )
-        ax.set_yticks([])
-        # ax[row, col].set_xlim(0, max_sigma)
-        ax.set_xlabel(f"{prosail_var} std")
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_std.tex")
-    plt.close("all")
+#     fig, ax = plt.subplots(tight_layout=True, dpi=150)
+#     for idx, prosail_var in enumerate(PROSAILVARS):
+#         ax.hist(
+#             all_sigma[idx, ...].reshape(-1).cpu(),
+#             bins=100,
+#             density=True,
+#             histtype="step",
+#         )
+#         ax.set_yticks([])
+#         # ax[row, col].set_xlim(0, max_sigma)
+#         ax.set_xlabel(f"{prosail_var} std")
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{article_plot_dir}/{prosail_var}_std.tex")
+#     plt.close("all")
 
-    for idx, band in enumerate(BANDS):
-        fig, ax = plt.subplots(tight_layout=True, dpi=150)
-        fig, ax = regression_plot(
-            pd.DataFrame(
-                {
-                    band: all_s2_r[idx, :].reshape(-1).detach().cpu().numpy(),
-                    f"Reconstructed {band}": all_rec[idx, :]
-                    .reshape(-1)
-                    .detach()
-                    .cpu()
-                    .numpy(),
-                }
-            ),
-            band,
-            f"Reconstructed {band}",
-            hue=None,
-        )
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{article_plot_dir}/{band}_scatter_true_vs_pred.tex")
-    plt.close("all")
+#     for idx, band in enumerate(BANDS):
+#         fig, ax = plt.subplots(tight_layout=True, dpi=150)
+#         fig, ax = regression_plot(
+#             pd.DataFrame(
+#                 {
+#                     band: all_s2_r[idx, :].reshape(-1).detach().cpu().numpy(),
+#                     f"Reconstructed {band}": all_rec[idx, :]
+#                     .reshape(-1)
+#                     .detach()
+#                     .cpu()
+#                     .numpy(),
+#                 }
+#             ),
+#             band,
+#             f"Reconstructed {band}",
+#             hue=None,
+#         )
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{article_plot_dir}/{band}_scatter_true_vs_pred.tex")
+#     plt.close("all")
 
-    for idx, band in enumerate(BANDS):
-        fig, ax = plt.subplots(figsize=(2, 2), tight_layout=True, dpi=150)
-        xmin = min(
-            all_s2_r[idx, :].cpu().min().item(), all_rec[idx, :].cpu().min().item()
-        )
-        xmax = max(
-            all_s2_r[idx, :].cpu().max().item(), all_rec[idx, :].cpu().max().item()
-        )
-        ax.hist2d(
-            all_s2_r[idx, :].reshape(-1).numpy(),
-            all_rec[idx, :].reshape(-1).cpu().numpy(),
-            range=[[xmin, xmax], [xmin, xmax]],
-            bins=100,
-            cmap="viridis",
-            norm=LogNorm(),
-        )
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        ax.plot(
-            [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-            [
-                min(xlim[0], ylim[0]),
-                max(xlim[1], ylim[1]),
-            ],
-            "k",
-        )
-        ax.set_yticks([])
-        ax.set_ylabel(f"Reconstructed {band}")
-        ax.set_xlabel(f"{band}")
-        ax.set_aspect("equal")
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{article_plot_dir}/{band}_2dhist_true_vs_pred.tex")
-    plt.close("all")
+#     for idx, band in enumerate(BANDS):
+#         fig, ax = plt.subplots(figsize=(2, 2), tight_layout=True, dpi=150)
+#         xmin = min(
+#             all_s2_r[idx, :].cpu().min().item(), all_rec[idx, :].cpu().min().item()
+#         )
+#         xmax = max(
+#             all_s2_r[idx, :].cpu().max().item(), all_rec[idx, :].cpu().max().item()
+#         )
+#         ax.hist2d(
+#             all_s2_r[idx, :].reshape(-1).numpy(),
+#             all_rec[idx, :].reshape(-1).cpu().numpy(),
+#             range=[[xmin, xmax], [xmin, xmax]],
+#             bins=100,
+#             cmap="viridis",
+#             norm=LogNorm(),
+#         )
+#         xlim = ax.get_xlim()
+#         ylim = ax.get_ylim()
+#         ax.plot(
+#             [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#             [
+#                 min(xlim[0], ylim[0]),
+#                 max(xlim[1], ylim[1]),
+#             ],
+#             "k",
+#         )
+#         ax.set_yticks([])
+#         ax.set_ylabel(f"Reconstructed {band}")
+#         ax.set_xlabel(f"{band}")
+#         ax.set_aspect("equal")
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{article_plot_dir}/{band}_2dhist_true_vs_pred.tex")
+#     plt.close("all")
 
-    n_cols = 5
-    n_rows = 2
-    fig, ax = plt.subplots(
-        n_rows, n_cols, figsize=(2 * n_cols, n_rows * 2), tight_layout=True, dpi=150
-    )
-    for idx, band in enumerate(BANDS):
-        row = idx // n_cols
-        col = idx % n_cols
-        xmin = min(
-            all_s2_r[idx, :].cpu().min().item(), all_rec[idx, :].cpu().min().item()
-        )
-        xmax = max(
-            all_s2_r[idx, :].cpu().max().item(), all_rec[idx, :].cpu().max().item()
-        )
-        ax[row, col].hist2d(
-            all_s2_r[idx, :].reshape(-1).numpy(),
-            all_rec[idx, :].reshape(-1).cpu().numpy(),
-            range=[[xmin, xmax], [xmin, xmax]],
-            bins=100,
-            cmap="viridis",
-            norm=LogNorm(),
-        )
+#     n_cols = 5
+#     n_rows = 2
+#     fig, ax = plt.subplots(
+#         n_rows, n_cols, figsize=(2 * n_cols, n_rows * 2), tight_layout=True, dpi=150
+#     )
+#     for idx, band in enumerate(BANDS):
+#         row = idx // n_cols
+#         col = idx % n_cols
+#         xmin = min(
+#             all_s2_r[idx, :].cpu().min().item(), all_rec[idx, :].cpu().min().item()
+#         )
+#         xmax = max(
+#             all_s2_r[idx, :].cpu().max().item(), all_rec[idx, :].cpu().max().item()
+#         )
+#         ax[row, col].hist2d(
+#             all_s2_r[idx, :].reshape(-1).numpy(),
+#             all_rec[idx, :].reshape(-1).cpu().numpy(),
+#             range=[[xmin, xmax], [xmin, xmax]],
+#             bins=100,
+#             cmap="viridis",
+#             norm=LogNorm(),
+#         )
 
-        xlim = ax[row, col].get_xlim()
-        ylim = ax[row, col].get_ylim()
-        ax[row, col].plot(
-            [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-            [
-                min(xlim[0], ylim[0]),
-                max(xlim[1], ylim[1]),
-            ],
-            "k",
-        )
-        ax[row, col].set_yticks([])
-        ax[row, col].set_ylabel(f"Reconstructed {band}")
-        ax[row, col].set_xlabel(f"True {band}")
-        ax[row, col].set_aspect("equal")
-        _, _, r2_band, rmse_band = regression_metrics(
-            all_s2_r[idx, :].reshape(-1).numpy(), all_rec[idx, :].reshape(-1).cpu()
-        )
-        perf_text = f"r2: {r2_band:.2f} - RMSE: {rmse_band:.2f}"
-        ax[row, col].text(
-            0.01, 0.99, perf_text, ha="left", va="top", transform=ax[row, col].transAxes
-        )
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/2dhist_true_vs_pred.tex")
-    plt.close("all")
+#         xlim = ax[row, col].get_xlim()
+#         ylim = ax[row, col].get_ylim()
+#         ax[row, col].plot(
+#             [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#             [
+#                 min(xlim[0], ylim[0]),
+#                 max(xlim[1], ylim[1]),
+#             ],
+#             "k",
+#         )
+#         ax[row, col].set_yticks([])
+#         ax[row, col].set_ylabel(f"Reconstructed {band}")
+#         ax[row, col].set_xlabel(f"True {band}")
+#         ax[row, col].set_aspect("equal")
+#         _, _, r2_band, rmse_band = regression_metrics(
+#             all_s2_r[idx, :].reshape(-1).numpy(), all_rec[idx, :].reshape(-1).cpu()
+#         )
+#         perf_text = f"r2: {r2_band:.2f} - RMSE: {rmse_band:.2f}"
+#         ax[row, col].text(
+#             0.01, 0.99, perf_text, ha="left", va="top", transform=ax[row, col].transAxes
+#         )
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/2dhist_true_vs_pred.tex")
+#     plt.close("all")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
-    xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
-    m, b, r2, rmse = regression_metrics(
-        all_lai.detach().cpu().numpy(), all_weiss_lai.detach().cpu().numpy()
-    )
-    ax.hist2d(
-        all_lai.cpu().numpy(),
-        all_weiss_lai.cpu().numpy(),
-        range=[[xmin, xmax], [xmin, xmax]],
-        bins=100,
-        cmap="viridis",
-        norm=LogNorm(),
-    )
-    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b], "r")
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot(
-        [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-        [
-            min(xlim[0], ylim[0]),
-            max(xlim[1], ylim[1]),
-        ],
-        "k",
-    )
-    ax.set_xlabel("PROSAIL-VAE LAI")
-    ax.set_ylabel("SL2P LAI")
-    ax.set_aspect("equal")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_lai_2dhist_pvae_vs_snap.tex")
+#     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+#     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
+#     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
+#     m, b, r2, rmse = regression_metrics(
+#         all_lai.detach().cpu().numpy(), all_weiss_lai.detach().cpu().numpy()
+#     )
+#     ax.hist2d(
+#         all_lai.cpu().numpy(),
+#         all_weiss_lai.cpu().numpy(),
+#         range=[[xmin, xmax], [xmin, xmax]],
+#         bins=100,
+#         cmap="viridis",
+#         norm=LogNorm(),
+#     )
+#     ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b], "r")
+#     xlim = ax.get_xlim()
+#     ylim = ax.get_ylim()
+#     ax.plot(
+#         [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#         [
+#             min(xlim[0], ylim[0]),
+#             max(xlim[1], ylim[1]),
+#         ],
+#         "k",
+#     )
+#     ax.set_xlabel("PROSAIL-VAE LAI")
+#     ax.set_ylabel("SL2P LAI")
+#     ax.set_aspect("equal")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/all_lai_2dhist_pvae_vs_snap.tex")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b, r2, rmse = regression_metrics(
-        all_weiss_lai.detach().cpu().numpy(), all_lai.detach().cpu().numpy()
-    )
-    xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
-    xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
-    ax.scatter(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(), s=0.5)
-    ax.plot(
-        [xmin, xmax],
-        [m * xmin + b, m * xmax + b],
-        "r",
-        label=f"{m:.2f} x + {b:.2f}\n r2 = {r2:.2f}\n RMSE: {rmse:.2f}",
-    )
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot(
-        [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-        [
-            min(xlim[0], ylim[0]),
-            max(xlim[1], ylim[1]),
-        ],
-        "k",
-    )
-    ax.legend()
-    ax.set_ylabel("PROSAIL-VAE LAI")
-    ax.set_xlabel("SL2P LAI")
-    ax.set_aspect("equal")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_lai_scatter_true_vs_pred.tex")
+#     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+#     m, b, r2, rmse = regression_metrics(
+#         all_weiss_lai.detach().cpu().numpy(), all_lai.detach().cpu().numpy()
+#     )
+#     xmin = min(all_lai.cpu().min().item(), all_weiss_lai.cpu().min().item())
+#     xmax = max(all_lai.cpu().max().item(), all_weiss_lai.cpu().max().item())
+#     ax.scatter(all_weiss_lai.cpu().numpy(), all_lai.cpu().numpy(), s=0.5)
+#     ax.plot(
+#         [xmin, xmax],
+#         [m * xmin + b, m * xmax + b],
+#         "r",
+#         label=f"{m:.2f} x + {b:.2f}\n r2 = {r2:.2f}\n RMSE: {rmse:.2f}",
+#     )
+#     xlim = ax.get_xlim()
+#     ylim = ax.get_ylim()
+#     ax.plot(
+#         [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#         [
+#             min(xlim[0], ylim[0]),
+#             max(xlim[1], ylim[1]),
+#         ],
+#         "k",
+#     )
+#     ax.legend()
+#     ax.set_ylabel("PROSAIL-VAE LAI")
+#     ax.set_xlabel("SL2P LAI")
+#     ax.set_aspect("equal")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/all_lai_scatter_true_vs_pred.tex")
 
-    ccc = all_cab * all_lai
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b, r2, rmse = regression_metrics(
-        all_weiss_cab.detach().cpu().numpy(), ccc.detach().cpu().numpy()
-    )
-    xmin = min(ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
-    xmax = max(ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
-    ax.scatter(all_weiss_cab.cpu().numpy(), ccc.cpu().numpy(), s=0.5)
-    ax.plot(
-        [xmin, xmax],
-        [m * xmin + b, m * xmax + b],
-        "r",
-        label=f"{m:.2f} x + {b:.2f}\n r2 = {r2:.2f}\n RMSE: {rmse:.2f}",
-    )
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot(
-        [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-        [
-            min(xlim[0], ylim[0]),
-            max(xlim[1], ylim[1]),
-        ],
-        "k",
-    )
-    ax.legend()
-    ax.set_ylabel(f"PROSAIL-VAE CCC")
-    ax.set_xlabel(f"SL2P CCC")
-    ax.set_aspect("equal")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_ccc_scatter_pvae_vs_snap.tex")
+#     ccc = all_cab * all_lai
+#     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+#     m, b, r2, rmse = regression_metrics(
+#         all_weiss_cab.detach().cpu().numpy(), ccc.detach().cpu().numpy()
+#     )
+#     xmin = min(ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+#     xmax = max(ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
+#     ax.scatter(all_weiss_cab.cpu().numpy(), ccc.cpu().numpy(), s=0.5)
+#     ax.plot(
+#         [xmin, xmax],
+#         [m * xmin + b, m * xmax + b],
+#         "r",
+#         label=f"{m:.2f} x + {b:.2f}\n r2 = {r2:.2f}\n RMSE: {rmse:.2f}",
+#     )
+#     xlim = ax.get_xlim()
+#     ylim = ax.get_ylim()
+#     ax.plot(
+#         [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#         [
+#             min(xlim[0], ylim[0]),
+#             max(xlim[1], ylim[1]),
+#         ],
+#         "k",
+#     )
+#     ax.legend()
+#     ax.set_ylabel(f"PROSAIL-VAE CCC")
+#     ax.set_xlabel(f"SL2P CCC")
+#     ax.set_aspect("equal")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/all_ccc_scatter_pvae_vs_snap.tex")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
-    xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
-    ax.hist2d(
-        all_weiss_cab.cpu().numpy(),
-        all_ccc.cpu().numpy(),
-        range=[[xmin, xmax], [xmin, xmax]],
-        bins=100,
-        cmap="viridis",
-        norm=LogNorm(),
-    )
-    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b], "r")
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot(
-        [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-        [
-            min(xlim[0], ylim[0]),
-            max(xlim[1], ylim[1]),
-        ],
-        "k",
-    )
-    ax.legend()
-    ax.set_xlabel(f"PROSAIL-VAE CCC")
-    ax.set_ylabel(f"SL2P CCC")
-    ax.set_aspect("equal")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_ccc_2dhist_pvae_vs_snap.tex")
+#     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+#     xmin = min(all_ccc.cpu().min().item(), all_weiss_cab.cpu().min().item())
+#     xmax = max(all_ccc.cpu().max().item(), all_weiss_cab.cpu().max().item())
+#     ax.hist2d(
+#         all_weiss_cab.cpu().numpy(),
+#         all_ccc.cpu().numpy(),
+#         range=[[xmin, xmax], [xmin, xmax]],
+#         bins=100,
+#         cmap="viridis",
+#         norm=LogNorm(),
+#     )
+#     ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b], "r")
+#     xlim = ax.get_xlim()
+#     ylim = ax.get_ylim()
+#     ax.plot(
+#         [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#         [
+#             min(xlim[0], ylim[0]),
+#             max(xlim[1], ylim[1]),
+#         ],
+#         "k",
+#     )
+#     ax.legend()
+#     ax.set_xlabel(f"PROSAIL-VAE CCC")
+#     ax.set_ylabel(f"SL2P CCC")
+#     ax.set_aspect("equal")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/all_ccc_2dhist_pvae_vs_snap.tex")
 
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    all_cwc = all_lai * all_cw
-    xmin = min(all_cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
-    xmax = max(all_cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
-    ax.hist2d(
-        all_weiss_cw.cpu().numpy(),
-        all_cwc.cpu().numpy(),
-        range=[[xmin, xmax], [xmin, xmax]],
-        bins=100,
-        cmap="viridis",
-        norm=LogNorm(),
-    )
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b], "r")
-    ax.plot(
-        [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-        [
-            min(xlim[0], ylim[0]),
-            max(xlim[1], ylim[1]),
-        ],
-        "k",
-    )
-    ax.legend()
-    ax.set_xlabel(f"PROSAIL-VAE CWC")
-    ax.set_ylabel(f"SL2P CWC")
-    ax.set_aspect("equal")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_cwc_2dhist_pvae_vs_snap.tex")
+#     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+#     all_cwc = all_lai * all_cw
+#     xmin = min(all_cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
+#     xmax = max(all_cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
+#     ax.hist2d(
+#         all_weiss_cw.cpu().numpy(),
+#         all_cwc.cpu().numpy(),
+#         range=[[xmin, xmax], [xmin, xmax]],
+#         bins=100,
+#         cmap="viridis",
+#         norm=LogNorm(),
+#     )
+#     xlim = ax.get_xlim()
+#     ylim = ax.get_ylim()
+#     ax.plot([xmin, xmax], [m * xmin + b, m * xmax + b], "r")
+#     ax.plot(
+#         [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#         [
+#             min(xlim[0], ylim[0]),
+#             max(xlim[1], ylim[1]),
+#         ],
+#         "k",
+#     )
+#     ax.legend()
+#     ax.set_xlabel(f"PROSAIL-VAE CWC")
+#     ax.set_ylabel(f"SL2P CWC")
+#     ax.set_aspect("equal")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/all_cwc_2dhist_pvae_vs_snap.tex")
 
-    fig, ax = plt.subplots()
-    err = (all_s2_r - all_rec).reshape(len(BANDS), -1).abs().cpu()
-    ax.boxplot(err, positions=np.arange(len(BANDS)), showfliers=False)
-    ax.set_yscale("log")
-    # ax.set_yscale('symlog',linthresh=1e-6)
-    ax.set_xticklabels(BANDS)
-    ax.set_ylabel("Absolute error")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/bands_err_boxplot.tex")
+#     fig, ax = plt.subplots()
+#     err = (all_s2_r - all_rec).reshape(len(BANDS), -1).abs().cpu()
+#     ax.boxplot(err, positions=np.arange(len(BANDS)), showfliers=False)
+#     ax.set_yscale("log")
+#     # ax.set_yscale('symlog',linthresh=1e-6)
+#     ax.set_xticklabels(BANDS)
+#     ax.set_ylabel("Absolute error")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/bands_err_boxplot.tex")
 
-    cwc = all_lai * all_cw
-    fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
-    m, b, r2, rmse = regression_metrics(
-        all_weiss_cw.detach().cpu().numpy(), cwc.detach().cpu().numpy()
-    )
+#     cwc = all_lai * all_cw
+#     fig, ax = plt.subplots(1, tight_layout=True, dpi=150)
+#     m, b, r2, rmse = regression_metrics(
+#         all_weiss_cw.detach().cpu().numpy(), cwc.detach().cpu().numpy()
+#     )
 
-    xmin = min(cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
-    xmax = max(cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
-    ax.scatter(all_weiss_cw.cpu().numpy(), cwc.cpu().numpy(), s=0.5)
-    ax.plot(
-        [xmin, xmax],
-        [m * xmin + b, m * xmax + b],
-        "r",
-        label=f"{m:.2f} x + {b:.2f}\n r2 = {r2:.2f}\n RMSE: {rmse:.2f}",
-    )
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax.plot(
-        [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
-        [
-            min(xlim[0], ylim[0]),
-            max(xlim[1], ylim[1]),
-        ],
-        "k",
-    )
-    ax.legend()
-    ax.set_ylabel(f"Predicted CWC")
-    ax.set_xlabel(f"SNAP CWC")
-    ax.set_aspect("equal")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/all_cwc_scatter_true_vs_pred.tex")
-    plt.close("all")
+#     xmin = min(cwc.cpu().min().item(), all_weiss_cw.cpu().min().item())
+#     xmax = max(cwc.cpu().max().item(), all_weiss_cw.cpu().max().item())
+#     ax.scatter(all_weiss_cw.cpu().numpy(), cwc.cpu().numpy(), s=0.5)
+#     ax.plot(
+#         [xmin, xmax],
+#         [m * xmin + b, m * xmax + b],
+#         "r",
+#         label=f"{m:.2f} x + {b:.2f}\n r2 = {r2:.2f}\n RMSE: {rmse:.2f}",
+#     )
+#     xlim = ax.get_xlim()
+#     ylim = ax.get_ylim()
+#     ax.plot(
+#         [min(xlim[0], ylim[0]), max(xlim[1], ylim[1])],
+#         [
+#             min(xlim[0], ylim[0]),
+#             max(xlim[1], ylim[1]),
+#         ],
+#         "k",
+#     )
+#     ax.legend()
+#     ax.set_ylabel(f"Predicted CWC")
+#     ax.set_xlabel(f"SNAP CWC")
+#     ax.set_aspect("equal")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/all_cwc_scatter_true_vs_pred.tex")
+#     plt.close("all")
 
-    fig, axs = plt.subplots(6, 4, figsize=(4 * 4, 10 * 4), dpi=150)
-    for j, varname in enumerate(PROSAILVARS):
-        row = j // 2
-        col = (j % 2) * 2
-        hist, bin_edges = np.histogram(
-            all_vars[j, ...].reshape(-1).cpu(), bins=100, density=True
-        )
-        axs[row, col].plot(
-            np.concatenate(
-                (
-                    np.array([var_bounds.asdict()[PROSAILVARS[j]]["low"]]),
-                    bin_edges,
-                    np.array([var_bounds.asdict()[PROSAILVARS[j]]["high"]]),
-                )
-            ),
-            np.concatenate((np.array([0, 0]), hist, np.array([0]))),
-            lw=1,
-        )
-        axs[row, col].set_xlim(
-            var_bounds.asdict()[PROSAILVARS[j]]["low"],
-            var_bounds.asdict()[PROSAILVARS[j]]["high"],
-        )
-        axs[row, col].set_xlabel(varname)
-        axs[row, col].set_yticks([])
-        hist, bin_edges = np.histogram(
-            all_sigma[j, ...].reshape(-1).cpu(), bins=100, density=True
-        )
-        axs[row, col + 1].plot(bin_edges, np.concatenate((np.array([0]), hist)), lw=1)
-        # axs[row, col+1].hist(all_sigma[j,...].reshape(-1).cpu(), bins=100, density=True)#, histtype='step')
-        axs[row, col + 1].set_yticks([])
-        axs[row, col + 1].set_xlabel(f"{varname} std")
-        # j += 1
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/aggregated_all_vars_and_std.tex")
+#     fig, axs = plt.subplots(6, 4, figsize=(4 * 4, 10 * 4), dpi=150)
+#     for j, varname in enumerate(PROSAILVARS):
+#         row = j // 2
+#         col = (j % 2) * 2
+#         hist, bin_edges = np.histogram(
+#             all_vars[j, ...].reshape(-1).cpu(), bins=100, density=True
+#         )
+#         axs[row, col].plot(
+#             np.concatenate(
+#                 (
+#                     np.array([var_bounds.asdict()[PROSAILVARS[j]]["low"]]),
+#                     bin_edges,
+#                     np.array([var_bounds.asdict()[PROSAILVARS[j]]["high"]]),
+#                 )
+#             ),
+#             np.concatenate((np.array([0, 0]), hist, np.array([0]))),
+#             lw=1,
+#         )
+#         axs[row, col].set_xlim(
+#             var_bounds.asdict()[PROSAILVARS[j]]["low"],
+#             var_bounds.asdict()[PROSAILVARS[j]]["high"],
+#         )
+#         axs[row, col].set_xlabel(varname)
+#         axs[row, col].set_yticks([])
+#         hist, bin_edges = np.histogram(
+#             all_sigma[j, ...].reshape(-1).cpu(), bins=100, density=True
+#         )
+#         axs[row, col + 1].plot(bin_edges, np.concatenate((np.array([0]), hist)), lw=1)
+#         # axs[row, col+1].hist(all_sigma[j,...].reshape(-1).cpu(), bins=100, density=True)#, histtype='step')
+#         axs[row, col + 1].set_yticks([])
+#         axs[row, col + 1].set_xlabel(f"{varname} std")
+#         # j += 1
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/aggregated_all_vars_and_std.tex")
 
-    fig, axs = plt.subplots(6, 2, figsize=(4 * 2, 10 * 2), dpi=150)
-    for j, varname in enumerate(PROSAILVARS):
-        row = j // 2
-        col = j % 2
-        axs[row, col].hist2d(
-            all_vars[j, ...].reshape(-1).cpu().numpy(),
-            all_sigma[j, ...].reshape(-1).cpu().numpy(),
-            bins=100,
-            cmap="viridis",
-            norm=LogNorm(),
-        )
-        hist, bin_edges = np.histogram(
-            all_vars[j, ...].reshape(-1).cpu(), bins=100, density=True
-        )
-        axs[row, col].set_xlabel(f"{varname}")
-        axs[row, col].set_ylabel(f"{varname} std")
-        # j += 1
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{article_plot_dir}/aggregated_all_vars_vs_std.tex")
+#     fig, axs = plt.subplots(6, 2, figsize=(4 * 2, 10 * 2), dpi=150)
+#     for j, varname in enumerate(PROSAILVARS):
+#         row = j // 2
+#         col = j % 2
+#         axs[row, col].hist2d(
+#             all_vars[j, ...].reshape(-1).cpu().numpy(),
+#             all_sigma[j, ...].reshape(-1).cpu().numpy(),
+#             bins=100,
+#             cmap="viridis",
+#             norm=LogNorm(),
+#         )
+#         hist, bin_edges = np.histogram(
+#             all_vars[j, ...].reshape(-1).cpu(), bins=100, density=True
+#         )
+#         axs[row, col].set_xlabel(f"{varname}")
+#         axs[row, col].set_ylabel(f"{varname} std")
+#         # j += 1
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{article_plot_dir}/aggregated_all_vars_vs_std.tex")
 
-    if not socket.gethostname() == "CELL200973":
-        fig, ax = pair_plot(
-            all_vars.squeeze().permute(1, 0),
-            tensor_2=None,
-            features=PROSAILVARS,
-            res_dir=article_plot_dir,
-            filename="prosail_vars_pair_plot.png",
-        )
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{article_plot_dir}/prosail_vars_pair_plot.tex")
+#     if not socket.gethostname() == "CELL200973":
+#         fig, ax = pair_plot(
+#             all_vars.squeeze().permute(1, 0),
+#             tensor_2=None,
+#             features=PROSAILVARS,
+#             res_dir=article_plot_dir,
+#             filename="prosail_vars_pair_plot.png",
+#         )
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{article_plot_dir}/prosail_vars_pair_plot.tex")
 
 
 def PROSAIL_2D_aggregated_results(
@@ -2377,217 +2377,217 @@ def PROSAIL_2D_aggregated_results(
     return
 
 
-def PROSAIL_2D_article_plots(
-    plot_dir,
-    sim_image,
-    cropped_image,
-    rec_image,
-    weiss_lai,
-    weiss_cab,
-    weiss_cw,
-    sigma_image,
-    i,
-    info=None,
-):
-    art_plot_dir = os.path.join(plot_dir, "article_plots")
-    os.makedirs(art_plot_dir)
+# def PROSAIL_2D_article_plots(
+#     plot_dir,
+#     sim_image,
+#     cropped_image,
+#     rec_image,
+#     weiss_lai,
+#     weiss_cab,
+#     weiss_cw,
+#     sigma_image,
+#     i,
+#     info=None,
+# ):
+#     art_plot_dir = os.path.join(plot_dir, "article_plots")
+#     os.makedirs(art_plot_dir)
 
-    fig, _ = plot_patches([cropped_image.cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_rgb.tex")
+#     fig, _ = plot_patches([cropped_image.cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_rgb.tex")
 
-    fig, _ = plot_patches([rec_image.cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_rgb.tex")
+#     fig, _ = plot_patches([rec_image.cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_rgb.tex")
 
-    fig, _ = plot_patches([cropped_image[torch.tensor([8, 6, 3]), ...].cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_B11-8-5.tex")
+#     fig, _ = plot_patches([cropped_image[torch.tensor([8, 6, 3]), ...].cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-original_B11-8-5.tex")
 
-    fig, _ = plot_patches([rec_image[torch.tensor([8, 6, 3]), ...].cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(
-        f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_B11-8-5.tex"
-    )
+#     fig, _ = plot_patches([rec_image[torch.tensor([8, 6, 3]), ...].cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(
+#         f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-reconstruction_B11-8-5.tex"
+#     )
 
-    vmin_lai = min(
-        sim_image[6, ...].unsqueeze(0).cpu().min().item(),
-        weiss_lai.unsqueeze(0).cpu().min().item(),
-    )
-    vmax_lai = max(
-        sim_image[6, ...].unsqueeze(0).cpu().max().item(),
-        weiss_lai.unsqueeze(0).cpu().max().item(),
-    )
-    fig, _ = plot_patches((weiss_lai.unsqueeze(0).cpu()), vmin=vmin_lai, vmax=vmax_lai)
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_LAI.tex")
+#     vmin_lai = min(
+#         sim_image[6, ...].unsqueeze(0).cpu().min().item(),
+#         weiss_lai.unsqueeze(0).cpu().min().item(),
+#     )
+#     vmax_lai = max(
+#         sim_image[6, ...].unsqueeze(0).cpu().max().item(),
+#         weiss_lai.unsqueeze(0).cpu().max().item(),
+#     )
+#     fig, _ = plot_patches((weiss_lai.unsqueeze(0).cpu()), vmin=vmin_lai, vmax=vmax_lai)
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_LAI.tex")
 
-    fig, _ = plot_patches(
-        [sim_image[6, ...].unsqueeze(0).cpu()], vmin=vmin_lai, vmax=vmax_lai
-    )
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI.tex")
+#     fig, _ = plot_patches(
+#         [sim_image[6, ...].unsqueeze(0).cpu()], vmin=vmin_lai, vmax=vmax_lai
+#     )
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI.tex")
 
-    fig, _ = plot_patches([sigma_image[6, ...].unsqueeze(0).cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI-std.tex")
+#     fig, _ = plot_patches([sigma_image[6, ...].unsqueeze(0).cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-LAI-std.tex")
 
-    ccc = sim_image[1, ...] * sim_image[6, ...]
-    ccc_std = var_of_product(
-        sigma_image[1, ...].pow(2),
-        sigma_image[6, ...].pow(2),
-        sim_image[1, ...],
-        sim_image[6, ...],
-    ).sqrt()
-    vmin_ccc = min(
-        ccc.unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item()
-    )
-    vmax_ccc = max(
-        ccc.unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item()
-    )
-    fig, _ = plot_patches((weiss_cab.unsqueeze(0).cpu()), vmin=vmin_ccc, vmax=vmax_ccc)
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_CCC.tex")
+#     ccc = sim_image[1, ...] * sim_image[6, ...]
+#     ccc_std = var_of_product(
+#         sigma_image[1, ...].pow(2),
+#         sigma_image[6, ...].pow(2),
+#         sim_image[1, ...],
+#         sim_image[6, ...],
+#     ).sqrt()
+#     vmin_ccc = min(
+#         ccc.unsqueeze(0).cpu().min().item(), weiss_cab.unsqueeze(0).cpu().min().item()
+#     )
+#     vmax_ccc = max(
+#         ccc.unsqueeze(0).cpu().max().item(), weiss_cab.unsqueeze(0).cpu().max().item()
+#     )
+#     fig, _ = plot_patches((weiss_cab.unsqueeze(0).cpu()), vmin=vmin_ccc, vmax=vmax_ccc)
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_CCC.tex")
 
-    fig, _ = plot_patches([ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc)
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC.tex")
+#     fig, _ = plot_patches([ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc)
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC.tex")
 
-    fig, _ = plot_patches([ccc_std.unsqueeze(0).cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC-std.tex")
+#     fig, _ = plot_patches([ccc_std.unsqueeze(0).cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CCC-std.tex")
 
-    cwc = sim_image[4, ...] * sim_image[6, ...]
-    cwc_std = var_of_product(
-        sigma_image[4, ...].pow(2),
-        sigma_image[6, ...].pow(2),
-        sim_image[4, ...],
-        sim_image[6, ...],
-    ).sqrt()
-    vmin_cwc = min(
-        cwc.unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item()
-    )
-    vmax_cwc = max(
-        cwc.unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item()
-    )
+#     cwc = sim_image[4, ...] * sim_image[6, ...]
+#     cwc_std = var_of_product(
+#         sigma_image[4, ...].pow(2),
+#         sigma_image[6, ...].pow(2),
+#         sim_image[4, ...],
+#         sim_image[6, ...],
+#     ).sqrt()
+#     vmin_cwc = min(
+#         cwc.unsqueeze(0).cpu().min().item(), weiss_cw.unsqueeze(0).cpu().min().item()
+#     )
+#     vmax_cwc = max(
+#         cwc.unsqueeze(0).cpu().max().item(), weiss_cw.unsqueeze(0).cpu().max().item()
+#     )
 
-    fig, _ = plot_patches((weiss_cw.unsqueeze(0).cpu()), vmin=vmin_cwc, vmax=vmax_cwc)
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_CWC.tex")
+#     fig, _ = plot_patches((weiss_cw.unsqueeze(0).cpu()), vmin=vmin_cwc, vmax=vmax_cwc)
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_CWC.tex")
 
-    fig, _ = plot_patches([cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc)
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC.tex")
+#     fig, _ = plot_patches([cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc)
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC.tex")
 
-    fig, _ = plot_patches([cwc_std.unsqueeze(0).cpu()])
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC-std.tex")
+#     fig, _ = plot_patches([cwc_std.unsqueeze(0).cpu()])
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-CWC-std.tex")
 
-    w = cropped_image.shape[1]
-    h = cropped_image.shape[2]
-    fig, axs = plt.subplots(1, 4, figsize=(4 * 4, 1 * 4), dpi=min(w, h))
-    _, _ = plot_patches([cropped_image.cpu(), rec_image.cpu()], fig=fig, axs=axs[:2])
-    _, _ = plot_patches(
-        [
-            cropped_image[torch.tensor([8, 6, 3]), ...].cpu(),
-            rec_image[torch.tensor([8, 6, 3]), ...].cpu(),
-        ],
-        fig=fig,
-        axs=axs[2:],
-    )
-    axs[0].set_xlabel("Original image (visible)")
-    axs[1].set_xlabel("Reconstruction (visible)")
-    axs[2].set_xlabel("Original image (infra-red)")
-    axs[3].set_xlabel("Reconstruction (infra-red)")
+#     w = cropped_image.shape[1]
+#     h = cropped_image.shape[2]
+#     fig, axs = plt.subplots(1, 4, figsize=(4 * 4, 1 * 4), dpi=min(w, h))
+#     _, _ = plot_patches([cropped_image.cpu(), rec_image.cpu()], fig=fig, axs=axs[:2])
+#     _, _ = plot_patches(
+#         [
+#             cropped_image[torch.tensor([8, 6, 3]), ...].cpu(),
+#             rec_image[torch.tensor([8, 6, 3]), ...].cpu(),
+#         ],
+#         fig=fig,
+#         axs=axs[2:],
+#     )
+#     axs[0].set_xlabel("Original image (visible)")
+#     axs[1].set_xlabel("Reconstruction (visible)")
+#     axs[2].set_xlabel("Original image (infra-red)")
+#     axs[3].set_xlabel("Reconstruction (infra-red)")
 
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-patch_rgb_ir_rec.tex")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-patch_rgb_ir_rec.tex")
 
-    w = sim_image.shape[1]
-    h = sim_image.shape[2]
-    fig, axs = plt.subplots(3, 3, figsize=(3 * 4, 3 * 4), dpi=min(w, h))
-    _, _ = plot_patches(
-        (weiss_lai.unsqueeze(0).cpu()),
-        vmin=vmin_lai,
-        vmax=vmax_lai,
-        fig=fig,
-        axs=axs[0, 0],
-    )
-    _, _ = plot_patches(
-        [sim_image[6, ...].unsqueeze(0).cpu()],
-        vmin=vmin_lai,
-        vmax=vmax_lai,
-        fig=fig,
-        axs=axs[0, 1],
-    )
-    _, _ = plot_patches(
-        [sigma_image[6, ...].unsqueeze(0).cpu()], fig=fig, axs=axs[0, 2]
-    )
-    _, _ = plot_patches(
-        (weiss_cab.unsqueeze(0).cpu()),
-        vmin=vmin_ccc,
-        vmax=vmax_ccc,
-        fig=fig,
-        axs=axs[1, 0],
-    )
-    _, _ = plot_patches(
-        [ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc, fig=fig, axs=axs[1, 1]
-    )
-    _, _ = plot_patches([ccc_std.unsqueeze(0).cpu()], fig=fig, axs=axs[1, 2])
-    _, _ = plot_patches(
-        (weiss_cw.unsqueeze(0).cpu()),
-        vmin=vmin_cwc,
-        vmax=vmax_cwc,
-        fig=fig,
-        axs=axs[2, 0],
-    )
-    _, _ = plot_patches(
-        [cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc, fig=fig, axs=axs[2, 1]
-    )
-    _, _ = plot_patches([cwc_std.unsqueeze(0).cpu()], fig=fig, axs=axs[2, 2])
-    axs[0, 0].set_xlabel("SNAP LAI")
-    axs[0, 1].set_xlabel("PROSAIL-VAE LAI")
-    axs[0, 2].set_xlabel("PROSAIL-VAE LAI std")
-    axs[1, 0].set_xlabel("SNAP CCC")
-    axs[1, 1].set_xlabel("PROSAIL-VAE CCC")
-    axs[1, 2].set_xlabel("PROSAIL-VAE CCC std")
-    axs[2, 0].set_xlabel("SNAP CWC")
-    axs[2, 1].set_xlabel("PROSAIL-VAE CWC")
-    axs[2, 2].set_xlabel("PROSAIL-VAE CWC std")
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(
-        f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_PVAE_LAI_CCC_CWC.tex"
-    )
-    for j, varname in enumerate(PROSAILVARS):
-        if j == 6:
-            continue
-        fig, _ = plot_patches([sim_image[j, ...].unsqueeze(0).cpu()])
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}.tex")
-        fig, _ = plot_patches([sigma_image[j, ...].unsqueeze(0).cpu()])
-        tikzplotlib_fix_ncols(fig)
-        tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}-std.tex")
-        plt.close("all")
+#     w = sim_image.shape[1]
+#     h = sim_image.shape[2]
+#     fig, axs = plt.subplots(3, 3, figsize=(3 * 4, 3 * 4), dpi=min(w, h))
+#     _, _ = plot_patches(
+#         (weiss_lai.unsqueeze(0).cpu()),
+#         vmin=vmin_lai,
+#         vmax=vmax_lai,
+#         fig=fig,
+#         axs=axs[0, 0],
+#     )
+#     _, _ = plot_patches(
+#         [sim_image[6, ...].unsqueeze(0).cpu()],
+#         vmin=vmin_lai,
+#         vmax=vmax_lai,
+#         fig=fig,
+#         axs=axs[0, 1],
+#     )
+#     _, _ = plot_patches(
+#         [sigma_image[6, ...].unsqueeze(0).cpu()], fig=fig, axs=axs[0, 2]
+#     )
+#     _, _ = plot_patches(
+#         (weiss_cab.unsqueeze(0).cpu()),
+#         vmin=vmin_ccc,
+#         vmax=vmax_ccc,
+#         fig=fig,
+#         axs=axs[1, 0],
+#     )
+#     _, _ = plot_patches(
+#         [ccc.unsqueeze(0).cpu()], vmin=vmin_ccc, vmax=vmax_ccc, fig=fig, axs=axs[1, 1]
+#     )
+#     _, _ = plot_patches([ccc_std.unsqueeze(0).cpu()], fig=fig, axs=axs[1, 2])
+#     _, _ = plot_patches(
+#         (weiss_cw.unsqueeze(0).cpu()),
+#         vmin=vmin_cwc,
+#         vmax=vmax_cwc,
+#         fig=fig,
+#         axs=axs[2, 0],
+#     )
+#     _, _ = plot_patches(
+#         [cwc.unsqueeze(0).cpu()], vmin=vmin_cwc, vmax=vmax_cwc, fig=fig, axs=axs[2, 1]
+#     )
+#     _, _ = plot_patches([cwc_std.unsqueeze(0).cpu()], fig=fig, axs=axs[2, 2])
+#     axs[0, 0].set_xlabel("SNAP LAI")
+#     axs[0, 1].set_xlabel("PROSAIL-VAE LAI")
+#     axs[0, 2].set_xlabel("PROSAIL-VAE LAI std")
+#     axs[1, 0].set_xlabel("SNAP CCC")
+#     axs[1, 1].set_xlabel("PROSAIL-VAE CCC")
+#     axs[1, 2].set_xlabel("PROSAIL-VAE CCC std")
+#     axs[2, 0].set_xlabel("SNAP CWC")
+#     axs[2, 1].set_xlabel("PROSAIL-VAE CWC")
+#     axs[2, 2].set_xlabel("PROSAIL-VAE CWC std")
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(
+#         f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-SNAP_PVAE_LAI_CCC_CWC.tex"
+#     )
+#     for j, varname in enumerate(PROSAILVARS):
+#         if j == 6:
+#             continue
+#         fig, _ = plot_patches([sim_image[j, ...].unsqueeze(0).cpu()])
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}.tex")
+#         fig, _ = plot_patches([sigma_image[j, ...].unsqueeze(0).cpu()])
+#         tikzplotlib_fix_ncols(fig)
+#         tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-{varname}-std.tex")
+#         plt.close("all")
 
-    fig, axs = plt.subplots(5, 4, figsize=(4 * 4, 10 * 4), dpi=min(w, h))
-    n_var = 0
-    for j, varname in enumerate(PROSAILVARS):
-        if j == 6:
-            continue
-        row = n_var // 2
-        col = (n_var % 2) * 2
-        _, _ = plot_patches(
-            [sim_image[j, ...].unsqueeze(0).cpu()], fig=fig, axs=axs[row, col]
-        )
-        axs[row, col].set_xlabel(varname)
-        _, _ = plot_patches(
-            [sigma_image[j, ...].unsqueeze(0).cpu()], fig=fig, axs=axs[row, col + 1]
-        )
-        axs[row, col + 1].set_xlabel(f"{varname} std")
-        n_var += 1
-    tikzplotlib_fix_ncols(fig)
-    tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-all_vars_and_std.tex")
-    return
+#     fig, axs = plt.subplots(5, 4, figsize=(4 * 4, 10 * 4), dpi=min(w, h))
+#     n_var = 0
+#     for j, varname in enumerate(PROSAILVARS):
+#         if j == 6:
+#             continue
+#         row = n_var // 2
+#         col = (n_var % 2) * 2
+#         _, _ = plot_patches(
+#             [sim_image[j, ...].unsqueeze(0).cpu()], fig=fig, axs=axs[row, col]
+#         )
+#         axs[row, col].set_xlabel(varname)
+#         _, _ = plot_patches(
+#             [sigma_image[j, ...].unsqueeze(0).cpu()], fig=fig, axs=axs[row, col + 1]
+#         )
+#         axs[row, col + 1].set_xlabel(f"{varname} std")
+#         n_var += 1
+#     tikzplotlib_fix_ncols(fig)
+#     tikzplotlib.save(f"{art_plot_dir}/{i}-{info[1]}-{info[2]}-all_vars_and_std.tex")
+#     return
 
 
 def PROSAIL_2D_res_plots(

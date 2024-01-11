@@ -4,12 +4,6 @@ Created on Mon Nov 14 14:20:44 2022
 
 @author: yoel
 """
-import os
-import sys
-
-from prosailvae import __path__ as PPATH
-
-TOP_PATH = os.path.join(PPATH[0], os.pardir)
 import argparse
 import logging
 import logging.config
@@ -29,17 +23,11 @@ from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 # from torch_lr_finder import get_PROSAIL_VAE_lr
-from dataset.loaders import (
-    get_simloader,
-    get_train_valid_test_loader_from_patches,
-    lr_finder_loader,
-)
-from metrics.results import (
+from dataset.loaders import get_simloader, get_train_valid_test_loader_from_patches
+from metrics.results import (  # save_results_on_sim_data,; save_validation_results,
     get_res_dir_path,
     plot_losses,
     save_results_on_s2_data,
-    save_results_on_sim_data,
-    save_validation_results,
 )
 from prosailvae.prosail_vae import (
     ProsailVAEConfig,
@@ -49,7 +37,6 @@ from prosailvae.prosail_vae import (
 )
 from prosailvae.ProsailSimus import get_bands_idx
 from utils.utils import (
-    IOStandardizeCoeffs,
     get_RAM_usage,
     get_total_RAM,
     load_standardize_coeffs,
@@ -301,7 +288,6 @@ def training_loop(
     info_df = pd.DataFrame()
     best_val_loss = torch.inf
     total_ram = get_total_RAM()
-    old_lr = optimizer.param_groups[0]["lr"]
     if exp_lr_decay > 0:
         if lr_recompute_mode:
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
@@ -334,17 +320,17 @@ def training_loop(
                         lai_cyclical_loader, lai_precomputed=cyclical_lai_precomputed
                     )
                     all_cyclical_rmse.append(cyclical_rmse.cpu().item())
-                    save_validation_results(
-                        prosail_vae,
-                        validation_dir_at_epoch,
-                        frm4veg_data_dir=frm4veg_data_dir,
-                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                        belsar_data_dir=belsar_data_dir,
-                        model_name=f"pvae_{epoch}",
-                        method="simple_interpolate",
-                        mode="sim_tg_mean",
-                        remove_files=True,
-                    )
+                    # save_validation_results(
+                    #     prosail_vae,
+                    #     validation_dir_at_epoch,
+                    #     frm4veg_data_dir=frm4veg_data_dir,
+                    #     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                    #     belsar_data_dir=belsar_data_dir,
+                    #     model_name=f"pvae_{epoch}",
+                    #     method="simple_interpolate",
+                    #     mode="sim_tg_mean",
+                    #     remove_files=True,
+                    # )
 
             t0 = time.time()
             if optimizer.param_groups[0]["lr"] < 5e-8:
@@ -520,10 +506,8 @@ def setup_training():
     sim_data_dir = params["sim_data_dir"]
     s2_data_dir = params["s2_data_dir"]
     assert parser.n_fold < parser.n_xp
-    if len(parser.root_results_dir) == 0:
-        root_results_dir = os.path.join(TOP_PATH, "results/")
-    else:
-        root_results_dir = parser.root_results_dir
+
+    root_results_dir = parser.root_results_dir
     res_dir = get_res_dir_path(
         root_results_dir, params, parser.n_xp, parser.overwrite_xp
     )
@@ -896,20 +880,20 @@ def main():
             else all_valid_loss_df["loss_sum"].min()
         )
         min_loss_df = pd.DataFrame({"Loss": [min_loss]})
-        if True and not socket.gethostname() == PC_SOCKET_NAME:
-            global_validation_metrics = save_validation_results(
-                prosail_vae,
-                validation_dir,
-                frm4veg_data_dir=frm4veg_data_dir,
-                frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                belsar_data_dir=belsar_data_dir,
-                model_name="pvae",
-                method="simple_interpolate",
-                mode="sim_tg_mean",
-                remove_files=True,
-                plot_results=parser.plot_results,
-                save_reconstruction=False,
-            )
+        # if True and not socket.gethostname() == PC_SOCKET_NAME:
+        #     global_validation_metrics = save_validation_results(
+        #         prosail_vae,
+        #         validation_dir,
+        #         frm4veg_data_dir=frm4veg_data_dir,
+        #         frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+        #         belsar_data_dir=belsar_data_dir,
+        #         model_name="pvae",
+        #         method="simple_interpolate",
+        #         mode="sim_tg_mean",
+        #         remove_files=True,
+        #         plot_results=parser.plot_results,
+        #         save_reconstruction=False,
+        #     )
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse": [1.0]})
         _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(
             params["s2_data_dir"],
@@ -939,17 +923,17 @@ def main():
             (pd.DataFrame({"model": [model_name]}), cyclical_rmse_df, min_loss_df),
             axis=1,
         )
-        for variable, metrics in global_validation_metrics.items():
-            global_results_df = pd.concat(
-                (
-                    global_results_df,
-                    metrics["rmse"],
-                    metrics["picp"],
-                    metrics["mpiw"],
-                    metrics["mestdr"],
-                ),
-                axis=1,
-            )
+        # for variable, metrics in global_validation_metrics.items():
+        #     global_results_df = pd.concat(
+        #         (
+        #             global_results_df,
+        #             metrics["rmse"],
+        #             metrics["picp"],
+        #             metrics["mpiw"],
+        #             metrics["mestdr"],
+        #         ),
+        #         axis=1,
+        #     )
         res_df_filename = os.path.join(
             res_dir,
             "model_results.csv",
@@ -963,20 +947,20 @@ def main():
                 res_df_filename, mode="a", index=False, header=False
             )
 
-        if not params["encoder_type"] in spatial_encoder_types:  # If encoder is not CNN
-            save_results_on_sim_data(
-                prosail_vae,
-                res_dir,
-                params["sim_data_dir"],
-                all_train_loss_df,
-                all_valid_loss_df,
-                info_df,
-                LOGGER_NAME=LOGGER_NAME,
-                plot_results=parser.plot_results,
-                bvnet_mode=parser.weiss_mode,
-                n_samples=params["n_samples"],
-                lai_cyclical_loader=lai_cyclical_loader,
-            )
+        # if not params["encoder_type"] in spatial_encoder_types:  # If encoder is not CNN
+        #     save_results_on_sim_data(
+        #         prosail_vae,
+        #         res_dir,
+        #         params["sim_data_dir"],
+        #         all_train_loss_df,
+        #         all_valid_loss_df,
+        #         info_df,
+        #         LOGGER_NAME=LOGGER_NAME,
+        #         plot_results=parser.plot_results,
+        #         bvnet_mode=parser.weiss_mode,
+        #         n_samples=params["n_samples"],
+        #         lai_cyclical_loader=lai_cyclical_loader,
+        #     )
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)

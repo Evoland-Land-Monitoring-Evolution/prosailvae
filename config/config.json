@@ -1,12 +1,12 @@
 {
     "batch_size": 1,
-    "epochs": 100,
+    "epochs": 10,
     "lr": 0.001,
     "test_size": 0.01,
     "valid_ratio": 0.01,
     "workers": 0,
     "encoder_last_activation": null,
-    "n_samples": 5,
+    "n_samples": 70,
     "supervised": false,
     "beta_kl": 2,
     "beta_index": 0,
@@ -15,18 +15,14 @@
     "n_fold": null,
     "simulated_dataset": false,
     "lr_recompute": 10,
-    "loss_type": "spatial_nll",
+    "loss_type": "diag_nll",
     "apply_norm_rec": true,
     "exp_lr_decay": 0.98,
-    "encoder_type": "rcnn",
+    "encoder_type": "rnn",
     "load_model": true,
-    "vae_load_dir_path": "pvae_spatial_lai_uniform_prior_b_kl_2",
-    "sim_data_dir": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/snap_distribution_data/",
+    "vae_load_dir_path": "pvae_pixellic_lai_uniform_prior_b_kl_2",
     "s2_data_dir": "/work/CESBIO/projects/DeepChange/PROSAILVAE/s2_patch_dataset",
-    "frm4veg_data_dir": "/work/CESBIO/projects/DeepChange/PROSAILVAE/validation_data/frm4veg_validation",
-    "frm4veg_2021_data_dir":"/work/CESBIO/projects/DeepChange/PROSAILVAE/validation_data/frm4veg_2021_validation",
-    "belsar_dir":"/work/CESBIO/projects/DeepChange/PROSAILVAE/validation_data/belSAR_validation",
-    "cyclical_data_dir":"projected_data",
+    "sim_data_dir": "/work/scratch/zerahy/prosailvae/data/1e5_simulated_full_bands_new_dist_corr_type_2/",
     "lr_recompute_mode": false,
     "first_layer_kernel": 3,
     "first_layer_size": 32,
@@ -44,8 +40,8 @@
     ],
     "weiss_bands": false,
     "supervised_kl": false,
-    "supervised_config_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/hyperprior_lai_cab_b1000/sup_kl_model_config.json",
-    "supervised_weight_file": "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/results/hyperprior_lai_cab_b1000/sup_kl_model_weights.tar",
+    "supervised_config_file": "/work/scratch/zerahy/prosailvae/results/+++cnn_42585459_jobarray/1_d2023_05_04_17_28_02_supervised_True_train_/config.json",
+    "supervised_weight_file": "/work/scratch/zerahy/prosailvae/results/+++cnn_42585459_jobarray/1_d2023_05_04_17_28_02_supervised_True_train_/prosailvae_weights.tar",
     "disabled_latent": [],
     "disabled_latent_values": [],
     "cycle_training": true,
@@ -54,7 +50,7 @@
     "break_init_at_rec_loss": null,
     "n_init_models": 10,
     "n_init_epochs": 9,
-    "init_lr": 0.0005,
+    "init_lr": 0.001,
     "rec_bands_loss_coeffs": [
         1,
         2,
@@ -70,7 +66,7 @@
     "beta_cyclical": 0,
     "lat_loss_type": "lai_nll",
     "lat_idx": [
-        1, 6
+        6
     ],
     "layer_sizes": [
         512,
@@ -80,11 +76,12 @@
         3,
         3
     ],
+    "bvnet_bands": false,
     "vae_save_file_path": null,
     "deterministic": false,
     "snap_cyclical": false,
     "lrs_threshold": 0.005,
     "validation_at_every_epoch": null,
     "prosail_vars_dist_type": "legacy",
-    "prospect_version":"5"
+    "prospect_version": "5"
 }

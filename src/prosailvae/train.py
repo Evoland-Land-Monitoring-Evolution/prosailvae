@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Created on Mon Nov 14 14:20:44 2022
 
@@ -28,6 +27,7 @@ from metrics.results import (  # save_results_on_sim_data,; save_validation_resu
     get_res_dir_path,
     plot_losses,
     save_results_on_s2_data,
+    save_validation_results,
 )
 from prosailvae.prosail_vae import (
     ProsailVAEConfig,
@@ -199,9 +199,7 @@ def initialize_by_training(
     best_model_idx = 0
     t0 = time.time()
     for i in range(n_models):
-        logger.info(
-            f"=========================== Model {i} ============================"
-        )
+        logger.info(f"=================== Model {i} / {n_models} ================")
         prosail_vae = load_prosail_vae_with_hyperprior(
             pv_config=pv_config,
             pv_config_hyper=pv_config_hyper,
@@ -236,16 +234,16 @@ def initialize_by_training(
         if break_at_rec_loss is not None:
             if all_valid_loss_df["rec_loss"].values.min() <= break_at_rec_loss:
                 logger.info(
-                    f"Model {i} has gone under threshold loss {all_valid_loss_df['rec_loss'].values.min()} < {break_at_rec_loss}."
+                    f"Model {i} has gone under threshold loss "
+                    f"{all_valid_loss_df['rec_loss'].values.min()}"
+                    f" < {break_at_rec_loss}."
                 )
                 broke_at_rec = True
                 break
         if time.time() - t0 > max_sec:
             break
     logger.info(f"Best model is model {best_model_idx}.")
-    logger.info(
-        f"====================================================================="
-    )
+    logger.info("=====================================================================")
     return broke_at_rec
 
 
@@ -308,29 +306,32 @@ def training_loop(
         max_train_samples_per_epoch = 5
         max_valid_samples_per_epoch = 2
     all_cyclical_rmse = []
+    logger.info(f"\nWill train for {n_epoch} epochs")
     with logging_redirect_tqdm():
         for epoch in trange(n_epoch, desc="PROSAIL-VAE training", leave=True):
+            logger.info(f"\n Starting epoch {epoch} / {n_epoch}")
             if validation_at_every_epoch is not None:
                 if epoch % validation_at_every_epoch == 0:
                     validation_dir_at_epoch = os.path.join(
                         validation_dir, f"epoch_{epoch}"
                     )
-                    os.makedirs(validation_dir_at_epoch)
+                    if not os.path.exists(validation_dir_at_epoch):
+                        os.makedirs(validation_dir_at_epoch)
                     _, cyclical_rmse = prosail_vae.get_cyclical_metrics_from_loader(
                         lai_cyclical_loader, lai_precomputed=cyclical_lai_precomputed
                     )
                     all_cyclical_rmse.append(cyclical_rmse.cpu().item())
-                    # save_validation_results(
-                    #     prosail_vae,
-                    #     validation_dir_at_epoch,
-                    #     frm4veg_data_dir=frm4veg_data_dir,
-                    #     frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-                    #     belsar_data_dir=belsar_data_dir,
-                    #     model_name=f"pvae_{epoch}",
-                    #     method="simple_interpolate",
-                    #     mode="sim_tg_mean",
-                    #     remove_files=True,
-                    # )
+                    save_validation_results(
+                        prosail_vae,
+                        validation_dir_at_epoch,
+                        frm4veg_data_dir=frm4veg_data_dir,
+                        frm4veg_2021_data_dir=frm4veg_2021_data_dir,
+                        belsar_data_dir=belsar_data_dir,
+                        model_name=f"pvae_{epoch}",
+                        method="simple_interpolate",
+                        mode="sim_tg_mean",
+                        remove_files=True,
+                    )
 
             t0 = time.time()
             if optimizer.param_groups[0]["lr"] < 5e-8:
@@ -420,7 +421,9 @@ def training_loop(
                 ]
             )
             logger.info(
-                f"{epoch} -- RAM: {ram_usage} / {total_ram} -- lr: {'{:.2E}'.format(optimizer.param_groups[0]['lr'])} -- {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}"
+                f"\n{epoch} -- RAM: {ram_usage} / {total_ram} -- lr: "
+                f"{'{:.2E}'.format(optimizer.param_groups[0]['lr'])} --"
+                f" {'{:.1f}'.format(t1-t0)} s -- {train_loss_info} -- {valid_loss_info}"
             )
             train_loss_dict["epoch"] = epoch
             valid_loss_dict["epoch"] = epoch
@@ -445,7 +448,7 @@ def training_loop(
             if max_sec is not None:
                 if t_end - t_init > max_sec:
                     logger.info(
-                        f"Time limit of {max_sec} seconds over, finishing training early."
+                        f"Time limit of {max_sec} seconds over, ending training early."
                     )
                     break
             # if os.path.isfile(os.path.join(res_dir, "stop.txt")):
@@ -534,13 +537,15 @@ def setup_training():
         logger.info("Supervised KL loss (hyperprior) enabled.")
 
         logger.info(
-            f"copying {params['supervised_config_file']} into {res_dir+'/sup_kl_model_config.json'}"
+            f"copying {params['supervised_config_file']} into "
+            f"{res_dir+'/sup_kl_model_config.json'}"
         )
         shutil.copyfile(
             params["supervised_config_file"], res_dir + "/sup_kl_model_config.json"
         )
         logger.info(
-            f"copying {params['supervised_weight_file']} into {res_dir+'/sup_kl_model_weights.tar'}"
+            f"copying {params['supervised_weight_file']} into "
+            f"{res_dir+'/sup_kl_model_weights.tar'}"
         )
         shutil.copyfile(
             params["supervised_weight_file"], res_dir + "/sup_kl_model_weights.tar"
@@ -605,6 +610,7 @@ def get_training_data(params, logger):
         )
         data_dir = sim_data_dir
     else:
+        logger.info(f"Loading training and validation loader in" f" {s2_data_dir} ...")
         train_loader, valid_loader, _ = get_train_valid_test_loader_from_patches(
             s2_data_dir,
             batch_size=params["batch_size"],
@@ -846,8 +852,8 @@ def main():
         belsar_data_dir,
         model_name,
     ) = setup_training()
-    tracker, useEmissionTracker = configureEmissionTracker(parser)
-    spatial_encoder_types = ["cnn", "rcnn"]
+    # tracker, useEmissionTracker = configureEmissionTracker(parser)
+    # spatial_encoder_types = ["cnn", "rcnn"]
     try:
         lai_cyclical_loader = None
 
@@ -947,7 +953,7 @@ def main():
                 res_df_filename, mode="a", index=False, header=False
             )
 
-        # if not params["encoder_type"] in spatial_encoder_types:  # If encoder is not CNN
+        # if not params["encoder_type"] in spatial_encoder_types:  # encoder is not CNN
         #     save_results_on_sim_data(
         #         prosail_vae,
         #         res_dir,
@@ -967,8 +973,8 @@ def main():
     except Exception as exc:
         traceback.print_exc()
         print(exc)
-    if useEmissionTracker:
-        tracker.stop()
+    # if useEmissionTracker:
+    #     tracker.stop()
     pass
 
 

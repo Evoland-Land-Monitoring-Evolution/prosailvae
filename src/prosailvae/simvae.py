@@ -12,7 +12,7 @@ import torch.nn as nn
 
 # from sensorsio.utils import rgb_render
 # import matplotlib.pyplot as plt
-from bvnet_regression.bvnet_utils import (
+from .bvnet_regression.bvnet_utils import (
     get_bvnet_biophyiscal_from_batch,
     get_bvnet_biophyiscal_from_pixellic_batch,
 )

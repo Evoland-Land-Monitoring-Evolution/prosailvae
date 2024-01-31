@@ -20,3 +20,4 @@ data/validation_tiles/*
 /thirdparties/
 __pycache__/
 /.coverage
+/src/PROSAILVAE.egg-info/

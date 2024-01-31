@@ -19,3 +19,4 @@ field_data/*/.gpkg
 data/validation_tiles/*
 /thirdparties/
 __pycache__/
+/.coverage

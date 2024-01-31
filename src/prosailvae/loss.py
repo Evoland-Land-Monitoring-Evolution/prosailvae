@@ -3,9 +3,9 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 
-from prosailvae.dist_utils import kl_tn_uniform, truncated_gaussian_nll
-from utils.image_utils import crop_s2_input
-from utils.utils import select_rec_loss_fn, torch_select_unsqueeze
+from .dist_utils import kl_tn_uniform, truncated_gaussian_nll
+from .utils.image_utils import crop_s2_input
+from .utils.utils import select_rec_loss_fn, torch_select_unsqueeze
 
 
 @dataclass

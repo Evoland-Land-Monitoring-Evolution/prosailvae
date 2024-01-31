@@ -7,7 +7,7 @@ Created on Wed Aug 31 14:23:46 2022
 import torch
 import torch.nn as nn
 
-from utils.utils import (
+from .utils.utils import (
     full_gaussian_nll_loss,
     gaussian_nll_loss,
     mse_loss,

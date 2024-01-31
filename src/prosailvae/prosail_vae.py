@@ -14,16 +14,16 @@ from pathlib import Path
 
 import torch
 
-from prosailvae.decoders import ProsailSimulatorDecoder
-from prosailvae.encoders import EncoderConfig, get_encoder
+from .decoders import ProsailSimulatorDecoder
+from .encoders import EncoderConfig, get_encoder
 
 # from prosailvae.decoders import TSSimulatorDecoder
-from prosailvae.latentspace import TruncatedNormalLatent
-from prosailvae.loss import LossConfig, NLLLoss
-from prosailvae.ProsailSimus import PROSAILVARS, ProsailSimulator, SensorSimulator
-from prosailvae.simspaces import LinearVarSpace
-from prosailvae.simvae import SimVAE
-from utils.utils import load_dict
+from .latentspace import TruncatedNormalLatent
+from .loss import LossConfig, NLLLoss
+from .ProsailSimus import PROSAILVARS, ProsailSimulator, SensorSimulator
+from .simspaces import LinearVarSpace
+from .simvae import SimVAE
+from .utils.utils import load_dict
 
 # from prosailvae.prosail_var_dists import (get_z2prosailparams_offset, get_z2prosailparams_mat, get_prosailparams_pdf_span)
 

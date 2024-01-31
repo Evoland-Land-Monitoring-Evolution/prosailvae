@@ -16,13 +16,13 @@ from .bvnet_regression.bvnet_utils import (
     get_bvnet_biophyiscal_from_batch,
     get_bvnet_biophyiscal_from_pixellic_batch,
 )
-from utils.image_utils import (
+from .utils.image_utils import (
     batchify_batch_latent,
     check_is_patch,
     crop_s2_input,
     unbatchify,
 )
-from utils.utils import NaN_model_params, count_parameters, unstandardize
+from .utils.utils import NaN_model_params, count_parameters, unstandardize
 
 
 class SimVAE(nn.Module):

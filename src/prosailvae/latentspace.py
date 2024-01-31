@@ -7,12 +7,12 @@ Created on Wed Aug 31 14:54:24 2022
 import torch
 import torch.nn as nn
 
-from utils.TruncatedNormal import (
+from .utils.TruncatedNormal import (
     TruncatedNormal,
     kl_truncated_normal_truncated_normal,
     kl_truncated_normal_uniform,
 )
-from utils.utils import torch_select_unsqueeze
+from .utils.utils import torch_select_unsqueeze
 
 from .dist_utils import truncated_gaussian_nll
 

@@ -16,7 +16,7 @@ from scipy.signal import decimate
 from prosailvae.spectral_indices import get_spectral_idx
 
 # from prosail import spectral_lib
-from utils.utils import (
+from .utils.utils import (
     gaussian_nll_loss,
     standardize,
     torch_select_unsqueeze,

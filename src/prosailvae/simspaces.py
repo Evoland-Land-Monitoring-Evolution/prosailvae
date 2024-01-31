@@ -8,9 +8,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from utils.image_utils import batchify_batch_latent, unbatchify
-from utils.TruncatedNormal import TruncatedNormal
-from utils.utils import torch_select_unsqueeze
+from .utils.image_utils import batchify_batch_latent, unbatchify
+from .utils.TruncatedNormal import TruncatedNormal
+from .utils.utils import torch_select_unsqueeze
 
 from .dist_utils import cdfs2quantiles, convolve_pdfs, pdfs2cdfs
 from .prosail_var_dists import (

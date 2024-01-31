@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 import torch
 import torch.nn as nn
 
-from utils.image_utils import batchify_batch_latent, check_is_patch, crop_s2_input
-from utils.utils import IOStandardizeCoeffs, standardize, torch_select_unsqueeze
+from .utils.image_utils import batchify_batch_latent, check_is_patch, crop_s2_input
+from .utils.utils import IOStandardizeCoeffs, standardize, torch_select_unsqueeze
 
 from .spectral_indices import get_spectral_idx
 

@@ -1,9 +1,10 @@
 import logging
-from pytorch_lightning import LightningModule
-import torch
-from ..prosail_vae import ProsailVAEConfig, get_prosail_vae
 from typing import Any
 
+import torch
+from pytorch_lightning import LightningModule
+
+from ..prosail_vae import ProsailVAEConfig, get_prosail_vae
 
 # Configure logging
 NUMERIC_LEVEL = getattr(logging, "INFO", None)
@@ -15,10 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-ancestors
-    def __init__(self, config: ProsailVAEConfig):
+    def __init__(self, config: ProsailVAEConfig, lr: float = 1e-3):
         super().__init__()
         self.model = get_prosail_vae(config, device=self.device)
         self.n_samples = 1  # how many samples drawn for reconstruction
+        self.learning_rate = lr
 
     def step(self, batch):
         train_loss_dict = {}

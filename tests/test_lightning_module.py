@@ -4,7 +4,7 @@ import torch
 
 from prosailvae.encoders import EncoderConfig
 from prosailvae.loss import LossConfig
-from prosailvae.models.LightningModule import ProsailVAELightningModule
+from prosailvae.models.lightning_module import ProsailVAELightningModule
 from prosailvae.prosail_vae import ProsailVAEConfig
 from prosailvae.utils.utils import load_standardize_coeffs
 

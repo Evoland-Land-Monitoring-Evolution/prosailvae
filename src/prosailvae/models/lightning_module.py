@@ -1,3 +1,5 @@
+""" Pytorch Lightning Module for training a ProsailVAE model """
+
 import logging
 from typing import Any
 
@@ -16,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-ancestors
+    """Pytorch Lightning Module for training a ProsailVAE model"""
+
     def __init__(self, config: ProsailVAEConfig, lr: float = 1e-3):
         super().__init__()
         self.model = get_prosail_vae(config, device=self.device)
@@ -23,6 +27,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         self.learning_rate = lr
 
     def step(self, batch):
+        """Generic step of the model. Delegates to the pytorch model"""
         train_loss_dict = {}
         loss_sum, _ = self.model.unsupervised_batch_loss(
             batch,

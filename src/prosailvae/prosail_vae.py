@@ -4,11 +4,6 @@ Created on Tue Nov  8 14:45:12 2022
 
 @author: yoel
 """
-import os
-
-from prosailvae import __path__ as PPATH
-
-TOP_PATH = os.path.join(PPATH[0], os.pardir)
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -25,8 +20,6 @@ from .simspaces import LinearVarSpace
 from .simvae import SimVAE
 from .utils.utils import load_dict
 
-# from prosailvae.prosail_var_dists import (get_z2prosailparams_offset, get_z2prosailparams_mat, get_prosailparams_pdf_span)
-
 
 def load_params(config_dir, config_file, parser=None):
     """
@@ -35,17 +28,16 @@ def load_params(config_dir, config_file, parser=None):
     params = load_dict(config_dir + config_file)
     if params["supervised"]:
         params["simulated_dataset"] = True
-    if not "load_model" in params.keys():
+    if "load_model" not in params.keys():
         params["load_model"] = False
-    if not "vae_load_dir_path" in params.keys():
+    if "vae_load_dir_path" not in params.keys():
         params["vae_load_dir_path"] = None
     else:
-        params[
-            "vae_load_dir_path"
-        ] = f"{Path( __file__ ).parent.absolute()}/../../trained_models/{params['vae_load_dir_path']}"
-    if not "lr_recompute_mode" in params.keys():
+        params["vae_load_dir_path"] = f"{Path( __file__).parent.absolute()}"
+        f"/../../trained_models/{params['vae_load_dir_path']}"
+    if "lr_recompute_mode" not in params.keys():
         params["lr_recompute_mode"] = False
-    if not "init_model" in params.keys():
+    if "init_model" not in params.keys():
         params["init_model"] = False
     if parser is not None:
         params["k_fold"] = parser.n_xp
@@ -111,10 +103,6 @@ def load_params(config_dir, config_file, parser=None):
         params["prosail_vars_dist_type"] = "legacy"
     if "lat_idx" not in params.keys():
         params["lat_idx"] = []
-    if "sim_data_dir" not in params.keys():
-        params["sim_data_dir"] = os.path.join(TOP_PATH, "data/")
-    if "s2_data_dir" not in params.keys():
-        params["s2_data_dir"] = os.path.join(TOP_PATH, "data/")
     if "prospect_version" not in params.keys():
         params["prospect_version"] = "5"
     if "frm4veg_data_dir" not in params.keys():
@@ -228,7 +216,7 @@ def get_prosail_vae_config(
 
 def get_prosail_vae(
     pv_config: ProsailVAEConfig,
-    device: str = "cpu",
+    device: torch.device | str = "cpu",
     logger_name: str = "",
     hyper_prior: SimVAE | None = None,
     optimizer: torch.optim.Optimizer | None = None,

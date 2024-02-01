@@ -13,7 +13,7 @@ RSR_DIR = "/home/inglada/Dev/MMDC/prosailvae/data/"
 N_PROSAIL_VARS = 11
 
 
-def test_lightning_instanciate(bands: int = 10, lat_idx: int = 6):
+def instanciate(bands: int = 10, lat_idx: int = 6):
     io_coeffs = load_standardize_coeffs(PATCHES_DIR)
     n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
     enc_conf = EncoderConfig(
@@ -26,3 +26,7 @@ def test_lightning_instanciate(bands: int = 10, lat_idx: int = 6):
     pv_conf = ProsailVAEConfig(enc_conf, loss_conf, RSR_DIR, "/tmp", "/tmp")
     mod = ProsailVAELightningModule(pv_conf)
     return mod
+
+
+def test_lightning_instanciate(bands: int = 10, lat_idx: int = 6):
+    instanciate()

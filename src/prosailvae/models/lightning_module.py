@@ -1,7 +1,7 @@
 """ Pytorch Lightning Module for training a ProsailVAE model """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import torch
 from pytorch_lightning import LightningModule
@@ -22,13 +22,13 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
 
     def __init__(self, config: ProsailVAEConfig, lr: float = 1e-3):
         super().__init__()
-        self.model = get_prosail_vae(config, device=self.device)
+        self.model = get_prosail_vae(config, device=cast(torch.device, self.device))
         self.n_samples = 1  # how many samples drawn for reconstruction
         self.learning_rate = lr
 
-    def step(self, batch):
+    def step(self, batch: Any) -> Any:
         """Generic step of the model. Delegates to the pytorch model"""
-        train_loss_dict = {}
+        train_loss_dict: dict = {}
         loss_sum, _ = self.model.unsupervised_batch_loss(
             batch,
             train_loss_dict,

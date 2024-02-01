@@ -3,6 +3,7 @@ ProsailVAE Lightning Data Module
 """
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import torch
 from pytorch_lightning import LightningDataModule
@@ -36,9 +37,9 @@ class ProsailVAEDataModule(LightningDataModule):
         self.concat = config.concat
 
     def train_dataloader(self) -> DataLoader:
-        return self.instanciate_dataloader("train_patches.pth")
+        return self.instanciate_dataloader("train_patches.pth", shuffle=True)
 
-    def validation_dataloader(self) -> DataLoader:
+    def val_dataloader(self) -> DataLoader:
         """Instanciate and return a validation data loader"""
         return self.instanciate_dataloader("valid_patches.pth")
 
@@ -46,12 +47,16 @@ class ProsailVAEDataModule(LightningDataModule):
         """Instanciate and return a testing data loader"""
         return self.instanciate_dataloader("test_patches.pth")
 
-    def instanciate_dataloader(self, fname: str) -> DataLoader:
+    def instanciate_dataloader(self, fname: str, shuffle: bool = False) -> DataLoader:
         """Instanciate and return a data loader using patches from the given file"""
-        return get_loader_from_patches(
-            path_to_patches=self.patches_dir / fname,
-            # bands=self.bands,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            concat=self.concat,
+        return cast(
+            DataLoader,
+            get_loader_from_patches(
+                path_to_patches=self.patches_dir / fname,
+                # bands=self.bands,
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                concat=self.concat,
+                shuffle=shuffle,
+            ),
         )

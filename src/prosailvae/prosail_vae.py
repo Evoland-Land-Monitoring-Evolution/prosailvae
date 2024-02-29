@@ -130,7 +130,7 @@ class ProsailVAEConfig:
 
     encoder_config: EncoderConfig
     loss_config: LossConfig
-    rsr_dir: str
+    rsr_dir: Path
     vae_load_file_path: str
     vae_save_file_path: str
     spatial_mode: bool = False
@@ -259,7 +259,7 @@ def get_prosail_vae(
     )
     if load_simulator:
         ssimulator = SensorSimulator(
-            pv_config.rsr_dir + "/sentinel2.rsr",
+            pv_config.rsr_dir / "sentinel2.rsr",
             device="cpu",
             bands_loc=pv_config.encoder_config.io_coeffs.bands.loc,
             bands_scale=pv_config.encoder_config.io_coeffs.bands.scale,
@@ -271,7 +271,7 @@ def get_prosail_vae(
         )
     else:
         ssimulator = SensorSimulator(
-            pv_config.rsr_dir + "/sentinel2.rsr",
+            pv_config.rsr_dir / "sentinel2.rsr",
             device="cpu",
             bands_loc=None,
             bands_scale=None,

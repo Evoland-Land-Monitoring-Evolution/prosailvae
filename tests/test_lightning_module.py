@@ -8,8 +8,9 @@ from prosailvae.models.lightning_module import ProsailVAELightningModule
 from prosailvae.prosail_vae import ProsailVAEConfig
 from prosailvae.utils.utils import load_standardize_coeffs
 
+SRC_DIR = Path(__file__).parent.parent
 PATCHES_DIR = Path("/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/s2_patch_dataset/")
-RSR_DIR = "/home/inglada/Dev/MMDC/prosailvae/data/"
+RSR_DIR = SRC_DIR / "data"
 N_PROSAIL_VARS = 11
 
 

@@ -14,11 +14,12 @@ TMP_DIR = Path("/tmp")
 
 def prepare_data():
     fname = "train_patches.pth"
-    x = torch.load(PATCHES_DIR / fname)
-    y = x[:10, :]
-    torch.save(y, TMP_DIR / fname)
-    torch.save(y, TMP_DIR / "valid_patches.pth")
-    torch.save(y, TMP_DIR / "test_patches.pth")
+    if not Path(TMP_DIR / fname).exists():
+        x = torch.load(PATCHES_DIR / "test_patches.pth")
+        y = x[:10, :, :2, :2]
+        torch.save(y, TMP_DIR / fname)
+        torch.save(y, TMP_DIR / "valid_patches.pth")
+        torch.save(y, TMP_DIR / "test_patches.pth")
 
 
 @pytest.mark.slow

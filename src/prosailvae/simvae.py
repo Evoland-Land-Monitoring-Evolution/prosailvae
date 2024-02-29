@@ -34,29 +34,35 @@ class SimVAE(nn.Module):
     Attributes
     ----------
     encoder : Encoder
-        A torch NN that encodes a time series into a low dimension vector to be interpreted
+        A torch NN that encodes a time series into a low dimension vector to be
+    interpreted
         as distribution parameters.
     lat_space : LatentSpace
         A torch object representing the latent distributions produced by the encoder.
     sim_space : SimSpace
-        A torch object representing the distribution of the decoder parameters, to be derived
+        A torch object representing the distribution of the decoder parameters, to be
+    derived
         from the latent distribution.
     decoder : Decoder
         A torch object that decodes samples of parameters distributions from sim_space.
     supervised : bool
         Indicate whether the Encoder is to be trained from a labelled dataset or not.
     dt_nll_coef : float
-        coefficient of the NLL of the derivative of the reconstruction in the total loss.
+        coefficient of the NLL of the derivative of the reconstruction in the total
+    loss.
     dt_order : int
-        order of the numerical approximation of time series derivative to be computed in the loss.
+        order of the numerical approximation of time series derivative to be computed
+    in the loss.
     cumsum_coef : float
-        coefficient of the NLL of the cumulative sum of time series to be computed in the loss.
+        coefficient of the NLL of the cumulative sum of time series to be computed in
+    the loss.
     Methods
     -------
     encode(x)
         Encode time series in x using attribute encoder.
     encode2lat_params(x):
-        Encode time series using attribute encoder and converts it into latent distribution
+        Encode time series using attribute encoder and converts it into latent
+    distribution
         parameters.
     sample_latent_from_params(dist_params, n_samples=1)
         Outputs n_samples samples from latent distributions parametrized by dist_params.
@@ -66,9 +72,11 @@ class SimVAE(nn.Module):
     decode(sim)
         Decode parameters using decoder and reconstruct time series.
     forward(x, n_samples=1)
-        Output n_samples samples of distribution of reconstructions from encoding time series x.
+        Output n_samples samples of distribution of reconstructions from encoding
+    time series x.
     point_estimate_rec(x, mode='random')
-        Outputs the latent distribution parameters, a sample from the latent distribution,
+        Outputs the latent distribution parameters, a sample from the latent
+    distribution,
         a sample from the decoder parameters distribution and a reconstruction.
         Samples can be random, the mode, the expectation, the median from distributions.
         This is selected by mode.
@@ -91,11 +99,17 @@ class SimVAE(nn.Module):
         beta_cyclical: float = 0.0,
         snap_cyclical: bool = False,
         inference_mode: bool = False,
-        lat_idx: torch.Tensor = torch.tensor([]),
-        disabled_latent=[],
-        disabled_latent_values=[],
+        lat_idx: torch.Tensor = None,
+        disabled_latent=None,
+        disabled_latent_values=None,
         lat_nll: str = "diag_nll",
     ):
+        if lat_idx is None:
+            lat_idx = torch.tensor([])
+        if disabled_latent is None:
+            disabled_latent = []
+        if disabled_latent_values is None:
+            disabled_latent_values = []
         super().__init__()
         # encoder
         self.config = config
@@ -349,14 +363,99 @@ class SimVAE(nn.Module):
             )
         return dist_params, z, sim
 
+    def crop_patch(
+        self, s2_r: torch.Tensor, s2_a: torch.Tensor, z: torch.Tensor, rec: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        assert check_is_patch(rec)
+        s2_r = crop_s2_input(s2_r, self.encoder.nb_enc_cropped_hw)
+        s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
+        z = crop_s2_input(z, self.encoder.nb_enc_cropped_hw)
+
+    def compute_rec_loss(self, s2_r: torch.Tensor, rec: torch.Tensor) -> torch.Tensor:
+        if self.decoder.ssimulator.apply_norm:
+            return self.reconstruction_loss(
+                self.decoder.ssimulator.normalize(s2_r), rec
+            )
+        else:
+            return self.reconstruction_loss(s2_r, rec)
+
+    def compute_cyclical_loss(self, s2_r, s2_a, z, rec, batch_size, n_samples):
+        sample_dim = self.reconstruction_loss.sample_dim
+        feature_dim = self.reconstruction_loss.feature_dim
+
+        if self.snap_cyclical:
+            if self.spatial_mode:
+                raise NotImplementedError
+                snap_s2_r = s2_r
+                snap_s2_a = s2_a
+                if batch_size > 1:
+                    snap_s2_r = torch.cat(snap_s2_r.split(1, dim=0), -1)
+                    snap_s2_a = torch.cat(snap_s2_a.split(1, dim=0), -1)
+                (snap_lai, snap_cab, snap_cw) = get_bvnet_biophyiscal_from_batch(
+                    (snap_s2_r, snap_s2_a),
+                    patch_size=s2_r.size(-1),
+                    sensor="2A",
+                    device=self.device,
+                )
+                snap_lai = snap_lai.reshape(-1, 1)
+            else:
+                (
+                    snap_lai,
+                    snap_cab,
+                    snap_cw,
+                ) = get_bvnet_biophyiscal_from_pixellic_batch(
+                    (s2_r, s2_a), sensor="2A", device=self.device
+                )
+            snap_sim = torch.cat(
+                (
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    snap_lai,
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                    torch.zeros_like(snap_lai),
+                ),
+                1,
+            ).to(self.device)
+            snap_z = self.sim_space.sim2z(snap_sim)
+            return (s2_r, s2_a, snap_z)
+
+        else:
+            rec_cyc = unstandardize(
+                rec,
+                self.encoder.bands_loc,
+                self.encoder.bands_scale,
+                dim=feature_dim,
+            )
+            # Fusing samples and batch dimensions together
+            rec_cyc = rec_cyc.transpose(sample_dim, 1)
+            rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
+            s2_a_cyc = s2_a.unsqueeze(sample_dim)
+            s2_a_cyc = s2_a_cyc.tile(
+                [
+                    (n_samples if i == sample_dim else 1)
+                    for i in range(len(s2_a_cyc.size()))
+                ]
+            )
+            s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
+            s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
+            z_cyc = z.transpose(feature_dim, -1)
+            z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
+            return (rec_cyc, s2_a_cyc, z_cyc)
+
     def unsupervised_batch_loss(
         self, batch, normalized_loss_dict, len_loader=1, n_samples=1
     ):
         """
         Computes the unsupervised loss on batch (ELBO)
         """
-        s2_r = batch[0].to(self.device)
-        s2_a = batch[1].to(self.device)
+        s2_r = batch[0]
+        s2_a = batch[1]
         input_is_patch = check_is_patch(s2_r)
         batch_size = s2_r.size(0)
         if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
@@ -370,90 +469,17 @@ class SimVAE(nn.Module):
 
         # cropping pixels lost to padding
         if self.spatial_mode:
-            assert check_is_patch(rec)
-            s2_r = crop_s2_input(s2_r, self.encoder.nb_enc_cropped_hw)
-            s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
-            z = crop_s2_input(z, self.encoder.nb_enc_cropped_hw)
+            s2_r, s2_a, z = self.crop_patch(s2_r, s2_a, z, rec)
+
         # Reconstruction term
-        if self.decoder.ssimulator.apply_norm:
-            rec_loss = self.reconstruction_loss(
-                self.decoder.ssimulator.normalize(s2_r), rec
-            )
-        else:
-            rec_loss = self.reconstruction_loss(
-                s2_r, rec
-            )  # self.decoder.loss(s2_r, rec)
+        rec_loss = self.compute_rec_loss(s2_r, rec)
         loss_dict = {"rec_loss": rec_loss.item()}
         loss_sum = rec_loss
 
         if self.beta_cyclical > 0:
-            sample_dim = self.reconstruction_loss.sample_dim
-            feature_dim = self.reconstruction_loss.feature_dim
-
-            if self.snap_cyclical:
-                if self.spatial_mode:
-                    raise NotImplementedError
-                    snap_s2_r = s2_r
-                    snap_s2_a = s2_a
-                    if batch_size > 1:
-                        snap_s2_r = torch.cat(snap_s2_r.split(1, dim=0), -1)
-                        snap_s2_a = torch.cat(snap_s2_a.split(1, dim=0), -1)
-                    (snap_lai, snap_cab, snap_cw) = get_bvnet_biophyiscal_from_batch(
-                        (snap_s2_r, snap_s2_a),
-                        patch_size=s2_r.size(-1),
-                        sensor="2A",
-                        device=self.device,
-                    )
-                    snap_lai = snap_lai.reshape(-1, 1)
-                else:
-                    (
-                        snap_lai,
-                        snap_cab,
-                        snap_cw,
-                    ) = get_bvnet_biophyiscal_from_pixellic_batch(
-                        (s2_r, s2_a), sensor="2A", device=self.device
-                    )
-                snap_sim = torch.cat(
-                    (
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        snap_lai,
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                        torch.zeros_like(snap_lai),
-                    ),
-                    1,
-                ).to(self.device)
-                snap_z = self.sim_space.sim2z(snap_sim)
-                cyclical_batch = (s2_r, s2_a, snap_z)
-
-            else:
-                rec_cyc = unstandardize(
-                    rec,
-                    self.encoder.bands_loc,
-                    self.encoder.bands_scale,
-                    dim=feature_dim,
-                )
-                # Fusing samples and batch dimensions together
-                rec_cyc = rec_cyc.transpose(sample_dim, 1)
-                rec_cyc = rec_cyc.reshape(-1, *rec_cyc.shape[2:])
-                s2_a_cyc = s2_a.unsqueeze(sample_dim)
-                s2_a_cyc = s2_a_cyc.tile(
-                    [
-                        (n_samples if i == sample_dim else 1)
-                        for i in range(len(s2_a_cyc.size()))
-                    ]
-                )
-                s2_a_cyc = s2_a_cyc.transpose(sample_dim, 1)
-                s2_a_cyc = s2_a_cyc.reshape(-1, *s2_a_cyc.shape[2:])
-                z_cyc = z.transpose(feature_dim, -1)
-                z_cyc = z_cyc.reshape(-1, z_cyc.size(-1))
-                cyclical_batch = (rec_cyc, s2_a_cyc, z_cyc)
+            cyclical_batch = self.compute_cyclical_loss(
+                s2_r, s2_a, z, rec, batch_size, n_samples
+            )
             cyclical_loss, _ = self.supervised_batch_loss(
                 cyclical_batch, {}, ref_is_lat=True
             )
@@ -471,10 +497,6 @@ class SimVAE(nn.Module):
                 s2_r_sup = s2_r
                 s2_a_sup = s2_a
                 if self.spatial_mode:  # if encoder 1 encodes patches
-                    # if self.encoder.nb_enc_cropped_hw > 0: # Padding management
-                    #     s2_r_sup = crop_s2_input(s2_r_sup, self.encoder.nb_enc_cropped_hw)
-                    #     s2_a_sup = crop_s2_input(s2_a_sup, self.encoder.nb_enc_cropped_hw)
-                    #     print(s2_r_sup.size())
                     if self.hyper_prior.encoder.get_spatial_encoding():
                         # Case of a spatial hyperprior
                         raise NotImplementedError
@@ -521,16 +543,21 @@ class SimVAE(nn.Module):
         """
         s2_r = batch[0].to(self.device)
         s2_a = batch[1].to(self.device)
-        batch_size = s2_r.size(0)
         ref_lat = batch[2].to(self.device)
         if not ref_is_lat:
             ref_lat = self.sim_space.sim2z(ref_lat)
         encoder_output, _ = self.encode(s2_r, s2_a)
         if encoder_output.isnan().any() or encoder_output.isinf().any():
             nan_in_params = NaN_model_params(self)
-            err_str = "NaN encountered during encoding, but there is no NaN in network parameters!"
+            err_str = (
+                "NaN encountered during encoding, "
+                "but there is no NaN in network parameters!"
+            )
             if nan_in_params:
-                err_str = "NaN encountered during encoding, there are NaN in network parameters!"
+                err_str = (
+                    "NaN encountered during encoding, "
+                    "there are NaN in network parameters!"
+                )
             raise ValueError(err_str)
         params = self.lat_space.get_params_from_encoder(encoder_output=encoder_output)
         reduction_nll = "sum"
@@ -576,7 +603,7 @@ class SimVAE(nn.Module):
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
             for _, batch in zip(
-                range(min(len(dataloader), batch_per_epoch)), dataloader
+                range(min(len(dataloader), batch_per_epoch)), dataloader, strict=False
             ):
                 nll_batch = self.compute_lat_nlls_batch(batch)
                 all_nlls.append(nll_batch)
@@ -625,7 +652,7 @@ class SimVAE(nn.Module):
             print("self state dict")
             print(self.state_dict().keys())
             print(exc)
-            raise ValueError
+            raise ValueError from exc
         if optimizer is not None:
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if hyper_prior is not None:
@@ -703,7 +730,7 @@ class SimVAE(nn.Module):
             if batch_per_epoch is None:
                 batch_per_epoch = len(dataloader)
             for i, batch in zip(
-                range(min(len(dataloader), batch_per_epoch)), dataloader
+                range(min(len(dataloader), batch_per_epoch)), dataloader, strict=False
             ):
                 n_batches += batch[0].size(0)
                 if max_samples is not None:
@@ -730,7 +757,6 @@ class SimVAE(nn.Module):
         s2_r = batch[0].to(self.device)
         s2_a = batch[1].to(self.device)
         input_is_patch = check_is_patch(s2_r)
-        batch_size = s2_r.size(0)
         if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
             assert input_is_patch
         else:  # encoder is pixellic
@@ -772,7 +798,6 @@ class SimVAE(nn.Module):
         s2_a = batch[1].to(self.device)
         lai_idx = 6
         input_is_patch = check_is_patch(s2_r)
-        batch_size = s2_r.size(0)
         if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
             assert input_is_patch
         else:  # encoder is pixellic
@@ -795,7 +820,6 @@ class SimVAE(nn.Module):
                 s2_a = crop_s2_input(s2_a, self.encoder.nb_enc_cropped_hw)
                 sim = crop_s2_input(sim, self.encoder.nb_enc_cropped_hw)
 
-            # s2_r = unstandardize(s2_r, self.encoder.bands_loc, self.encoder.bands_scale, dim=feature_dim)
             s2_r = s2_r.transpose(sample_dim, 1)
             s2_r = s2_r.reshape(-1, *s2_r.shape[2:])
 
@@ -840,13 +864,12 @@ class SimVAE(nn.Module):
                 cyclical_loss = []
                 cyclical_rmse = []
             for i, batch in zip(
-                range(min(len(dataloader), batch_per_epoch)), dataloader
+                range(min(len(dataloader), batch_per_epoch)), dataloader, strict=False
             ):
                 n_batches += batch[0].size(0)
                 if max_samples is not None:
                     if i == max_samples:
                         break
-                # cyclical_loss.append(self.get_cyclical_loss_from_batch(batch, n_samples=n_samples).unsqueeze(0))
                 cyclical_rmse.append(
                     self.get_cyclical_lai_squared_error_from_batch(
                         batch, mode="lat_mode", lai_precomputed=lai_precomputed
@@ -867,7 +890,7 @@ class SimVAE(nn.Module):
                 batch_per_epoch = len(dataloader)
                 cyclical_rmse = []
             for i, batch in zip(
-                range(min(len(dataloader), batch_per_epoch)), dataloader
+                range(min(len(dataloader), batch_per_epoch)), dataloader, strict=False
             ):
                 n_batches += batch[0].size(0)
                 if max_samples is not None:

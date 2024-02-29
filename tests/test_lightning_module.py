@@ -14,7 +14,7 @@ RSR_DIR = SRC_DIR / "data"
 N_PROSAIL_VARS = 11
 
 
-def instanciate(bands: int = 10, lat_idx: int = 6):
+def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
     io_coeffs = load_standardize_coeffs(PATCHES_DIR)
     n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
     enc_conf = EncoderConfig(
@@ -29,5 +29,6 @@ def instanciate(bands: int = 10, lat_idx: int = 6):
     return mod
 
 
-def test_lightning_instanciate(bands: int = 10, lat_idx: int = 6):
-    instanciate()
+def test_lightning_instanciate(bands: int = 10, lat_idx: int = 6) -> None:
+    module = instanciate()
+    assert module is not None

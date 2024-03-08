@@ -8,7 +8,7 @@ ipython
 isort           # import sorting
 jax
 lightning-utilities==0.9.0
-matplotlib==3.6 https://github.com/nschloe/tikzplotlib/issues/559
+matplotlib==3.6  # https://github.com/nschloe/tikzplotlib/issues/559
 memory_profiler
 mypy            # linter
 numpy

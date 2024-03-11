@@ -1,6 +1,7 @@
 auto-walrus
 black           # code formatting
 codecarbon
+einops
 flake8          # code analysis
 geopandas
 ipykernel

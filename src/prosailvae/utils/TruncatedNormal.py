@@ -16,7 +16,8 @@ class TruncatedNormal(Distribution):
     """
     Truncated Standard Normal distribution
     https://people.sc.fsu.edu/~jburkardt/presentations/truncated_normal.pdf
-    Credits to https://github.com/toshas/torch_truncnorm/blob/main/TruncatedNormal.py for the implementation backbone
+    Credits to https://github.com/toshas/torch_truncnorm/blob/main/TruncatedNormal.py
+    for the implementation backbone
     """
 
     arg_constraints = {
@@ -154,10 +155,12 @@ class TruncatedNormal(Distribution):
         """
         return self.log_prob(value).exp()
 
-    def rsample(self, sample_shape=torch.Size()):
+    def rsample(self, sample_shape: torch.Size | None = None):
         """
         Reparametrized sampled (differentiable w.r.t. distribution parameters)
         """
+        if sample_shape is None:
+            sample_shape = torch.Size()
         shape = self._extended_shape(sample_shape)
         p = torch.empty(shape, device=self.low.device).uniform_(
             self._dtype_min_gt_0, self._dtype_max_lt_1
@@ -167,8 +170,9 @@ class TruncatedNormal(Distribution):
 
 @register_kl(TruncatedNormal, TruncatedNormal)
 def kl_truncated_normal_truncated_normal(p, q):
-    """
-    Kullback-Leibler divergence between two truncated normal distributions on the same interval
+    """Kullback-Leibler divergence between two truncated normal
+    distributions on the same interval
+
     """
     assert isinstance(p, TruncatedNormal) and isinstance(q, TruncatedNormal)
     assert torch.isclose(p.low, q.low).all()
@@ -192,9 +196,9 @@ def kl_truncated_normal_truncated_normal(p, q):
 
 @register_kl(TruncatedNormal, Uniform)
 def kl_truncated_normal_uniform(p, q=None):
-    """
-    Kullback-Leibler divergence between a truncated normal distribution and a uniform distribution
-      on the same interval
+    """Kullback-Leibler divergence between a truncated normal
+    distribution and a uniform distribution on the same interval
+
     """
     assert isinstance(p, TruncatedNormal)
     if q is not None:

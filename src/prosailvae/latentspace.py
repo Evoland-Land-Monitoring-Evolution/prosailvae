@@ -7,14 +7,13 @@ Created on Wed Aug 31 14:54:24 2022
 import torch
 import torch.nn as nn
 
+from .dist_utils import truncated_gaussian_nll
 from .utils.TruncatedNormal import (
     TruncatedNormal,
     kl_truncated_normal_truncated_normal,
     kl_truncated_normal_uniform,
 )
 from .utils.utils import torch_select_unsqueeze
-
-from .dist_utils import truncated_gaussian_nll
 
 
 class LatentSpace(nn.Module):
@@ -26,9 +25,11 @@ class LatentSpace(nn.Module):
     Methods
     -------
     reparametrize(y, n_samples)
-        Uses encoding y of time series and outputs n_samples samples from latent distribution.
+        Uses encoding y of time series and outputs n_samples samples from latent
+    distribution.
     latent_pdf(params, support_sampling)
-        Uses latent distributions parameters derived from encoding of time series to output
+        Uses latent distributions parameters derived from encoding of time series to
+    output
         a discretized pdf of the latent distribution sampled with step support_sampling.
     loss(z, params)
         computes a loss (likely a NLL) of latent parameters params from sample z.
@@ -57,9 +58,13 @@ class TruncatedNormalLatent(LatentSpace):
         max_sigma: float = 1.4,
         device: str = "cpu",
         kl_type: str = "tnu",
-        disabled_latent=[],
-        disabled_latent_values=[],
+        disabled_latent: list[float] = None,
+        disabled_latent_values: list[float] = None,
     ):
+        if disabled_latent is None:
+            disabled_latent = []
+        if disabled_latent_values is None:
+            disabled_latent_values = []
         super().__init__()
         self.device = device
         self.latent_dim = latent_dim
@@ -93,18 +98,6 @@ class TruncatedNormalLatent(LatentSpace):
         """
         Transforms an encoder's output into distribution parameters
         """
-        # if len(y.size())==3:
-        #     # Input dimension (B x L x 2)
-        #     params = torch.zeros((y.size(0), y.size(1), self.latent_dim, 2)).to(y.device)
-        #     for i in range(y.size(0)):
-        #         output_i = y[i,:,:]
-        #         output_i = output_i.view(-1, 2, self.latent_dim)
-        #         mu_i = torch.sigmoid(output_i[:, 0, :].view(-1, self.latent_dim, 1))
-        #         logstd_i = torch.sigmoid(output_i[:, 1, :].view(-1, self.latent_dim, 1))
-        #         logstd_i = logstd_i * (self.log_max_sigma - self.log_min_sigma) + self.log_min_sigma
-        #         sigma_i = torch.exp(logstd_i)
-        #         params_i = torch.stack([mu_i, sigma_i], dim=2)
-        #         params[i,:,:,:] = params_i.squeeze(3)
         if len(encoder_output.size()) == 2:
             # input size (B x 2L)
             encoder_output = encoder_output.reshape(
@@ -131,8 +124,9 @@ class TruncatedNormalLatent(LatentSpace):
     def sample_latent_from_params(
         self, params: torch.Tensor, n_samples: int = 1, deterministic=False
     ):
-        """
-        Sample the latent variables in a differentiable manner from distribution parameters.
+        """Sample the latent variables in a differentiable manner from
+        distribution parameters.
+
         """
         mu = params[..., 0]
         if deterministic:
@@ -216,11 +210,13 @@ class TruncatedNormalLatent(LatentSpace):
         params: torch.Tensor,
         params2: torch.Tensor | None = None,
         #    lai_only=False,
-        lat_idx=torch.tensor([]),
+        lat_idx: torch.Tensor | None = None,
     ):
         """
         Computes the Kullback-Leibler divergence
         """
+        if lat_idx is None:
+            lat_idx = torch.tensor([])
         sigma = params[:, :, 1].squeeze()
         mu = params[:, :, 0].squeeze()
         if lat_idx.size(0) > 0:

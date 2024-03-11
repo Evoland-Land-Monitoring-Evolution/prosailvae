@@ -29,39 +29,43 @@ class IOStandardizeCoeffs:
     idx: StandardizeCoeff
 
 
+class IOStandardizeCoeffsFromDisk(IOStandardizeCoeffs):
+    def __init__(self, data_dir: str, prefix="", n_bands=10, n_angles=3, n_idx=4):
+        coeffs_info_dict = {
+            "bands_loc": ["norm_mean", torch.zeros(n_bands)],
+            "bands_scale": ["norm_std", torch.ones(n_bands)],
+            "idx_loc": ["idx_loc", torch.zeros(n_idx)],
+            "idx_scale": ["idx_scale", torch.ones(n_idx)],
+            "angles_loc": ["angles_loc", torch.zeros(n_angles)],
+            "angles_scale": ["angles_scale", torch.ones(n_angles)],
+        }
+        coeffs_dict = {}
+        for coef_name, info in coeffs_info_dict.items():
+            if data_dir is not None and os.path.isfile(
+                os.path.join(data_dir, prefix + f"{info[0]}.pt")
+            ):
+                coeffs_dict[coef_name] = torch.load(
+                    os.path.join(data_dir, prefix + f"{info[0]}.pt")
+                )
+            else:
+                coeffs_dict[coef_name] = info[1]
+
+        self.bands = StandardizeCoeff(
+            loc=coeffs_dict["bands_loc"], scale=coeffs_dict["bands_scale"]
+        )
+        self.idx = StandardizeCoeff(
+            loc=coeffs_dict["idx_loc"], scale=coeffs_dict["idx_scale"]
+        )
+        self.angles = StandardizeCoeff(
+            loc=coeffs_dict["angles_loc"], scale=coeffs_dict["angles_scale"]
+        )
+
+
 def load_standardize_coeffs(
     data_dir: str | None = None, prefix="", n_bands=10, n_angles=3, n_idx=4
 ):
-    coeffs_info_dict = {
-        "bands_loc": ["norm_mean", torch.zeros(n_bands)],
-        "bands_scale": ["norm_std", torch.ones(n_bands)],
-        "idx_loc": ["idx_loc", torch.zeros(n_idx)],
-        "idx_scale": ["idx_scale", torch.ones(n_idx)],
-        "angles_loc": ["angles_loc", torch.zeros(n_angles)],
-        "angles_scale": ["angles_scale", torch.ones(n_angles)],
-    }
-    coeffs_dict = {}
-    for coef_name, info in coeffs_info_dict.items():
-        if data_dir is not None and os.path.isfile(
-            os.path.join(data_dir, prefix + f"{info[0]}.pt")
-        ):
-            coeffs_dict[coef_name] = torch.load(
-                os.path.join(data_dir, prefix + f"{info[0]}.pt")
-            )
-        else:
-            coeffs_dict[coef_name] = info[1]
-    io_coeffs = IOStandardizeCoeffs(
-        bands=StandardizeCoeff(
-            loc=coeffs_dict["bands_loc"], scale=coeffs_dict["bands_scale"]
-        ),
-        idx=StandardizeCoeff(
-            loc=coeffs_dict["idx_loc"], scale=coeffs_dict["idx_scale"]
-        ),
-        angles=StandardizeCoeff(
-            loc=coeffs_dict["angles_loc"], scale=coeffs_dict["angles_scale"]
-        ),
-    )
-    return io_coeffs
+    loaded = IOStandardizeCoeffsFromDisk(data_dir, prefix, n_bands, n_angles, n_idx)
+    return IOStandardizeCoeffs(loaded.bands, loaded.angles, loaded.idx)
 
 
 # @dataclass
@@ -98,7 +102,8 @@ def select_rec_loss_fn(loss_type):
         rec_loss_fn = mse_loss
     else:
         raise NotImplementedError(
-            "Please choose between 'diag_nll' (diagonal covariance matrix) and 'full_nll' (full covariance matrix) for nll loss option."
+            "Please choose between 'diag_nll' (diagonal covariance matrix)"
+            " and 'full_nll' (full covariance matrix) for nll loss option."
         )
     return rec_loss_fn
 
@@ -140,7 +145,7 @@ def load_dict(dict_file_path):
 
 
 def NaN_model_params(model):
-    for name, param in model.named_parameters():
+    for _, param in model.named_parameters():
         if param.requires_grad:
             if torch.isnan(param).any():
                 return True
@@ -157,7 +162,8 @@ def full_gaussian_nll(x, mu, sigma_mat, eps=1e-6, device="cpu", regularization=1
     )
     if L_info.ne(0).any():
         raise ValueError(
-            "Baddly conditionned covariance matrix for cholesky lower triangular computation. "
+            "Baddly conditionned covariance matrix for cholesky"
+            " lower triangular computation."
         )
     inverse_sigma_mat = torch.cholesky_inverse(L)
     return (

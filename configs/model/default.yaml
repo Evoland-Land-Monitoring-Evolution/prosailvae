@@ -8,7 +8,9 @@ model:
       _target_: prosailvae.encoders.EncoderConfig
       encoder_type: "rnn"
       input_size: 13
-      io_coeffs: ???
+      io_coeffs:
+        _target_: prosailvae.utils.utils.IOStandardizeCoeffsFromDisk
+        data_dir: "/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/s2_patch_dataset/"
       output_size: 11
     loss_config:
       _target_: prosailvae.loss.LossConfig

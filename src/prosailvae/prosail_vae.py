@@ -15,7 +15,7 @@ from .encoders import EncoderConfig, get_encoder
 # from prosailvae.decoders import TSSimulatorDecoder
 from .latentspace import TruncatedNormalLatent
 from .loss import LossConfig, NLLLoss
-from .ProsailSimus import PROSAILVARS, ProsailSimulator, SensorSimulator
+from .ProsailSimus import ProsailSimulator, SensorSimulator
 from .simspaces import LinearVarSpace
 from .simvae import SimVAE
 from .utils.utils import load_dict
@@ -130,7 +130,7 @@ class ProsailVAEConfig:
 
     encoder_config: EncoderConfig
     loss_config: LossConfig
-    rsr_dir: Path
+    rsr_dir: Path | str
     vae_load_file_path: str
     vae_save_file_path: str
     spatial_mode: bool = False
@@ -147,71 +147,8 @@ class ProsailVAEConfig:
     prosail_vars_dist_type: str = "legacy"
     prospect_version: str = "5"
 
-
-def get_prosail_vae_config(
-    params, bands, io_coeffs, inference_mode, prosail_bands, rsr_dir, lai_ccc_mode=False
-):
-    """
-    Get ProsailVAEConfig from params dict
-    """
-    # assert len(prosail_bands) == len(bands)
-    n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
-    encoder_config = EncoderConfig(
-        encoder_type=params["encoder_type"],
-        input_size=len(bands) + 3 + n_idx,  # + 2 * 3 + n_idx,
-        output_size=len(PROSAILVARS) if not lai_ccc_mode else 2,
-        io_coeffs=io_coeffs,
-        bands=bands,
-        last_activation=None,
-        n_latent_params=2,
-        layer_sizes=params["layer_sizes"],
-        kernel_sizes=params["kernel_sizes"],
-        padding="valid",
-        first_layer_kernel=params["first_layer_kernel"],
-        first_layer_size=params["first_layer_size"],
-        block_layer_sizes=params["block_layer_sizes"],
-        block_layer_depths=params["block_layer_depths"],
-        block_kernel_sizes=params["block_kernel_sizes"],
-        block_n=params["block_n"],
-        disable_s2_r_idx=n_idx == 0,
-    )
-    spatial_encoder = get_encoder(encoder_config).get_spatial_encoding()
-    if spatial_encoder:
-        params["loss_type"] = "spatial_nll"
-    if params["rec_bands_loss_coeffs"] is not None:
-        assert len(bands) >= len(params["rec_bands_loss_coeffs"])
-        reconstruction_bands_coeffs = params["rec_bands_loss_coeffs"]
-    else:
-        reconstruction_bands_coeffs = None
-    loss_config = LossConfig(
-        supervised=params["supervised"],
-        beta_index=params["beta_index"],
-        beta_kl=params["beta_kl"],
-        beta_cyclical=params["beta_cyclical"],
-        snap_cyclical=params["snap_cyclical"],
-        loss_type=params["loss_type"],
-        lat_loss_type=params["lat_loss_type"],
-        reconstruction_bands_coeffs=reconstruction_bands_coeffs,
-        lat_idx=torch.tensor(params["lat_idx"]).int(),
-    )
-
-    return ProsailVAEConfig(
-        encoder_config=encoder_config,
-        loss_config=loss_config,
-        rsr_dir=rsr_dir,
-        vae_load_file_path=params["vae_load_file_path"],
-        vae_save_file_path=params["vae_save_file_path"],
-        load_vae=params["load_model"],
-        apply_norm_rec=params["apply_norm_rec"],
-        inference_mode=inference_mode,
-        prosail_bands=prosail_bands,
-        disabled_latent=params["disabled_latent"],
-        disabled_latent_values=params["disabled_latent_values"],
-        R_down=params["R_down"],
-        deterministic=params["deterministic"],
-        prosail_vars_dist_type=params["prosail_vars_dist_type"],
-        prospect_version=params["prospect_version"],
-    )
+    def __post_init__(self):
+        self.rsr_dir = Path(self.rsr_dir)
 
 
 def get_prosail_vae(

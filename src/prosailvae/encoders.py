@@ -9,10 +9,9 @@ from dataclasses import dataclass, field
 import torch
 import torch.nn as nn
 
-from .utils.image_utils import batchify_batch_latent, check_is_patch, crop_s2_input
-from .utils.utils import IOStandardizeCoeffs, standardize, torch_select_unsqueeze
-
 from .spectral_indices import get_spectral_idx
+from .utils.image_utils import batchify_batch_latent, check_is_patch
+from .utils.utils import IOStandardizeCoeffs, standardize
 
 
 @dataclass
@@ -59,132 +58,6 @@ class Encoder(nn.Module):
 
     def encode(self):
         raise NotImplementedError
-
-
-class ProsailNNEncoder(Encoder):
-    """
-    A class used to represent a simple MLP encoder of an auto encoder.
-    ...
-
-    Attributes
-    ----------
-    net : nn.Sequential
-        NN layers of the encoder
-
-    Methods
-    -------
-    encode(x)
-        Encode time series x using net.
-    """
-
-    def __init__(
-        self,
-        config: EncoderConfig,
-        device: str = "cpu",
-    ):
-        super().__init__()
-        if hidden_layers_size is None:
-            hidden_layers_size = [512, 512]
-            bands = config
-        if bands is None:
-            bands = torch.arange(10)
-        self.bands = bands.to(device)
-        layers = []
-        layers.append(
-            nn.Linear(in_features=config.input_size, out_features=hidden_layers_size[0])
-        )
-
-        for i in range(len(hidden_layers_size) - 1):
-            in_features = hidden_layers_size[i]
-            out_features = hidden_layers_size[i + 1]
-            layers.append(nn.Linear(in_features=in_features, out_features=out_features))
-            layers.append(nn.ReLU())
-            # layers.append(nn.BatchNorm1d(num_features=out_features))
-        layers.append(
-            nn.Linear(
-                in_features=hidden_layers_size[-1],
-                out_features=config.n_latent_params * config.output_size,
-            )
-        )
-        self.output_size = config.output_size
-        if config.last_activation is not None:
-            layers.append(config.last_activation)
-        self.device = device
-        self.net = nn.Sequential(*layers).to(device)
-
-        bands_loc = config.io_coeffs.bands.loc
-        idx_loc = config.io_coeffs.idx.loc
-        angles_loc = config.io_coeffs.angles.loc
-        bands_scale = config.io_coeffs.bands.scale
-        idx_scale = config.io_coeffs.idx.scale
-        angles_scale = config.io_coeffs.angles.scale
-        bands_loc = (
-            bands_loc if bands_loc is not None else torch.zeros(config.input_size)
-        )
-        bands_scale = (
-            bands_scale if bands_scale is not None else torch.ones(config.input_size)
-        )
-        idx_loc = idx_loc if idx_loc is not None else torch.zeros(5)
-        idx_scale = idx_scale if idx_scale is not None else torch.ones(5)
-        angles_loc = angles_loc if angles_loc is not None else torch.zeros(3)
-        angles_scale = angles_scale if angles_scale is not None else torch.ones(3)
-        self.bands_loc = bands_loc.float().to(device)
-        self.bands_scale = bands_scale.float().to(device)
-        self.idx_loc = idx_loc.float().to(device)
-        self.idx_scale = idx_scale.float().to(device)
-        self.angles_loc = angles_loc.float().to(device)
-        self.angles_scale = angles_scale.float().to(device)
-        self._spatial_encoding = False
-        self.nb_enc_cropped_hw = 0
-        self.disable_s2_r_idx = config.disable_s2_r_idx
-
-    def get_spatial_encoding(self):
-        """
-        Return private attribute about wether the encoder takes patches as input
-        """
-        return self._spatial_encoding
-
-    def change_device(self, device):
-        """
-        Move the class attributes to desired device
-        """
-        self.device = device
-        self.bands_loc = self.bands_loc.to(device)
-        self.bands_scale = self.bands_scale.to(device)
-        self.idx_loc = self.idx_loc.to(device)
-        self.idx_scale = self.idx_scale.to(device)
-        self.angles_loc = self.angles_loc.to(device)
-        self.angles_scale = self.angles_scale.to(device)
-        self.net = self.net.to(device)
-        self.bands = self.bands.to(device)
-
-    def encode(self, s2_refl, angles):
-        """
-        Encode S2 reflectances and angles. Asserts s2_refl dimension is batch x features.
-        """
-
-        normed_refl = standardize(
-            s2_refl[:, self.bands], loc=self.bands_loc, scale=self.bands_scale, dim=1
-        )
-        # normed_angles = standardize(torch.concat(torch.cos(torch.deg2rad(angles)),
-        #  torch.sin(torch.deg2rad(angles)),
-        #  axis=1),
-        #  loc=self.angles_loc, scale=self.angles_scale, dim=1)
-        normed_angles = standardize(
-            torch.cos(torch.deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
-        )
-        encoder_input = torch.concat((normed_refl, normed_angles), axis=1)
-        if not self.disable_s2_r_idx:
-            spectral_idx = get_spectral_idx(s2_refl, bands_dim=1)
-            encoder_input = torch.concat((encoder_input, spectral_idx), axis=1)
-        encoder_output = self.net(encoder_input)
-        return encoder_output, angles
-
-    def forward(self, s2_refl, angles):
-        """
-        Encode S2 reflectances and angles
-        """
-        return self.encode(s2_refl, angles)
 
 
 class EncoderResBlock(nn.Module):
@@ -363,10 +236,6 @@ class ProsailRNNEncoder(Encoder):
             )
         else:
             raise NotImplementedError
-        # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
-        #                                           torch.sin(torch.deg2rad(angles))),
-        #                                           axis=1),
-        #                             loc=self.angles_loc, scale=self.angles_scale, dim=1)
         normed_angles = standardize(
             torch.cos(torch.deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
         )
@@ -382,152 +251,6 @@ class ProsailRNNEncoder(Encoder):
         Encode S2 reflectances and angles
         """
         return self.encode(s2_refl, angles)
-
-
-class ProsailCNNEncoder(nn.Module):
-    """
-    Implements an encoder with alternate
-    convolutional and Relu layers
-    """
-
-    def __init__(self, config: EncoderConfig, device: str = "cpu"):
-        """
-        Constructor
-
-        :param encoder_sizes: Number of features for each layer
-        :param kernel_sizes: List of kernel sizes for each layer
-        """
-
-        super().__init__()
-        bands = config.bands
-        if bands is None:
-            bands = torch.arange(10)
-        self.bands = bands.to(device)
-        self.device = device
-        enc_blocks: list[nn.Module] = sum(
-            [
-                [
-                    nn.Conv2d(
-                        in_layer,
-                        out_layer,
-                        kernel_size=kernel_size,
-                        padding=config.padding,
-                    ),
-                    nn.ReLU(),
-                ]
-                for in_layer, out_layer, kernel_size in zip(
-                    config.layer_sizes, config.layer_sizes[1:], config.kernel_sizes
-                )
-            ],
-            [],
-        )
-        self.output_size = config.output_size
-        self.cnet = nn.Sequential(*enc_blocks).to(device)
-        self.nb_enc_cropped_hw = sum(
-            [(kernel_size - 1) // 2 for kernel_size in config.kernel_sizes]
-        )
-        self.mu_conv = nn.Conv2d(
-            config.layer_sizes[-1], config.layer_sizes[-1] // 2, kernel_size=1
-        ).to(device)
-        self.logvar_conv = nn.Conv2d(
-            config.layer_sizes[-1], config.layer_sizes[-1] // 2, kernel_size=1
-        ).to(device)
-        self.mu_logvar_conv = nn.Conv2d(
-            config.layer_sizes[-1], config.layer_sizes[-1], kernel_size=1
-        ).to(device)
-        bands_loc = config.io_coeffs.bands.loc
-        idx_loc = config.io_coeffs.idx.loc
-        angles_loc = config.io_coeffs.angles.loc
-        bands_scale = config.io_coeffs.bands.scale
-        idx_scale = config.io_coeffs.idx.scale
-        angles_scale = config.io_coeffs.angles.scale
-        bands_loc = (
-            bands_loc if bands_loc is not None else torch.zeros(config.input_size)
-        )
-        bands_scale = (
-            bands_scale if bands_scale is not None else torch.ones(config.input_size)
-        )
-        idx_loc = idx_loc if idx_loc is not None else torch.zeros(5)
-        idx_scale = idx_scale if idx_scale is not None else torch.ones(5)
-        angles_loc = angles_loc if angles_loc is not None else torch.zeros(3)
-        angles_scale = angles_scale if angles_scale is not None else torch.ones(3)
-        self.bands_loc = bands_loc.float().to(device)
-        self.bands_scale = bands_scale.float().to(device)
-        self.idx_loc = idx_loc.float().to(device)
-        self.idx_scale = idx_scale.float().to(device)
-        self.angles_loc = angles_loc.float().to(device)
-        self.angles_scale = angles_scale.float().to(device)
-        self._spatial_encoding = True
-        self.disable_s2_r_idx = config.disable_s2_r_idx
-
-    def get_spatial_encoding(self):
-        """
-        Return private attribute about wether the encoder takes patches as input
-        """
-        return self._spatial_encoding
-
-    def encode(self, s2_r, angles):
-        """
-        Forward pass of the convolutionnal encoder
-
-        :param x: Input tensor of shape [N,C_in,H,W]
-
-        :return: Output Dataclass that holds mu and var
-                 tensors of shape [N,C_out,H,W]
-        """
-        is_patch = check_is_patch(s2_r)
-        if not is_patch:
-            raise AttributeError(
-                "Input data is a not a patch: spatial encoder can only take patches as input"
-            )
-
-        normed_refl = standardize(s2_r, self.bands_loc, self.bands_scale, dim=1)[
-            :, self.bands, ...
-        ]
-        if len(normed_refl.size()) == 3:
-            normed_refl = normed_refl.unsqueeze(0)
-        if len(angles.size()) == 3:
-            angles = angles.unsqueeze(0)
-        # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
-        #                                           torch.sin(torch.deg2rad(angles))), axis=1),
-        #                             self.angles_loc, self.angles_scale, dim=1)
-        normed_angles = standardize(
-            torch.cos(torch.deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
-        )
-        encoder_input = torch.concat((normed_refl, normed_angles, spectral_idx), axis=1)
-        if not self.disable_s2_r_idx:
-            spectral_idx = get_spectral_idx(s2_r, bands_dim=1)
-            encoder_input = torch.concat((encoder_input, spectral_idx), axis=1)
-        y = self.cnet(encoder_input)
-        # y_mu = self.mu_conv(y)
-        # y_logvar = self.logvar_conv(y)
-        # y_mu_logvar = torch.concat([y_mu, y_logvar], axis=1)
-        y_mu_logvar = self.mu_logvar_conv.forward(y)
-        if self.nb_enc_cropped_hw > 0:
-            angles = crop_s2_input(angles, self.nb_enc_cropped_hw)
-        return batchify_batch_latent(y_mu_logvar), batchify_batch_latent(angles)
-
-    def forward(self, s2_refl, angles):
-        """
-        Encodes S2 reflectances and angles
-        """
-        return self.encode(s2_refl, angles)
-
-    def change_device(self, device):
-        """
-        Move the class attributes to desired device
-        """
-        self.device = device
-        self.bands_loc = self.bands_loc.to(device)
-        self.bands_scale = self.bands_scale.to(device)
-        self.idx_loc = self.idx_loc.to(device)
-        self.idx_scale = self.idx_scale.to(device)
-        self.angles_loc = self.angles_loc.to(device)
-        self.angles_scale = self.angles_scale.to(device)
-        self.cnet = self.cnet.to(device)
-        self.mu_conv = self.mu_conv.to(device)
-        self.logvar_conv = self.logvar_conv.to(device)
-        self.bands = self.bands.to(device)
 
 
 class EncoderCResNetBlock(Encoder):
@@ -706,7 +429,8 @@ class ProsailResCNNEncoder(nn.Module):
         is_patch = check_is_patch(s2_refl)
         if not is_patch:
             raise AttributeError(
-                "Input data is a not a patch: spatial encoder can only take patches as input"
+                "Input data is a not a patch: spatial encoder can only"
+                " take patches as input"
             )
 
         normed_refl = standardize(s2_refl, self.bands_loc, self.bands_scale, dim=1)[
@@ -716,8 +440,7 @@ class ProsailResCNNEncoder(nn.Module):
             normed_refl = normed_refl.unsqueeze(0)  # Ensures batch dimension appears
         if len(angles.size()) == 3:
             angles = angles.unsqueeze(0)
-        # normed_angles = standardize(torch.concat((torch.cos(torch.deg2rad(angles)),
-        #                                           torch.sin(torch.deg2rad(angles))), axis=1),
+
         normed_angles = standardize(
             torch.cos(torch.deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
         )
@@ -765,7 +488,7 @@ class ProsailResCNNEncoder(nn.Module):
 
 def get_encoder(config: EncoderConfig, device: str = "cpu"):
     if config.encoder_type == "nn":
-        encoder = ProsailNNEncoder(config, device)
+        pass  # encoder = ProsailNNEncoder(config, device)
     elif config.encoder_type == "rnn":
         encoder = ProsailRNNEncoder(config, device)
     elif config.encoder_type == "rcnn":
@@ -778,9 +501,7 @@ def get_encoder(config: EncoderConfig, device: str = "cpu"):
         # # crnn_group_n = [1,2]
         encoder = ProsailResCNNEncoder(config, device)
     elif config.encoder_type == "cnn":
-        # encoder_sizes = [vae_params["input_size"] + 2 * 3] + vae_params["hidden_layers_size"] + [output_size]
-        # enc_kernel_sizes = [3] * (len(encoder_sizes) - 1)
-        encoder = ProsailCNNEncoder(config, device)
+        pass  # encoder = ProsailCNNEncoder(config, device)
     else:
         raise NotImplementedError
     return encoder

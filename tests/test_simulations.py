@@ -2,6 +2,7 @@ from pathlib import Path
 
 import torch
 
+from prosailvae.decoders import ProsailSimulatorDecoder
 from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 
 
@@ -45,3 +46,29 @@ def test_s2_simulation() -> None:
     s2_simu = simulator(dummy_spectra)
     ref_data = s2_simus_dummy_ref(batch_size)
     assert torch.isclose(s2_simu, ref_data).all()
+
+
+def dummy_latent(batch_size: int = 10, nb_samples: int = 10) -> torch.Tensor:
+    nb_latents = 11
+    return torch.randn(batch_size, nb_latents, nb_samples)
+
+
+def dummy_angles(batch_size: int = 10) -> torch.Tensor:
+    tts = torch.randint(low=25, high=70, size=(batch_size,)).float()
+    tto = torch.randint(low=-14, high=14, size=(batch_size,)).float()
+    relaz = torch.randint(low=0, high=360, size=(batch_size,)).float()
+    return torch.stack([tts, tto, relaz], dim=1)
+
+
+def test_simulator_decoder() -> None:
+    batch_size = 10
+    prospect_range = (400, 2500)
+    bands = list(range(1, 13))
+    rsr_file = f"{Path(__file__).parent}/../data/sentinel2.rsr"
+    prosail = ProsailSimulator()
+    sensor = SensorSimulator(rsr_file, prospect_range, bands)
+    decoder = ProsailSimulatorDecoder(prosail, sensor)
+    latent = dummy_latent(batch_size)
+    angles = dummy_angles(batch_size)
+    recons = decoder.decode(latent, angles)
+    assert recons is not None

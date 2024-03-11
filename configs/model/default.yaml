@@ -1,0 +1,17 @@
+name: "default"
+
+model:
+  _target_: prosailvae.models.lightning_module.ProsailVAELightningModule
+  config:
+    _target_: prosailvae.prosail_vae.ProsailVAEConfig
+    encoder_config:
+      _target_: prosailvae.encoders.EncoderConfig
+      encoder_type: "rnn"
+      input_size: 13
+      io_coeffs: ???
+      output_size: 11
+    loss_config:
+      _target_: prosailvae.loss.LossConfig
+    rsr_dir: "/home/inglada/Dev/MMDC/prosailvae/data"
+    vae_load_file_path: "/tmp"
+    vae_save_file_path: "/tmp"

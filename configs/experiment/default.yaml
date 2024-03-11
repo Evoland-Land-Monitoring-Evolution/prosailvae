@@ -1,0 +1,10 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=s2_lingap_mlp
+
+defaults:
+  - override /model: default.yaml
+  - override /datamodule : default.yaml
+# all parameters bellow will be merged with parameters from default configurations set above
+# this allows you overwrite only specified parameters

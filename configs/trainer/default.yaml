@@ -1,0 +1,22 @@
+_target_: pytorch_lightning.Trainer
+
+accelerator: gpu
+devices: 1
+
+min_epochs: 0
+max_epochs: 100
+log_every_n_steps : 50
+val_check_interval : 0.5
+
+# number of validation steps to execute at the beginning of the training
+num_sanity_val_steps: 0
+
+precision: 'bf16-mixed'
+
+# fastdev
+fast_dev_run: False
+
+# For profiling
+#profiler : 'pytorch'
+#val_check_interval : 5
+#max_steps: 8

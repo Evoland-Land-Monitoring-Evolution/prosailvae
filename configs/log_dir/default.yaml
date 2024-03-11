@@ -1,0 +1,5 @@
+# @package _global_
+
+hydra:
+  run:
+    dir: ${output_dir}/logs/experiments/runs/${name}/${run_id}

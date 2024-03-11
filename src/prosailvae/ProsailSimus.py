@@ -4,7 +4,6 @@ Created on Wed Nov  9 13:39:15 2022
 
 @author: yoel
 """
-from typing import Tuple
 
 import numpy as np
 import prosail
@@ -13,15 +12,10 @@ from prosail.sail_model import init_prosail_spectra
 from scipy.interpolate import interp1d
 from scipy.signal import decimate
 
-from prosailvae.spectral_indices import get_spectral_idx
+from .spectral_indices import get_spectral_idx
 
 # from prosail import spectral_lib
-from .utils.utils import (
-    gaussian_nll_loss,
-    standardize,
-    torch_select_unsqueeze,
-    unstandardize,
-)
+from .utils.utils import gaussian_nll_loss, standardize, unstandardize
 
 
 def subsample_spectra(tensor, R_down=1, axis=0, method="interp"):
@@ -89,31 +83,6 @@ def decimate_1Dtensor(tensor, R_down=1):
     return torch.from_numpy(decimated_array).to(device)
 
 
-# def subsample_tensor(tensor, R_down=1, axis=0, method='block_mean'):
-#     if R_down > 1 :
-#         assert 2100 % R_down == 0
-#         if method=='block_mean':
-#             size = torch.as_tensor(tensor.size())
-#             axis_len = size[axis]
-#             if axis_len == 2101:
-#                 tensor = tensor.gather(axis, torch.arange(2100))
-#                 size = torch.as_tensor(tensor.size())
-#             resized = torch.zeros(len(size)+1)
-#             resized[axis] = 2100//R_down
-#             resized[axis+1] = R_down
-#             resized[axis+2:] = size[axis+1:]
-#             tensor = tensor.reshape(resized.int().numpy().tolist()).mean(axis)
-#         else:
-#             if len(tensor.size())==1:
-#                 tensor = decimate_1Dtensor(tensor, R_down=R_down)
-#             elif len(tensor.size())==2:
-#                 axis = 0 if axis == 1 else 1
-#                 tensor = apply_along_axis(decimate_1Dtensor, tensor, R_down, axis=axis)
-#             else:
-#                 raise NotImplementedError
-#     return tensor
-
-
 class SensorSimulator:
     """Simulates the reflectances of a sensor from a full spectrum and the
     RSR of the sensor.
@@ -133,7 +102,7 @@ class SensorSimulator:
         rsr_file: str,
         prospect_range: tuple[int, int] = (400, 2500),
         #  bands=[1, 2, 3, 4, 5, 6, 7, 8, 9, 11],
-        bands=[1, 2, 3, 4, 5, 6, 7, 8, 11, 12],
+        bands=None,
         device="cpu",
         bands_loc=None,
         bands_scale=None,
@@ -143,6 +112,8 @@ class SensorSimulator:
         R_down=1,
     ):
         super().__init__()
+        if bands is None:
+            bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
         self.R_down = R_down
         self.bands = bands
         self.device = device
@@ -182,16 +153,12 @@ class SensorSimulator:
         self.s2norm_factor_d = (self.rsr * self.solar).sum(axis=2)
         self.s2norm_factor_n = self.rsr * self.solar
         if self.R_down > 1:
-            # self.s2norm_factor_n = subsample_spectra(self.s2norm_factor_n.reshape(len(bands), -1), axis=1,
-            #                                          R_down=R_down, method="decimate").reshape(1, len(bands), -1) * self.R_down
-
             self.s2norm_factor_n = (
                 self.s2norm_factor_n[:, :, :-1]
                 .reshape(1, len(bands), -1, R_down)
                 .mean(3)
                 * self.R_down
             )
-            # self.s2norm_factor_n = subsample_spectra(self.s2norm_factor_n, R_down=R_down, axis=2) * self.R_down
 
     def change_device(self, device):
         self.device = device

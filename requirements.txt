@@ -4,6 +4,9 @@ codecarbon
 einops
 flake8          # code analysis
 geopandas
+hydra-colorlog
+hydra-core
+hydra-optuna-sweeper
 ipykernel
 ipython
 isort           # import sorting

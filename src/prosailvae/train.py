@@ -18,12 +18,18 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.optim as optim
+from dataset.loaders import get_simloader, get_train_valid_test_loader_from_patches
 from tqdm import trange
 from tqdm.contrib.logging import logging_redirect_tqdm
+from utils.utils import (
+    get_RAM_usage,
+    get_total_RAM,
+    load_standardize_coeffs,
+    plot_grad_flow,
+    save_dict,
+)
 
-# from torch_lr_finder import get_PROSAIL_VAE_lr
-from dataset.loaders import get_simloader, get_train_valid_test_loader_from_patches
-from metrics.results import (  # save_results_on_sim_data,; save_validation_results,
+from metrics.results import (
     get_res_dir_path,
     plot_losses,
     save_results_on_s2_data,
@@ -36,13 +42,6 @@ from prosailvae.prosail_vae import (
     load_prosail_vae_with_hyperprior,
 )
 from prosailvae.ProsailSimus import get_bands_idx
-from utils.utils import (
-    get_RAM_usage,
-    get_total_RAM,
-    load_standardize_coeffs,
-    plot_grad_flow,
-    save_dict,
-)
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -162,7 +161,8 @@ def get_prosailvae_train_parser():
     parser.add_argument(
         "-w",
         dest="weiss_mode",
-        help="removes B2 and B8 bands for validation with weiss data",  # TODO replace weiss mode with explicit band selection
+        # TODO replace weiss mode with explicit band selection
+        help="removes B2 and B8 bands for validation with weiss data",
         type=bool,
         default=False,
     )
@@ -707,10 +707,6 @@ def train_prosailvae(
         n_models = params["n_init_models"]
         lr = params["init_lr"]
         n_epochs = params["n_init_epochs"]
-        # if socket.gethostname()==PC_SOCKET_NAME:
-        #     n_epochs = 1
-        #     n_models = 2
-
         broke_at_rec = initialize_by_training(
             n_models=n_models,
             n_epochs=n_epochs,
@@ -818,7 +814,7 @@ def configureEmissionTracker(parser):
         )
         tracker.start()
         useEmissionTracker = True
-    except:
+    except Exception:
         logger.error(
             "Couldn't start codecarbon ! Emissions not tracked for this execution."
         )
@@ -852,8 +848,6 @@ def main():
         belsar_data_dir,
         model_name,
     ) = setup_training()
-    # tracker, useEmissionTracker = configureEmissionTracker(parser)
-    # spatial_encoder_types = ["cnn", "rcnn"]
     try:
         lai_cyclical_loader = None
 
@@ -886,20 +880,6 @@ def main():
             else all_valid_loss_df["loss_sum"].min()
         )
         min_loss_df = pd.DataFrame({"Loss": [min_loss]})
-        # if True and not socket.gethostname() == PC_SOCKET_NAME:
-        #     global_validation_metrics = save_validation_results(
-        #         prosail_vae,
-        #         validation_dir,
-        #         frm4veg_data_dir=frm4veg_data_dir,
-        #         frm4veg_2021_data_dir=frm4veg_2021_data_dir,
-        #         belsar_data_dir=belsar_data_dir,
-        #         model_name="pvae",
-        #         method="simple_interpolate",
-        #         mode="sim_tg_mean",
-        #         remove_files=True,
-        #         plot_results=parser.plot_results,
-        #         save_reconstruction=False,
-        #     )
         cyclical_rmse_df = pd.DataFrame(data={"cyclical_rmse": [1.0]})
         _, valid_loader, test_loader = get_train_valid_test_loader_from_patches(
             params["s2_data_dir"],
@@ -929,17 +909,6 @@ def main():
             (pd.DataFrame({"model": [model_name]}), cyclical_rmse_df, min_loss_df),
             axis=1,
         )
-        # for variable, metrics in global_validation_metrics.items():
-        #     global_results_df = pd.concat(
-        #         (
-        #             global_results_df,
-        #             metrics["rmse"],
-        #             metrics["picp"],
-        #             metrics["mpiw"],
-        #             metrics["mestdr"],
-        #         ),
-        #         axis=1,
-        #     )
         res_df_filename = os.path.join(
             res_dir,
             "model_results.csv",
@@ -953,28 +922,12 @@ def main():
                 res_df_filename, mode="a", index=False, header=False
             )
 
-        # if not params["encoder_type"] in spatial_encoder_types:  # encoder is not CNN
-        #     save_results_on_sim_data(
-        #         prosail_vae,
-        #         res_dir,
-        #         params["sim_data_dir"],
-        #         all_train_loss_df,
-        #         all_valid_loss_df,
-        #         info_df,
-        #         LOGGER_NAME=LOGGER_NAME,
-        #         plot_results=parser.plot_results,
-        #         bvnet_mode=parser.weiss_mode,
-        #         n_samples=params["n_samples"],
-        #         lai_cyclical_loader=lai_cyclical_loader,
-        #     )
         save_array_xp_path(job_array_dir, res_dir)
         if params["k_fold"] > 1:
             save_array_xp_path(os.path.join(res_dir, os.path.pardir), res_dir)
     except Exception as exc:
         traceback.print_exc()
         print(exc)
-    # if useEmissionTracker:
-    #     tracker.stop()
     pass
 
 

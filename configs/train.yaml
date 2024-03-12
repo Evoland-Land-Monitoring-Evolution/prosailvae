@@ -57,6 +57,6 @@ mat_mul_precision : 'high'
 
 # default name for the experiment, determines logging folder path
 # (you can overwrite this name in experiment configs)
-name: ${model.name}
+name: "default"
 
 run_id : ${now:%Y-%m-%d}_${now:%H-%M-%S}

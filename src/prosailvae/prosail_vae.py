@@ -229,7 +229,7 @@ def get_prosail_vae(
             decoder=decoder,
             lat_space=lat_space,
             sim_space=prosail_var_space,
-            config=pv_config,
+            deterministic=pv_config.deterministic,
             reconstruction_loss=reconstruction_loss,
             supervised=pv_config.loss_config.supervised,
             device="cpu",

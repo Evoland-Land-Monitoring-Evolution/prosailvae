@@ -16,12 +16,16 @@ from ..dataset.loaders import get_loader_from_patches
 class DataModuleConfig:
     """Configuration for the ProsailVAEDataModule"""
 
-    patches_dir: Path
+    patches_dir: Path | str
     bands: list[int]
     batch_size: int = 1
     num_workers: int = 0
     max_valid_samples: int = 50
     concat: bool = False
+
+    def __post_init__(self):
+        if isinstance(self.patches_dir, str):
+            self.patches_dir = Path(self.patches_dir)
 
 
 class ProsailVAEDataModule(LightningDataModule):

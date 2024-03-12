@@ -36,7 +36,7 @@ class SimVAEConfig:
     lat_space: LatentSpace
     sim_space: SimVarSpace
     reconstruction_loss: nn.Module
-    config: Any
+    deterministic: bool = False
     index_loss: Any | None = None
     supervised: bool = False
     device: str = "cpu"
@@ -118,7 +118,6 @@ class SimVAE(nn.Module):
             config.disabled_latent_values = []
         super().__init__()
         # encoder
-        self.config = config.config
         self.encoder = config.encoder
         self.lat_space = config.lat_space
         self.sim_space = config.sim_space
@@ -141,7 +140,7 @@ class SimVAE(nn.Module):
         self.lat_idx = config.lat_idx
         self.lat_nll = config.lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
-        self.deterministic = config.config.deterministic
+        self.deterministic = config.deterministic
         self.beta_cyclical = config.beta_cyclical
 
         self.snap_cyclical = config.snap_cyclical

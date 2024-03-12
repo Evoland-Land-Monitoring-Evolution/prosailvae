@@ -56,7 +56,7 @@ def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
             decoder=decoder,
             lat_space=lat_space,
             sim_space=prosail_var_space,
-            config=pv_conf,
+            deterministic=pv_conf.deterministic,
             reconstruction_loss=reconstruction_loss,
             supervised=pv_conf.loss_config.supervised,
             device="cpu",

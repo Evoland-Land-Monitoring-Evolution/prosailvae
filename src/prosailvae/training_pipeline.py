@@ -46,8 +46,7 @@ def setup(
         )
 
     # Init lightning model
-    # log.info("Instantiating model <%s>", config.model._target_)
-    # pylint: disable=W0212
+    log.info("Instantiating model <%s>", config.model._target_)  # pylint: disable=W0212
     pl_module: LightningModule = hydra.utils.instantiate(config.model)
 
     # Init lightning datamodule

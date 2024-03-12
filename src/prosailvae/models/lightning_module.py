@@ -1,12 +1,12 @@
 """ Pytorch Lightning Module for training a ProsailVAE model """
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 import torch
 from pytorch_lightning import LightningModule
 
-from ..prosail_vae import ProsailVAEConfig, get_prosail_vae
+from ..simvae import SimVAE
 
 # Configure logging
 NUMERIC_LEVEL = getattr(logging, "INFO", None)
@@ -20,9 +20,12 @@ logger = logging.getLogger(__name__)
 class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-ancestors
     """Pytorch Lightning Module for training a ProsailVAE model"""
 
-    def __init__(self, config: ProsailVAEConfig, lr: float = 1e-3):
+    def __init__(self, model: SimVAE, lr: float = 1e-3):
         super().__init__()
-        self.model = get_prosail_vae(config, device=cast(torch.device, self.device))
+        # this line allows to access init params with 'self.hparams' attribute
+        # it also ensures init params will be stored in ckpt
+        self.save_hyperparameters(logger=False)
+        self.model = model
         self.n_samples = 1  # how many samples drawn for reconstruction
         self.learning_rate = lr
 

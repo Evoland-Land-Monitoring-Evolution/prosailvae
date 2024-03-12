@@ -6,6 +6,8 @@ Created on Thu Sep  1 08:25:49 2022
 """
 
 import logging
+from dataclasses import dataclass
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -16,6 +18,8 @@ from .bvnet_regression.bvnet_utils import (
     get_bvnet_biophyiscal_from_batch,
     get_bvnet_biophyiscal_from_pixellic_batch,
 )
+from .latentspace import LatentSpace
+from .simspaces import SimVarSpace
 from .utils.image_utils import (
     batchify_batch_latent,
     check_is_patch,
@@ -23,6 +27,29 @@ from .utils.image_utils import (
     unbatchify,
 )
 from .utils.utils import NaN_model_params, count_parameters, unstandardize
+
+
+@dataclass
+class SimVAEConfig:
+    encoder: nn.Module
+    decoder: nn.Module
+    lat_space: LatentSpace
+    sim_space: SimVarSpace
+    reconstruction_loss: nn.Module
+    config: Any
+    index_loss: Any | None = None
+    supervised: bool = False
+    device: str = "cpu"
+    beta_kl: float = 0
+    beta_index: float = 0
+    logger_name: str = "PROSAIL-VAE logger"
+    beta_cyclical: float = 0.0
+    snap_cyclical: bool = False
+    inference_mode: bool = False
+    lat_idx: torch.Tensor = None
+    disabled_latent = None
+    disabled_latent_values = None
+    lat_nll: str = "diag_nll"
 
 
 class SimVAE(nn.Module):
@@ -82,64 +109,42 @@ class SimVAE(nn.Module):
         This is selected by mode.
     """
 
-    def __init__(
-        self,
-        encoder,
-        decoder,
-        lat_space,
-        sim_space,
-        reconstruction_loss,
-        config,
-        index_loss=None,
-        supervised: bool = False,
-        device: str = "cpu",
-        beta_kl: float = 0,
-        beta_index: float = 0,
-        logger_name: str = "PROSAIL-VAE logger",
-        beta_cyclical: float = 0.0,
-        snap_cyclical: bool = False,
-        inference_mode: bool = False,
-        lat_idx: torch.Tensor = None,
-        disabled_latent=None,
-        disabled_latent_values=None,
-        lat_nll: str = "diag_nll",
-    ):
-        if lat_idx is None:
-            lat_idx = torch.tensor([])
-        if disabled_latent is None:
-            disabled_latent = []
-        if disabled_latent_values is None:
-            disabled_latent_values = []
+    def __init__(self, config: SimVAEConfig):
+        if config.lat_idx is None:
+            config.lat_idx = torch.tensor([])
+        if config.disabled_latent is None:
+            config.disabled_latent = []
+        if config.disabled_latent_values is None:
+            config.disabled_latent_values = []
         super().__init__()
         # encoder
-        self.config = config
-        self.encoder = encoder
-        self.lat_space = lat_space
-        self.sim_space = sim_space
-        self.decoder = decoder
-        self.reconstruction_loss = reconstruction_loss
-        self.index_loss = index_loss
-        # self.loss = loss
+        self.config = config.config
+        self.encoder = config.encoder
+        self.lat_space = config.lat_space
+        self.sim_space = config.sim_space
+        self.decoder = config.decoder
+        self.reconstruction_loss = config.reconstruction_loss
+        self.index_loss = config.index_loss
         self.encoder.eval()
         self.lat_space.eval()
-        self.supervised = supervised
-        self.device = device
-        self.beta_kl = beta_kl
+        self.supervised = config.supervised
+        self.device = config.device
+        self.beta_kl = config.beta_kl
         self.eval()
-        self.logger = logging.getLogger(logger_name)
+        self.logger = logging.getLogger(config.logger_name)
         self.logger.info(
             f"Number of trainable parameters: {count_parameters(self.encoder)}"
         )
-        self.beta_index = beta_index
-        self.inference_mode = inference_mode
+        self.beta_index = config.beta_index
+        self.inference_mode = config.inference_mode
         self.hyper_prior = None
-        self.lat_idx = lat_idx
-        self.lat_nll = lat_nll
+        self.lat_idx = config.lat_idx
+        self.lat_nll = config.lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
-        self.deterministic = config.deterministic
-        self.beta_cyclical = beta_cyclical
+        self.deterministic = config.config.deterministic
+        self.beta_cyclical = config.beta_cyclical
 
-        self.snap_cyclical = snap_cyclical
+        self.snap_cyclical = config.snap_cyclical
         if self.snap_cyclical:
             self.lat_idx = torch.tensor([6]).int()
             self.lat_nll = "lai_nll"

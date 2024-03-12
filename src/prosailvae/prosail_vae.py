@@ -17,7 +17,7 @@ from .latentspace import TruncatedNormalLatent
 from .loss import LossConfig, NLLLoss
 from .ProsailSimus import ProsailSimulator, SensorSimulator
 from .simspaces import LinearVarSpace
-from .simvae import SimVAE
+from .simvae import SimVAE, SimVAEConfig
 from .utils.utils import load_dict
 
 
@@ -224,22 +224,24 @@ def get_prosail_vae(
     )
 
     prosail_vae = SimVAE(
-        encoder=encoder,
-        decoder=decoder,
-        lat_space=lat_space,
-        sim_space=prosail_var_space,
-        config=pv_config,
-        reconstruction_loss=reconstruction_loss,
-        supervised=pv_config.loss_config.supervised,
-        device="cpu",
-        beta_kl=pv_config.loss_config.beta_kl,
-        beta_index=pv_config.loss_config.beta_index,
-        beta_cyclical=pv_config.loss_config.beta_cyclical,
-        snap_cyclical=pv_config.loss_config.snap_cyclical,
-        logger_name=logger_name,
-        inference_mode=pv_config.inference_mode,
-        lat_nll=pv_config.loss_config.lat_loss_type,
-        lat_idx=pv_config.loss_config.lat_idx,
+        SimVAEConfig(
+            encoder=encoder,
+            decoder=decoder,
+            lat_space=lat_space,
+            sim_space=prosail_var_space,
+            config=pv_config,
+            reconstruction_loss=reconstruction_loss,
+            supervised=pv_config.loss_config.supervised,
+            device="cpu",
+            beta_kl=pv_config.loss_config.beta_kl,
+            beta_index=pv_config.loss_config.beta_index,
+            beta_cyclical=pv_config.loss_config.beta_cyclical,
+            snap_cyclical=pv_config.loss_config.snap_cyclical,
+            logger_name=logger_name,
+            inference_mode=pv_config.inference_mode,
+            lat_nll=pv_config.loss_config.lat_loss_type,
+            lat_idx=pv_config.loss_config.lat_idx,
+        )
     )
     prosail_vae.set_hyper_prior(hyper_prior)
     if pv_config.load_vae is not None and pv_config.vae_load_file_path is not None:

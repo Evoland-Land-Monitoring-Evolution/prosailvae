@@ -5,6 +5,8 @@ Created on Wed Nov  9 13:39:15 2022
 @author: yoel
 """
 
+from pathlib import Path
+
 import numpy as np
 import prosail
 import torch
@@ -83,6 +85,16 @@ def decimate_1Dtensor(tensor, R_down=1):
     return torch.from_numpy(decimated_array).to(device)
 
 
+def sanitize_rsr_file_path(rsr_file: str) -> str:
+    """Look for rsr file into the data folder if the provided file is not found"""
+    if Path(rsr_file).is_file():
+        return rsr_file
+    local_file = Path(f"{__file__}").parent.parent.parent / "data" / rsr_file
+    if local_file.is_file():
+        return local_file
+    raise FileNotFoundError(f"{rsr_file} not found")
+
+
 class SensorSimulator:
     """Simulates the reflectances of a sensor from a full spectrum and the
     RSR of the sensor.
@@ -118,7 +130,9 @@ class SensorSimulator:
         self.bands = bands
         self.device = device
         self.prospect_range = prospect_range
-        self.rsr = torch.from_numpy(np.loadtxt(rsr_file, unpack=True)).to(device)
+        self.rsr = torch.from_numpy(
+            np.loadtxt(sanitize_rsr_file_path(rsr_file), unpack=True)
+        ).to(device)
         self.nb_bands = self.rsr.shape[0] - 2
         self.rsr_range = (
             int(self.rsr[0, 0].item() * 1000),

@@ -22,7 +22,7 @@ model:
         prospect_version: "5"
       ssimulator:
         _target_: prosailvae.ProsailSimus.SensorSimulator
-        rsr_file: "/home/inglada/Dev/MMDC/prosailvae/data/sentinel2.rsr"
+        rsr_file: "sentinel2.rsr"
         device: "cpu"
         apply_norm: True
         bands: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]

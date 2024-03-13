@@ -7,6 +7,11 @@ ifneq ($(wildcard /work/CESBIO/*),)
 	CONDA_SRC:=module load conda/22.11.1
 	CONDA_ACT:=conda activate /work/scratch/env/$(USER)/virtualenv/$(CONDA_ENV)
 endif
+ifneq ($(wildcard /gpfsdswork/*),)
+	MODULE_PURGE:=module purge
+	CONDA_SRC:=module load anaconda-py3/2023.09
+	CONDA_ACT:=conda activate $(CONDA_ENV)
+endif
 CONDA = $(MODULE_PURGE) && $(CONDA_SRC) && $(CONDA_ACT)
 PYPATH = PYTHONPATH=./src/:${PYTHONPATH}
 

@@ -10,7 +10,6 @@ python --version
 conda deactivate
 conda activate $target
 
-
 # Install requirements
 pip install -r requirements.txt
 

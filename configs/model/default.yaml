@@ -11,7 +11,7 @@ model:
         input_size: 17
         io_coeffs:
           _target_: prosailvae.utils.utils.IOStandardizeCoeffsFromDisk
-          data_dir: "/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/s2_patch_dataset/"
+          data_dir: ${datamodule.config.patches_dir}
         output_size: 11
     decoder:
       _target_: prosailvae.decoders.ProsailSimulatorDecoder

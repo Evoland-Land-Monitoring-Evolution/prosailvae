@@ -1,8 +1,6 @@
-from pathlib import Path
-
 from prosailvae.datamodules.data_module import DataModuleConfig, ProsailVAEDataModule
 
-PATCHES_DIR = Path("/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/s2_patch_dataset/")
+from .paths import PATCHES_DIR
 
 
 def instanciate(bands: int = 10) -> ProsailVAEDataModule:

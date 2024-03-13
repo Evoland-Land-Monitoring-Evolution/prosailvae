@@ -7,8 +7,9 @@ from prosailvae.loss import LossConfig
 from prosailvae.prosail_vae import ProsailVAEConfig, get_prosail_vae
 from prosailvae.utils.utils import load_standardize_coeffs
 
+from .paths import PATCHES_DIR
+
 SRC_DIR = Path(__file__).parent.parent
-PATCHES_DIR = Path("/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE/s2_patch_dataset/")
 RSR_DIR = SRC_DIR / "data"
 N_PROSAIL_VARS = 11
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

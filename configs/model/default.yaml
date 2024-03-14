@@ -17,20 +17,20 @@ model:
       _target_: prosailvae.decoders.ProsailSimulatorDecoder
       prosailsimulator:
         _target_: prosailvae.ProsailSimus.ProsailSimulator
-        device: "cpu"
+        device: ${accelerator}
         R_down: 1
         prospect_version: "5"
       ssimulator:
         _target_: prosailvae.ProsailSimus.SensorSimulator
         rsr_file: "sentinel2.rsr"
-        device: "cpu"
+        device: ${accelerator}
         apply_norm: True
         bands: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
         R_down: 1
       loss_type: "diag_nll"
     lat_space:
       _target_: prosailvae.latentspace.TruncatedNormalLatent
-      device: "cpu"
+      device: ${accelerator}
       latent_dim: 11
       kl_type: "tnu"
       disabled_latent: []
@@ -38,14 +38,14 @@ model:
     sim_space:
       _target_: prosailvae.simspaces.LinearVarSpace
       latent_dim: 11
-      device: "cpu"
+      device: ${accelerator}
       var_bounds_type: "legacy"
     deterministic: False
     reconstruction_loss:
       _target_: prosailvae.loss.NLLLoss
       loss_type: "diag_nll"
     supervised: False
-    device: "cpu"
+    device: ${accelerator}
     beta_kl: 0.0
     beta_index: 0.0
     beta_cyclical: 0.0

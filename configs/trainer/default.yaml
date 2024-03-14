@@ -1,6 +1,6 @@
 _target_: pytorch_lightning.Trainer
 
-accelerator: cpu
+accelerator: ${accelerator}
 devices: 1
 
 min_epochs: 0
@@ -11,7 +11,7 @@ val_check_interval : 0.5
 # number of validation steps to execute at the beginning of the training
 num_sanity_val_steps: 2
 
-precision: 'bf16-mixed'
+precision: 32
 
 # fastdev
 fast_dev_run: False

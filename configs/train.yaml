@@ -1,6 +1,7 @@
 # @package _global_
 
 # specify here default training configuration
+accelerator: "cuda"
 defaults:
   - _self_
   - datamodule: default.yaml
@@ -34,7 +35,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to output folder
-output_dir: /tmp/ # /work/scratch/data/${oc.env:USER}/prosailvae
+output_dir: ${oc.env:WORKING_DIR}/prosailvae
 
 # pretty print config at the start of the run using Rich library
 print_config: True
@@ -57,6 +58,6 @@ mat_mul_precision : 'high'
 
 # default name for the experiment, determines logging folder path
 # (you can overwrite this name in experiment configs)
-name: "default"
+name: "prosailvae"
 
 run_id : ${now:%Y-%m-%d}_${now:%H-%M-%S}

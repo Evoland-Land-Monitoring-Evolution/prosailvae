@@ -126,8 +126,10 @@ class ProsailRNNEncoder(Encoder):
         Encode time series x using net.
     """
 
-    def __init__(self, config: EncoderConfig, device: str = "cpu"):
+    def __init__(self, config: EncoderConfig, device: str | None = None):
         super().__init__()
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         bands = config.bands
         if bands is None:
             bands = torch.arange(10)

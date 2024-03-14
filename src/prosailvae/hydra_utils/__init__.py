@@ -60,7 +60,6 @@ with suppress(ModuleNotFoundError):
     def print_config(
         config: DictConfig,
         print_order: Sequence[str] = (
-            "fold",
             "datamodule",
             "model",
             "callbacks",

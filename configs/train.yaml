@@ -26,8 +26,8 @@ defaults:
   - optional local: default.yaml
 
   # enable color logging
-  - override hydra/hydra_logging: colorlog
-  - override hydra/job_logging: colorlog
+  # - override hydra/hydra_logging: colorlog
+  # - override hydra/job_logging: colorlog
 
 # path to original working directory
 # hydra hijacks working directory by changing it to the new log directory
@@ -35,7 +35,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to output folder
-output_dir: ${oc.env:WORKING_DIR}/prosailvae
+output_dir: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/
 
 # pretty print config at the start of the run using Rich library
 print_config: True

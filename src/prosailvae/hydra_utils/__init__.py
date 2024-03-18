@@ -107,8 +107,12 @@ with suppress(ModuleNotFoundError):
             branch.add(rich.syntax.Syntax(branch_content, "yaml"))
 
         rich.print(tree)
-
-        with open("config_tree.log", "w", encoding="utf-8") as file:
+        output_dir = config["output_dir"]
+        experiment = config["name"]
+        run_id = config["run_id"]
+        conf_tree_file = f"{output_dir}/logs/experiments/runs/{experiment}/{run_id}"
+        conf_tree_file = conf_tree_file + "/config_tree.log"
+        with open(conf_tree_file, "w", encoding="utf-8") as file:
             rich.print(tree, file=file)
 
     @rank_zero_only

@@ -18,14 +18,14 @@ experiment=jz
 
 # be sure no modules loaded
 module purge
-export SCRATCH=/gpfsdswork/projects/rech/adz/uzh16pa
-export SRCDIR=${SCRATCH}/src/MMDC/prosailvae
-export WORKING_DIR=${SCRATCH}/PROSAILVAE/jobs
+export BASE_DIR=/gpfsdswork/projects/rech/adz/uzh16pa
+export PV_SRCDIR=${BASE_DIR}/src/MMDC/prosailvae
+export PV_WORKING_DIR=${BASE_DIR}/PROSAILVAE/jobs
 
-cd ${WORKING_DIR}
+cd ${PV_WORKING_DIR}
 module purge
 module load anaconda-py3/2023.09
 conda activate prosailvae
 export PYTHONOPTIMIZE=TRUE
 export HYDRA_FULL_ERROR=1
-python ${SRCDIR}/train.py experiment=$experiment  >> output_$SLURM_JOBID.log
+python ${PV_SRCDIR}/train.py experiment=$experiment  >> output_$SLURM_JOBID.log

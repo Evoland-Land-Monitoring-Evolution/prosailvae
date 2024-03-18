@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -6,10 +5,9 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import tikzplotlib
 
-from validation.belsar_validation import get_sites_geometry, load_belsar_validation_data
+from prosailvae.validation.belsar_validation import load_belsar_validation_data
 
 
 @dataclass
@@ -63,14 +61,14 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
 
     wheat_dates = [datetime.strptime(d, "%Y-%m-%d") for d in meas_dates.wheat_dates]
     # Convert date strings (e.g. 2014-10-18) to datetime
-    wheat_levels = np.tile([1, 1, 1, 1, 1], int(np.ceil(len(wheat_dates) / 5)))[
-        : len(wheat_dates)
-    ]
+    # wheat_levels = np.tile([1, 1, 1, 1, 1], int(np.ceil(len(wheat_dates) / 5)))[
+    #     : len(wheat_dates)
+    # ]
     maize_dates = [datetime.strptime(d, "%Y-%m-%d") for d in meas_dates.maize_dates]
     # Convert date strings (e.g. 2014-10-18) to datetime
-    maize_levels = np.tile(
-        [-1, -1, -1, -1, -1, -1], int(np.ceil(len(maize_dates) / 6))
-    )[: len(maize_dates)]
+    # maize_levels = np.tile(
+    #     [-1, -1, -1, -1, -1, -1], int(np.ceil(len(maize_dates) / 6))
+    # )[: len(maize_dates)]
     # Create figure and plot a stem plot with the date
     fig, ax = plt.subplots(figsize=(8.8, 2), layout="constrained", dpi=150)
     # ax.set(title="Measurement dates in BelSAR campaign")
@@ -88,15 +86,14 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
     ax.axhline(1, color="k", zorder=0, lw=1)
     ax.axhline(-1, color="k", zorder=0, lw=1)
     ax.axhline(-1, color="k", zorder=0, lw=1)
-    # annotate lines
-    # wheat_d_offset = [-3,3,0,0,0]
-    # for i, (d, l, r) in enumerate(zip(wheat_dates, wheat_levels, meas_dates.wheat_names)):
-    #     ax.annotate(r, xy=(d, l),
-    #                 xytext=(0 + wheat_d_offset[i], np.sign(l) * 0.5), textcoords="offset points",
-    #                 horizontalalignment="center",
-    #                 verticalalignment="bottom" if l > 0 else "top")
-    # maize_d_offset = [-3,3,3,-3,0,0]
-    # ax.vlines(maize_dates, 0, maize_levels, color="tab:blue")  # The vertical stems.
+    # annotate lines wheat_d_offset = [-3,3,0,0,0] for i, (d, l, r) in
+    # enumerate(zip(wheat_dates, wheat_levels, meas_dates.wheat_names)):
+    # ax.annotate(r, xy=(d, l), xytext=(0 + wheat_d_offset[i],
+    # np.sign(l) * 0.5), textcoords="offset points",
+    # horizontalalignment="center", verticalalignment="bottom" if l > 0
+    # else "top") maize_d_offset = [-3,3,3,-3,0,0]
+    # ax.vlines(maize_dates, 0, maize_levels, color="tab:blue") # The
+    # vertical stems.
     ax.scatter(
         maize_dates,
         0 * np.ones_like(maize_dates),
@@ -107,13 +104,11 @@ def plot_measurements_and_s2_dates(s2_dates=None, s2_names=None):
         label="Maize",
     )  # Baseline and markers on it.
 
-    # annotate lines
-    # for i, (d, l, r) in enumerate(zip(maize_dates, maize_levels, meas_dates.maize_names)):
-    #     ax.annotate(r, xy=(d, l),
-    #                 xytext=(maize_d_offset[i], np.sign(l)*2), textcoords="offset points",
-    #                 horizontalalignment="center",
-    #                 verticalalignment="bottom" if l > 0 else "top")
-    # s2_d_offset = [0,0,0,0,0,0,0,0,0,0,0,0,10]
+    # annotate lines for i, (d, l, r) in enumerate(zip(maize_dates,
+    # maize_levels,¿- meas_dates.maize_names)): ax.annotate(r, xy=(d,
+    # l), xytext=(maize_d_offset[i], np.sign(l)*2), textcoords="offset
+    # points", horizontalalignment="center", verticalalignment="bottom"
+    # if l > 0 else "top") s2_d_offset = [0,0,0,0,0,0,0,0,0,0,0,0,10]
     if s2_dates is not None and s2_names is not None:
         s2_dates = [datetime.strptime(d, "%Y-%m-%d") for d in s2_dates]
         # s2_levels = np.tile([ 2, 2, 2, 2, 2, 2],
@@ -260,8 +255,10 @@ def get_belsar_sites_time_series(
 
 
 def get_belsar_lai_vs_hspot(
-    metrics, belsar_data_dir, sites=["W1"], fig=None, ax=None, label=""
+    metrics, belsar_data_dir, sites=None, fig=None, ax=None, label=""
 ):
+    if sites is None:
+        sites = ["W1"]
     validation_df, _, _, _, _, _, _ = load_belsar_validation_data(
         belsar_data_dir, "2A_20180508_both_BelSAR_agriculture_database"
     )
@@ -320,8 +317,9 @@ def get_belsar_lai_vs_hspot(
 
 
 def tikzplotlib_fix_ncols(obj):
-    """
-    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
+    """workaround for matplotlib 3.6 renamed legend's _ncol to _ncols,
+    which breaks tikzplotlib
+
     """
     if hasattr(obj, "_ncols"):
         obj._ncol = obj._ncols
@@ -361,10 +359,12 @@ if __name__ == "__main__":
     )
     tikzplotlib_fix_ncols(fig)
     tikzplotlib.save(
-        "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/belsar_dates.tex"
+        "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/"
+        "data/belSAR_validation/belsar_dates.tex"
     )
     fig.savefig(
-        "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/data/belSAR_validation/dates.svg"
+        "/home/yoel/Documents/Dev/PROSAIL-VAE/prosailvae/"
+        "data/belSAR_validation/dates.svg"
     )
 
     list_output_filenames = [

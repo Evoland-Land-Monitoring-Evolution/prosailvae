@@ -52,3 +52,15 @@ model:
     snap_cyclical: False
     logger_name: ""
     inference_mode: False
+val_config:
+  _target_: prosailvae.models.lightning_module.ValidationConfig
+  res_dir: ${output_dir}/logs/experiments/runs/${name}/${run_id}/validation
+  frm4veg_data_dir: ${data_dir}/validation_data/frm4veg_validation
+  frm4veg_2021_data_dir: ${data_dir}/validation_data/frm4veg_2021_validation
+  belsar_data_dir: ${data_dir}/validation_data/belsar_validation
+  model_name: pvae
+  method: simple_interpolate
+  mode: sim_tg_mean
+  save_reconstruction: True
+  remove_files: False
+  plot_results: True

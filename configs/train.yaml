@@ -61,3 +61,5 @@ mat_mul_precision : 'high'
 name: "prosailvae"
 
 run_id : ${now:%Y-%m-%d}_${now:%H-%M-%S}
+
+data_dir : "/gpfsscratch/rech/adz/uzh16pa/ProsailVAE/PROSAILVAE/"

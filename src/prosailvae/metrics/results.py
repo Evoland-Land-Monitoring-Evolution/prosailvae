@@ -414,8 +414,9 @@ def save_validation_results(
             )
         )
 
-        hspot_dir = os.path.join(res_dir, "hspot_vs_lai")
-        os.makedirs(hspot_dir)
+        hspot_dir = Path(res_dir) / "hspot_vs_lai"
+        if not hspot_dir.exists():
+            hspot_dir.mkdir(parents=True)
 
         fig, ax = get_belsar_lai_vs_hspot(
             all_belsar,

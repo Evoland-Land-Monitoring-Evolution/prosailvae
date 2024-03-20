@@ -110,12 +110,13 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         )
 
         if self.val_config is not None:
+            logger.info(f"Validation config {self.val_config}")
             save_validation_results(
                 self.model,
                 self.val_config.res_dir / f"ep_{self.current_epoch}",
-                self.frm4veg_data_dir,
-                self.frm4veg_2021_data_dir,
-                self.belsar_data_dir,
+                self.val_config.frm4veg_data_dir,
+                self.val_config.frm4veg_2021_data_dir,
+                self.val_config.belsar_data_dir,
                 model_name=f"pvae_{self.current_epoch}",
                 method="simple_interpolate",
                 mode="sim_tg_mean",

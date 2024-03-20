@@ -4,6 +4,7 @@ import shutil
 import socket
 import zipfile
 from datetime import datetime
+from pathlib import Path
 
 import fiona
 import geopandas as gpd
@@ -19,6 +20,8 @@ from ..bvnet_regression.bvnet import BVNET
 from ..ProsailSimus import BANDS
 from ..utils.image_utils import get_encoded_image_from_batch, tensor_to_raster
 from .validation_utils import read_data_from_theia, simple_interpolate
+
+fiona.drvsupport.supported_drivers["KML"] = "rw"
 
 BELSAR_FILENAMES = [
     "2A_20180508_both_BelSAR_agriculture_database",  # OK
@@ -493,7 +496,6 @@ def get_belsar_image_metrics(
     """
     if bands_idx is None:
         bands_idx = torch.arange(10)
-    fiona.drvsupport.supported_drivers["KML"] = "rw"
     from rasterio.mask import mask
 
     pred_array_idx = {
@@ -794,9 +796,10 @@ def save_belsar_predictions(
             full_err_tensor = (rec - s2_r.squeeze(0)).abs()
             tensor = torch.cat((tensor, err_tensor, full_err_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
+        res_file = Path(res_dir) / f"{filename}_{model_name}_{mode}.tif"
         tensor_to_raster(
             tensor,
-            res_dir + f"/{filename}_{model_name}_{mode}.tif",
+            res_file,
             crs=crs,
             resolution=10,
             dtype=np.float32,

@@ -139,7 +139,7 @@ def get_prosailvae_results_parser():
 
 def save_validation_results(
     model,
-    res_dir,
+    res_dir: Path,
     frm4veg_data_dir,
     frm4veg_2021_data_dir,
     belsar_data_dir,
@@ -150,6 +150,9 @@ def save_validation_results(
     remove_files=False,
     plot_results=False,
 ):
+    if not res_dir.is_dir():
+        res_dir.mkdir(parents=True)
+    logging.info(res_dir)
     (
         barrax_results,
         barrax_2021_results,

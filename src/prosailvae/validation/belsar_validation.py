@@ -814,7 +814,7 @@ def save_belsar_predictions(
 
 
 def save_bvnet_belsar_predictions(
-    belsar_dir, res_dir, list_belsar_filename, lai_bvnet=None
+    belsar_dir, res_dir: Path, list_belsar_filename, lai_bvnet=None
 ):
     NO_DATA = -10000
     # filename = "2A_20180613_FRM_Veg_Barrax_20180605"
@@ -852,7 +852,7 @@ def save_bvnet_belsar_predictions(
         tensor = torch.cat((lai_pred, dummy_tensor), 0)
         tensor[tensor.isnan()] = NO_DATA
         resolution = 10
-        file_path = res_dir + f"/{filename}_BVNET.tif"
+        file_path = res_dir / f"{filename}_BVNET.tif"
         tensor_to_raster(
             tensor,
             file_path,

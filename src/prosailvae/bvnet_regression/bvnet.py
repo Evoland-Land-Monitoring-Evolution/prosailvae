@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -8,11 +9,9 @@ import torch
 import torch.nn as nn
 from tqdm import trange
 
-from prosailvae import __path__ as PPATH
-
-TOP_PATH = os.path.join(PPATH[0], os.pardir)
-SNAP_WEIGHTS_PATH = os.path.join(os.path.join(TOP_PATH, "bvnet_regression"), "weights")
 from ..dataset.bvnet_dataset import load_bvnet_dataset
+
+SNAP_WEIGHTS_PATH = Path(__file__).parent / "weights"
 
 
 def normalize(
@@ -293,8 +292,9 @@ def get_SNAP_norm_factors(ver: str = "2", variable="lai"):
 
 
 class BVNET(nn.Module):
-    """
-    Neural Network with BVNET architecture to predict LAI from S2 reflectances and angles
+    """Neural Network with BVNET architecture to predict LAI from S2
+    reflectances and angles
+
     """
 
     def __init__(

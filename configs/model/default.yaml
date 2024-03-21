@@ -1,4 +1,5 @@
 _target_: prosailvae.models.lightning_module.ProsailVAELightningModule
+resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-20_21-24-39/last.ckpt
 model:
   _target_: prosailvae.simvae.SimVAE
   config:

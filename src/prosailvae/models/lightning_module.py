@@ -48,6 +48,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         model: SimVAE,
         lr: float = 1e-3,
         val_config: ValidationConfig | None = None,
+        resume_from_checkpoint: str | None = None,
     ):
         super().__init__()
         # this line allows to access init params with 'self.hparams' attribute
@@ -57,6 +58,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         self.n_samples = 1  # how many samples drawn for reconstruction
         self.learning_rate = lr
         self.val_config = val_config
+        self.resume_from_checkpoint = resume_from_checkpoint
 
     def step(self, batch: Any) -> Any:
         """Generic step of the model. Delegates to the pytorch model"""

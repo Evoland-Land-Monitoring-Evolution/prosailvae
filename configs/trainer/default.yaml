@@ -4,12 +4,12 @@ accelerator: ${accelerator}
 devices: 1
 
 min_epochs: 0
-max_epochs: 1
+max_epochs: 200
 log_every_n_steps : 100
 val_check_interval : 0.5
 
 # number of validation steps to execute at the beginning of the training
-num_sanity_val_steps: 2
+num_sanity_val_steps: 1
 
 precision: 32
 

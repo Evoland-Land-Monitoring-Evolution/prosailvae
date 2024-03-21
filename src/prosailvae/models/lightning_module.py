@@ -61,12 +61,12 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
     def step(self, batch: Any) -> Any:
         """Generic step of the model. Delegates to the pytorch model"""
         train_loss_dict: dict = {}
-        loss_sum, _ = self.model.unsupervised_batch_loss(
+        loss_sum, loss_dict = self.model.unsupervised_batch_loss(
             batch,
             train_loss_dict,
             n_samples=self.n_samples,
         )
-        return loss_sum
+        return loss_sum, loss_dict
 
     def training_step(  # pylint: disable=arguments-differ
         self,
@@ -79,18 +79,19 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
             logger.info(f"Training step on batch {batch_idx}")
             logger.info(f"Device {self.model.device}")
         torch.autograd.set_detect_anomaly(True)
-        loss = self.step(batch)
+        opt_loss, loss_dict = self.step(batch)
 
         # log training metrics
-        self.log(
-            "train/loss",
-            loss,
-            on_step=False,
-            on_epoch=True,
-            prog_bar=False,
-        )
-
-        return loss
+        for loss_type, loss in loss_dict.items():
+            loss_name = f"train/{loss_type}"
+            self.log(
+                loss_name,
+                loss,
+                on_step=True,
+                on_epoch=True,
+                prog_bar=False,
+            )
+        return opt_loss
 
     def validation_step(  # pylint: disable=arguments-differ
         self,
@@ -99,17 +100,20 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         prefix: str = "val",
     ) -> dict[str, Any]:
         """Validation step. Step and return loss and metrics."""
-        loss = self.step(batch)
+        opt_loss, loss_dict = self.step(batch)
 
-        self.log(
-            f"{prefix}/loss",
-            loss,
-            on_step=False,
-            on_epoch=True,
-            prog_bar=False,
-        )
+        # log validation metrics
+        for loss_type, loss in loss_dict.items():
+            loss_name = f"{prefix}/{loss_type}"
+            self.log(
+                loss_name,
+                loss,
+                on_step=True,
+                on_epoch=True,
+                prog_bar=False,
+            )
 
-        if self.val_config is not None:
+        if self.val_config is not None and prefix == "val" and batch_idx == 0:
             logger.info(f"Validation config {self.val_config}")
             save_validation_results(
                 self.model,
@@ -123,7 +127,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
                 remove_files=True,
             )
 
-        return {"loss": loss}
+        return {"loss": opt_loss}
 
     def test_step(  # pylint: disable=arguments-differ
         self,
@@ -151,7 +155,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         scheduler = {
             "scheduler": training_scheduler,
             "interval": "epoch",
-            "monitor": "val/loss",
+            "monitor": "val/loss_sum",
             "frequency": 1,
         }
         return {

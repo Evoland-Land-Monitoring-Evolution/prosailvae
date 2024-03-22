@@ -126,8 +126,8 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
                 model_name=f"pvae_{self.current_epoch}",
                 method="simple_interpolate",
                 mode="sim_tg_mean",
-                remove_files=False,
-                plot_results=True,
+                remove_files=self.val_config.remove_files,
+                plot_results=self.val_config.plot_results,
             )
 
         return {"loss": opt_loss}

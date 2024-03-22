@@ -159,9 +159,9 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         )
         scheduler = {
             "scheduler": training_scheduler,
-            "interval": "epoch",
+            "interval": "step",
             "monitor": "val/loss_sum",
-            "frequency": 1,
+            "frequency": 100,
         }
         return {
             "optimizer": optimizer,

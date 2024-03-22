@@ -31,6 +31,6 @@ def test_train_pipeline():
     data_mod = ProsailVAEDataModule(cfg)
     trainer = Trainer(num_sanity_val_steps=1, max_epochs=1)
     trainer.fit(model=lit_mod, datamodule=data_mod)
-    optimized_metric = "train/loss"
+    optimized_metric = "val/loss_sum"
     score = trainer.callback_metrics.get(optimized_metric)
     assert score is not None

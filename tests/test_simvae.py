@@ -40,7 +40,7 @@ def test_forward():
     patch_size = 4
     config = generate_config()
     model = get_prosail_vae(config, DEVICE)
-    data = torch.rand(batch_size, 10, patch_size, patch_size)
-    angles = torch.rand(batch_size, 3, patch_size, patch_size)
+    data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
+    angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
     dist_params, z, phi, rec = model.forward(data, angles=angles, n_samples=3)
     rec.sum().backward()

@@ -55,7 +55,9 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         # it also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
         self.model = model
-        self.n_samples = 1  # how many samples drawn for reconstruction
+        self.n_samples = (
+            30  # TODO: expose in config how many samples drawn for reconstruction
+        )
         self.learning_rate = lr
         self.val_config = val_config
         self.resume_from_checkpoint = resume_from_checkpoint

@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --gres=gpu:1               # number of gpus
 #SBATCH --cpus-per-task=4
-#SBATCH --time=10:59:00            # Walltime
+#SBATCH --time=19:59:00            # Walltime
 #SBATCH --qos=qos_gpu-t3
 #SBATCH --hint=nomultithread
 #SBATCH --account=adz@v100 # MANDATORY : account (launch myaccounts to list your accounts)

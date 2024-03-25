@@ -33,6 +33,7 @@ pandas
 pre-commit      # hooks for applying linters on commit
 psutil
 pudb            # debugger
+pylsp-mypy
 pytest          # tests
 python-dotenv   # loading env variables from .env file
 python-lsp-server[all]

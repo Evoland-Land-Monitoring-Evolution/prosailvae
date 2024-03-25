@@ -17,3 +17,4 @@ data/validation_tiles/*
 __pycache__/
 /.coverage
 /src/PROSAILVAE.egg-info/
+*~

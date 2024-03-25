@@ -2,6 +2,8 @@
 
 # to execute this experiment run:
 # python train.py experiment=jz.yaml
+r_down: 7
+latent_size: 11
 
 defaults:
   - override /model: default.yaml

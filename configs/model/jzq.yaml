@@ -12,13 +12,13 @@ model:
         io_coeffs:
           _target_: prosailvae.utils.utils.IOStandardizeCoeffsFromDisk
           data_dir: ${datamodule.config.patches_dir}
-        output_size: 11
+        output_size: ${latent_size}
     decoder:
       _target_: prosailvae.decoders.ProsailSimulatorDecoder
       prosailsimulator:
         _target_: prosailvae.ProsailSimus.ProsailSimulator
         device: ${accelerator}
-        R_down: 7
+        R_down: ${r_down}
         prospect_version: "5"
       ssimulator:
         _target_: prosailvae.ProsailSimus.SensorSimulator
@@ -26,18 +26,18 @@ model:
         device: ${accelerator}
         apply_norm: True
         bands: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
-        R_down: 7
+        R_down: ${r_down}
       loss_type: "diag_nll"
     lat_space:
       _target_: prosailvae.latentspace.TruncatedNormalLatent
       device: ${accelerator}
-      latent_dim: 11
+      latent_dim: ${latent_size}
       kl_type: "tnu"
       disabled_latent: []
       disabled_latent_values: []
     sim_space:
       _target_: prosailvae.simspaces.LinearVarSpace
-      latent_dim: 11
+      latent_dim: ${latent_size}
       device: ${accelerator}
       var_bounds_type: "legacy"
     deterministic: False
@@ -52,6 +52,7 @@ model:
     snap_cyclical: False
     logger_name: ""
     inference_mode: False
+latent_samples: 70
 val_config:
   _target_: prosailvae.models.lightning_module.ValidationConfig
   res_dir: ${output_dir}/logs/experiments/runs/${name}/${run_id}/validation

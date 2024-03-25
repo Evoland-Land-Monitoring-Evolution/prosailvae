@@ -47,6 +47,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         self,
         model: SimVAE,
         lr: float = 1e-3,
+        latent_samples: int = 10,
         val_config: ValidationConfig | None = None,
         resume_from_checkpoint: str | None = None,
     ):
@@ -55,9 +56,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         # it also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
         self.model = model
-        self.n_samples = (
-            30  # TODO: expose in config how many samples drawn for reconstruction
-        )
+        self.latent_samples = latent_samples
         self.learning_rate = lr
         self.val_config = val_config
         self.resume_from_checkpoint = resume_from_checkpoint
@@ -68,7 +67,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         loss_sum, loss_dict = self.model.unsupervised_batch_loss(
             batch,
             train_loss_dict,
-            n_samples=self.n_samples,
+            n_samples=self.latent_samples,
         )
         return loss_sum, loss_dict
 

@@ -47,7 +47,7 @@ model:
       loss_type: "diag_nll"
     supervised: False
     device: ${accelerator}
-    beta_kl: 0.0
+    beta_kl: 2.0
     beta_index: 0.0
     beta_cyclical: 0.0
     snap_cyclical: False

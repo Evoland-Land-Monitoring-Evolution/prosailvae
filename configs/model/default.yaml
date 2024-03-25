@@ -63,6 +63,6 @@ val_config:
   model_name: pvae
   method: simple_interpolate
   mode: sim_tg_mean
-  save_reconstruction: True
+  save_reconstruction: False
   remove_files: False
   plot_results: True

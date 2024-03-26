@@ -4,26 +4,17 @@ Created on Tue Nov 29 09:29:06 2022
 
 @author: Nale Raphael
 """
+import argparse
 import copy
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.optim as optim
 from packaging import version
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
 from tqdm.autonotebook import tqdm
-
-# from prosailvae.loss import lr_finder_elbo, lr_finder_sup_nll
-from dataset.loaders import lr_finder_loader
-
-PYTORCH_VERSION = version.parse(torch.__version__)
-
-import argparse
-
-from mmdc_singledate.datamodules.mmdc_datamodule import destructure_batch
 
 try:
     from apex import amp
@@ -31,6 +22,8 @@ try:
     IS_AMP_AVAILABLE = True
 except ImportError:
     IS_AMP_AVAILABLE = False
+
+PYTORCH_VERSION = version.parse(torch.__version__)
 
 
 class DataLoaderIter:
@@ -149,7 +142,8 @@ class LRFinder:
         >>> lr_finder.plot() # to inspect the loss-learning rate graph
         >>> lr_finder.reset() # to reset the model and optimizer to their initial state
     Reference:
-    Cyclical Learning Rates for Training Neural Networks: https://arxiv.org/abs/1506.01186
+    Cyclical Learning Rates for Training Neural Networks:
+     https://arxiv.org/abs/1506.01186
     fastai/lr_find: https://github.com/fastai/fastai
     """
 
@@ -244,33 +238,45 @@ class LRFinder:
                 is 1, gradients are not accumulated. Default: 1.
             non_blocking_transfer (bool, optional): when non_blocking_transfer is set,
                 tries to convert/move data to the device asynchronously if possible,
-                e.g., moving CPU Tensors with pinned memory to CUDA devices. Default: True.
+                e.g., moving CPU Tensors with pinned memory to CUDA devices
+                      Default: True.
         Example (fastai approach):
             >>> lr_finder = LRFinder(net, optimizer, criterion, device="cuda")
             >>> lr_finder.range_test(dataloader, end_lr=100, num_iter=100)
         Example (Leslie Smith's approach):
             >>> lr_finder = LRFinder(net, optimizer, criterion, device="cuda")
-            >>> lr_finder.range_test(trainloader, val_loader=val_loader, end_lr=1, num_iter=100, step_mode="linear")
+            >>> lr_finder.range_test(trainloader, val_loader=val_loader, end_lr=1
+                num_iter=100, step_mode="linear")
         Gradient accumulation is supported; example:
             >>> train_data = ...    # prepared dataset
             >>> desired_bs, real_bs = 32, 4         # batch size
-            >>> accumulation_steps = desired_bs // real_bs     # required steps for accumulation
-            >>> dataloader = torch.utils.data.DataLoader(train_data, batch_size=real_bs, shuffle=True)
+            >>> accumulation_steps = desired_bs // real_bs     # required steps for
+                accumulation
+            >>> dataloader = torch.utils.data.DataLoader(train_data, batch_size=real_bs,
+                shuffle=True)
             >>> acc_lr_finder = LRFinder(net, optimizer, criterion, device="cuda")
-            >>> acc_lr_finder.range_test(dataloader, end_lr=10, num_iter=100, accumulation_steps=accumulation_steps)
-        If your DataLoader returns e.g. dict, or other non standard output, intehit from TrainDataLoaderIter,
-        redefine method `inputs_labels_from_batch` so that it outputs (inputs, lables) data:
+            >>> acc_lr_finder.range_test(dataloader, end_lr=10, num_iter=100,
+                accumulation_steps=accumulation_steps)
+        If your DataLoader returns e.g. dict, or other non standard output, intehit
+         from TrainDataLoaderIter,
+        redefine method `inputs_labels_from_batch` so that it outputs (inputs, lables)
+         data:
             >>> import torch_lr_finder
             >>> class TrainIter(torch_lr_finder.TrainDataLoaderIter):
             >>>     def inputs_labels_from_batch(self, batch_data):
-            >>>         return (batch_data['user_features'], batch_data['user_history']), batch_data['y_labels']
+            >>>         return (batch_data['user_features'],
+                batch_data['user_history']), batch_data['y_labels']
             >>> train_data_iter = TrainIter(train_dl)
-            >>> finder = torch_lr_finder.LRFinder(model, optimizer, partial(model._train_loss, need_one_hot=False))
-            >>> finder.range_test(train_data_iter, end_lr=10, num_iter=300, diverge_th=10)
+            >>> finder = torch_lr_finder.LRFinder(model, optimizer,
+                partial(model._train_loss, need_one_hot=False))
+            >>> finder.range_test(train_data_iter, end_lr=10, num_iter=300,
+                diverge_th=10)
         Reference:
-        [Training Neural Nets on Larger Batches: Practical Tips for 1-GPU, Multi-GPU & Distributed setups](
+        [Training Neural Nets on Larger Batches: Practical Tips for 1-GPU, Multi-GPU &
+              Distributed setups](
         https://medium.com/huggingface/ec88c3e51255)
-        [thomwolf/gradient_accumulation](https://gist.github.com/thomwolf/ac7a7da6b1888c2eeac8ac8b9b05d3d3)
+        [thomwolf/gradient_accumulation]
+          (https://gist.github.com/thomwolf/ac7a7da6b1888c2eeac8ac8b9b05d3d3)
         """
 
         # Reset test results
@@ -367,7 +373,9 @@ class LRFinder:
                 + "in the given optimizer"
             )
 
-        for param_group, new_lr in zip(self.optimizer.param_groups, new_lrs):
+        for param_group, new_lr in zip(
+            self.optimizer.param_groups, new_lrs, strict=True
+        ):
             param_group["lr"] = new_lr
 
     def _check_for_scheduler(self):
@@ -741,59 +749,12 @@ def get_prosailvae_train_parser():
     return parser
 
 
-def get_PROSAIL_VAE_lr(
-    model,
-    lrtrainloader,
-    plot_lr=False,
-    disable_tqdm=True,
-    n_samples=20,
-    old_lr=1,
-    old_lr_max_ratio=10,
-    max_samples=5,
-):
-    model.lr_find_mode = True
-    optimizer = optim.Adam(model.parameters(), lr=1e-7, weight_decay=1e-2)
-    inference_mode = model.inference_mode
-    if model.supervised:
-        criterion = lr_finder_sup_nll
-        model.inference_mode = True
-    else:
-        criterion = lr_finder_elbo(
-            index_loss=model.decoder.ssimulator.index_loss,
-            beta_kl=model.beta_kl,
-            beta_index=model.beta_index,
-            loss_type=model.decoder.loss_type,
-            ssimulator=model.decoder.ssimulator,
-        )
-
-    lr_finder = LRFinder(model, optimizer, criterion, device=model.device)
-
-    if model.decoder.loss_type == "mse":
-        n_samples = 1
-    lr_finder.range_test(
-        lrtrainloader,
-        end_lr=10,
-        num_iter=100,
-        disable_tqdm=disable_tqdm,
-        n_samples=n_samples,
-    )
-    model.lr_find_mode = False
-    suggested_lr = lr_finder.suggest_lr()
-    lr_optimal = min(suggested_lr, old_lr_max_ratio * old_lr)
-    if plot_lr:
-        print(lr_optimal)
-        lr_finder.plot(log_lr=True)
-    model.inference_mode = inference_mode
-    lr_finder.reset()
-    return lr_optimal
-
-
 if __name__ == "__main__":
+    from dataset.loaders import get_norm_coefs
     from prosail_vae import get_prosail_VAE
+    from utils.utils import load_dict
 
     import prosailvae
-    from dataset.loaders import get_norm_coefs
-    from utils.utils import load_dict
 
     parser = get_prosailvae_train_parser().parse_args()
     root_dir = os.path.join(os.path.dirname(prosailvae.__file__), os.pardir)
@@ -830,6 +791,3 @@ if __name__ == "__main__":
         inference_mode=inference_mode,
         bands=bands,
     )
-    model = prosail_VAE
-
-    lr_finder = get_PROSAIL_VAE_lr(model, data_dir, plot_lr=True, disable_tqdm=False)

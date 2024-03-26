@@ -7,6 +7,7 @@ Created on Tue Oct 25 13:39:40 2022
 import argparse
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -107,15 +108,15 @@ def save_ids_for_k_fold(
 
 
 def get_simloader(
-    valid_ratio=None,
-    sample_ids=None,
-    batch_size=1024,
-    num_workers=0,
-    file_prefix="s2_",
-    data_dir=None,
-    cat_angles=False,
-    lai_only=False,
-):
+    valid_ratio: float | None = None,
+    sample_ids: torch.Tensor | None = None,
+    batch_size: int = 1024,
+    num_workers: int = 0,
+    file_prefix: str = "s2_",
+    data_dir: str | None = None,
+    cat_angles: bool = False,
+    lai_only: bool = False,
+) -> DataLoader | tuple[DataLoader, DataLoader]:
     if data_dir is None:
         data_dir = os.path.join(
             os.path.join(os.path.dirname(prosailvae.__file__), os.pardir), "data/"
@@ -180,7 +181,7 @@ def get_simloader(
         return train_loader, valid_loader
 
 
-def get_S2_id_split_parser():
+def get_S2_id_split_parser() -> argparse.ArgumentParser:
     """
     Creates a new argument parser.
     """
@@ -209,7 +210,9 @@ def get_S2_id_split_parser():
     return parser
 
 
-def get_norm_coefs(data_dir, file_prefix=""):
+def get_norm_coefs(
+    data_dir: str, file_prefix: str = ""
+) -> tuple[torch.Tensor, torch.Tensor]:
     norm_mean = torch.load(data_dir + f"/{file_prefix}norm_mean.pt")
     norm_std = torch.load(data_dir + f"/{file_prefix}norm_std.pt")
     if type(norm_mean) is np.ndarray:
@@ -219,7 +222,7 @@ def get_norm_coefs(data_dir, file_prefix=""):
     return norm_mean, norm_std
 
 
-def convert_angles(angles):
+def convert_angles(angles: torch.Tensor) -> torch.Tensor:
     # TODO: convert 6 S2 "angles" into sun zenith, S2 zenith and Sun/S2
     # relative Azimuth (degrees)
     c_sun_zen = angles[:, 0].unsqueeze(1)
@@ -235,10 +238,12 @@ def convert_angles(angles):
     sun_zen = torch.rad2deg(torch.arccos(c_sun_zen))
     obs_zen = torch.rad2deg(torch.arccos(c_obs_zen))
     rel_azi = torch.rad2deg(torch.atan2(s_rel_azi, c_rel_azi)) % 360
-    return torch.concat((sun_zen, obs_zen, rel_azi), axis=1)
+    return torch.concat((sun_zen, obs_zen, rel_azi), dim=1)
 
 
-def flatten_patch(s2_refl, angles):
+def flatten_patch(
+    s2_refl: torch.Tensor, angles: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size = s2_refl.size(0)
     patch_size_x = s2_refl.size(2)
     patch_size_y = s2_refl.size(3)
@@ -256,30 +261,30 @@ def flatten_patch(s2_refl, angles):
 
 
 def get_mmdc_loaders(
-    tensors_dir="",
-    batch_size=1,
-    batch_par_epoch=100,
-    max_open_files=4,
-    num_workers=1,
-    pin_memory=False,
-):
+    tensors_dir: str = "",
+    batch_size: int = 1,
+    batch_par_epoch: int = 100,
+    max_open_files: int = 4,
+    num_workers: int = 1,
+    pin_memory: bool = False,
+) -> tuple[DataLoader, DataLoader, DataLoader]:
     train_data_files = [
         list(i)
         for i in create_tensors_path_set(
-            path_to_exported_files=f"{tensors_dir}/", datasplit="train"
+            path_to_exported_files=Path(f"{tensors_dir}/"), datasplit="train"
         )
     ]
     # print(f"{train_data_files}")
     val_data_files = [
         list(i)
         for i in create_tensors_path_set(
-            path_to_exported_files=f"{tensors_dir}/", datasplit="val"
+            path_to_exported_files=Path(f"{tensors_dir}/"), datasplit="val"
         )
     ]
     test_data_files = [
         list(i)
         for i in create_tensors_path_set(
-            path_to_exported_files=f"{tensors_dir}/", datasplit="test"
+            path_to_exported_files=Path(f"{tensors_dir}/"), datasplit="test"
         )
     ]
     # define iterable dataset
@@ -323,13 +328,13 @@ def get_mmdc_loaders(
 
 
 def get_train_valid_test_loader_from_patches(
-    path_to_patches_dir,
-    bands=None,
-    batch_size=1,
-    num_workers=0,
-    max_valid_samples=50,
-    concat=False,
-):
+    path_to_patches_dir: str,
+    bands: torch.Tensor | None = None,
+    batch_size: int = 1,
+    num_workers: int = 0,
+    max_valid_samples: int = 50,
+    concat: bool = False,
+) -> tuple[DataLoader, DataLoader, DataLoader]:
     if bands is None:
         bands = torch.arange(10)
     path_to_train_patches = os.path.join(path_to_patches_dir, "train_patches.pth")
@@ -363,15 +368,15 @@ def get_train_valid_test_loader_from_patches(
 
 
 def get_loader_from_patches(
-    path_to_patches,
-    bands=None,
-    batch_size=1,
-    num_workers=0,
-    concat=False,
-    max_samples=None,
-    shuffle=True,
-    plot_distribution=False,
-):
+    path_to_patches: str,
+    bands: torch.Tensor | None = None,
+    batch_size: int = 1,
+    num_workers: int = 0,
+    concat: bool = False,
+    max_samples: int | None = None,
+    shuffle: bool = True,
+    plot_distribution: bool = False,
+) -> DataLoader:
     if bands is None:
         bands = torch.tensor([0, 1, 2, 4, 5, 6, 3, 7, 8, 9])
     patches = torch.load(path_to_patches)
@@ -395,7 +400,7 @@ def get_loader_from_patches(
         logger.info(f"Limit to {max_samples} samples")
     if concat:
         dataset = TensorDataset(
-            torch.cat((s2_r_patches.float(), s2_a_patches.float()), axis=1)
+            torch.cat((s2_r_patches.float(), s2_a_patches.float()), dim=1)
         )
         loader = DataLoader(
             dataset=dataset,

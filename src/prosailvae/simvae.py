@@ -212,6 +212,11 @@ class SimVAE(nn.Module):
     def forward(self, x, angles=None, n_samples=1, apply_norm=None):
         """
         Forward pass through the VAE
+        Returns: 
+            dist_params: distribution parameters
+            z: latent space normalized
+            sim: denormalized latent space
+            rec: reconstruction of input
         """
         is_patch = check_is_patch(x)
         # encoding
@@ -471,6 +476,7 @@ class SimVAE(nn.Module):
         params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
 
         # cropping pixels lost to padding
+        ### TO DO: FIX CROP PATCH DOESN4T RETURN ANYTHING
         if self.spatial_mode:
             s2_r, s2_a, z = self.crop_patch(s2_r, s2_a, z, rec)
 
@@ -907,3 +913,96 @@ class SimVAE(nn.Module):
 
         cyclical_rmse = torch.cat(cyclical_rmse, 0).mean().sqrt()
         return cyclical_rmse
+    
+
+
+    def pvae_method(
+        self, batch, n_samples=1
+    ):
+        """
+        pvae_method takes batch, passes it to VAE and outputs useful parameters 
+        
+        INPUTS: 
+            batch 
+        RETURNS: 
+            distri_params: distribution paramaters
+            z: latent samples after sampling (normalized)
+            sim: denormalized latent samples
+            rec: S2 reconstruction 
+        """
+        s2_r = batch[0]
+        s2_a = batch[1]
+        input_is_patch = check_is_patch(s2_r)
+        if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
+            assert input_is_patch
+        else:  # encoder is pixellic
+            if input_is_patch:  # converting patch into batch
+                s2_r = batchify_batch_latent(s2_r)
+                s2_a = batchify_batch_latent(s2_a)
+        # Forward Pass
+        distri_params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
+
+        return distri_params, z, sim, rec
+
+    def pvae_reconstruction_loss(self, s2_r, s2_a, z, rec):
+        """
+        pvae_reconstruction_loss computes the reconstruction loss between input and output.
+
+        INPUTS: 
+            s2_r: S2 reflectance
+            s2_a: S2 angles
+            z (tensor): latent samples after sampling (normalized)
+            rec (tensor): S2 reconstruction 
+
+        RETURNS: 
+            rec_loss: reconstruction loss 
+        """
+    
+        ### TO DO: why does crop_patch not return anything ???
+        if self.spatial_mode:
+            raise NotImplementedError
+            s2_r, _, _ = self.crop_patch(s2_r, s2_a, z, rec)
+        # Reconstruction term
+        rec_loss = self.compute_rec_loss(s2_r, rec)
+        return rec_loss
+    
+    def pvae_kl_term(self, s2_r, s2_a, distri_params):
+        """
+        pvae_kl_term computes KL loss between output of encoder and prior
+
+        INPUTS: 
+            s2_r: S2 reflectance
+            s2_a: S2 angles
+            z (tensor): latent samples after sampling (normalized)
+            rec (tensor): S2 reconstruction 
+
+        RETURNS: 
+            kl_loss: Kullbach-Leibler loss
+        """
+        # Kl term
+        if self.beta_kl > 0:
+            if self.hyper_prior is None:  # KL Truncated Normal latent || Uniform prior
+                kl_loss = (
+                    self.beta_kl
+                    * self.lat_space.kl(distri_params, lat_idx=self.lat_idx).sum(1).mean()
+                )
+            else:  # KL Truncated Normal latent || Truncated Normal hyperprior
+                s2_r_sup = s2_r
+                s2_a_sup = s2_a
+                if self.spatial_mode:  # if encoder 1 encodes patches
+                    if self.hyper_prior.encoder.get_spatial_encoding():
+                        # Case of a spatial hyperprior
+                        raise NotImplementedError
+                    s2_r_sup = batchify_batch_latent(s2_r_sup)
+                    s2_a_sup = batchify_batch_latent(s2_a_sup)
+                with torch.no_grad():
+                    params_hyper = self.hyper_prior.encode2lat_params(
+                        s2_r_sup, s2_a_sup
+                    )
+                kl_loss = (
+                    self.beta_kl
+                    * self.lat_space.kl(distri_params, params_hyper, lat_idx=self.lat_idx)
+                    .sum(1)
+                    .mean()
+                )  # sum over latent and mean over batch
+        return kl_loss

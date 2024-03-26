@@ -916,9 +916,7 @@ class SimVAE(nn.Module):
     
 
 
-    def pvae_method(
-        self, batch, n_samples=1
-    ):
+    def pvae_method(self, batch, n_samples=1):
         """
         pvae_method takes batch, passes it to VAE and outputs useful parameters 
         

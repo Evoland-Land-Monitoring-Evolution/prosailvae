@@ -1,3 +1,5 @@
+import torch
+
 from prosailvae.decoders import ProsailSimulatorDecoder
 from prosailvae.encoders import ProsailRNNEncoder
 from prosailvae.latentspace import TruncatedNormalLatent
@@ -9,12 +11,14 @@ from prosailvae.simvae import SimVAE, SimVAEConfig
 
 from .test_simvae import generate_config
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
     pv_conf = generate_config()
     encoder = ProsailRNNEncoder(pv_conf.encoder_config)
     lat_space = TruncatedNormalLatent(
-        device="cpu",
+        device=DEVICE,
         latent_dim=pv_conf.encoder_config.output_size,
         kl_type="tnu",
         disabled_latent=pv_conf.disabled_latent,
@@ -26,17 +30,17 @@ def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
     )
     prosail_var_space = LinearVarSpace(
         latent_dim=pv_conf.encoder_config.output_size,
-        device="cpu",
+        device=DEVICE,
         var_bounds_type=pv_conf.prosail_vars_dist_type,
     )
     psimulator = ProsailSimulator(
-        device="cpu",
+        device=DEVICE,
         R_down=pv_conf.R_down,
         prospect_version=pv_conf.prospect_version,
     )
     ssimulator = SensorSimulator(
         pv_conf.rsr_dir / "sentinel2.rsr",
-        device="cpu",
+        device=DEVICE,
         bands_loc=None,
         bands_scale=None,
         apply_norm=pv_conf.apply_norm_rec,
@@ -59,7 +63,7 @@ def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
             deterministic=pv_conf.deterministic,
             reconstruction_loss=reconstruction_loss,
             supervised=pv_conf.loss_config.supervised,
-            device="cpu",
+            device=DEVICE,
             beta_kl=pv_conf.loss_config.beta_kl,
             beta_index=pv_conf.loss_config.beta_index,
             beta_cyclical=pv_conf.loss_config.beta_cyclical,

@@ -8,9 +8,10 @@ from prosailvae.ProsailSimus import ProsailSimulator, SensorSimulator
 
 def get_ref_data(file_name: str, batch_size: int = 10) -> torch.Tensor:
     assert batch_size <= 100
-    return torch.load(f"{Path(__file__).parent}/../data/{file_name}").float()[
-        :batch_size
-    ]
+    data: torch.Tensor = torch.load(
+        f"{Path(__file__).parent}/../data/{file_name}"
+    ).float()[:batch_size]
+    return data
 
 
 def prosail_params(batch_size: int = 10) -> torch.Tensor:

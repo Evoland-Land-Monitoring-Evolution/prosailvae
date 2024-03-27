@@ -234,7 +234,6 @@ class SimVAE(nn.Module):
         )
         # transfer to simulator variable
         sim = self.transfer_latent(z)
-
         # decoding
         rec = self.decode(sim, angles, apply_norm=apply_norm)
         if is_patch:
@@ -482,6 +481,7 @@ class SimVAE(nn.Module):
 
         # Reconstruction term
         rec_loss = self.compute_rec_loss(s2_r, rec)
+        
         loss_dict = {"rec_loss": rec_loss.item()}
         loss_sum = rec_loss
 
@@ -913,9 +913,30 @@ class SimVAE(nn.Module):
 
         cyclical_rmse = torch.cat(cyclical_rmse, 0).mean().sqrt()
         return cyclical_rmse
+   
+
+    def pvae_batch_extraction( self, batch):
+        """
+        Extracts from batch , S2 refelectances and S2 angles
+
+        INPUTS: 
+            batch: input
+
+        RETURNS: 
+            s2_r: S2 bands reflectances
+            s2_a: S2 angles 
+        """
+        s2_r = batch[0]
+        s2_a = batch[1]
+        input_is_patch = check_is_patch(s2_r)
+        if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
+            assert input_is_patch
+        else:  # encoder is pixellic
+            if input_is_patch:  # converting patch into batch
+                s2_r = batchify_batch_latent(s2_r)
+                s2_a = batchify_batch_latent(s2_a)
+        return s2_r, s2_a
     
-
-
     def pvae_method(self, batch, n_samples=1):
         """
         pvae_method takes batch, passes it to VAE and outputs useful parameters 
@@ -928,29 +949,21 @@ class SimVAE(nn.Module):
             sim: denormalized latent samples
             rec: S2 reconstruction 
         """
-        s2_r = batch[0]
-        s2_a = batch[1]
-        input_is_patch = check_is_patch(s2_r)
-        if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
-            assert input_is_patch
-        else:  # encoder is pixellic
-            if input_is_patch:  # converting patch into batch
-                s2_r = batchify_batch_latent(s2_r)
-                s2_a = batchify_batch_latent(s2_a)
+        s2_r, s2_a = self.pvae_batch_extraction(batch)
         # Forward Pass
         distri_params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
 
         return distri_params, z, sim, rec
 
-    def pvae_reconstruction_loss(self, s2_r, s2_a, z, rec):
+    def pvae_reconstruction_loss(self, s2_r: torch.Tensor, s2_a: torch.Tensor, z: torch.Tensor, rec: torch.Tensor):
         """
         pvae_reconstruction_loss computes the reconstruction loss between input and output.
 
         INPUTS: 
-            s2_r: S2 reflectance
-            s2_a: S2 angles
-            z (tensor): latent samples after sampling (normalized)
-            rec (tensor): S2 reconstruction 
+            s2_r: S2 reflectance. Shape: [width x height, bands] 
+            s2_a: S2 angles. Shape: [width x height, angles]    
+            z: latent samples after sampling (normalized). 
+            rec: S2 reconstruction. Shape: [width x height, bands, latent samples]
 
         RETURNS: 
             rec_loss: reconstruction loss 
@@ -961,6 +974,7 @@ class SimVAE(nn.Module):
             raise NotImplementedError
             s2_r, _, _ = self.crop_patch(s2_r, s2_a, z, rec)
         # Reconstruction term
+        
         rec_loss = self.compute_rec_loss(s2_r, rec)
         return rec_loss
     
@@ -978,6 +992,7 @@ class SimVAE(nn.Module):
             kl_loss: Kullbach-Leibler loss
         """
         # Kl term
+        kl_loss = 0
         if self.beta_kl > 0:
             if self.hyper_prior is None:  # KL Truncated Normal latent || Uniform prior
                 kl_loss = (

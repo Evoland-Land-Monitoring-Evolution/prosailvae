@@ -8,7 +8,7 @@ from prosailvae.prosail_vae import ProsailVAEConfig, get_prosail_vae
 from prosailvae.utils.utils import load_standardize_coeffs
 import os
 from .paths import PATCHES_DIR
-
+from einops import rearrange
 SRC_DIR = Path(__file__).parent.parent
 RSR_DIR = SRC_DIR / "data"
 N_PROSAIL_VARS = 11
@@ -45,6 +45,7 @@ def test_forward():
     data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
     dist_params, z, phi, rec = model.forward(data, angles=angles, n_samples=3)
+    
     rec.sum().backward()
 
 def test_pvae_method(): 
@@ -54,7 +55,7 @@ def test_pvae_method():
     model = get_prosail_vae(config, DEVICE)
     data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
-    dist_params, z, phi, rec = model.pvae_method(data, angles=angles, n_samples=3)
+    dist_params, z, phi, rec = model.pvae_method([data, angles] , n_samples=3)
     rec.sum().backward()
 
 
@@ -65,8 +66,11 @@ def test_pvae_loss():
     model = get_prosail_vae(config, DEVICE)
     data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
-    dist_params, z, phi, rec = model.forward(data, angles=angles, n_samples=3)
-    rec_loss = model.pvae_reconstruction_loss( data, angles, z, rec)
-    assert rec_loss is not None 
+    dist_params, z, phi, rec = model.pvae_method([data, angles] , n_samples=3)
+    dic= {}
+    loss_sum, normalized_loss_dict = model.unsupervised_batch_loss([data,angles], dic, n_samples=3 )
     kl_loss = model.pvae_kl_term( data, angles, dist_params)
     assert kl_loss is not None 
+    
+    rec_loss = model.pvae_reconstruction_loss( rearrange( data, 'b bands p p2 -> (b  p  p2) bands'), angles, z, rec)
+    assert rec_loss is not None 

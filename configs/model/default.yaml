@@ -34,7 +34,7 @@ model:
         apply_norm: True
         bands: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12] # indices in the rsr file (no 0, 9, 10 - 60 m res bands)
         R_down: ${r_down}
-      loss_type: "diag_nll"
+      loss_type: ${loss_type}
     lat_space:
       _target_: prosailvae.latentspace.TruncatedNormalLatent
       device: ${accelerator}
@@ -50,8 +50,8 @@ model:
     deterministic: False
     reconstruction_loss:
       _target_: prosailvae.loss.NLLLoss
-      loss_type: "diag_nll" # must be the same as loss_type above
-      feature_indexes: [1, 2, 3, 4, 5, 6, 7, 8, 9] # ex. [1 2 3] -> only takes into account B3 B4 B5 (0 is B2)
+      loss_type: ${loss_type}
+      feature_indexes: [1, 2, 3, 4, 5, 6, 7, 8, 9] # Do not use B2 in loss (0 is B2)
     supervised: False
     device: ${accelerator}
     beta_kl: 2.0

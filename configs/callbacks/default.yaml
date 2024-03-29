@@ -6,7 +6,7 @@ model_checkpoint:
   save_last: True # additionally always save model from last epoch
   verbose: True
   dirpath: ${output_dir}/checkpoints/${run_id}
-  filename: "{step:04d}_val_loss={val/loss:.8f}"
+  filename: "{step:04d}_val_loss={val/loss_sum:.3e}"
   auto_insert_metric_name: False
 
 lr_monitor:

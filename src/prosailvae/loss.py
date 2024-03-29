@@ -108,6 +108,13 @@ class NLLLoss(nn.Module):
         feature_dim=1,
         feature_indexes: list[int] | None = None,
     ) -> None:
+        """
+
+        'feature_indexes' allows to indicate which features are
+        taken into account for the loss computatino. For ex. [1 2 3] ->
+        only takes into account B3 B4 B5 (0 is B2)
+
+        """
         super().__init__()
         if loss_type is not None:
             sample_dim, feature_dim = get_nll_dimensions(loss_type)

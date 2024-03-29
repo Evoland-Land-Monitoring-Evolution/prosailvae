@@ -68,7 +68,7 @@ class SimVAEConfig:
     beta_cyclical: float = 0.0
     snap_cyclical: bool = False
     inference_mode: bool = False
-    lat_idx: torch.Tensor = None
+    lat_idx: torch.Tensor | list[int] | None = None
     disabled_latent = None
     disabled_latent_values = None
     lat_nll: str = "diag_nll"
@@ -105,8 +105,13 @@ class SimVAE(nn.Module):
     """
 
     def __init__(self, config: SimVAEConfig):
-        if config.lat_idx is None:
-            config.lat_idx = torch.tensor([])
+        match config.lat_idx:
+            case None:
+                self.lat_idx = torch.tensor([])
+            case torch.Tensor:
+                self.lat_idx = config.lat_idx
+            case _:
+                self.lat_idx = torch.tensor(list(config.lat_idx))
         if config.disabled_latent is None:
             config.disabled_latent = []
         if config.disabled_latent_values is None:
@@ -132,7 +137,6 @@ class SimVAE(nn.Module):
         self.beta_index = config.beta_index
         self.inference_mode = config.inference_mode
         self.hyper_prior = None
-        self.lat_idx = config.lat_idx
         self.lat_nll = config.lat_nll
         self.spatial_mode = self.encoder.get_spatial_encoding()
         self.deterministic = config.deterministic

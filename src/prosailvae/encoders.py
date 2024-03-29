@@ -40,7 +40,8 @@ class EncoderConfig:
     block_n: list[int] = field(
         default_factory=lambda: [1, 2],
     )
-    disable_s2_r_idx: bool = False
+    disable_s2_r_idx: bool = False  # If True, do not use spectral
+    # indices but, must be coherent with input size
 
 
 class Encoder(nn.Module):

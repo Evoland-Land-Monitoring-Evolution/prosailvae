@@ -64,7 +64,7 @@ class ProsailVAEDataModule(LightningDataModule):
             DataLoader,
             get_loader_from_patches(
                 path_to_patches=self.patches_dir / fname,
-                # bands=self.bands,
+                bands=self.bands,
                 batch_size=self.batch_size,
                 num_workers=self.num_workers,
                 concat=self.concat,

@@ -378,7 +378,7 @@ def get_loader_from_patches(
     plot_distribution: bool = False,
 ) -> DataLoader:
     if bands is None:
-        bands = torch.tensor([0, 1, 2, 4, 5, 6, 3, 7, 8, 9])
+        bands = torch.arange(10)
     patches = torch.load(path_to_patches)
     s2_a_patches = torch.zeros(patches.size(0), 3, patches.size(2), patches.size(3))
     s2_a_patches[:, 0, ...] = patches[:, 11, ...]  # sun zenith

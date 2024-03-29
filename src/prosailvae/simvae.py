@@ -31,6 +31,28 @@ from .utils.utils import NaN_model_params, count_parameters, unstandardize
 
 @dataclass
 class SimVAEConfig:
+    """
+
+    Attributes
+    ----------
+    encoder : Encoder
+        A torch NN that encodes a time series into a low dimension vector to be
+        interpreted as distribution parameters.
+    decoder : Decoder
+        A torch object that decodes samples of parameters distributions from sim_space.
+    lat_space : LatentSpace
+        A torch object representing the latent distributions produced by the encoder.
+    sim_space : SimSpace
+        A torch object representing the distribution of the decoder parameters, to be
+        derived from the latent distribution.
+
+    supervised : bool
+        Indicate whether the Encoder is to be trained from a labelled dataset or not.
+    lat_idx: torch.Tensor | list[int] | None = None
+        Indices of the latent vars on which the KL will be applied. None means all.
+
+    """
+
     encoder: nn.Module
     decoder: nn.Module
     lat_space: LatentSpace
@@ -56,33 +78,6 @@ class SimVAE(nn.Module):
     """
     A class used to represent an encoder with simulator-decoder.
 
-    ...
-
-    Attributes
-    ----------
-    encoder : Encoder
-        A torch NN that encodes a time series into a low dimension vector to be
-    interpreted
-        as distribution parameters.
-    lat_space : LatentSpace
-        A torch object representing the latent distributions produced by the encoder.
-    sim_space : SimSpace
-        A torch object representing the distribution of the decoder parameters, to be
-    derived
-        from the latent distribution.
-    decoder : Decoder
-        A torch object that decodes samples of parameters distributions from sim_space.
-    supervised : bool
-        Indicate whether the Encoder is to be trained from a labelled dataset or not.
-    dt_nll_coef : float
-        coefficient of the NLL of the derivative of the reconstruction in the total
-    loss.
-    dt_order : int
-        order of the numerical approximation of time series derivative to be computed
-    in the loss.
-    cumsum_coef : float
-        coefficient of the NLL of the cumulative sum of time series to be computed in
-    the loss.
     Methods
     -------
     encode(x)

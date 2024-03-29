@@ -46,26 +46,36 @@ class LatentSpace(nn.Module):
 
 
 class TruncatedNormalLatent(LatentSpace):
-    """
-    A Latent distribution with independant Truncated Normal variables.
+    """A Latent distribution with independent Truncated Normal variables.
     Assumes all variables are in the [0,1] interval.
+
+    Some latent variables can be disabled when sampling. This means
+    that, when generating samples, the disabled variables will not be
+    random, but deterministic values. To disable a variable, the
+    'disabled_latent' field can contain a list of indices corresponding
+    to the variables that need to be disabled. These are positional
+    indices: index 0 is the first variable. The deterministic values for
+    the disabled variables have to be set using the
+    'disabled_latenet_values'.
+
     """
 
     def __init__(
         self,
-        latent_dim: int = 10,
+        latent_dim: int,
         min_sigma: float = 5e-4,
         max_sigma: float = 1.4,
         device: str = "cpu",
         kl_type: str = "tnu",
-        disabled_latent: list[float] = None,
+        disabled_latent: list[int] = None,
         disabled_latent_values: list[float] = None,
     ):
+        super().__init__()
         if disabled_latent is None:
             disabled_latent = []
-        if disabled_latent_values is None:
             disabled_latent_values = []
-        super().__init__()
+        else:
+            assert len(disabled_latent) == len(disabled_latent_values)
         self.device = device
         self.latent_dim = latent_dim
         self.max_sigma = torch.tensor(max_sigma).to(device)

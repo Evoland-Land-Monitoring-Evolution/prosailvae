@@ -123,6 +123,13 @@ class SensorSimulator:
         apply_norm=True,
         R_down=1,
     ):
+        """
+        The 'bands' parameter is the list of indices in the rsr file
+        that will be used. For instance, for S2 [1, 2, 3, 4, 5, 6, 7, 8,
+        11, 12] means using only the 10m and 20m resolution bands (no 0,
+        9, 10 - 60 m res bands)
+
+        """
         super().__init__()
         if bands is None:
             bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]

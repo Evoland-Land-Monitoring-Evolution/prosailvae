@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 
-from ..metrics.results import save_validation_results
+from ..metrics.results import save_results_on_s2_data, save_validation_results
 from ..simvae import SimVAE
 
 # Configure logging
@@ -116,11 +117,22 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
                 prog_bar=False,
             )
 
-        if self.val_config is not None and prefix == "val" and batch_idx == 0:
+        if self.val_config is not None and prefix == "val":  # and batch_idx == 0:
             logger.info(f"Validation config {self.val_config}")
+            save_results_on_s2_data(
+                self.model,
+                self.trainer.val_dataloaders,
+                self.val_config.res_dir / f"ep_{self.current_epoch}_{self.global_step}",
+                logger.name,
+                self.val_config.plot_results,
+                info_test_data=np.load(
+                    Path(self.val_config.belsar_data_dir).parent.parent
+                    / "s2_patch_dataset/test_info.npy"
+                ),
+            )
             save_validation_results(
                 self.model,
-                self.val_config.res_dir / f"ep_{self.current_epoch}",
+                self.val_config.res_dir / f"ep_{self.current_epoch}_{self.global_step}",
                 self.val_config.frm4veg_data_dir,
                 self.val_config.frm4veg_2021_data_dir,
                 self.val_config.belsar_data_dir,

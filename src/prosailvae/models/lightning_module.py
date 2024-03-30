@@ -117,7 +117,7 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
                 prog_bar=False,
             )
 
-        if self.val_config is not None and prefix == "val":  # and batch_idx == 0:
+        if self.val_config is not None and prefix == "val" and batch_idx == 0:
             logger.info(f"Validation config {self.val_config}")
             save_results_on_s2_data(
                 self.model,

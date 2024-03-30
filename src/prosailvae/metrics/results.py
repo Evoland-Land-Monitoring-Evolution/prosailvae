@@ -882,10 +882,10 @@ def plot_losses(
 def save_results_on_s2_data(
     PROSAIL_VAE,
     loader,
-    res_dir,
+    res_dir: Path,
     LOGGER_NAME="PROSAIL-VAE logger",
     plot_results=False,
-    info_test_data=None,
+    info_test_data: np.ndarray | None = None,
     max_test_patch=50,
     lai_cyclical_loader=None,
 ):
@@ -900,9 +900,9 @@ def save_results_on_s2_data(
     if not plot_results:
         return
 
-    plot_dir = res_dir + "/plots/"
-    if not os.path.isdir(plot_dir):
-        os.makedirs(plot_dir)
+    plot_dir = res_dir / "plots"
+    if not plot_dir.exists():
+        plot_dir.mkdir(parents=True)
 
     all_rec = []
     all_lai = []
@@ -974,14 +974,15 @@ def save_results_on_s2_data(
             cyclical_ref_lai.append(crop_s2_input(sim_image, hw)[6, ...].reshape(-1))
             cyclical_lai.append(cyclical_sim_image[6, ...].reshape(-1))
             cyclical_lai_std.append(cyclical_std_image[6, ...].reshape(-1))
+            assert info_test_data is not None
             info = info_test_data[i, :]
             (bvnet_lai, bvnet_cab, bvnet_cw) = get_bvnet_biophyiscal_from_batch(
                 (cropped_s2_r, cropped_s2_a), patch_size=32, sensor=info[0]
             )
 
-            patch_plot_dir = plot_dir + f"/{i}_{info[1]}_{info[2]}_{info[3]}/"
-            if not os.path.isdir(patch_plot_dir):
-                os.makedirs(patch_plot_dir)
+            patch_plot_dir = plot_dir / f"{i}_{info[1]}_{info[2]}_{info[3]}/"
+            if not patch_plot_dir.exists():
+                patch_plot_dir.mkdir(parents=True)
             PROSAIL_2D_article_plots(
                 patch_plot_dir,
                 sim_image,

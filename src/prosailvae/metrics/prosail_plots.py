@@ -8,6 +8,7 @@ Created on Thu Nov 17 11:46:20 2022
 import os
 import socket
 from math import ceil, log10
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
@@ -803,7 +804,7 @@ def pair_plot(
     tensor_1,
     tensor_2=None,
     features=None,
-    res_dir="",
+    res_dir: Path | None = None,
     filename="pair_plot.png",
     label_axis=True,
 ):
@@ -974,7 +975,7 @@ def pair_plot(
         y = np.concatenate((y, np.ones(tensor_2.size(0))))
     fig, ax = myplotGrid(X, y, features, colormap={0: "blue"}, label_axis=label_axis)
     if res_dir is not None:
-        fig.savefig(res_dir + filename)
+        fig.savefig(res_dir / filename)
     return fig, ax
 
 
@@ -1901,7 +1902,7 @@ def article_2D_aggregated_results(
             all_vars.squeeze().permute(1, 0),
             tensor_2=None,
             features=PROSAILVARS,
-            res_dir=article_plot_dir,
+            res_dir=Path(article_plot_dir),
             filename="prosail_vars_pair_plot.png",
         )
         tikzplotlib_fix_ncols(fig)
@@ -1968,7 +1969,7 @@ def PROSAIL_2D_aggregated_results(
             all_vars.squeeze().permute(1, 0),
             tensor_2=None,
             features=PROSAILVARS,
-            res_dir=plot_dir,
+            res_dir=Path(plot_dir),
             filename="sim_prosail_pair_plot.png",
         )
 
@@ -2303,7 +2304,7 @@ def PROSAIL_2D_aggregated_results(
 
 
 def PROSAIL_2D_article_plots(
-    plot_dir,
+    plot_dir: Path,
     sim_image,
     cropped_image,
     rec_image,
@@ -2314,9 +2315,9 @@ def PROSAIL_2D_article_plots(
     i,
     info=None,
 ):
-    art_plot_dir = os.path.join(plot_dir, "article_plots")
-    if not os.path.exists(art_plot_dir):
-        os.makedirs(art_plot_dir)
+    art_plot_dir = plot_dir / "article_plots"
+    if not art_plot_dir.exists():
+        art_plot_dir.mkdir(parents=True)
 
     fig, _ = plot_patches([cropped_image.cpu()])
     tikzplotlib_fix_ncols(fig)

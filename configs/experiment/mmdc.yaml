@@ -1,0 +1,18 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=jz.yaml
+r_down: 7
+latent_size: 11
+loss_type: "diag_nll"
+tiles_dir: "/gpfsscratch/rech/adz/uzh16pa/MMDC"
+
+defaults:
+  - override /model: jz_mmdc.yaml
+  - override /datamodule : mmdc_datamodule.yaml
+# all parameters bellow will be merged with parameters from default configurations set above
+# this allows you overwrite only specified parameters
+
+tags: ["mmdc"]
+
+name: "mmdc"

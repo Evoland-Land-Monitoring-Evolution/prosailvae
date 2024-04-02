@@ -4,6 +4,8 @@ import torch
 from affine import Affine
 from torchutils.patches import patchify, unpatchify
 
+from ..datamodules.mmdc_interface import MMDC_DATA_COMPONENTS, mmdc2pvae_batch
+
 
 def unbatchify(tensor: torch.Tensor, batch_size=1) -> torch.Tensor:
     """
@@ -107,7 +109,12 @@ def get_encoded_image_from_batch(
     padding=False,
     no_rec=False,
 ):
-    s2_r, s2_a = batch
+    if bands is None:
+        bands = torch.tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    local_batch = batch
+    if len(batch[0]) == MMDC_DATA_COMPONENTS:
+        local_batch = mmdc2pvae_batch(batch)
+    s2_r, s2_a = local_batch
     hw = PROSAIL_VAE.encoder.nb_enc_cropped_hw
     patched_s2_r = patchify(s2_r.squeeze(), patch_size=patch_size, margin=hw).to(
         PROSAIL_VAE.device

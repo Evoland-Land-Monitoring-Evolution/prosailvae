@@ -1,0 +1,78 @@
+_target_: prosailvae.models.lightning_module.ProsailVAELightningModule
+# resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_16-54-49/last.ckpt
+# resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_15-21-47/last.ckpt
+# resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_15-02-15/last.ckpt
+model:
+  _target_: prosailvae.simvae.SimVAE
+  config:
+    _target_: prosailvae.simvae.SimVAEConfig
+    encoder:
+      _target_: prosailvae.encoders.ProsailRNNEncoder
+      config:
+        _target_: prosailvae.encoders.EncoderConfig
+        encoder_type: "rnn"
+        input_size: 17 # 10 bands, 3 angles, 4 spectral indices
+        io_coeffs:
+          _target_: prosailvae.utils.utils.IOStandardizeCoeffsFromDisk
+          data_dir: "/gpfsscratch/rech/adz/uzh16pa/ProsailVAE/PROSAILVAE/s2_patch_dataset/"
+        output_size: ${latent_size}
+        layer_sizes: [32]
+        first_layer_size: 32
+        block_layer_sizes: [32]
+        block_layer_depths: [2]
+        block_kernel_sizes: [1]
+        block_n: [3]
+    decoder:
+      _target_: prosailvae.decoders.ProsailSimulatorDecoder
+      prosailsimulator:
+        _target_: prosailvae.ProsailSimus.ProsailSimulator
+        device: ${accelerator}
+        R_down: ${r_down}
+        prospect_version: "5"
+      ssimulator:
+        _target_: prosailvae.ProsailSimus.SensorSimulator
+        rsr_file: "sentinel2.rsr"
+        device: ${accelerator}
+        apply_norm: True
+        bands: [1, 2, 3, 4, 5, 6, 7, 8, 11, 12] # indices in the rsr file (no 0, 9, 10 - 60 m res bands)
+        R_down: ${r_down}
+      loss_type: ${loss_type}
+    lat_space:
+      _target_: prosailvae.latentspace.TruncatedNormalLatent
+      device: ${accelerator}
+      latent_dim: ${latent_size}
+      kl_type: "tnu"
+      disabled_latent: []
+      disabled_latent_values: []
+    sim_space:
+      _target_: prosailvae.simspaces.LinearVarSpace
+      latent_dim: ${latent_size}
+      device: ${accelerator}
+      var_bounds_type: "legacy"
+    deterministic: False
+    reconstruction_loss:
+      _target_: prosailvae.loss.NLLLoss
+      loss_type: ${loss_type}
+      feature_indexes: [1, 2, 3, 4, 5, 6, 7, 8, 9] # Do not use B2 in loss (0 is B2)
+    supervised: False
+    device: ${accelerator}
+    beta_kl: 2.0
+    beta_index: 0.0
+    beta_cyclical: 0.0
+    snap_cyclical: False
+    logger_name: ""
+    inference_mode: False
+    lat_idx: [6]  # KL on LAI only; if null, KL is applied to all latents
+latent_samples: 70
+val_config:
+  _target_: prosailvae.models.lightning_module.ValidationConfig
+  res_dir: ${output_dir}/logs/experiments/runs/${name}/${run_id}/validation
+  frm4veg_data_dir: ${data_dir}/validation_data/frm4veg_validation
+  frm4veg_2021_data_dir: ${data_dir}/validation_data/frm4veg_2021_validation
+  belsar_data_dir: ${data_dir}/validation_data/belSAR_validation
+  model_name: pvae
+  method: simple_interpolate
+  mode: sim_tg_mean # point estimation (mean of a Truncated Gaussian)
+  save_reconstruction: False
+  remove_files: False
+  plot_results: True

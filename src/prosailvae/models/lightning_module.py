@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 
+from ..datamodules.mmdc_interface import MMDC_DATA_COMPONENTS, mmdc2pvae_batch
 from ..metrics.results import save_results_on_s2_data, save_validation_results
 from ..simvae import SimVAE
 
@@ -62,11 +63,16 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
         self.val_config = val_config
         self.resume_from_checkpoint = resume_from_checkpoint
 
-    def step(self, batch: Any) -> Any:
+    def step(
+        self, batch: tuple[torch.Tensor] | list[list[torch.Tensor]]
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Generic step of the model. Delegates to the pytorch model"""
+        local_batch = batch
+        if len(batch[0]) == MMDC_DATA_COMPONENTS:
+            local_batch = mmdc2pvae_batch(batch)
         train_loss_dict: dict = {}
         loss_sum, loss_dict = self.model.unsupervised_batch_loss(
-            batch,
+            local_batch,
             train_loss_dict,
             n_samples=self.latent_samples,
         )

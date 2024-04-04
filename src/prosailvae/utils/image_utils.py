@@ -1,6 +1,3 @@
-from typing import Tuple
-
-import matplotlib.pyplot as plt
 import numpy as np
 import rasterio as rio
 import torch
@@ -57,7 +54,7 @@ def get_invalid_symetrical_padding(enc_kernel_sizes):
 def rgb_render(
     data: np.ndarray,
     clip: int = 2,
-    bands: list[int] = [2, 1, 0],
+    bands: list[int] | None = None,
     norm: bool = True,
     dmin: np.ndarray = None,
     dmax: np.ndarray = None,
@@ -72,6 +69,8 @@ def rgb_render(
 
     :returns: a tuple of data ready for matplotlib, dmin, dmax
     """
+    if bands is None:
+        bands = [2, 1, 0]
     assert len(bands) == 1 or len(bands) == 3
     assert clip >= 0 and clip <= 100
 
@@ -103,7 +102,7 @@ def get_encoded_image_from_batch(
     batch,
     PROSAIL_VAE,
     patch_size=32,
-    bands=torch.tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    bands=None,
     mode="lat_mode",
     padding=False,
     no_rec=False,
@@ -183,20 +182,6 @@ def check_is_patch(tensor: torch.Tensor):
         return False
     else:
         raise ValueError
-
-
-def plot_patch_distribution(
-    s2_r,
-    s2_a,
-    bands_dim=1,
-    bands_names=["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"],
-):
-    n_bands = s2_r.size(bands_dim)
-    fig_bands, ax_bands = plt.subplots(2, n_bands // 2)
-    for i in range(n_bands):
-        refl = torch.select(s2_r, bands_dim, i)
-        ax_bands.hist()
-    pass
 
 
 def tensor_to_raster(

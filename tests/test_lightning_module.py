@@ -14,8 +14,12 @@ from .test_simvae import generate_config
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
-    pv_conf = generate_config()
+def instanciate(
+    bands: int = 10, lat_idx: list[int] | None = None
+) -> ProsailVAELightningModule:
+    if lat_idx is None:
+        lat_idx = [6]
+    pv_conf = generate_config(bands, lat_idx)
     encoder = ProsailRNNEncoder(pv_conf.encoder_config)
     lat_space = TruncatedNormalLatent(
         device=DEVICE,
@@ -78,6 +82,10 @@ def instanciate(bands: int = 10, lat_idx: int = 6) -> ProsailVAELightningModule:
     return mod
 
 
-def test_lightning_instanciate(bands: int = 10, lat_idx: int = 6) -> None:
+def test_lightning_instanciate(
+    bands: int = 10, lat_idx: list[int] | None = None
+) -> None:
+    if lat_idx is None:
+        lat_idx = [6]
     module = instanciate(bands, lat_idx)
     assert module is not None

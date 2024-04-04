@@ -15,7 +15,9 @@ N_PROSAIL_VARS = 11
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def generate_config(bands: int = 10, lat_idx: int = 6):
+def generate_config(bands: int = 10, lat_idx: list[int] | None = None):
+    if lat_idx is None:
+        lat_idx = [6]
     io_coeffs = load_standardize_coeffs(PATCHES_DIR)
     n_idx = io_coeffs.idx.loc.size(0) if io_coeffs.idx.loc is not None else 0
     enc_conf = EncoderConfig(

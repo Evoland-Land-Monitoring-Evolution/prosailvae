@@ -18,3 +18,4 @@ __pycache__/
 /.coverage
 /src/PROSAILVAE.egg-info/
 *~
+/.mypy_cache/

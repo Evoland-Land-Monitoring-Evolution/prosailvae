@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=mktest
+#SBATCH --job-name=pvmktest
 #SBATCH --output=outputfile-%j.out
 #SBATCH --error=errorfile-%j.err
 #SBATCH --constraint=v100-32g
 #SBATCH --nodes=1                       # number of nodes ( or --nodes=1)
-#SBATCH --ntasks-per-node=8
+#SBATCH --ntasks-per-node=4
 #SBATCH --gres=gpu:1               # number of gpus
-#SBATCH --cpus-per-task=4
-#SBATCH --time=01:59:00            # Walltime
+#SBATCH --cpus-per-task=1
+#SBATCH --time=0:20:00            # Walltime
 #SBATCH --qos=qos_gpu-dev
 #SBATCH --hint=nomultithread
 #SBATCH --account=adz@v100 # MANDATORY : account (launch myaccounts to list your accounts)

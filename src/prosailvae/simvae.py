@@ -915,16 +915,16 @@ class SimVAE(nn.Module):
         return cyclical_rmse
    
 
-    def pvae_batch_extraction( self, batch):
+    def pvae_batch_extraction( self, batch: list):
         """
         Extracts from batch , S2 refelectances and S2 angles
 
         INPUTS: 
-            batch: input
+            batch: [reflectance bands, angles]. Shape: list[tensor, tensor]
 
         RETURNS: 
-            s2_r: S2 bands reflectances
-            s2_a: S2 angles 
+            s2_r: S2 bands reflectances. Shape [batch, latent dim, width size, patch size]
+            s2_a: S2 angles. Shape [batch, angles dim, patch size, patch size]
         """
         s2_r = batch[0]
         s2_a = batch[1]
@@ -937,17 +937,17 @@ class SimVAE(nn.Module):
                 s2_a = batchify_batch_latent(s2_a)
         return s2_r, s2_a
     
-    def pvae_method(self, batch, n_samples=1):
+    def pvae_method(self, batch: list, n_samples: int =70):
         """
         pvae_method takes batch, passes it to VAE and outputs useful parameters 
         
         INPUTS: 
-            batch 
+            batch: [reflectance bands, angles]. Shape: list[tensor, tensor]
         RETURNS: 
-            distri_params: distribution paramaters
-            z: latent samples after sampling (normalized)
-            sim: denormalized latent samples
-            rec: S2 reconstruction 
+            distri_params: distribution paramaters of TN. Shape: [(batch x width x height), variables, (mean sigma)]
+            z: latent samples after sampling (normalized). Shape: [(batch x width x height), variables, n_samples]
+            sim: denormalized latent samples. Shape: [(batch x width x height), variables, n_samples]
+            rec: S2 reconstruction. Shape: [(batch x width x height), bands, n_samples]
         """
         s2_r, s2_a = self.pvae_batch_extraction(batch)
         # Forward Pass
@@ -960,13 +960,13 @@ class SimVAE(nn.Module):
         pvae_reconstruction_loss computes the reconstruction loss between input and output.
 
         INPUTS: 
-            s2_r: S2 reflectance. Shape: [width x height, bands] 
-            s2_a: S2 angles. Shape: [width x height, angles]    
-            z: latent samples after sampling (normalized). 
+            s2_r: S2 reflectance. Shape: [width x height, bands]
+            s2_a: S2 angles. Shape: [width x height, angles]
+            z: latent samples after sampling (normalized). Shape: [(batch x width x height), variables, n_samples]
             rec: S2 reconstruction. Shape: [width x height, bands, latent samples]
 
         RETURNS: 
-            rec_loss: reconstruction loss 
+            rec_loss: reconstruction loss
         """
     
         ### TO DO: why does crop_patch not return anything ???
@@ -978,18 +978,18 @@ class SimVAE(nn.Module):
         rec_loss = self.compute_rec_loss(s2_r, rec)
         return rec_loss
     
-    def pvae_kl_term(self, s2_r, s2_a, distri_params):
+    def pvae_kl_term(self, s2_r: torch.Tensor, s2_a: torch.Tensor, distri_params: torch.Tensor):
         """
         pvae_kl_term computes KL loss between output of encoder and prior
 
         INPUTS: 
-            s2_r: S2 reflectance
-            s2_a: S2 angles
-            z (tensor): latent samples after sampling (normalized)
-            rec (tensor): S2 reconstruction 
+            s2_r: S2 reflectance. Shape: [width x height, bands]
+            s2_a: S2 angles. Shape: [width x height, angles]
+            z: latent samples after sampling (normalized) Shape: [(batch x width x height), variables, n_samples]
+            distri_params: Truncated gaussian distribution parameters. Shape: [(batch x width x height), variables, (mean sigma)]
 
         RETURNS: 
-            kl_loss: Kullbach-Leibler loss
+            kl_loss: Sum of Kullbach-Leibler loss
         """
         # Kl term
         kl_loss = 0

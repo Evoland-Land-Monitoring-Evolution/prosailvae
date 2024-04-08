@@ -946,6 +946,10 @@ class SimVAE(nn.Module):
         INPUTS:
             batch: [reflectance bands, angles]. Shape: list[tensor, tensor]
         RETURNS:
+            s2_r: S2 bands reflectances.
+                  Shape: [batch, latent dim, width size, patch size]
+            s2_a: S2 angles.
+                  Shape: [batch, angles dim, patch size, patch size]
             distri_params: distribution paramaters of TN.
                            Shape: [(batch x width x height), variables, (mean sigma)]
             z: latent samples after sampling (normalized).
@@ -961,7 +965,7 @@ class SimVAE(nn.Module):
             s2_r, n_samples=n_samples, angles=s2_a
         )
         # TODO: change tuple for dataclass
-        return distri_params, z, sim, rec
+        return s2_r, s2_a, distri_params, z, sim, rec
 
     def pvae_reconstruction_loss(
         self, s2_r: torch.Tensor, s2_a: torch.Tensor, z: torch.Tensor, rec: torch.Tensor

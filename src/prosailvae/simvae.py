@@ -913,7 +913,7 @@ class SimVAE(nn.Module):
         cyclical_rmse = torch.cat(cyclical_rmse, 0).mean().sqrt()
         return cyclical_rmse
 
-    def pvae_batch_extraction(self, batch: list) -> tuple(torch.Tensor, torch.Tensor):
+    def pvae_batch_extraction(self, batch: list) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Extracts from batch , S2 refelectances and S2 angles
 
@@ -939,7 +939,7 @@ class SimVAE(nn.Module):
 
     def pvae_method(
         self, batch: list, n_samples: int = 70
-    ) -> tuple(torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor):
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         pvae_method takes batch, passes it to VAE and outputs useful parameters
 

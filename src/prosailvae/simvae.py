@@ -111,7 +111,7 @@ class SimVAE(nn.Module):
             case torch.Tensor:
                 self.lat_idx = config.lat_idx
             case _:
-                self.lat_idx = torch.tensor(list(config.lat_idx))
+                self.lat_idx = torch.tensor([])
         if config.disabled_latent is None:
             config.disabled_latent = []
         if config.disabled_latent_values is None:
@@ -939,7 +939,14 @@ class SimVAE(nn.Module):
 
     def pvae_method(
         self, batch: list, n_samples: int = 70
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
         """
         pvae_method takes batch, passes it to VAE and outputs useful parameters
 
@@ -967,9 +974,36 @@ class SimVAE(nn.Module):
         # TODO: change tuple for dataclass
         return s2_r, s2_a, distri_params, z, sim, rec
 
+    def pvae_samples_2_distri_para(
+        self, recs: torch.Tensor, sample_dim: int = 2
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Computes mean and var of each band. Method gotten from loss.gaussian_nll_loss
+
+        INPUTS:
+            recs: reconstruction from PM.
+                Shape: [(batch x width x height), bands, n_samples]
+        RETURNS:
+            rec_mu: reconstruction mean.
+                Shape: [(batch x width x height), bands, 0]
+            rec_err_var: reconstruction variance.
+                Shape: [(batch x width x height), bands, 0]
+        """
+        if len(recs.size()) < 3:
+            raise ValueError("recs needs a batch, a feature and a sample dimension")
+        if recs.size(sample_dim) == 1:
+            rec_err_var = torch.tensor(0.0001).to(
+                recs.device
+            )  # constant variance, enabling computation even with 1 sample
+            rec_mu = recs
+        else:
+            rec_err_var = recs.var(sample_dim, keepdim=True)  # .unsqueeze(sample_dim)
+            rec_mu = recs.mean(sample_dim, keepdim=True)  # .unsqueeze(sample_dim)
+        return rec_mu, rec_err_var
+
     def pvae_reconstruction_loss(
         self, s2_r: torch.Tensor, s2_a: torch.Tensor, z: torch.Tensor, rec: torch.Tensor
-    ) -> int:
+    ) -> torch.Tensor:
         """
         Computes the reconstruction loss between input and output.
 
@@ -984,7 +1018,8 @@ class SimVAE(nn.Module):
                  Shape: [width x height, bands, latent samples]
 
         RETURNS:
-            rec_loss: reconstruction loss
+            rec_loss: reconstruction loss.
+                 Shape: []
         """
 
         # TODO: why does crop_patch not return anything ???
@@ -992,12 +1027,16 @@ class SimVAE(nn.Module):
             raise NotImplementedError
             s2_r, _, _ = self.crop_patch(s2_r, s2_a, z, rec)
         # Reconstruction term
-        rec_loss = self.compute_rec_loss(s2_r, rec)
+        rec_mean, rec_var = self.pvae_samples_2_distri_para(rec)
+        if self.decoder.ssimulator.apply_norm:
+            s2_r = self.decoder.ssimulator.normalize(s2_r)
+
+        rec_loss = self.reconstruction_loss(s2_r, rec_mean, rec_var)
         return rec_loss
 
-    def pvae_kl_term(
+    def pvae_kl_elbo(
         self, s2_r: torch.Tensor, s2_a: torch.Tensor, distri_params: torch.Tensor
-    ) -> int:
+    ) -> torch.Tensor:
         """
         pvae_kl_term computes KL loss between output of encoder and prior
 

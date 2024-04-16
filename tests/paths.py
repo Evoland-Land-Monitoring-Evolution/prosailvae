@@ -1,6 +1,6 @@
 from pathlib import Path
 
-ROOT_DIR = Path("/work/CESBIO/projects/DeepChange/PROSAILVAE")
+ROOT_DIR = Path("/home/desousak/Documents/Data/PROSAILVAE/")
 TMP_DIR = Path("/tmp")
 if Path("/usr/local/stok/DATA/MMDC").exists():
     ROOT_DIR = Path("/usr/local/stok/DATA/MMDC/ProsailVAE/PROSAILVAE")

@@ -1002,7 +1002,13 @@ class SimVAE(nn.Module):
         return rec_mu, rec_err_var
 
     def pvae_reconstruction_loss(
-        self, s2_r: torch.Tensor, s2_a: torch.Tensor, z: torch.Tensor, rec: torch.Tensor
+        self,
+        s2_r: torch.Tensor,
+        s2_a: torch.Tensor,
+        z: torch.Tensor,
+        rec: torch.Tensor,
+        res_mean: torch.Tensor | None = None,
+        res_sigma: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Computes the reconstruction loss between input and output.
@@ -1015,8 +1021,11 @@ class SimVAE(nn.Module):
             z: latent samples after sampling (normalized).
                Shape: [(batch x width x height), variables, n_samples]
             rec: S2 reconstruction.
-                 Shape: [width x height, bands, latent samples]
-
+                 Shape: [batch x width x height, bands, latent samples]
+            mean_res: residual mean prediction
+                 Shape: [bands]
+            sigma_res: residual std prediction
+                Shape: [bands]
         RETURNS:
             rec_loss: reconstruction loss.
                  Shape: []
@@ -1030,8 +1039,12 @@ class SimVAE(nn.Module):
         rec_mean, rec_var = self.pvae_samples_2_distri_para(rec)
         if self.decoder.ssimulator.apply_norm:
             s2_r = self.decoder.ssimulator.normalize(s2_r)
-
-        rec_loss = self.reconstruction_loss(s2_r, rec_mean, rec_var)
+        if res_mean is not None and res_sigma is not None:
+            rec_loss = self.reconstruction_loss(
+                s2_r, rec_mean + res_mean, rec_var + res_sigma
+            )
+        else:
+            rec_loss = self.reconstruction_loss(s2_r, rec_mean, rec_var)
         return rec_loss
 
     def pvae_kl_elbo(

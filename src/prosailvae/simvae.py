@@ -111,7 +111,7 @@ class SimVAE(nn.Module):
             case torch.Tensor:
                 self.lat_idx = config.lat_idx
             case _:
-                self.lat_idx = torch.tensor([])
+                self.lat_idx = torch.tensor(list(config.lat_idx))
         if config.disabled_latent is None:
             config.disabled_latent = []
         if config.disabled_latent_values is None:

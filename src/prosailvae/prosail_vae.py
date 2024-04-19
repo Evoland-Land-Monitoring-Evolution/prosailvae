@@ -175,6 +175,7 @@ def get_prosail_vae(
         disabled_latent=pv_config.disabled_latent,
         disabled_latent_values=pv_config.disabled_latent_values,
     )
+
     reconstruction_loss = NLLLoss(
         loss_type=pv_config.loss_config.loss_type,
         feature_indexes=pv_config.loss_config.reconstruction_bands_coeffs,

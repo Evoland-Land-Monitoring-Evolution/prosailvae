@@ -14,7 +14,7 @@ from .encoders import EncoderConfig, get_encoder
 
 # from prosailvae.decoders import TSSimulatorDecoder
 from .latentspace import TruncatedNormalLatent
-from .loss import LossConfig, NLLLoss, pvae_NLLLoss
+from .loss import LossConfig, NLLLoss
 from .ProsailSimus import ProsailSimulator, SensorSimulator
 from .simspaces import LinearVarSpace
 from .simvae import SimVAE, SimVAEConfig
@@ -159,7 +159,6 @@ def get_prosail_vae(
     optimizer: torch.optim.Optimizer | None = None,
     load_simulator=True,
     freeze_weights=False,
-    pvae: bool = False,
 ):
     """
     Intializes an instance of prosail_vae
@@ -176,16 +175,10 @@ def get_prosail_vae(
         disabled_latent=pv_config.disabled_latent,
         disabled_latent_values=pv_config.disabled_latent_values,
     )
-    if pvae:
-        reconstruction_loss = pvae_NLLLoss(
-            loss_type=pv_config.loss_config.loss_type,
-            feature_indexes=pv_config.loss_config.reconstruction_bands_coeffs,
-        )
-    else:
-        reconstruction_loss = NLLLoss(
-            loss_type=pv_config.loss_config.loss_type,
-            feature_indexes=pv_config.loss_config.reconstruction_bands_coeffs,
-        )
+    reconstruction_loss = NLLLoss(
+        loss_type=pv_config.loss_config.loss_type,
+        feature_indexes=pv_config.loss_config.reconstruction_bands_coeffs,
+    )
 
     prosail_var_space = LinearVarSpace(
         latent_dim=pv_config.encoder_config.output_size,

@@ -19,7 +19,6 @@ class LossConfig:
     lat_loss_type: str = ""
     reconstruction_bands_coeffs: list[int] | None = None
     lat_idx: torch.Tensor = torch.tensor([])
-    pvae: bool = False
 
 
 def get_nll_dimensions(loss_type):
@@ -97,23 +96,6 @@ def gaussian_nll_loss(
     ).mean()
 
 
-def pvae_gaussian_nll_loss(
-    tgt,
-    rec_mu,
-    rec_err_var,
-    sample_dim=2,
-    feature_dim=1,
-    feature_indexes: list[int] | None = None,
-):
-    return gaussian_nll(
-        tgt.unsqueeze(sample_dim),
-        rec_mu,
-        rec_err_var,
-        sum_dim=feature_dim,
-        feature_indexes=feature_indexes,
-    ).mean()
-
-
 class NLLLoss(nn.Module):
     """
     nn.Module Loss for NLL
@@ -144,43 +126,6 @@ class NLLLoss(nn.Module):
         return gaussian_nll_loss(
             targets,
             inputs,
-            sample_dim=self.sample_dim,
-            feature_dim=self.feature_dim,
-            feature_indexes=self.feature_indexes,
-        )
-
-
-class pvae_NLLLoss(nn.Module):
-    """
-    nn.Module Loss for NLL
-    """
-
-    def __init__(
-        self,
-        loss_type: str | None = None,
-        sample_dim=2,
-        feature_dim=1,
-        feature_indexes: list[int] | None = None,
-    ) -> None:
-        """
-
-        'feature_indexes' allows to indicate which features are
-        taken into account for the loss computatino. For ex. [1 2 3] ->
-        only takes into account B3 B4 B5 (0 is B2)
-
-        """
-        super().__init__()
-        if loss_type is not None:
-            sample_dim, feature_dim = get_nll_dimensions(loss_type)
-        self.sample_dim = sample_dim
-        self.feature_dim = feature_dim
-        self.feature_indexes = feature_indexes
-
-    def forward(self, targets, mu, var):
-        return pvae_gaussian_nll_loss(
-            targets,
-            mu,
-            var,
             sample_dim=self.sample_dim,
             feature_dim=self.feature_dim,
             feature_indexes=self.feature_indexes,

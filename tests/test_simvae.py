@@ -27,7 +27,7 @@ def generate_config(bands: int = 10, lat_idx: list[int] | None = None):
         io_coeffs=io_coeffs,
         output_size=N_PROSAIL_VARS,
     )
-    loss_conf = LossConfig(lat_idx=torch.tensor(lat_idx).int(), pvae=pvae)
+    loss_conf = LossConfig(lat_idx=torch.tensor(lat_idx).int())
     pv_conf = ProsailVAEConfig(enc_conf, loss_conf, RSR_DIR, "/tmp", "/tmp")
     return pv_conf
 
@@ -93,39 +93,11 @@ def test_regression_pvae_distri_para_computation():
     assert (var == reg_var).all()
 
 
-def test_pvae_loss_reconstruction():
-    batch_size = 2
-    patch_size = 4
-    config = generate_config()
-
-    model = get_prosail_vae(config, DEVICE, pvae=True)
-
-    data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
-    angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
-    model_encoder_state_dict = model.encoder.state_dict()
-    torch.manual_seed(42)
-    s2r, s2a, dist_params, z, phi, rec = model.pvae_method([data, angles], n_samples=20)
-
-    dic = {}
-    model2 = get_prosail_vae(config, DEVICE)
-    model2.encoder.load_state_dict(model_encoder_state_dict)
-    torch.manual_seed(42)
-
-    loss_sum, normalized_loss_dict = model2.unsupervised_batch_loss(
-        [data, angles], dic, n_samples=20
-    )
-    data_bis = rearrange(data, "b bands p p2 -> (b  p  p2) bands")
-    rec_loss = model.pvae_reconstruction_loss(data_bis, angles, z, rec)
-    assert torch.eq(
-        rec_loss.to(DEVICE), torch.tensor(normalized_loss_dict["rec_loss"]).to(DEVICE)
-    )
-
-
 def test_pvae_kl_elbo():
     batch_size = 2
     patch_size = 4
     config = generate_config()
-    model = get_prosail_vae(config, DEVICE, pvae=True)
+    model = get_prosail_vae(config, DEVICE)
     data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
     s2r, s2a, dist_params, z, phi, rec = model.pvae_method([data, angles], n_samples=20)

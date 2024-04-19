@@ -1001,52 +1001,6 @@ class SimVAE(nn.Module):
             rec_mu = recs.mean(sample_dim, keepdim=True)  # .unsqueeze(sample_dim)
         return rec_mu, rec_err_var
 
-    def pvae_reconstruction_loss(
-        self,
-        s2_r: torch.Tensor,
-        s2_a: torch.Tensor,
-        z: torch.Tensor,
-        rec: torch.Tensor,
-        res_mean: torch.Tensor | None = None,
-        res_sigma: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        """
-        Computes the reconstruction loss between input and output.
-
-        INPUTS:
-            s2_r: S2 reflectance.
-                  Shape: [width x height, bands]
-            s2_a: S2 angles.
-                  Shape: [width x height, angles]
-            z: latent samples after sampling (normalized).
-               Shape: [(batch x width x height), variables, n_samples]
-            rec: S2 reconstruction.
-                 Shape: [batch x width x height, bands, latent samples]
-            mean_res: residual mean prediction
-                 Shape: [bands]
-            sigma_res: residual std prediction
-                Shape: [bands]
-        RETURNS:
-            rec_loss: reconstruction loss.
-                 Shape: []
-        """
-
-        # TODO: why does crop_patch not return anything ???
-        if self.spatial_mode:
-            raise NotImplementedError
-            s2_r, _, _ = self.crop_patch(s2_r, s2_a, z, rec)
-        # Reconstruction term
-        rec_mean, rec_var = self.pvae_samples_2_distri_para(rec)
-        if self.decoder.ssimulator.apply_norm:
-            s2_r = self.decoder.ssimulator.normalize(s2_r)
-        if res_mean is not None and res_sigma is not None:
-            rec_loss = self.reconstruction_loss(
-                s2_r, rec_mean + res_mean, rec_var + res_sigma
-            )
-        else:
-            rec_loss = self.reconstruction_loss(s2_r, rec_mean, rec_var)
-        return rec_loss
-
     def pvae_kl_elbo(
         self, s2_r: torch.Tensor, s2_a: torch.Tensor, distri_params: torch.Tensor
     ) -> torch.Tensor:

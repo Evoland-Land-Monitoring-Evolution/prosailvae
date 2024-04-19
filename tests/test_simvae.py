@@ -51,6 +51,7 @@ def test_forward():
 
 
 def test_regression_pvae_method():
+    """Test if forward method and pvae method result in same output"""
     batch_size = 2
     patch_size = 4
     config = generate_config()
@@ -76,6 +77,7 @@ def test_regression_pvae_method():
 
 
 def test_regression_pvae_distri_para_computation():
+    """Regression test to verify that mean and var is correctly calculated"""
     batch_size = 2
     patch_size = 4
     sample_dim = 2
@@ -94,6 +96,7 @@ def test_regression_pvae_distri_para_computation():
 
 
 def test_pvae_kl_elbo():
+    """Test if KL is calculated correctly"""
     batch_size = 2
     patch_size = 4
     config = generate_config()

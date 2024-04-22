@@ -4,7 +4,7 @@ import torch
 from einops import rearrange
 
 from prosailvae.encoders import EncoderConfig
-from prosailvae.loss import LossConfig, pvae_samples_2_distri_para
+from prosailvae.loss import LossConfig, compute_bands_stats
 from prosailvae.prosail_vae import ProsailVAEConfig, get_prosail_vae
 from prosailvae.utils.utils import load_standardize_coeffs
 
@@ -87,7 +87,7 @@ def test_regression_pvae_distri_para_computation():
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
     torch.manual_seed(42)
     s2r, s2a, dist_params, z, phi, rec = model.pvae_method([data, angles], n_samples=50)
-    mean, var = pvae_samples_2_distri_para(rec, sample_dim=sample_dim)
+    mean, var = compute_bands_stats(rec, sample_dim=sample_dim)
     reg_var = rec.var(sample_dim, keepdim=True)
     reg_mean = rec.mean(sample_dim, keepdim=True)
 

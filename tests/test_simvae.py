@@ -63,7 +63,9 @@ def test_regression_pvae_method():
         data, angles=angles, n_samples=3
     )
     torch.manual_seed(42)
-    s2r, s2a, dist_params, z, phi, rec = model.pvae_method([data, angles], n_samples=3)
+    s2r, s2a, dist_params, z, phi, rec = model.generate_outputs(
+        [data, angles], n_samples=3
+    )
     z_reg = rearrange(
         z_reg, "batch samples bands w h -> (batch  w  h) bands samples"
     ).to(DEVICE)
@@ -86,7 +88,9 @@ def test_regression_pvae_distri_para_computation():
     data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
     torch.manual_seed(42)
-    s2r, s2a, dist_params, z, phi, rec = model.pvae_method([data, angles], n_samples=50)
+    s2r, s2a, dist_params, z, phi, rec = model.generate_outputs(
+        [data, angles], n_samples=50
+    )
     mean, var = compute_bands_stats(rec, sample_dim=sample_dim)
     reg_var = rec.var(sample_dim, keepdim=True)
     reg_mean = rec.mean(sample_dim, keepdim=True)
@@ -103,6 +107,8 @@ def test_pvae_kl_elbo():
     model = get_prosail_vae(config, DEVICE)
     data = torch.rand(batch_size, 10, patch_size, patch_size).to(DEVICE)
     angles = torch.rand(batch_size, 3, patch_size, patch_size).to(DEVICE)
-    s2r, s2a, dist_params, z, phi, rec = model.pvae_method([data, angles], n_samples=20)
-    kl_loss = model.pvae_kl_elbo(data, angles, dist_params)
+    s2r, s2a, dist_params, z, phi, rec = model.generate_outputs(
+        [data, angles], n_samples=20
+    )
+    kl_loss = model.compute_kl_elbo(data, angles, dist_params)
     assert kl_loss is not None

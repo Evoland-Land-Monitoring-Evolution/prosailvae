@@ -462,7 +462,7 @@ class SimVAE(nn.Module):
         """
 
         # Forward Pass
-        s2_r, s2_a, distri_params, z, sim, rec = self.pvae_method(batch, n_samples)
+        s2_r, s2_a, distri_params, z, sim, rec = self.generate_outputs(batch, n_samples)
         batch_size = s2_r.size(0)
         # cropping pixels lost to padding
         # TODO: FIX CROP PATCH DOESN4T RETURN ANYTHING
@@ -487,7 +487,7 @@ class SimVAE(nn.Module):
 
         # Kl term
         if self.beta_kl > 0:
-            kl_loss = self.pvae_kl_elbo(s2_r, s2_a, distri_params)
+            kl_loss = self.compute_kl_elbo(s2_r, s2_a, distri_params)
             loss_sum += kl_loss
             loss_dict["kl_loss"] = kl_loss.item()
 
@@ -904,7 +904,7 @@ class SimVAE(nn.Module):
                 s2_a = batchify_batch_latent(s2_a)
         return s2_r, s2_a
 
-    def pvae_method(
+    def generate_outputs(
         self, batch: list, n_samples: int = 70
     ) -> tuple[
         torch.Tensor,
@@ -915,7 +915,7 @@ class SimVAE(nn.Module):
         torch.Tensor,
     ]:
         """
-        pvae_method takes batch, passes it to VAE and outputs useful parameters
+        generae_outputs takes batch, passes it to VAE and outputs useful parameters
 
         INPUTS:
             batch: [reflectance bands, angles]. Shape: list[tensor, tensor]
@@ -941,11 +941,11 @@ class SimVAE(nn.Module):
         # TODO: change tuple for dataclass
         return s2_r, s2_a, distri_params, z, sim, rec
 
-    def pvae_kl_elbo(
+    def compute_kl_elbo(
         self, s2_r: torch.Tensor, s2_a: torch.Tensor, distri_params: torch.Tensor
     ) -> torch.Tensor:
         """
-        pvae_kl_term computes KL loss between output of encoder and prior
+        compute_kl_elbo computes KL loss between output of encoder and prior
 
         INPUTS:
             s2_r: S2 reflectance. Shape: [width x height, bands]

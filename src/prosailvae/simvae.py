@@ -460,19 +460,10 @@ class SimVAE(nn.Module):
         """
         Computes the unsupervised loss on batch (ELBO)
         """
-        s2_r = batch[0]
-        s2_a = batch[1]
-        input_is_patch = check_is_patch(s2_r)
-        batch_size = s2_r.size(0)
-        if self.spatial_mode:  # self.decoder.loss_type=='spatial_nll':
-            assert input_is_patch
-        else:  # encoder is pixellic
-            if input_is_patch:  # converting patch into batch
-                s2_r = batchify_batch_latent(s2_r)
-                s2_a = batchify_batch_latent(s2_a)
-        # Forward Pass
-        params, z, sim, rec = self.forward(s2_r, n_samples=n_samples, angles=s2_a)
 
+        # Forward Pass
+        s2_r, s2_a, distri_params, z, sim, rec = self.pvae_method(batch, n_samples)
+        batch_size = s2_r.size(0)
         # cropping pixels lost to padding
         # TODO: FIX CROP PATCH DOESN4T RETURN ANYTHING
         if self.spatial_mode:
@@ -496,31 +487,7 @@ class SimVAE(nn.Module):
 
         # Kl term
         if self.beta_kl > 0:
-            if self.hyper_prior is None:  # KL Truncated Normal latent || Uniform prior
-                kl_loss = (
-                    self.beta_kl
-                    * self.lat_space.kl(params, lat_idx=self.lat_idx).sum(1).mean()
-                )
-            else:  # KL Truncated Normal latent || Truncated Normal hyperprior
-                s2_r_sup = s2_r
-                s2_a_sup = s2_a
-                if self.spatial_mode:  # if encoder 1 encodes patches
-                    if self.hyper_prior.encoder.get_spatial_encoding():
-                        # Case of a spatial hyperprior
-                        raise NotImplementedError
-                    s2_r_sup = batchify_batch_latent(s2_r_sup)
-                    s2_a_sup = batchify_batch_latent(s2_a_sup)
-                with torch.no_grad():
-                    params_hyper = self.hyper_prior.encode2lat_params(
-                        s2_r_sup, s2_a_sup
-                    )
-                kl_loss = (
-                    self.beta_kl
-                    * self.lat_space.kl(params, params_hyper, lat_idx=self.lat_idx)
-                    .sum(1)
-                    .mean()
-                )  # sum over latent and mean over batch
-
+            kl_loss = self.pvae_kl_elbo(s2_r, s2_a, distri_params)
             loss_sum += kl_loss
             loss_dict["kl_loss"] = kl_loss.item()
 

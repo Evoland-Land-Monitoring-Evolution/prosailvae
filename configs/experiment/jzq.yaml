@@ -8,6 +8,7 @@ latent_size: 11
 defaults:
   - override /model: jzq.yaml
   - override /datamodule : jzq.yaml
+  - override /callbacks: requeue.yaml
 # all parameters bellow will be merged with parameters from default configurations set above
 # this allows you overwrite only specified parameters
 

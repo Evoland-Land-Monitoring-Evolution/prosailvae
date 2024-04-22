@@ -2,6 +2,9 @@ _target_: pytorch_lightning.Trainer
 
 accelerator: ${accelerator}
 devices: 1
+detect_anomaly: True
+# gradient_clip_val: 0.5
+
 
 min_epochs: 0
 max_epochs: 200

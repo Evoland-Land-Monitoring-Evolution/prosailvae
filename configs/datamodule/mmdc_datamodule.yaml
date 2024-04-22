@@ -3,7 +3,7 @@ _target_: mmdc_singledate.datamodules.mmdc_datamodule.MMDCDataModule
 dl_config:
   _target_: mmdc_singledate.datamodules.mmdc_datamodule.MMDCDataLoaderConfig
   max_open_files : 2
-  batch_size_train: 1
+  batch_size_train: 4
   batch_size_val: 1
   num_workers: 2
   pin_memory: False
@@ -12,6 +12,6 @@ dl_config:
 data_paths:
   _target_: mmdc_singledate.datamodules.mmdc_datamodule.MMDCDataPaths
   tensors_dir : ${tiles_dir}
-  train_rois : ${tiles_dir}/tiles_conf_training/full/train.txt
-  val_rois : ${tiles_dir}/tiles_conf_training/full/val.txt
+  train_rois : ${tiles_dir}/tiles_conf_training/full/train_v.txt
+  val_rois : ${tiles_dir}/tiles_conf_training/full/val_v.txt
   test_rois : ${tiles_dir}/tiles_conf_training/full/test.txt

@@ -22,6 +22,7 @@ from article_plots.belsar_plots import (
 )
 
 from ..bvnet_regression.bvnet_utils import get_bvnet_biophyiscal_from_batch
+from ..datamodules.mmdc_interface import MMDC_DATA_COMPONENTS, mmdc2pvae_batch
 from ..dataset.loaders import get_simloader
 from ..ProsailSimus import BANDS, PROSAILVARS
 from ..utils.image_utils import crop_s2_input, get_encoded_image_from_batch
@@ -811,11 +812,15 @@ def get_rec_var(
         for i, batch in enumerate(loader):
             if i == max_batch:
                 break
-            s2_r = patchify(batch[0].squeeze(0), patch_size=32, margin=0).to(
+
+            local_batch = batch
+            if len(batch[0]) == MMDC_DATA_COMPONENTS:
+                local_batch = mmdc2pvae_batch(batch)
+            s2_r = patchify(local_batch[0].squeeze(0), patch_size=32, margin=0).to(
                 PROSAIL_VAE.device
             )
             s2_r = s2_r.reshape(-1, *s2_r.shape[2:])
-            s2_a = patchify(batch[1].squeeze(0), patch_size=32, margin=0).to(
+            s2_a = patchify(local_batch[1].squeeze(0), patch_size=32, margin=0).to(
                 PROSAIL_VAE.device
             )
             s2_a = s2_a.reshape(-1, *s2_a.shape[2:])

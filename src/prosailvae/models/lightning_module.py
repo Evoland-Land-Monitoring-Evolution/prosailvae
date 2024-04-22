@@ -101,6 +101,9 @@ class ProsailVAELightningModule(LightningModule):  # pylint: disable=too-many-an
                 on_epoch=True,
                 prog_bar=False,
             )
+            logger.info(f"{loss_type=} -> {loss=}")
+
+        logger.info(f"{opt_loss=}")
         return opt_loss
 
     def validation_step(  # pylint: disable=arguments-differ

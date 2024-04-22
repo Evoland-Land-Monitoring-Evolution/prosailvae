@@ -71,22 +71,38 @@ def gaussian_nll(
         return loss
 
 
-def gaussian_nll_loss(
-    tgt, recs, sample_dim=2, feature_dim=1, feature_indexes: list[int] | None = None
-):
+def pvae_samples_2_distri_para(
+    recs: torch.Tensor, sample_dim: int = 2
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Computes mean and var of each band.
+
+    INPUTS:
+        recs: reconstruction from PM.
+            Shape: [(batch x width x height), bands, n_samples]
+    RETURNS:
+        rec_mu: reconstruction mean.
+            Shape: [(batch x width x height), bands, 0]
+        rec_err_var: reconstruction variance.
+            Shape: [(batch x width x height), bands, 0]
+    """
     if len(recs.size()) < 3:
         raise ValueError("recs needs a batch, a feature and a sample dimension")
-    elif recs.size(sample_dim) == 1:
+    if recs.size(sample_dim) == 1:
         rec_err_var = torch.tensor(0.0001).to(
-            tgt.device
+            recs.device
         )  # constant variance, enabling computation even with 1 sample
         rec_mu = recs
     else:
         rec_err_var = recs.var(sample_dim, keepdim=True)  # .unsqueeze(sample_dim)
         rec_mu = recs.mean(sample_dim, keepdim=True)  # .unsqueeze(sample_dim)
-        # if feature_dim > sample_dim: # if feature dimension is after sample dimension,
-        #     # reducing it because sample dimension disappeared
-        #     feature_dim = feature_dim - 1
+    return rec_mu, rec_err_var
+
+
+def gaussian_nll_loss(
+    tgt, recs, sample_dim=2, feature_dim=1, feature_indexes: list[int] | None = None
+):
+    rec_mu, rec_err_var = pvae_samples_2_distri_para(recs, sample_dim)
     return gaussian_nll(
         tgt.unsqueeze(sample_dim),
         rec_mu,

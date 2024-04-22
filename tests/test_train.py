@@ -34,3 +34,5 @@ def test_train_pipeline() -> None:
     optimized_metric = "val/loss_sum"
     score = trainer.callback_metrics.get(optimized_metric)
     assert score is not None
+    trainer.validate(model=lit_mod, datamodule=data_mod)
+    trainer.test(model=lit_mod, datamodule=data_mod)

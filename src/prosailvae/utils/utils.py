@@ -171,8 +171,8 @@ def full_gaussian_nll(x, mu, sigma_mat, eps=1e-6, device="cpu", regularization=1
     ).squeeze() + 2 * torch.log(torch.max(torch.diagonal(L, 0, 1, 2), eps)).sum(1)
 
 
-def gaussian_nll(x, mu, sigma, eps=1e-6, device="cpu", sum_dim=1):
-    eps = torch.tensor(eps).to(device)
+def gaussian_nll(x, mu, sigma, eps=1e-6, sum_dim=1):
+    eps = torch.tensor(eps).to(x.device)
     return (
         (torch.square(x - mu) / torch.max(sigma, eps))
         + torch.log(torch.max(sigma, eps))

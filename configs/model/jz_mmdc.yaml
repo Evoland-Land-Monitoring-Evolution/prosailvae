@@ -1,7 +1,5 @@
 _target_: prosailvae.models.lightning_module.ProsailVAELightningModule
-# resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_16-54-49/last.ckpt
-# resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_15-21-47/last.ckpt
-# resume_from_checkpoint: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_15-02-15/last.ckpt
+# resume_from_checkpoint: /gpfsscratch/rech/adz/uzh16pa/JOBS/PROSAILVAE/jobs/prosailvae/checkpoints/2024-03-31_16-54-49/last.ckpt
 model:
   _target_: prosailvae.simvae.SimVAE
   config:

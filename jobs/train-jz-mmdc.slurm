@@ -22,7 +22,7 @@ module load anaconda-py3/2023.09
 conda activate prosailvae
 export BASE_DIR=/gpfsdswork/projects/rech/adz/uzh16pa
 export PV_SRCDIR=${BASE_DIR}/src/MMDC/prosailvae
-export PV_WORKING_DIR=${BASE_DIR}/PROSAILVAE/jobs
+export PV_WORKING_DIR=${SCRATCH}/JOBS/PROSAILVAE/jobs
 
 cd ${PV_WORKING_DIR}
 export PYTHONOPTIMIZE=TRUE

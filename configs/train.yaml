@@ -35,7 +35,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to output folder
-output_dir: /gpfsdswork/projects/rech/adz/uzh16pa/PROSAILVAE/jobs/prosailvae/
+output_dir: /gpfsscratch/rech/adz/uzh16pa/JOBS/PROSAILVAE/jobs/prosailvae/
 
 # pretty print config at the start of the run using Rich library
 print_config: True

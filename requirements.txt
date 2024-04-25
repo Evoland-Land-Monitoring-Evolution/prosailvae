@@ -30,9 +30,11 @@ nvidia-nccl-cu11==2.14.3
 nvidia-nvtx-cu11==11.7.91
 omegaconf
 pandas
+perflint
 pre-commit      # hooks for applying linters on commit
 psutil
 pudb            # debugger
+pylint
 pylsp-mypy
 pytest          # tests
 python-dotenv   # loading env variables from .env file

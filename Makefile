@@ -61,6 +61,10 @@ pylint:
 	-@$(CONDA) && echo "\npylint:\n======="  && pylint --ignore=$(PYLINT_IGNORED) src/ tests
 
 #.PHONY:
+perflint:
+	-@$(CONDA) && echo "\nperflint:\n======="  && pylint --ignore=$(PYLINT_IGNORED) src/ tests  --load-plugins=perflint
+
+#.PHONY:
 ruff:
 	-@$(CONDA) && echo "\nruff:\n=====" && ruff check . --output-format pylint
 

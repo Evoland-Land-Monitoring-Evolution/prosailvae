@@ -25,6 +25,7 @@ exclude = [
 
 target-version = "py310"
 
+[lint]
 # Enable flake8-bugbear (`B`) rules.
 select = ["E", "F", "B"]
 

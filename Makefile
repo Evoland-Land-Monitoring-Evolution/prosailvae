@@ -53,6 +53,8 @@ test_one_fail:
 test_one_fail_no_slow:
 	$(CONDA) && pytest -vv -m "not slow" -x tests/
 
+test_model_export:
+	$(CONDA) && python ./bin/model_export.py --checkpoint /usr/local/stok/DATA/MMDC/ProsailVAE/jz/prosailvae/checkpoints/2024-04-27_22-44-18/last.ckpt --config /usr/local/stok/DATA/MMDC/ProsailVAE/jz/prosailvae/logs/experiments/runs/mmdc/2024-04-27_22-44-18/.hydra --output /tmp
 
 
 PYLINT_IGNORED = ""

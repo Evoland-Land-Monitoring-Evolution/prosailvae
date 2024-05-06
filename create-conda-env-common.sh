@@ -30,7 +30,7 @@ pip install -e thirdparties/mmdc-singledate
 
 # Install ProsailPython
 rm -rf thirdparties/prosailpython
-git clone -b downsampled_tensor https://src.koda.cnrs.fr/mmdc/prosailpython.git thirdparties/prosailpython
+git clone -b torchport https://src.koda.cnrs.fr/mmdc/prosailpython.git thirdparties/prosailpython
 pip install -e thirdparties/prosailpython
 
 # Install the current project in edit mode

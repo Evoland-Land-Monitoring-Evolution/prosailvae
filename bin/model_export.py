@@ -1,16 +1,12 @@
-"""Export the encoder of a PROSAIL-VAE lightning checkpoint to Pytorch, TorchScript
-and ONNX formats"""
+"""Export the encoder of a PROSAIL-VAE lightning checkpoint to Pytorch
+and TorchScript formats"""
 
 import argparse
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
 
 import hydra
-import numpy as np
-import onnx
-import onnxruntime  # type: ignore
 import torch
-import torch.onnx
 
 from prosailvae.encoders import ProsailResCNNEncoder, ProsailRNNEncoder
 from prosailvae.latentspace import TruncatedNormalLatent
@@ -139,50 +135,6 @@ def torchscript_export(
     torch.allclose(torch_res[:, :, 1:], sigmas, rtol=1e-03, atol=1e-05)
 
 
-# TODO: test when onnx will support aten::deg2rad
-def onnx_export(
-    net: InverseProsail,
-    output_dir: Path,
-    data: tuple[torch.Tensor, torch.Tensor],
-    res: torch.Tensor,
-) -> None:
-    """Export to ONNX"""
-    output_onnx_file = output_dir / f"{ckpt_file.stem}.onnx"
-    net.eval()
-    refls, angles = data
-    torch.onnx.export(
-        net,
-        data,
-        output_onnx_file,
-        export_params=True,
-        opset_version=10,
-        do_constant_folding=False,
-        input_names=["refls", "angles"],
-        output_names=["output"],
-        dynamic_axes={
-            "refls": [0],  # variable length axes
-            "angles": [0],
-            "output": [0],
-        },
-    )
-    # Check the ouput of the exported model
-    onnx_net = onnx.load(output_onnx_file)
-    onnx.checker.check_model(onnx_net)
-    ort_session = onnxruntime.InferenceSession(
-        output_onnx_file, providers=["CPUExecutionProvider"]
-    )
-    ort_inputs = {
-        ort_session.get_inputs()[0].name: refls.numpy(),
-        ort_session.get_inputs()[1].name: angles.numpy(),
-    }
-    ort_ouputs = ort_session.run(["output"], ort_inputs)
-
-    mus = res[:, :, :1].numpy()
-    sigmas = res[:, :, 1:].numpy()
-    np.testing.assert_allclose(mus, ort_ouputs[:, :, :1], rtol=1e-03, atol=1e-05)
-    np.testing.assert_allclose(sigmas, ort_ouputs[:, :, 1:], rtol=1e-03, atol=1e-05)
-
-
 def convert_to_inverse_prosail(
     ckpt_file: Path, config_dir: Path, output_type: Literal["z", "sim"]
 ) -> tuple[InverseProsail, torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
@@ -223,7 +175,8 @@ def get_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         Path(__file__).name,
-        description="Export PVAE encoder from lightning checkpoint to Pytorch and onnx",
+        description="Export PVAE encoder from lightning checkpoint"
+        " to Pytorch and Torch Script",
     )
 
     parser.add_argument(

@@ -88,7 +88,7 @@ def retrieve_modules(
         latent_space = cast(TruncatedNormalLatent, simvae.lat_space)
         sim_space = cast(LinearVarSpace, simvae.sim_space)
 
-    return encoder, latent_space, sim_space
+    return encoder.to(device), latent_space.to(device), sim_space.to(device)
 
 
 def convert_to_inverse_prosail(

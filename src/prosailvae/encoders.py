@@ -11,7 +11,7 @@ import torch.nn as nn
 
 from .spectral_indices import get_spectral_idx
 from .utils.image_utils import batchify_batch_latent, check_is_patch
-from .utils.utils import IOStandardizeCoeffs, standardize
+from .utils.utils import IOStandardizeCoeffs, deg2rad, standardize
 
 
 @dataclass
@@ -240,7 +240,7 @@ class ProsailRNNEncoder(Encoder):
         else:
             raise NotImplementedError
         normed_angles = standardize(
-            torch.cos(torch.deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
+            torch.cos(deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
         )
         encoder_input = torch.concat((normed_refl, normed_angles), axis=1)
         if not self.disable_s2_r_idx:
@@ -445,7 +445,7 @@ class ProsailResCNNEncoder(nn.Module):
             angles = angles.unsqueeze(0)
 
         normed_angles = standardize(
-            torch.cos(torch.deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
+            torch.cos(deg2rad(angles)), self.angles_loc, self.angles_scale, dim=1
         )
         encoder_input = torch.concat((normed_refl, normed_angles), axis=1)
         if not self.disable_s2_r_idx:

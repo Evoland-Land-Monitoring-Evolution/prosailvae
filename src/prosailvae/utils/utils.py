@@ -302,3 +302,7 @@ def torch_select_unsqueeze(tensor, select_dim, nb_dim):
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def deg2rad(x: torch.Tensor) -> torch.Tensor:
+    return x * torch.pi / 180

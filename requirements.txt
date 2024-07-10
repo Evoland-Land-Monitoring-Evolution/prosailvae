@@ -1,9 +1,12 @@
+affine~=2.4.0
 auto-walrus
 black           # code formatting
 codecarbon
-einops
+einops~=0.7.0
+findpeaks~=2.5.5
+fiona~=1.9.5
 flake8          # code analysis
-geopandas
+geopandas~=0.14.0
 hydra-colorlog
 hydra-core
 hydra-optuna-sweeper
@@ -11,11 +14,12 @@ ipykernel
 ipython
 isort           # import sorting
 jax
+lightning~=2.0.9.post0
 lightning-utilities==0.9.0
-matplotlib==3.6  # https://github.com/nschloe/tikzplotlib/issues/559
+matplotlib~=3.8.1
 memory_profiler
 mypy            # linter
-numpy
+numpy~=1.26.0
 numpyro
 nvidia-cublas-cu11==11.10.3.66
 nvidia-cuda-cupti-cu11==11.7.101
@@ -28,29 +32,43 @@ nvidia-cusolver-cu11==11.4.0.1
 nvidia-cusparse-cu11==11.7.4.91
 nvidia-nccl-cu11==2.14.3
 nvidia-nvtx-cu11==11.7.91
-omegaconf
-pandas
+omegaconf~=2.3.0
+
+onnxruntime~=1.18.0
+packaging~=23.2
+pandas~=2.1.2
 perflint
 pre-commit      # hooks for applying linters on commit
-psutil
+prosail~=2.0.5
+prosailvae~=0.0.0
+psutil~=5.9.6
 pudb            # debugger
 pylint
 pylsp-mypy
-pytest          # tests
-python-dotenv   # loading env variables from .env file
+pyproj~=3.6.1
+pytest~=7.4.3
+python-dateutil~=2.8.2
+python-dotenv~=1.0.0
 python-lsp-server[all]
 pytorch-lightning==2.0.6
 pyupgrade
-rasterio
+rasterio~=1.3.9
 refurb
-rich
+rich~=13.6.0
 ruff
-scikit-learn
-seaborn
+scikit-learn~=1.3.2
+scipy~=1.11.3
+seaborn~=0.13.0
+setuptools~=68.0.0
 sh              # for running bash commands in some tests
+shapely~=2.0.2
 tensorboard
 tikzplotlib
 torch==2.0.1
+torchmetrics~=1.2.0
+torchutils~=0.0.0
 torchvision
-tqdm
+tqdm~=4.66.1
+typing_extensions~=4.8.0
+xarray~=2023.10.1
 zenodo_get

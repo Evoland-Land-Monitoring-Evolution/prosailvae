@@ -4,14 +4,11 @@ Created on Wed Nov  9 13:39:15 2022
 
 @author: yoel
 """
-from dataclasses import dataclass
-from typing import Tuple
-
 import numpy as np
 import torch
+from utils.utils import gaussian_nll_loss, standardize, unstandardize
 
 from prosailvae.spectral_indices import get_spectral_idx
-from utils.utils import gaussian_nll_loss, standardize, unstandardize
 
 band_rsr_index = {
     "B2": 1,
@@ -44,7 +41,7 @@ class SensorSimulator:
     def __init__(
         self,
         prospect_range: tuple[int, int] = (400, 2500),
-        bands=[1, 2, 3, 4, 5, 6, 7, 8, 11, 12],
+        bands=None,
         device="cpu",
         bands_loc=None,
         bands_scale=None,
@@ -54,6 +51,8 @@ class SensorSimulator:
         spectral_resolution=1,
     ):
         super().__init__()
+        if bands is None:
+            bands = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
         rsr_path = ""
         self.spectral_resolution = spectral_resolution
         self.bands_rsr_idx = [band_rsr_index[b] for b in bands]
@@ -71,9 +70,9 @@ class SensorSimulator:
         self.rsr_prospect[0, :] = torch.linspace(
             prospect_range[0], prospect_range[1], self.nb_lambdas
         ).to(device)
-        self.rsr_prospect[
-            1:, : -(self.prospect_range[1] - self.rsr_range[1])
-        ] = self.rsr[1:, (self.prospect_range[0] - self.rsr_range[0]) :]
+        self.rsr_prospect[1:, : -(self.prospect_range[1] - self.rsr_range[1])] = (
+            self.rsr[1:, (self.prospect_range[0] - self.rsr_range[0]) :]
+        )
 
         self.solar = self.rsr_prospect[1, :].unsqueeze(0)
         self.rsr = self.rsr_prospect[2:, :].unsqueeze(0)

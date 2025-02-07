@@ -4,6 +4,7 @@ Created on Wed Nov  9 13:39:15 2022
 
 @author: yoel
 """
+
 import numpy as np
 import torch
 from utils.utils import gaussian_nll_loss, standardize, unstandardize
@@ -32,8 +33,8 @@ class SensorSimulator:
         in micrometers and regularly sampled with a 0.001 step (1 nm). The
         input full spectrum can be a Prosail simulation and will be sampled
         with the same step. The wavelength ranges of the RSR are typically
-        [0.350,2400] and Prosail gives [400, 2500]. The output will be given
-        in [400, 2500] as the input.
+        [0.350, 2.400] (µm) and Prosail gives [400, 2500] (nm). The output will be given
+        in [400, 2500] (nm)  as the input.
 
         The RSR file columns are: lambda, solar spectrum and bands.
     """
@@ -64,7 +65,7 @@ class SensorSimulator:
         self.rsr_range = (
             int(self.rsr[0, 0].item() * 1000),
             int(self.rsr[0, -1].item() * 1000),
-        )
+        )  # convert from micrometers to nanometers
         self.nb_lambdas = prospect_range[1] - prospect_range[0] + 1
         self.rsr_prospect = torch.zeros([self.rsr.shape[0], self.nb_lambdas]).to(device)
         self.rsr_prospect[0, :] = torch.linspace(
